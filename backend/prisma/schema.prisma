@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  phone        String?
+  tier         Tier     @default(FREE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  searches     Search[]
+
+  @@map("users")
+}
+
+model Search {
+  id               String           @id @default(cuid())
+  userId           String?
+  user             User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword          String
+  websiteUrl       String
+  checkInterval    Int              @default(30)
+  notificationType NotificationType @default(EMAIL)
+  notifyEmail      String?
+  isActive         Boolean          @default(true)
+  inStockOnly      Boolean          @default(false)
+  maxPrice         Float?
+  lastChecked      DateTime?
+  lastMatchHash    String?
+  expiresAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  matches          Match[]
+  notifications    Notification[]
+
+  @@map("searches")
+}
+
+model Match {
+  id       String   @id @default(cuid())
+  searchId String
+  search   Search   @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  title    String
+  price    Float?
+  url      String
+  hash     String
+  foundAt  DateTime @default(now())
+
+  @@map("matches")
+}
+
+model Notification {
+  id       String           @id @default(cuid())
+  searchId String
+  search   Search           @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  type     NotificationType
+  sentAt   DateTime         @default(now())
+  status   String           @default("sent")
+
+  @@map("notifications")
+}
+
+enum Tier {
+  FREE
+  PRO
+}
+
+enum NotificationType {
+  EMAIL
+  SMS
+  BOTH
+}
