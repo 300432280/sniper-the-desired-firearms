@@ -14,14 +14,16 @@ export async function sendAlertSms(
   to: string,
   keyword: string,
   matchCount: number,
-  firstMatchUrl: string
+  notificationId: string,
+  backendUrl: string
 ): Promise<void> {
   const twilioClient = getClient();
   if (!twilioClient) {
     throw new Error('Twilio not configured');
   }
 
-  const body = `[FirearmAlert] ${matchCount} match${matchCount > 1 ? 'es' : ''} found for "${keyword}": ${firstMatchUrl}`;
+  const landingUrl = `${backendUrl}/notifications/${notificationId}`;
+  const body = `[FirearmAlert] ${matchCount} NEW item${matchCount > 1 ? 's' : ''} for "${keyword}": ${landingUrl}`;
 
   await twilioClient.messages.create({
     body,

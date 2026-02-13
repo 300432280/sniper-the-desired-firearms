@@ -1,41 +1,77 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { searchesApi } from '@/lib/api';
+import { searchesApi, type Search, type Match } from '@/lib/api';
 import { useAuth } from '@/lib/hooks';
 
 export default function NewAlertPage() {
-  const router = useRouter();
   const { user } = useAuth();
 
   const [keyword, setKeyword] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [websiteUrls, setWebsiteUrls] = useState<string[]>(['']);
   const [checkInterval, setCheckInterval] = useState(30);
   const [notificationType, setNotificationType] = useState<'EMAIL' | 'SMS' | 'BOTH'>('EMAIL');
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<{ searches: Search[]; matches: Match[] } | null>(null);
 
-  const isPro = user?.tier === 'PRO';
+  const isPro = user?.tier === 'PRO' || user?.isAdmin;
+
+  const addUrl = () => {
+    if (websiteUrls.length < 10) setWebsiteUrls([...websiteUrls, '']);
+  };
+
+  const removeUrl = (index: number) => {
+    if (websiteUrls.length > 1) setWebsiteUrls(websiteUrls.filter((_, i) => i !== index));
+  };
+
+  const updateUrl = (index: number, value: string) => {
+    // Auto-split if user types or pastes comma/newline-separated URLs
+    const parts = value.split(/[,\n]+/).map((s) => s.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      const before = websiteUrls.slice(0, index);
+      const after = websiteUrls.slice(index + 1);
+      setWebsiteUrls([...before, ...parts, ...after].slice(0, 10));
+      return;
+    }
+    setWebsiteUrls(websiteUrls.map((u, i) => (i === index ? value : u)));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
+    // Normalize URLs — filter empty, prepend protocol if missing
+    const normalizedUrls = websiteUrls
+      .map((u) => u.trim())
+      .filter((u) => u.length > 0)
+      .map((u) => {
+        if (/^https?:\/\//i.test(u)) return u;
+        // localhost has no SSL
+        if (/^localhost(:\d+)?/i.test(u) || /^127\.0\.0\.1/i.test(u)) return `http://${u}`;
+        return `https://${u}`;
+      });
+
+    if (normalizedUrls.length === 0) {
+      setError('At least one URL is required');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await searchesApi.createAuth({
+      const data = await searchesApi.createAuth({
+        websiteUrls: normalizedUrls,
         keyword,
-        websiteUrl,
         checkInterval,
         notificationType,
         inStockOnly,
         maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
       });
-      router.push('/dashboard');
+      setResults(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create alert');
     } finally {
@@ -43,6 +79,80 @@ export default function NewAlertPage() {
     }
   };
 
+  // ── Results view ──────────────────────────────────────────────────────────
+  if (results) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+        <div className="card border border-accent/30 text-center py-8 mb-6">
+          <div className="text-4xl text-accent mb-3 font-heading">&#10003;</div>
+          <h2 className="font-heading text-2xl tracking-widest mb-2">
+            {results.searches.length} Alert{results.searches.length !== 1 ? 's' : ''} Created
+          </h2>
+          <p className="text-foreground-muted text-sm">
+            Monitoring &ldquo;<span className="text-foreground font-medium">{keyword}</span>&rdquo;
+            {' '}&mdash; found {results.matches.length} initial match{results.matches.length !== 1 ? 'es' : ''}.
+          </p>
+        </div>
+
+        {results.searches.map((s) => {
+          const searchMatches = results.matches.filter((m) => m.searchId === s.id);
+          return (
+            <div key={s.id} className="mb-5">
+              <p className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mb-2 truncate">
+                {s.websiteUrl}
+              </p>
+              {searchMatches.length > 0 ? (
+                <div className="space-y-1.5">
+                  {searchMatches.map((m) => (
+                    <a
+                      key={m.id}
+                      href={m.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="card flex items-center justify-between hover:border-accent/30 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{m.title}</p>
+                        {m.price != null && (
+                          <p className="text-xs text-accent font-mono">${m.price}</p>
+                        )}
+                      </div>
+                      <svg className="w-4 h-4 text-foreground-muted flex-shrink-0 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeWidth="1.5" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+                      </svg>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="card text-center py-6">
+                  <p className="text-foreground-muted text-sm">No matches yet &mdash; we&apos;ll notify you when something appears.</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <div className="flex gap-3 mt-6">
+          <Link href="/dashboard" className="btn-primary flex-1 text-center">
+            View Dashboard
+          </Link>
+          <button
+            onClick={() => {
+              setResults(null);
+              setKeyword('');
+              setWebsiteUrls(['']);
+              setMaxPrice('');
+            }}
+            className="btn-secondary"
+          >
+            Create Another
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Form view ─────────────────────────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
       {/* Header */}
@@ -85,17 +195,41 @@ export default function NewAlertPage() {
           </div>
 
           <div>
-            <label className="label">Retailer URL to Monitor</label>
-            <input
-              type="url"
-              className="input-field"
-              placeholder="https://www.ellwoodepps.com/collections/rifles"
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              required
-            />
+            <label className="label">Retailer URLs to Monitor</label>
+            <div className="space-y-2">
+              {websiteUrls.map((url, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    type="text"
+                    className="input-field flex-1"
+                    placeholder="www.ellwoodepps.com/collections/rifles"
+                    value={url}
+                    onChange={(e) => updateUrl(i, e.target.value)}
+                    required
+                  />
+                  {websiteUrls.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeUrl(i)}
+                      className="px-3 border border-border text-foreground-muted hover:border-secondary/30 hover:text-secondary transition-colors text-sm"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {websiteUrls.length < 10 && (
+              <button
+                type="button"
+                onClick={addUrl}
+                className="mt-2 text-xs font-heading tracking-wider text-accent hover:text-foreground transition-colors"
+              >
+                + Add Another URL
+              </button>
+            )}
             <p className="mt-1 text-xs text-foreground-dim">
-              Use the URL of the search results or category page, not the homepage.
+              Use the search results or category page URL, not the homepage. Paste comma-separated URLs to add multiple at once.
             </p>
           </div>
         </div>
@@ -108,9 +242,10 @@ export default function NewAlertPage() {
 
           <div>
             <label className="label">Check Interval</label>
-            <div className="grid grid-cols-3 gap-2">
-              {([5, 30, 60] as const).map((interval) => {
+            <div className={`grid gap-2 ${user?.isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              {([...(user?.isAdmin ? [0] : []), 5, 30, 60] as number[]).map((interval) => {
                 const locked = interval === 5 && !isPro;
+                const isTestMode = interval === 0;
                 return (
                   <button
                     key={interval}
@@ -119,13 +254,20 @@ export default function NewAlertPage() {
                     onClick={() => !locked && setCheckInterval(interval)}
                     className={`py-2 text-sm font-heading tracking-wider uppercase border transition-colors
                       ${checkInterval === interval && !locked
-                        ? 'border-accent bg-accent-subtle text-accent'
+                        ? isTestMode
+                          ? 'border-orange-500 bg-orange-500/10 text-orange-400'
+                          : 'border-accent bg-accent-subtle text-accent'
                         : 'border-border-strong text-foreground-muted hover:border-accent/30'
                       }
                       ${locked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
                     `}
                   >
-                    {interval === 5 ? '5 Min' : interval === 30 ? '30 Min' : '1 Hour'}
+                    {interval === 0 ? '10 Sec' : interval === 5 ? '5 Min' : interval === 30 ? '30 Min' : '1 Hour'}
+                    {isTestMode && (
+                      <span className="block text-[9px] tracking-widest text-orange-500 normal-case mt-0.5">
+                        Test
+                      </span>
+                    )}
                     {locked && (
                       <span className="block text-[9px] tracking-widest text-foreground-dim normal-case mt-0.5">
                         Pro
@@ -243,7 +385,7 @@ export default function NewAlertPage() {
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />
-                Creating...
+                Scanning...
               </span>
             ) : (
               'Create Alert'

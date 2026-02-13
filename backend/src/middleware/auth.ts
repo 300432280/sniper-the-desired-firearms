@@ -45,6 +45,16 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
   next();
 }
 
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  requireAuth(req, res, () => {
+    if (!req.user || !config.adminEmails.includes(req.user.email)) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+    next();
+  });
+}
+
 export function signToken(payload: AuthPayload): string {
   return jwt.sign(payload, config.jwtSecret, {
     expiresIn: config.jwtExpiry as string,

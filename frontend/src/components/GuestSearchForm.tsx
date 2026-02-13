@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { searchesApi } from '@/lib/api';
+import { searchesApi, type Match } from '@/lib/api';
 
 interface Props {
   defaultKeyword?: string;
@@ -13,13 +13,24 @@ export default function GuestSearchForm({ defaultKeyword = '' }: Props) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [matches, setMatches] = useState<Match[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('loading');
     setErrorMsg('');
+
+    // Normalize URL
+    let normalizedUrl = websiteUrl.trim();
+    if (normalizedUrl && !/^https?:\/\//i.test(normalizedUrl)) {
+      normalizedUrl = /^localhost(:\d+)?/i.test(normalizedUrl) || /^127\.0\.0\.1/i.test(normalizedUrl)
+        ? `http://${normalizedUrl}`
+        : `https://${normalizedUrl}`;
+    }
+
     try {
-      await searchesApi.createGuest({ keyword, websiteUrl, notifyEmail: email });
+      const data = await searchesApi.createGuest({ keyword, websiteUrl: normalizedUrl, notifyEmail: email });
+      setMatches(data.matches);
       setStatus('success');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to create alert');
@@ -29,18 +40,52 @@ export default function GuestSearchForm({ defaultKeyword = '' }: Props) {
 
   if (status === 'success') {
     return (
-      <div className="card border border-accent/30 text-center py-10 animate-fade-in">
-        <div className="text-4xl text-accent mb-4 font-heading">&#10003;</div>
-        <h3 className="font-heading text-2xl text-accent tracking-widest mb-3">
-          Alert Active
-        </h3>
-        <p className="text-foreground-muted text-sm leading-relaxed max-w-sm mx-auto">
-          Monitoring for{' '}
-          <span className="text-foreground font-medium">&ldquo;{keyword}&rdquo;</span>{' '}
-          every 30 minutes for 24 hours. Email notification goes to{' '}
-          <span className="text-foreground font-medium">{email}</span>.
-        </p>
-        <div className="mt-8 pt-6 border-t border-border">
+      <div className="card border border-accent/30 py-8 animate-fade-in">
+        <div className="text-center">
+          <div className="text-4xl text-accent mb-4 font-heading">&#10003;</div>
+          <h3 className="font-heading text-2xl text-accent tracking-widest mb-3">
+            Alert Active
+          </h3>
+          <p className="text-foreground-muted text-sm leading-relaxed max-w-sm mx-auto">
+            Monitoring for{' '}
+            <span className="text-foreground font-medium">&ldquo;{keyword}&rdquo;</span>{' '}
+            every 30 minutes for 24 hours. Email notification goes to{' '}
+            <span className="text-foreground font-medium">{email}</span>.
+          </p>
+        </div>
+
+        {/* Initial matches */}
+        {matches.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-border space-y-1.5 px-2">
+            <p className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mb-2">
+              {matches.length} match{matches.length !== 1 ? 'es' : ''} found
+            </p>
+            {matches.map((m) => (
+              <a
+                key={m.id}
+                href={m.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block border border-border hover:border-accent/30 transition-colors px-3 py-2"
+              >
+                <p className="text-sm font-medium truncate">{m.title}</p>
+                {m.price != null && (
+                  <p className="text-xs text-accent font-mono">${m.price}</p>
+                )}
+              </a>
+            ))}
+          </div>
+        )}
+
+        {matches.length === 0 && (
+          <div className="mt-6 pt-6 border-t border-border text-center px-2">
+            <p className="text-xs text-foreground-muted">
+              No matches yet &mdash; we&apos;ll email you when something appears.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-8 pt-6 border-t border-border text-center">
           <p className="text-xs text-foreground-muted mb-4">
             Need more? Create a free account for unlimited alerts + SMS.
           </p>
@@ -81,8 +126,8 @@ export default function GuestSearchForm({ defaultKeyword = '' }: Props) {
         <label className="label">Retailer URL to Monitor</label>
         <input
           className="input-field"
-          type="url"
-          placeholder="https://www.ellwoodepps.com/collections/rifles"
+          type="text"
+          placeholder="www.ellwoodepps.com/collections/rifles"
           value={websiteUrl}
           onChange={(e) => setWebsiteUrl(e.target.value)}
           required
@@ -118,7 +163,7 @@ export default function GuestSearchForm({ defaultKeyword = '' }: Props) {
         {status === 'loading' ? (
           <span className="flex items-center gap-2">
             <span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />
-            Activating...
+            Scanning...
           </span>
         ) : (
           'Monitor For Free'

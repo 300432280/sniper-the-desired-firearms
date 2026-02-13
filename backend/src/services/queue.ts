@@ -38,13 +38,16 @@ export async function scheduleSearch(
     // Ignore if key doesn't exist
   }
 
+  // 0 = 10-second test mode (admin only), otherwise convert minutes to ms
+  const everyMs = intervalMinutes === 0 ? 10_000 : intervalMinutes * 60 * 1000;
+
   await scrapeQueue.add(
     'scrape-search',
     { searchId },
     {
       jobId,
       repeat: {
-        every: intervalMinutes * 60 * 1000,
+        every: everyMs,
         immediately: true, // Run immediately on creation, then on interval
       },
     }

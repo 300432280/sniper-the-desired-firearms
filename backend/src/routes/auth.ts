@@ -50,7 +50,8 @@ router.post('/register', async (req: Request, res: Response) => {
   const token = signToken({ userId: user.id, email: user.email, tier: user.tier });
   res.cookie('token', token, COOKIE_OPTIONS);
 
-  return res.status(201).json({ user });
+  const isAdmin = config.adminEmails.includes(user.email);
+  return res.status(201).json({ user: { ...user, isAdmin } });
 });
 
 // POST /api/auth/login
@@ -76,8 +77,9 @@ router.post('/login', async (req: Request, res: Response) => {
   const token = signToken({ userId: user.id, email: user.email, tier: user.tier });
   res.cookie('token', token, COOKIE_OPTIONS);
 
+  const isAdmin = config.adminEmails.includes(user.email);
   return res.json({
-    user: { id: user.id, email: user.email, tier: user.tier, phone: user.phone },
+    user: { id: user.id, email: user.email, tier: user.tier, phone: user.phone, isAdmin },
   });
 });
 
@@ -94,7 +96,8 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     select: { id: true, email: true, tier: true, phone: true },
   });
   if (!user) return res.status(404).json({ error: 'User not found' });
-  return res.json({ user });
+  const isAdmin = config.adminEmails.includes(user.email);
+  return res.json({ user: { ...user, isAdmin } });
 });
 
 // PATCH /api/auth/profile — update phone number
@@ -114,7 +117,8 @@ router.patch('/profile', requireAuth, async (req: Request, res: Response) => {
     select: { id: true, email: true, tier: true, phone: true },
   });
 
-  return res.json({ user });
+  const isAdmin = config.adminEmails.includes(user.email);
+  return res.json({ user: { ...user, isAdmin } });
 });
 
 export default router;

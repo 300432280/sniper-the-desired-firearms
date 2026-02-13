@@ -14,6 +14,8 @@ export const config = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID!,
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN!,
   twilioFromNumber: process.env.TWILIO_FROM_NUMBER!,
+  adminEmails: (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim()).filter(Boolean),
+  backendUrl: process.env.BACKEND_URL || `http://localhost:${process.env.PORT || '4000'}`,
 } as const;
 
 // Fail fast at startup if critical vars are missing

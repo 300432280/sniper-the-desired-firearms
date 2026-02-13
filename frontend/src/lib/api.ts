@@ -27,6 +27,7 @@ export interface User {
   email: string;
   tier: 'FREE' | 'PRO';
   phone?: string | null;
+  isAdmin?: boolean;
 }
 
 export interface Search {
@@ -56,6 +57,22 @@ export interface Match {
   foundAt: string;
 }
 
+export interface LiveMatch {
+  title: string;
+  price?: number;
+  url: string;
+  inStock?: boolean;
+  isNew?: boolean;
+}
+
+export interface ScanResult {
+  matches: LiveMatch[];
+  scrapedAt: string;
+  newCount: number;
+  totalDbMatches: number;
+  notificationId: string | null;
+}
+
 // ─── Auth API ─────────────────────────────────────────────────────────────────
 
 export const authApi = {
@@ -83,7 +100,7 @@ export type CreateGuestSearch = {
 
 export type CreateAuthSearch = {
   keyword: string;
-  websiteUrl: string;
+  websiteUrls: string[];
   checkInterval: number;
   notificationType: 'EMAIL' | 'SMS' | 'BOTH';
   inStockOnly: boolean;
@@ -97,10 +114,10 @@ export const searchesApi = {
     request<{ search: Search & { matches: Match[] } }>('GET', `/searches/${id}`),
 
   createGuest: (data: CreateGuestSearch) =>
-    request<{ search: Search }>('POST', '/searches', data),
+    request<{ search: Search; matches: Match[] }>('POST', '/searches', data),
 
   createAuth: (data: CreateAuthSearch) =>
-    request<{ search: Search }>('POST', '/searches', data),
+    request<{ searches: Search[]; matches: Match[] }>('POST', '/searches', data),
 
   delete: (id: string) => request<{ message: string }>('DELETE', `/searches/${id}`),
 
@@ -108,4 +125,7 @@ export const searchesApi = {
 
   matches: (searchId: string) =>
     request<{ matches: Match[] }>('GET', `/searches/matches/${searchId}`),
+
+  scanNow: (id: string) =>
+    request<ScanResult>('POST', `/searches/${id}/scan`),
 };

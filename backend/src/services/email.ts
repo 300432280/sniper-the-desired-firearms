@@ -7,11 +7,14 @@ export interface AlertEmailPayload {
   to: string;
   keyword: string;
   matches: Array<{ title: string; price?: number | null; url: string }>;
-  dashboardUrl: string;
+  notificationId: string;
+  backendUrl: string;
 }
 
 export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> {
-  const { to, keyword, matches, dashboardUrl } = payload;
+  const { to, keyword, matches, notificationId, backendUrl } = payload;
+  const landingUrl = `${backendUrl}/notifications/${notificationId}`;
+  const dashboardUrl = `${config.frontendUrl}/dashboard`;
 
   const matchRows = matches
     .slice(0, 5)
@@ -19,6 +22,7 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
       (m) =>
         `<tr>
           <td style="padding:10px 14px; color:#E2E2E2; border-bottom:1px solid #1E1E1E;">
+            <span style="display:inline-block; background:#4D7A3C; color:#fff; font-size:9px; padding:2px 6px; letter-spacing:0.1em; text-transform:uppercase; margin-right:8px; vertical-align:middle;">NEW</span>
             <a href="${m.url}" style="color:#4D7A3C; text-decoration:none;">${m.title}</a>
           </td>
           <td style="padding:10px 14px; color:#D4620A; font-weight:600; border-bottom:1px solid #1E1E1E; white-space:nowrap;">
@@ -28,10 +32,13 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
     )
     .join('');
 
+  const itemCount = matches.length;
+  const subject = `[FirearmAlert] ${itemCount} new item${itemCount > 1 ? 's' : ''}: "${keyword}"`;
+
   await resend.emails.send({
     from: config.fromEmail,
     to,
-    subject: `[FirearmAlert] Match found: "${keyword}"`,
+    subject,
     html: `
 <!DOCTYPE html>
 <html>
@@ -46,7 +53,7 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
               Tactical Alert
             </div>
             <h1 style="margin:0; font-size:22px; color:#E2E2E2; letter-spacing:0.05em;">
-              Match found: <span style="color:#4D7A3C;">${keyword}</span>
+              ${itemCount} new item${itemCount > 1 ? 's' : ''}: <span style="color:#4D7A3C;">${keyword}</span>
             </h1>
           </td>
         </tr>
@@ -66,8 +73,15 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
           </td>
         </tr>
         <tr>
+          <td style="padding:0 32px 16px;">
+            <a href="${landingUrl}" style="display:inline-block; background:#4D7A3C; color:#ffffff; padding:10px 24px; font-size:12px; letter-spacing:0.15em; text-transform:uppercase; text-decoration:none;">
+              View New Items
+            </a>
+          </td>
+        </tr>
+        <tr>
           <td style="padding:0 32px 32px;">
-            <a href="${dashboardUrl}" style="display:inline-block; background:#4D7A3C; color:#ffffff; padding:10px 24px; font-size:12px; letter-spacing:0.15em; text-transform:uppercase; text-decoration:none;">
+            <a href="${dashboardUrl}" style="color:#6B7280; font-size:11px; text-decoration:underline;">
               Manage Alerts
             </a>
           </td>

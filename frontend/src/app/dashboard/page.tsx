@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { searches, loading, error, toggleSearch, deleteSearch } = useSearches();
+  const { searches, loading, error, refresh, toggleSearch, deleteSearch } = useSearches();
 
   const activeCount = searches.filter((s) => s.isActive).length;
   const totalMatches = searches.reduce((n, s) => n + (s._count?.matches ?? 0), 0);
@@ -24,13 +24,32 @@ export default function DashboardPage() {
             Active Alerts
           </h1>
           {user && (
-            <p className="text-xs text-foreground-muted mt-1">{user.email}</p>
+            <p className="text-xs text-foreground-muted mt-1">
+              {user.email}
+              {user.isAdmin && (
+                <span className="ml-2 text-[9px] font-heading tracking-widest uppercase bg-orange-600 text-white px-1.5 py-0.5">
+                  Admin
+                </span>
+              )}
+            </p>
           )}
         </div>
 
-        <Link href="/dashboard/alerts/new" className="btn-primary flex-shrink-0">
-          + New Alert
-        </Link>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {user?.isAdmin && (
+            <a
+              href="http://localhost:4000/test-page"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] font-heading uppercase tracking-wider px-4 py-2 border border-orange-500/30 text-orange-400 hover:bg-orange-500/10 transition-colors"
+            >
+              Test Store
+            </a>
+          )}
+          <Link href="/dashboard/alerts/new" className="btn-primary">
+            + New Alert
+          </Link>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -42,7 +61,7 @@ export default function DashboardPage() {
         ].map((stat) => (
           <div key={stat.label} className="bg-surface px-5 py-4">
             <div className="font-heading text-2xl font-bold text-foreground">
-              {loading ? '—' : stat.value}
+              {loading ? '\u2014' : stat.value}
             </div>
             <div className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mt-0.5">
               {stat.label}
@@ -51,8 +70,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Pro upsell for FREE tier */}
-      {user?.tier === 'FREE' && searches.length > 0 && (
+      {/* Pro upsell for FREE tier (hide for admin) */}
+      {user?.tier === 'FREE' && !user?.isAdmin && searches.length > 0 && (
         <div className="border border-accent/20 bg-accent-subtle px-5 py-3 flex items-center justify-between gap-4 mb-6">
           <p className="text-xs text-accent">
             <span className="font-heading font-semibold tracking-wider">Free plan:</span>{' '}
@@ -60,6 +79,22 @@ export default function DashboardPage() {
           </p>
           <Link href="/#pricing" className="btn-primary text-xs py-1.5 px-4 flex-shrink-0">
             Upgrade
+          </Link>
+        </div>
+      )}
+
+      {/* Admin quick links */}
+      {user?.isAdmin && (
+        <div className="border border-orange-500/20 bg-orange-500/5 px-5 py-3 flex items-center gap-4 mb-6">
+          <span className="text-[10px] font-heading tracking-widest uppercase text-orange-400">Admin Tools</span>
+          <a href="http://localhost:4000/test-page" target="_blank" rel="noopener noreferrer" className="text-xs text-orange-300 hover:underline">
+            Test Store
+          </a>
+          <Link href="/dashboard/admin/debug" className="text-xs text-orange-300 hover:underline">
+            Debug Log
+          </Link>
+          <Link href="/dashboard/history" className="text-xs text-orange-300 hover:underline">
+            Match History
           </Link>
         </div>
       )}
@@ -109,6 +144,7 @@ export default function DashboardPage() {
               search={search}
               onToggle={toggleSearch}
               onDelete={deleteSearch}
+              onRefresh={refresh}
             />
           ))}
         </div>
