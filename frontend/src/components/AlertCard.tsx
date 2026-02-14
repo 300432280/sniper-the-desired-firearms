@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, LiveMatch, ScanResult, searchesApi } from '@/lib/api';
+import { Search, Match, LiveMatch, ScanResult, searchesApi } from '@/lib/api';
 
 interface Props {
   search: Search;
@@ -32,6 +32,11 @@ export default function AlertCard({ search, onToggle, onDelete, onRefresh }: Pro
   const [scanError, setScanError] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [scanMeta, setScanMeta] = useState<{ newCount: number; totalDbMatches: number; notificationId: string | null } | null>(null);
+
+  // Match history state
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyMatches, setHistoryMatches] = useState<Match[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const handleToggle = async () => {
     setToggling(true);
@@ -66,6 +71,8 @@ export default function AlertCard({ search, onToggle, onDelete, onRefresh }: Pro
       const data: ScanResult = await searchesApi.scanNow(search.id);
       setScanResults(data.matches);
       setScanMeta({ newCount: data.newCount, totalDbMatches: data.totalDbMatches, notificationId: data.notificationId });
+      // Invalidate cached history so next expand re-fetches
+      setHistoryMatches(null);
       if (data.newCount > 0 && onRefresh) {
         onRefresh();
       }
@@ -75,6 +82,25 @@ export default function AlertCard({ search, onToggle, onDelete, onRefresh }: Pro
       setScanning(false);
     }
   };
+
+  const toggleHistory = async () => {
+    const willShow = !showHistory;
+    setShowHistory(willShow);
+    // Lazy-load on first expand (or after scan invalidation)
+    if (willShow && historyMatches === null) {
+      setHistoryLoading(true);
+      try {
+        const data = await searchesApi.matches(search.id);
+        setHistoryMatches(data.matches);
+      } catch {
+        setHistoryMatches([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    }
+  };
+
+  const matchCount = search._count?.matches ?? 0;
 
   const lastChecked = search.lastChecked
     ? new Date(search.lastChecked).toLocaleString('en-CA', {
@@ -173,14 +199,24 @@ export default function AlertCard({ search, onToggle, onDelete, onRefresh }: Pro
           {NOTIFY_LABELS[search.notificationType]}
         </span>
 
-        {search._count !== undefined && (
-          <span className={`flex items-center gap-1 ${search._count.matches > 0 ? 'text-accent' : ''}`}>
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            {search._count.matches} match{search._count.matches !== 1 ? 'es' : ''}
-          </span>
-        )}
+        {/* Clickable match count — toggles history panel */}
+        <button
+          onClick={toggleHistory}
+          className={`flex items-center gap-1 hover:text-accent transition-colors ${matchCount > 0 ? 'text-accent' : ''}`}
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          {matchCount} match{matchCount !== 1 ? 'es' : ''}
+          <svg
+            className={`w-3 h-3 transition-transform duration-200 ${showHistory ? 'rotate-90' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
         {search.inStockOnly && (
           <span className="text-accent border border-accent/20 px-1.5 py-0.5 font-heading tracking-wider uppercase text-[10px]">
@@ -197,6 +233,76 @@ export default function AlertCard({ search, onToggle, onDelete, onRefresh }: Pro
           Checked: {lastChecked}
         </span>
       </div>
+
+      {/* Match history panel (expandable) */}
+      {showHistory && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted">
+              Match History
+            </span>
+            <button
+              onClick={() => setShowHistory(false)}
+              className="text-[10px] text-foreground-dim hover:text-foreground transition-colors"
+            >
+              Close
+            </button>
+          </div>
+
+          {historyLoading && (
+            <div className="text-xs text-foreground-muted py-4 text-center">
+              <span className="inline-block animate-pulse">Loading matches...</span>
+            </div>
+          )}
+
+          {!historyLoading && historyMatches && historyMatches.length === 0 && (
+            <div className="text-xs text-foreground-dim py-3 text-center">
+              No matches yet. Run a scan or wait for the next scheduled check.
+            </div>
+          )}
+
+          {!historyLoading && historyMatches && historyMatches.length > 0 && (
+            <div className="space-y-1.5">
+              {historyMatches.map((match) => (
+                <div key={match.id} className="flex items-center gap-3 px-3 py-2 bg-surface-elevated/50 border border-border/50 text-xs">
+                  <span className="text-[10px] text-foreground-dim font-mono flex-shrink-0 min-w-[68px]">
+                    {new Date(match.foundAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}{' '}
+                    {new Date(match.foundAt).toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <a
+                      href={match.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground hover:text-accent transition-colors truncate block"
+                      title={match.title}
+                    >
+                      {match.title}
+                    </a>
+                  </div>
+                  {match.price != null && (
+                    <span className="text-accent font-heading flex-shrink-0">${match.price.toFixed(2)}</span>
+                  )}
+                  <a
+                    href={match.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground-dim hover:text-blue-400 flex-shrink-0"
+                    title="Open link"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeWidth="1.5" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+                    </svg>
+                  </a>
+                </div>
+              ))}
+              <p className="text-[10px] text-foreground-dim pt-1">
+                Showing {historyMatches.length} match{historyMatches.length !== 1 ? 'es' : ''} (newest first)
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Scan results panel */}
       {showResults && (

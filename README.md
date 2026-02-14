@@ -208,6 +208,7 @@ npm run dev
 | Frontend | http://localhost:3000 |
 | Backend API | http://localhost:4000 |
 | Test Store | http://localhost:4000/test-page |
+| Notification Preview | http://localhost:4000/test-page/notification-preview |
 | Debug Log (admin) | http://localhost:3000/dashboard/admin/debug |
 | Prisma Studio | `npm run db:studio` → http://localhost:5555 |
 
@@ -219,7 +220,7 @@ Admin users are defined by the `ADMIN_EMAILS` environment variable. Admins get:
 
 1. **All Pro features unlocked** — 5-min checks, SMS, BOTH notifications (regardless of tier).
 2. **10-second test interval** — Special `checkInterval: 0` option for rapid testing.
-3. **Test Store access** — Dynamic product page at `/test-page` with add/remove/reset controls.
+3. **Test Store access** — Dynamic product page at `/test-page` with add/remove/reset controls and notification preview.
 4. **Admin toolbar** in the dashboard — Quick links to Test Store, Debug Log, Match History.
 5. **Debug Log SSE** — Real-time streaming of scrape events, match detections, email/SMS sends.
 
@@ -248,7 +249,9 @@ The test store (`/test-page`) is a dynamic in-memory product listing page that m
 5. Add a new listing with a title containing the keyword.
 6. Within 10 seconds, the worker detects the new listing and sends a notification.
 7. Click **Scan Now** on the alert card to see results with **NEW** badges.
-8. Click **View Notification** to see the notification landing page.
+8. Click the **match count** on any alert card to expand and see all historical matches (newest first).
+9. Click **View Notification** to see the notification landing page.
+10. Visit **Preview Notification** in the test portal to see mock notification landing page, email, and SMS.
 
 ### Test Store Admin Controls:
 
@@ -256,6 +259,7 @@ The test store (`/test-page`) is a dynamic in-memory product listing page that m
 - **Remove** — Delete individual listings
 - **Reset** — Restore all default listings
 - **Recent Notifications** panel — Preview links to notification landing pages
+- **Preview Notification** — Dedicated page (`/test-page/notification-preview`) showing mock notification landing page, email template, and SMS text exactly as users would see them
 
 ---
 
@@ -288,6 +292,7 @@ The test store (`/test-page`) is a dynamic in-memory product listing page that m
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/test-page` | — | Test store listings (admin sees control panel) |
+| GET | `/test-page/notification-preview` | — | Mock notification preview (landing page, email, SMS) |
 | POST | `/test-page/add` | Admin | Add a test listing |
 | POST | `/test-page/remove/:slug` | Admin | Remove a test listing |
 | POST | `/test-page/reset` | Admin | Reset to default listings |
@@ -321,14 +326,14 @@ firearm-alert/
 │   │   │   ├── alerts/[slug]/page.tsx  # SEO programmatic pages
 │   │   │   └── dashboard/
 │   │   │       ├── layout.tsx      # Auth guard (cookie check)
-│   │   │       ├── page.tsx        # Alert list + admin toolbar
+│   │   │       ├── page.tsx        # Alert list + stats (Monitoring / Items Found)
 │   │   │       ├── alerts/new/page.tsx  # Create alert form
 │   │   │       ├── history/page.tsx     # All match history
 │   │   │       └── admin/debug/page.tsx # Real-time debug log
 │   │   ├── components/
 │   │   │   ├── Navbar.tsx
 │   │   │   ├── GuestSearchForm.tsx
-│   │   │   └── AlertCard.tsx       # Alert card with Scan Now
+│   │   │   └── AlertCard.tsx       # Alert card with Scan Now + expandable match history
 │   │   └── lib/
 │   │       ├── api.ts              # Typed API client
 │   │       └── hooks.ts            # useAuth, useSearches hooks
@@ -343,7 +348,7 @@ firearm-alert/
     ├── prisma/
     │   └── schema.prisma     # Full DB schema
     └── src/
-        ├── index.ts          # Express app, test store, notification page
+        ├── index.ts          # Express app, test store, notification page, notification preview
         ├── config.ts         # Env var config + validation
         ├── lib/
         │   └── prisma.ts     # Prisma client singleton

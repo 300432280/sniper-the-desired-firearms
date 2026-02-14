@@ -53,15 +53,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-px border border-border bg-border mb-8">
+      <div className="grid grid-cols-2 gap-px border border-border bg-border mb-8">
         {[
-          { label: 'Active Alerts', value: activeCount },
-          { label: 'Total Alerts', value: searches.length },
-          { label: 'Total Matches', value: totalMatches },
+          { label: 'Monitoring', value: loading ? '\u2014' : `${activeCount} site${activeCount !== 1 ? 's' : ''}` },
+          { label: 'Items Found', value: loading ? '\u2014' : totalMatches },
         ].map((stat) => (
           <div key={stat.label} className="bg-surface px-5 py-4">
             <div className="font-heading text-2xl font-bold text-foreground">
-              {loading ? '\u2014' : stat.value}
+              {stat.value}
             </div>
             <div className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mt-0.5">
               {stat.label}

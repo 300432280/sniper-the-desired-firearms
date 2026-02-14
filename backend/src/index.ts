@@ -174,7 +174,8 @@ app.get('/test-page', async (req, res) => {
     </form>
   </div>
   ${notificationsPanel}
-  <div style="margin-bottom:16px;">
+  <div style="margin-bottom:16px; display:flex; gap:8px; flex-wrap:wrap;">
+    <a href="/test-page/notification-preview" style="color:#D4620A; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; border:1px solid rgba(212,98,10,0.3); padding:6px 14px; text-decoration:none; display:inline-block;">Preview Notification &rarr;</a>
     <a href="${config.frontendUrl}/dashboard/admin/debug" style="color:#4D7A3C; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; border:1px solid rgba(77,122,60,0.3); padding:6px 14px; text-decoration:none; display:inline-block;">Debug Log &rarr;</a>
   </div>` : '';
 
@@ -217,6 +218,171 @@ app.post('/test-page/reset', (req, res) => {
   testProducts.push(...DEFAULT_PRODUCTS.map((p) => ({ ...p })));
   nextTestId = 8;
   res.redirect('/test-page');
+});
+
+// ── Notification Preview Page ─────────────────────────────────────────
+// Admin-only: shows a mock notification landing page + email preview using test data.
+app.get('/test-page/notification-preview', (req, res) => {
+  const admin = isAdmin(req);
+  const mockKeyword = 'rifle';
+  const mockSentAt = new Date().toLocaleString('en-CA', {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const mockWebsite = `http://localhost:${config.port}/test-page`;
+  const mockMatches = [
+    { title: 'Norinco SKS 7.62x39 Semi-Auto Rifle', price: 449.99, url: `${mockWebsite}/sks-001` },
+    { title: 'Ruger 10/22 Carbine .22LR Rifle', price: 399.95, url: `${mockWebsite}/ruger1022-005` },
+    { title: 'Remington 870 Express 12ga Shotgun', price: 549.00, url: `${mockWebsite}/rem870-007` },
+  ];
+
+  // ── Notification Landing Page (same HTML as real /notifications/:id) ──
+  const landingMatchRows = mockMatches.map((m) => `
+    <div style="background:#161616; border:1px solid #1E1E1E; padding:14px 18px; margin:8px 0; display:flex; align-items:center; justify-content:space-between;">
+      <div style="flex:1;">
+        <span style="display:inline-block; background:#4D7A3C; color:#fff; font-size:9px; padding:2px 6px; letter-spacing:0.1em; text-transform:uppercase; margin-right:8px; vertical-align:middle;">NEW</span>
+        <span style="color:#E2E2E2; font-size:14px;">${m.title}</span>
+      </div>
+      <div style="flex-shrink:0; text-align:right;">
+        <span style="color:#D4620A; font-weight:600; margin-right:16px;">$${m.price.toFixed(2)}</span>
+        <a href="${m.url}" target="_blank" rel="noopener noreferrer" style="color:#4D7A3C; text-decoration:none; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; border:1px solid rgba(77,122,60,0.3); padding:4px 12px;">View &rarr;</a>
+      </div>
+    </div>`).join('');
+
+  // ── Email Preview (same HTML as real sendAlertEmail) ──
+  const emailMatchRows = mockMatches.map((m) => `
+    <tr>
+      <td style="padding:10px 14px; color:#E2E2E2; border-bottom:1px solid #1E1E1E;">
+        <span style="display:inline-block; background:#4D7A3C; color:#fff; font-size:9px; padding:2px 6px; letter-spacing:0.1em; text-transform:uppercase; margin-right:8px; vertical-align:middle;">NEW</span>
+        <a href="${m.url}" style="color:#4D7A3C; text-decoration:none;">${m.title}</a>
+      </td>
+      <td style="padding:10px 14px; color:#D4620A; font-weight:600; border-bottom:1px solid #1E1E1E; white-space:nowrap;">
+        $${m.price.toFixed(2)}
+      </td>
+    </tr>`).join('');
+
+  const emailHtml = `
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0D0D0D; padding:40px 20px;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="background:#111111; border:1px solid #1E1E1E; border-top:3px solid #4D7A3C;">
+      <tr>
+        <td style="padding:28px 32px 16px;">
+          <div style="font-size:11px; color:#6B7280; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:8px;">
+            Tactical Alert
+          </div>
+          <h1 style="margin:0; font-size:22px; color:#E2E2E2; letter-spacing:0.05em;">
+            ${mockMatches.length} new items: <span style="color:#4D7A3C;">${mockKeyword}</span>
+          </h1>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:0 32px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #1E1E1E;">
+            <tr>
+              <th style="padding:8px 14px; text-align:left; font-size:10px; color:#6B7280; text-transform:uppercase; letter-spacing:0.15em; background:#161616; border-bottom:1px solid #1E1E1E;">Item</th>
+              <th style="padding:8px 14px; text-align:left; font-size:10px; color:#6B7280; text-transform:uppercase; letter-spacing:0.15em; background:#161616; border-bottom:1px solid #1E1E1E;">Price</th>
+            </tr>
+            ${emailMatchRows}
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:0 32px 16px;">
+          <a href="#" style="display:inline-block; background:#4D7A3C; color:#ffffff; padding:10px 24px; font-size:12px; letter-spacing:0.15em; text-transform:uppercase; text-decoration:none;">
+            View New Items
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:0 32px 32px;">
+          <a href="${config.frontendUrl}/dashboard" style="color:#6B7280; font-size:11px; text-decoration:underline;">
+            Manage Alerts
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px 32px; border-top:1px solid #1E1E1E;">
+          <p style="margin:0; font-size:11px; color:#4A4A4A; line-height:1.6;">
+            FirearmAlert is a notification service. We are not affiliated with any retailer.
+            Users are responsible for complying with all applicable Canadian firearm laws.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>`;
+
+  // ── SMS Preview ──
+  const smsText = `[FirearmAlert] ${mockMatches.length} NEW items for "${mockKeyword}": ${mockWebsite}/notifications/preview-sample`;
+
+  res.type('html').send(`<!DOCTYPE html>
+<html><head>
+<title>Notification Preview — FirearmAlert Test Portal</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0D0D0D;color:#E2E2E2;font-family:Inter,Arial,sans-serif;padding:0;}
+  .wrap{max-width:700px;margin:0 auto;padding:40px 20px;}
+  .back{font-size:11px;color:#6B7280;text-decoration:none;letter-spacing:0.15em;text-transform:uppercase;display:inline-block;margin-bottom:24px;}
+  .back:hover{color:#4D7A3C;}
+  .section-label{font-size:11px;color:#D4620A;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1E1E1E;}
+  .section{margin-bottom:40px;}
+  .preview-box{border:1px solid #1E1E1E;overflow:hidden;}
+  .label{font-size:11px;color:#6B7280;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:8px;}
+  h1{font-size:24px;color:#E2E2E2;letter-spacing:0.05em;margin-bottom:6px;}
+  .meta{font-size:12px;color:#6B7280;margin-bottom:24px;}
+  .keyword{color:#4D7A3C;}
+  .footer{margin-top:32px;padding-top:16px;border-top:1px solid #1E1E1E;}
+  .footer a{color:#6B7280;font-size:11px;text-decoration:underline;}
+  .footer p{color:#4A4A4A;font-size:11px;line-height:1.6;margin-top:12px;}
+  .sms-box{background:#161616;border:1px solid #1E1E1E;padding:16px 20px;font-family:monospace;font-size:13px;color:#E2E2E2;line-height:1.5;}
+  ${!admin ? '.admin-only{display:none;}' : ''}
+</style>
+</head><body>
+<div class="wrap">
+  <a href="/test-page" class="back">&larr; Back to Test Store</a>
+
+  <div style="margin-bottom:32px;">
+    <div style="font-size:10px;color:#D4620A;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:6px;">Test Portal</div>
+    <h1 style="font-size:28px;">Notification Preview</h1>
+    <p style="font-size:12px;color:#6B7280;margin-top:4px;">This page shows exactly what a user sees when they receive a notification. All data below is mock/sample data.</p>
+  </div>
+
+  <!-- Section 1: Notification Landing Page -->
+  <div class="section">
+    <div class="section-label">Notification Landing Page</div>
+    <p style="font-size:11px;color:#6B7280;margin-bottom:12px;">This is the page users see when they click the link in their email or SMS.</p>
+    <div class="preview-box" style="padding:32px 24px;">
+      <div class="label">Tactical Alert</div>
+      <h1>${mockMatches.length} new items: <span class="keyword">${mockKeyword}</span></h1>
+      <div class="meta">Found on ${mockSentAt} &middot; Monitoring ${mockWebsite}</div>
+      ${landingMatchRows}
+      <div class="footer">
+        <a href="${config.frontendUrl}/dashboard">Manage Alerts</a>
+        <p>FirearmAlert is a notification service. We are not affiliated with any retailer.
+        Users are responsible for complying with all applicable Canadian firearm laws.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Email Preview -->
+  <div class="section">
+    <div class="section-label">Email Notification</div>
+    <p style="font-size:11px;color:#6B7280;margin-bottom:4px;">Subject: <span style="color:#E2E2E2;">[FirearmAlert] ${mockMatches.length} new items: &quot;${mockKeyword}&quot;</span></p>
+    <p style="font-size:11px;color:#6B7280;margin-bottom:12px;">From: <span style="color:#E2E2E2;">${config.fromEmail}</span></p>
+    <div class="preview-box">
+      ${emailHtml}
+    </div>
+  </div>
+
+  <!-- Section 3: SMS Preview -->
+  <div class="section">
+    <div class="section-label">SMS Notification</div>
+    <p style="font-size:11px;color:#6B7280;margin-bottom:12px;">The SMS message is a short text with a link to the notification landing page.</p>
+    <div class="sms-box">${smsText}</div>
+  </div>
+</div>
+</body></html>`);
 });
 
 // ── Notification Landing Page ──────────────────────────────────────────

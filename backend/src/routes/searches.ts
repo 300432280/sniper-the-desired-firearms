@@ -61,14 +61,19 @@ const authSearchSchema = z.object({
 
 // GET /api/searches
 router.get('/', requireAuth, async (req: Request, res: Response) => {
-  const searches = await prisma.search.findMany({
-    where: { userId: req.user!.userId },
-    include: {
-      _count: { select: { matches: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-  return res.json({ searches });
+  try {
+    const searches = await prisma.search.findMany({
+      where: { userId: req.user!.userId },
+      include: {
+        _count: { select: { matches: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return res.json({ searches });
+  } catch (err) {
+    console.error('[Route] Failed to list searches:', err);
+    return res.status(500).json({ error: 'Failed to load alerts' });
+  }
 });
 
 // POST /api/searches
@@ -198,51 +203,66 @@ router.post('/', optionalAuth, async (req: Request, res: Response) => {
 
 // DELETE /api/searches/:id
 router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
-  const search = await prisma.search.findFirst({
-    where: { id: req.params.id, userId: req.user!.userId },
-  });
-  if (!search) return res.status(404).json({ error: 'Search not found' });
+  try {
+    const search = await prisma.search.findFirst({
+      where: { id: req.params.id, userId: req.user!.userId },
+    });
+    if (!search) return res.status(404).json({ error: 'Search not found' });
 
-  await cancelSearch(search.id);
-  await prisma.search.delete({ where: { id: search.id } });
-  return res.json({ message: 'Search deleted' });
+    await cancelSearch(search.id);
+    await prisma.search.delete({ where: { id: search.id } });
+    return res.json({ message: 'Search deleted' });
+  } catch (err) {
+    console.error('[Route] Failed to delete search:', err);
+    return res.status(500).json({ error: 'Failed to delete alert' });
+  }
 });
 
 // PATCH /api/searches/:id/toggle
 router.patch('/:id/toggle', requireAuth, async (req: Request, res: Response) => {
-  const search = await prisma.search.findFirst({
-    where: { id: req.params.id, userId: req.user!.userId },
-  });
-  if (!search) return res.status(404).json({ error: 'Search not found' });
+  try {
+    const search = await prisma.search.findFirst({
+      where: { id: req.params.id, userId: req.user!.userId },
+    });
+    if (!search) return res.status(404).json({ error: 'Search not found' });
 
-  const updated = await prisma.search.update({
-    where: { id: search.id },
-    data: { isActive: !search.isActive },
-  });
+    const updated = await prisma.search.update({
+      where: { id: search.id },
+      data: { isActive: !search.isActive },
+    });
 
-  if (updated.isActive) {
-    await scheduleSearch(search.id, search.checkInterval);
-  } else {
-    await cancelSearch(search.id);
+    if (updated.isActive) {
+      await scheduleSearch(search.id, search.checkInterval);
+    } else {
+      await cancelSearch(search.id);
+    }
+
+    return res.json({ search: updated });
+  } catch (err) {
+    console.error('[Route] Failed to toggle search:', err);
+    return res.status(500).json({ error: 'Failed to toggle alert' });
   }
-
-  return res.json({ search: updated });
 });
 
 // GET /api/searches/matches/:searchId
 router.get('/matches/:searchId', requireAuth, async (req: Request, res: Response) => {
-  const search = await prisma.search.findFirst({
-    where: { id: req.params.searchId, userId: req.user!.userId },
-  });
-  if (!search) return res.status(404).json({ error: 'Search not found' });
+  try {
+    const search = await prisma.search.findFirst({
+      where: { id: req.params.searchId, userId: req.user!.userId },
+    });
+    if (!search) return res.status(404).json({ error: 'Search not found' });
 
-  const matches = await prisma.match.findMany({
-    where: { searchId: search.id },
-    orderBy: { foundAt: 'desc' },
-    take: 50,
-  });
+    const matches = await prisma.match.findMany({
+      where: { searchId: search.id },
+      orderBy: { foundAt: 'desc' },
+      take: 50,
+    });
 
-  return res.json({ matches });
+    return res.json({ matches });
+  } catch (err) {
+    console.error('[Route] Failed to load matches:', err);
+    return res.status(500).json({ error: 'Failed to load match history' });
+  }
 });
 
 // POST /api/searches/:id/scan — re-scrape, persist new matches, trigger notifications
@@ -383,18 +403,23 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
 
 // GET /api/searches/:id — single search with recent matches
 router.get('/:id', requireAuth, async (req: Request, res: Response) => {
-  const search = await prisma.search.findFirst({
-    where: { id: req.params.id, userId: req.user!.userId },
-    include: {
-      matches: {
-        orderBy: { foundAt: 'desc' },
-        take: 10,
+  try {
+    const search = await prisma.search.findFirst({
+      where: { id: req.params.id, userId: req.user!.userId },
+      include: {
+        matches: {
+          orderBy: { foundAt: 'desc' },
+          take: 10,
+        },
+        _count: { select: { matches: true } },
       },
-      _count: { select: { matches: true } },
-    },
-  });
-  if (!search) return res.status(404).json({ error: 'Search not found' });
-  return res.json({ search });
+    });
+    if (!search) return res.status(404).json({ error: 'Search not found' });
+    return res.json({ search });
+  } catch (err) {
+    console.error('[Route] Failed to load search:', err);
+    return res.status(500).json({ error: 'Failed to load alert details' });
+  }
 });
 
 export default router;
