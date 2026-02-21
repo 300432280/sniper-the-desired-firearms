@@ -1,15 +1,74 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useSearches, useAuth } from '@/lib/hooks';
 import AlertCard from '@/components/AlertCard';
 import Link from 'next/link';
+import type { Search } from '@/lib/api';
+
+export interface SearchGroup {
+  groupId: string;
+  keyword: string;
+  searches: Search[];
+  isActive: boolean;
+  totalMatches: number;
+  siteCount: number;
+  lastChecked: string | null;
+  checkInterval: number;
+  notificationType: string;
+  inStockOnly: boolean;
+  maxPrice: number | null;
+  createdAt: string;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { searches, loading, error, refresh, toggleSearch, deleteSearch } = useSearches();
+  const { searches, loading, error, refresh, toggleSearch, deleteSearch, toggleGroup, deleteGroup } = useSearches();
 
-  const activeCount = searches.filter((s) => s.isActive).length;
-  const totalMatches = searches.reduce((n, s) => n + (s._count?.matches ?? 0), 0);
+  // Group search-all alerts by searchAllGroupId, keep individual searches separate
+  const { individualSearches, groups } = useMemo(() => {
+    const groupMap = new Map<string, Search[]>();
+    const individual: Search[] = [];
+
+    for (const s of searches) {
+      if (s.searchAllGroupId) {
+        const list = groupMap.get(s.searchAllGroupId) || [];
+        list.push(s);
+        groupMap.set(s.searchAllGroupId, list);
+      } else {
+        individual.push(s);
+      }
+    }
+
+    const groupList: SearchGroup[] = [];
+    for (const [groupId, groupSearches] of groupMap) {
+      const first = groupSearches[0];
+      groupList.push({
+        groupId,
+        keyword: first.keyword,
+        searches: groupSearches,
+        isActive: groupSearches.some((s) => s.isActive),
+        totalMatches: groupSearches.reduce((n, s) => n + (s._count?.matches ?? 0), 0),
+        siteCount: groupSearches.length,
+        lastChecked: groupSearches.reduce((latest: string | null, s) => {
+          if (!s.lastChecked) return latest;
+          if (!latest) return s.lastChecked;
+          return s.lastChecked > latest ? s.lastChecked : latest;
+        }, null),
+        checkInterval: first.checkInterval,
+        notificationType: first.notificationType,
+        inStockOnly: first.inStockOnly,
+        maxPrice: first.maxPrice ?? null,
+        createdAt: first.createdAt,
+      });
+    }
+
+    return { individualSearches: individual, groups: groupList };
+  }, [searches]);
+
+  const activeCount = individualSearches.filter((s) => s.isActive).length + groups.filter((g) => g.isActive).length;
+  const totalMatches = individualSearches.reduce((n, s) => n + (s._count?.matches ?? 0), 0)
+    + groups.reduce((n, g) => n + g.totalMatches, 0);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
@@ -55,7 +114,7 @@ export default function DashboardPage() {
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-px border border-border bg-border mb-8">
         {[
-          { label: 'Monitoring', value: loading ? '\u2014' : `${activeCount} site${activeCount !== 1 ? 's' : ''}` },
+          { label: 'Monitoring', value: loading ? '\u2014' : `${activeCount} alert${activeCount !== 1 ? 's' : ''}` },
           { label: 'Items Found', value: loading ? '\u2014' : totalMatches },
         ].map((stat) => (
           <div key={stat.label} className="bg-surface px-5 py-4">
@@ -70,7 +129,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Pro upsell for FREE tier (hide for admin) */}
-      {user?.tier === 'FREE' && !user?.isAdmin && searches.length > 0 && (
+      {user?.tier === 'FREE' && !user?.isAdmin && (individualSearches.length > 0 || groups.length > 0) && (
         <div className="border border-accent/20 bg-accent-subtle px-5 py-3 flex items-center justify-between gap-4 mb-6">
           <p className="text-xs text-accent">
             <span className="font-heading font-semibold tracking-wider">Free plan:</span>{' '}
@@ -119,7 +178,7 @@ export default function DashboardPage() {
       )}
 
       {/* Empty state */}
-      {!loading && !error && searches.length === 0 && (
+      {!loading && !error && individualSearches.length === 0 && groups.length === 0 && (
         <div className="card border-dashed text-center py-16">
           <div className="text-foreground-dim text-4xl mb-4 font-heading">[ ]</div>
           <h2 className="font-heading text-2xl tracking-wider text-foreground-muted mb-3">
@@ -135,9 +194,18 @@ export default function DashboardPage() {
       )}
 
       {/* Alert list */}
-      {!loading && searches.length > 0 && (
+      {!loading && (individualSearches.length > 0 || groups.length > 0) && (
         <div className="space-y-3">
-          {searches.map((search) => (
+          {groups.map((group) => (
+            <AlertCard
+              key={group.groupId}
+              group={group}
+              onToggleGroup={toggleGroup}
+              onDeleteGroup={deleteGroup}
+              onRefresh={refresh}
+            />
+          ))}
+          {individualSearches.map((search) => (
             <AlertCard
               key={search.id}
               search={search}

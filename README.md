@@ -1,6 +1,6 @@
 # FirearmAlert
 
-Canadian firearm market monitoring web app. Monitors retailer websites for user-defined keywords and sends email/SMS alerts when **new** matches are found. Includes a built-in test store for end-to-end testing of the notification pipeline.
+Canadian firearm market monitoring web app. Monitors 50+ retailer websites, classifieds, forums, and auction platforms for user-defined keywords and sends email/SMS alerts when **new** matches are found. Uses an adapter-based scraping framework with platform-specific adapters for Shopify, WooCommerce, BigCommerce, Magento, and more. Supports "Search All Sites" to scan across the entire monitored network in one click. Includes authenticated forum scanning with encrypted credential storage and a built-in test store for end-to-end testing.
 
 ---
 
@@ -10,9 +10,10 @@ Canadian firearm market monitoring web app. Monitors retailer websites for user-
 |-------|------|---------|
 | Frontend | Next.js 14 (App Router) + TailwindCSS | Dashboard, alert management, SEO pages |
 | Backend | Express.js + TypeScript | REST API, scraper orchestration, test store |
-| Database | PostgreSQL (Prisma ORM) | Users, searches, matches, notifications |
+| Database | PostgreSQL (Prisma ORM) | Users, searches, matches, monitored sites, health checks |
 | Queue | BullMQ + Redis | Scheduled scrape jobs |
-| Scraping | Axios + Cheerio | HTML parsing with keyword matching |
+| Scraping | Axios + Cheerio + adapter framework | Platform-aware HTML/API extraction |
+| Credential Encryption | AES-256-GCM | Encrypted storage for forum login credentials |
 | Auth | JWT (httpOnly cookies) + bcrypt | Session management |
 | Email | Resend | Alert notification emails |
 | SMS | Twilio | Alert notification SMS |
@@ -24,36 +25,45 @@ Canadian firearm market monitoring web app. Monitors retailer websites for user-
 ## Architecture Overview
 
 ```
-User creates alert (keyword + URL + interval)
-        │
-        ▼
-  ┌─────────────┐     ┌──────────────┐
-  │ Express API │────▶│ PostgreSQL   │  (Search, Match, Notification)
-  └──────┬──────┘     └──────────────┘
-         │
-         ▼
-  ┌─────────────┐     ┌──────────────┐
-  │ BullMQ      │◀───▶│ Redis        │  (Repeating jobs)
-  │ Worker      │     └──────────────┘
-  └──────┬──────┘
-         │ every N minutes (or 10s in test mode)
-         ▼
-  ┌─────────────┐
-  │ Scraper     │  Axios + Cheerio → parse HTML → extract matches
-  └──────┬──────┘
-         │
-         ▼
+User creates alert (keyword + URL) — or "Search All Sites"
+        |
+        v
+  +-------------+     +--------------+
+  | Express API |---->| PostgreSQL   |  (Search, Match, MonitoredSite, Notification)
+  +------+------+     +--------------+
+         |
+         v
+  +-------------+     +--------------+
+  | BullMQ      |<--->| Redis        |  (Repeating jobs)
+  | Worker      |     +--------------+
+  +------+------+
+         | every N minutes (or 10s in test mode)
+         v
+  +--------------------+
+  | Adapter Registry   |  Domain -> adapter lookup (cached 5min)
+  +--------+-----------+
+           |
+           v
+  +-----------------------+
+  | Scraper Engine (v2)   |
+  | 1. Try API (WC Store) |
+  | 2. Fetch HTML         |
+  | 3. Adapter extraction |
+  | 4. Paginate           |
+  +-----------+-----------+
+              |
+              v
   Delta Detection (URL-based)
-  ├── New URLs   → INSERT into matches table
-  │              → Create Notification → Send Email/SMS
-  └── Known URLs → UPDATE title/price only (no notification)
+  +-- New URLs   -> INSERT into matches table
+  |              -> Create Notification -> Send Email/SMS
+  +-- Known URLs -> UPDATE title/price/thumbnail only (no notification)
 ```
 
 ### Deduplication & Delta Detection
 
 1. **DB-level**: `@@unique([searchId, url])` constraint on the `Match` model prevents duplicate rows.
 2. **Worker-level**: Before inserting, the worker queries all existing match URLs for the search. Only URLs not already in the DB are treated as "new" and trigger notifications.
-3. **Content hash**: A SHA-256 hash of sorted match URLs is stored as `lastMatchHash` on the Search. If the hash hasn't changed since the last check, the worker skips all processing (no DB writes, no notifications).
+3. **Content hash**: A SHA-256 hash of sorted match URLs is stored as `lastMatchHash` on the Search. If the hash hasn't changed since the last check, the worker skips all processing.
 
 ### Notification Flow
 
@@ -65,63 +75,147 @@ User creates alert (keyword + URL + interval)
 
 ---
 
+## Scraper Framework
+
+The scraper uses an **adapter-based architecture** where each site is matched to the best adapter for its platform. The adapter registry reads from the `MonitoredSite` database table and caches lookups for 5 minutes.
+
+### Adapter Pipeline
+
+```
+scrapeWithAdapter(url, keyword, options)
+  |
+  +-> Resolve adapter via AdapterRegistry (domain -> MonitoredSite -> adapterType)
+  |
+  +-> Step 1: Try API search (if adapter supports it)
+  |   - WooCommerce Store API: /wp-json/wc/store/v1/products?search=...
+  |   - WooCommerce WP REST: /wp-json/wp/v2/product?search=...
+  |   - iCollector CloudSearch JSON API
+  |   - Only accepted if results include prices (otherwise falls back to HTML)
+  |
+  +-> Step 2: Fetch search URL + adapter HTML extraction
+  |   - Uses searchUrlPattern from DB, or adapter's getSearchUrl()
+  |   - Cheerio-based extraction with platform-specific selectors
+  |
+  +-> Step 3: Paginate (if adapter supports getNextPageUrl)
+  +-> Step 4: Set seller, deduplicate by URL, compute content hash
+```
+
+### Adapters
+
+| Adapter | Platform | Sites | Search URL | Key Selectors |
+|---------|----------|-------|------------|---------------|
+| `ShopifyAdapter` | Shopify | 2 | `/search?q={kw}&type=product` | `[data-product-id]`, `.product-card` |
+| `WooCommerceAdapter` | WooCommerce | 17 | `/?s={kw}&post_type=product` | `li.product`, `.wd-product`, `div[class*="product"]` |
+| `GenericRetailAdapter` | BigCommerce, Magento, nopCommerce, custom PHP | 23 | Configurable via `searchUrlPattern` | `.card`, `.product-item`, link-based fallback |
+| `GunpostAdapter` | Drupal classifieds | 1 | `/ads?key={kw}` | Listing card selectors |
+| `XenForoAdapter` | XenForo forums | 2 | `/search/?q={kw}&t=post` | `.structItem`, thread selectors |
+| `VBulletinAdapter` | vBulletin forums | — | `/search.php?do=process` | `.threadtitle a` |
+| `ICollectorAdapter` | iCollector | 1 | CloudSearch JSON API | JSON lot parsing |
+| `HiBidAdapter` | HiBid | 1 | `?searchPhrase={kw}` | Lot card selectors |
+| `GenericAuctionAdapter` | Generic auctions | 2 | Site-specific | `[class*="lot"]`, bid price extraction |
+| `GenericAdapter` | Ultimate fallback | 1 | `/search?q={kw}` | All selector families |
+
+### Extraction Features
+
+- **Smart title extraction** — Prefers `.card-title`, `.product-title`, `[class*="title"]` over raw h-tags (avoids grabbing brand-only headings on BigCommerce)
+- **Multi-strategy price extraction** — Tries platform-specific price classes (`.price--withoutTax`, `.woocommerce-Price-amount`), then iterates all `[class*="price"]` elements, then falls back to full-text regex
+- **Lazy-load thumbnail handling** — Prefers `data-src` over `src`, detects placeholder/loading SVGs
+- **Link-based fallback** — When no product card selectors match, extracts from `<a>` tags whose text contains the keyword
+- **WooCommerce API** — Tries Store API and WP REST API before HTML (5s timeout in fast mode)
+- **Stock detection** — Heuristic based on "in stock" / "out of stock" / disabled cart button patterns
+- **Price from forum titles** — Extracts "$450 OBO" patterns from marketplace thread titles
+- **Auction bid prices** — Extracts "Current Bid: $1,200" patterns
+
+### Monitored Sites (50 active)
+
+| Category | Count | Examples |
+|----------|-------|---------|
+| Retailers (WooCommerce) | 17 | Lever Arms, Corwin Arms, Rangeview Sports, Marstar, CTC Supplies |
+| Retailers (BigCommerce) | 8 | Wolverine Supplies, Al Flaherty's, The Ammo Source, Frontier Firearms |
+| Retailers (Magento) | 3 | Ellwood Epps, RDSC, True North Arms |
+| Retailers (Shopify) | 2 | Fish World Guns, Jo Brook Outdoors |
+| Retailers (Other) | 12 | iRunGuns, Reliable Gun, Cabela's, Bass Pro, Canadian Tire, SAIL |
+| Forums | 2 | Canadian Gun Nutz (XenForo), Gun Owners of Canada (XenForo) |
+| Classifieds | 2 | GunPost, TownPost |
+| Auctions | 4 | iCollector, HiBid Canada, Miller & Miller, Switzer's |
+
+### HTTP Client
+
+- **Sucuri WAF bypass** — Solves JavaScript challenges, carries cookies across redirect chains, normalizes `www.` domain variants
+- **User agent rotation** — Random selection from 8 modern browser user agents
+- **Rate limiting** — Randomized delays (800–2500ms) between requests
+- **Retry with backoff** — 3 attempts with exponential backoff
+
+---
+
+## Search All Sites
+
+The "Search All Sites" feature creates a grouped alert that scans across all 50 enabled monitored sites simultaneously.
+
+### How it works:
+
+1. User creates an alert with "Search All Canadian Sites" toggle enabled
+2. Backend generates a `searchAllGroupId` and creates one `Search` record per enabled `MonitoredSite`
+3. Group scan endpoint scrapes all sites in parallel (all-concurrent with 20s per-site timeout)
+4. Results are aggregated and displayed in a unified match history sorted by date
+
+### Group API:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/searches` (with `searchAll: true`) | Create grouped alert |
+| GET | `/api/searches/group/:groupId` | Get group with aggregated matches |
+| POST | `/api/searches/group/:groupId/scan` | Scan all sites (SSE progress events) |
+| PATCH | `/api/searches/group/:groupId/toggle` | Pause/resume all in group |
+| DELETE | `/api/searches/group/:groupId` | Delete entire group |
+
+---
+
 ## Database Schema
 
 ```prisma
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  phone        String?
-  tier         Tier     @default(FREE)    // FREE | PRO
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  searches     Search[]
+  id, email (unique), passwordHash, phone?, tier (FREE|PRO)
+  -> searches[], credentials[]
+}
+
+model SiteCredential {
+  id, userId, domain, username, encryptedPassword (AES-256-GCM), sessionCookies?
+  @@unique([userId, domain])
 }
 
 model Search {
-  id               String           @id @default(cuid())
-  userId           String?                              // null = guest
-  keyword          String
-  websiteUrl       String
-  checkInterval    Int              @default(30)         // 0=10s test, 5/30/60 min
-  notificationType NotificationType @default(EMAIL)      // EMAIL | SMS | BOTH
-  notifyEmail      String?                              // guest-only
-  isActive         Boolean          @default(true)
-  inStockOnly      Boolean          @default(false)
-  maxPrice         Float?
-  lastChecked      DateTime?
-  lastMatchHash    String?                              // SHA-256 of sorted URLs
-  expiresAt        DateTime?                            // guest 24h expiry
-  matches          Match[]
-  notifications    Notification[]
+  id, userId?, credentialId?, keyword, websiteUrl,
+  checkInterval (0=10s test, 5/30/60 min),
+  notificationType (EMAIL|SMS|BOTH), notifyEmail?,
+  isActive, inStockOnly, maxPrice?, lastChecked?, lastMatchHash?,
+  expiresAt?, searchAllGroupId?
+  -> matches[], notifications[]
 }
 
 model Match {
-  id            String              @id @default(cuid())
-  searchId      String
-  title         String
-  price         Float?
-  url           String
-  hash          String
-  foundAt       DateTime            @default(now())
-  notifications NotificationMatch[]
-  @@unique([searchId, url])         // prevents duplicates
+  id, searchId, title, price?, url, hash, thumbnail?, postDate?, seller?, foundAt
+  @@unique([searchId, url])
 }
 
 model Notification {
-  id       String              @id @default(cuid())
-  searchId String
-  type     NotificationType
-  sentAt   DateTime            @default(now())
-  status   String              @default("sent")   // pending | sent | failed
-  matches  NotificationMatch[]
+  id, searchId, type, sentAt, status (pending|sent|failed)
+  -> matches[] (via NotificationMatch join)
 }
 
-model NotificationMatch {
-  notificationId String
-  matchId        String
-  @@id([notificationId, matchId])
+model MonitoredSite {
+  id, domain (unique), name, url, siteType, adapterType,
+  isEnabled, requiresSucuri, requiresAuth, searchUrlPattern?, notes?
+  -> healthChecks[]
+}
+
+model SiteHealthCheck {
+  id, siteId, isReachable, canScrape, responseTimeMs?, errorMessage?, checkedAt
+  @@index([siteId, checkedAt])
+}
+
+model SiteMap {
+  id, domain (unique), siteType, listingUrls, searchUrl?, hitCount
 }
 ```
 
@@ -169,7 +263,7 @@ Edit `backend/.env`:
 | `TWILIO_ACCOUNT_SID` | No | From [twilio.com](https://twilio.com) (for SMS) |
 | `TWILIO_AUTH_TOKEN` | No | Twilio auth token |
 | `TWILIO_FROM_NUMBER` | No | Twilio phone number |
-| `ADMIN_EMAILS` | No | Comma-separated admin emails (e.g., `a@b.com,admin@example.com`) |
+| `ADMIN_EMAILS` | No | Comma-separated admin emails |
 
 ### 3. Configure frontend environment
 
@@ -197,7 +291,15 @@ npm run db:push
 
 Runs `prisma db push` — creates tables from the schema and generates the Prisma client.
 
-### 6. Start both servers
+### 6. Seed monitored sites
+
+```bash
+cd backend && npx ts-node src/scripts/seed-sites.ts
+```
+
+Populates the `MonitoredSite` table with 50 Canadian firearm retailer/forum/auction sites, each tagged with the correct adapter type and search URL pattern.
+
+### 7. Start both servers
 
 ```bash
 npm run dev
@@ -210,7 +312,7 @@ npm run dev
 | Test Store | http://localhost:4000/test-page |
 | Notification Preview | http://localhost:4000/test-page/notification-preview |
 | Debug Log (admin) | http://localhost:3000/dashboard/admin/debug |
-| Prisma Studio | `npm run db:studio` → http://localhost:5555 |
+| Prisma Studio | `npm run db:studio` -> http://localhost:5555 |
 
 ---
 
@@ -223,6 +325,7 @@ Admin users are defined by the `ADMIN_EMAILS` environment variable. Admins get:
 3. **Test Store access** — Dynamic product page at `/test-page` with add/remove/reset controls and notification preview.
 4. **Admin toolbar** in the dashboard — Quick links to Test Store, Debug Log, Match History.
 5. **Debug Log SSE** — Real-time streaming of scrape events, match detections, email/SMS sends.
+6. **Site management** — CRUD for monitored sites, health check triggers, test scrape.
 
 ### Admin Account Setup
 
@@ -249,9 +352,7 @@ The test store (`/test-page`) is a dynamic in-memory product listing page that m
 5. Add a new listing with a title containing the keyword.
 6. Within 10 seconds, the worker detects the new listing and sends a notification.
 7. Click **Scan Now** on the alert card to see results with **NEW** badges.
-8. Click the **match count** on any alert card to expand and see all historical matches (newest first).
-9. Click **View Notification** to see the notification landing page.
-10. Visit **Preview Notification** in the test portal to see mock notification landing page, email, and SMS.
+8. Click the **match count** on any alert card to expand and see all historical matches.
 
 ### Test Store Admin Controls:
 
@@ -259,7 +360,7 @@ The test store (`/test-page`) is a dynamic in-memory product listing page that m
 - **Remove** — Delete individual listings
 - **Reset** — Restore all default listings
 - **Recent Notifications** panel — Preview links to notification landing pages
-- **Preview Notification** — Dedicated page (`/test-page/notification-preview`) showing mock notification landing page, email template, and SMS text exactly as users would see them
+- **Preview Notification** — Dedicated page showing mock notification landing page, email template, and SMS text
 
 ---
 
@@ -269,35 +370,66 @@ The test store (`/test-page`) is a dynamic in-memory product listing page that m
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/auth/register` | — | Create account (returns `isAdmin` flag) |
-| POST | `/api/auth/login` | — | Login (returns JWT cookie + `isAdmin` flag) |
+| POST | `/api/auth/register` | — | Create account |
+| POST | `/api/auth/login` | — | Login (returns JWT cookie) |
 | POST | `/api/auth/logout` | — | Clear JWT cookie |
-| GET | `/api/auth/me` | Cookie | Current user info (includes `isAdmin`) |
+| GET | `/api/auth/me` | Cookie | Current user info |
 | PATCH | `/api/auth/profile` | Cookie | Update phone number |
 
 ### Searches (Alerts)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/searches` | Cookie | List all user's alerts |
-| POST | `/api/searches` | Optional | Create alert (guest or authenticated) |
-| GET | `/api/searches/:id` | Cookie | Single alert with recent matches |
-| DELETE | `/api/searches/:id` | Cookie | Delete alert + cancel scheduled job |
+| GET | `/api/searches` | Cookie | List user's alerts |
+| POST | `/api/searches` | Optional | Create alert (supports `searchAll: true`) |
+| GET | `/api/searches/:id` | Cookie | Single alert with matches |
+| DELETE | `/api/searches/:id` | Cookie | Delete alert |
 | PATCH | `/api/searches/:id/toggle` | Cookie | Pause/resume alert |
-| GET | `/api/searches/matches/:id` | Cookie | Match history (up to 50) |
-| POST | `/api/searches/:id/scan` | Cookie | Manual scan — persists new matches, triggers notifications, returns results with `isNew` flags |
+| POST | `/api/searches/:id/scan` | Cookie | Manual scan with SSE progress |
+| GET | `/api/searches/matches/:searchId` | Cookie | Match history |
 
-### Backend Pages (HTML)
+### Search All Groups
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/test-page` | — | Test store listings (admin sees control panel) |
-| GET | `/test-page/notification-preview` | — | Mock notification preview (landing page, email, SMS) |
-| POST | `/test-page/add` | Admin | Add a test listing |
-| POST | `/test-page/remove/:slug` | Admin | Remove a test listing |
-| POST | `/test-page/reset` | Admin | Reset to default listings |
-| GET | `/notifications/:id` | — | Notification landing page (public) |
-| GET | `/admin/debug/events` | Admin | SSE stream of debug events |
+| GET | `/api/searches/group/:groupId` | Cookie | Group with aggregated matches |
+| POST | `/api/searches/group/:groupId/scan` | Cookie | Parallel scan all sites (SSE) |
+| PATCH | `/api/searches/group/:groupId/toggle` | Cookie | Pause/resume group |
+| DELETE | `/api/searches/group/:groupId` | Cookie | Delete entire group |
+
+### Credentials
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/searches/credentials` | Cookie | List stored site credentials |
+| POST | `/api/searches/credentials` | Cookie | Store encrypted credential |
+| DELETE | `/api/searches/credentials/:id` | Cookie | Delete credential |
+
+### Admin
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/admin/sites` | Admin | List all monitored sites |
+| POST | `/api/admin/sites` | Admin | Add monitored site |
+| PATCH | `/api/admin/sites/:id` | Admin | Update site config |
+| DELETE | `/api/admin/sites/:id` | Admin | Remove site |
+| POST | `/api/admin/sites/:id/test` | Admin | Test scrape a site |
+| GET | `/api/admin/health` | Admin | Latest health check results |
+| POST | `/api/admin/health/run` | Admin | Trigger manual health check |
+| POST | `/api/admin/health/prune` | Admin | Prune old health data |
+| GET | `/api/admin/debug-log` | Admin | SSE stream of debug events |
+| GET | `/api/admin/debug-log/history` | Admin | Buffered debug events (JSON) |
+
+### Backend Pages (HTML)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/test-page` | Test store listings |
+| GET | `/test-page/notification-preview` | Mock notification preview |
+| POST | `/test-page/add` | Add test listing (admin) |
+| POST | `/test-page/remove/:slug` | Remove test listing (admin) |
+| POST | `/test-page/reset` | Reset test listings (admin) |
+| GET | `/notifications/:id` | Notification landing page (public) |
 
 ---
 
@@ -305,109 +437,133 @@ The test store (`/test-page`) is a dynamic in-memory product listing page that m
 
 ```
 firearm-alert/
-├── package.json              # Root workspace config
-├── docker-compose.yml        # Local PostgreSQL + Redis
-├── README.md                 # This file
-│
-├── frontend/                 # Next.js 14 app (Vercel)
-│   ├── package.json
-│   ├── next.config.ts        # API proxy rewrite rules
-│   ├── tailwind.config.ts    # Tactical dark theme tokens
-│   ├── vercel.json           # Vercel deployment config
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── layout.tsx          # Root layout (Navbar)
-│   │   │   ├── page.tsx            # Landing page (SEO hero)
-│   │   │   ├── globals.css         # TailwindCSS base styles
-│   │   │   ├── sitemap.ts          # Dynamic sitemap
-│   │   │   ├── robots.ts           # robots.txt
-│   │   │   ├── login/page.tsx
-│   │   │   ├── register/page.tsx
-│   │   │   ├── alerts/[slug]/page.tsx  # SEO programmatic pages
-│   │   │   └── dashboard/
-│   │   │       ├── layout.tsx      # Auth guard (cookie check)
-│   │   │       ├── page.tsx        # Alert list + stats (Monitoring / Items Found)
-│   │   │       ├── alerts/new/page.tsx  # Create alert form
-│   │   │       ├── history/page.tsx     # All match history
-│   │   │       └── admin/debug/page.tsx # Real-time debug log
-│   │   ├── components/
-│   │   │   ├── Navbar.tsx
-│   │   │   ├── GuestSearchForm.tsx
-│   │   │   └── AlertCard.tsx       # Alert card with Scan Now + expandable match history
-│   │   └── lib/
-│   │       ├── api.ts              # Typed API client
-│   │       └── hooks.ts            # useAuth, useSearches hooks
-│   └── .env.local.example
-│
-└── backend/                  # Express API + worker (Railway)
-    ├── package.json
-    ├── tsconfig.json
-    ├── railway.json          # Railway build config
-    ├── Procfile              # Process command
-    ├── .env.example
-    ├── prisma/
-    │   └── schema.prisma     # Full DB schema
-    └── src/
-        ├── index.ts          # Express app, test store, notification page, notification preview
-        ├── config.ts         # Env var config + validation
-        ├── lib/
-        │   └── prisma.ts     # Prisma client singleton
-        ├── routes/
-        │   ├── auth.ts       # Register, login, logout, me, profile
-        │   └── searches.ts   # CRUD, toggle, scan, match history
-        ├── services/
-        │   ├── scraper.ts    # Axios + Cheerio scraping engine
-        │   ├── queue.ts      # BullMQ queue + scheduleSearch
-        │   ├── worker.ts     # Job processor (delta detection)
-        │   ├── email.ts      # Resend email (NEW badges, landing URL)
-        │   ├── sms.ts        # Twilio SMS
-        │   └── debugLog.ts   # In-memory event log + SSE
-        ├── middleware/
-        │   ├── auth.ts       # requireAuth, optionalAuth, requireAdmin
-        │   └── rateLimit.ts  # express-rate-limit (auth + guest)
-        └── scripts/
-            └── test-scraper.ts  # CLI scraper test tool
++-- package.json              # Root workspace config (npm workspaces)
++-- docker-compose.yml        # Local PostgreSQL + Redis
++-- README.md
+|
++-- frontend/                 # Next.js 14 app (Vercel)
+|   +-- src/
+|   |   +-- app/
+|   |   |   +-- layout.tsx          # Root layout (Navbar)
+|   |   |   +-- page.tsx            # Landing page (SEO hero)
+|   |   |   +-- login/page.tsx
+|   |   |   +-- register/page.tsx
+|   |   |   +-- alerts/[slug]/page.tsx  # SEO programmatic pages
+|   |   |   +-- dashboard/
+|   |   |       +-- layout.tsx      # Auth guard
+|   |   |       +-- page.tsx        # Alert list + stats
+|   |   |       +-- alerts/new/page.tsx  # Create alert / Search All
+|   |   |       +-- history/page.tsx     # All match history
+|   |   |       +-- admin/debug/page.tsx # Real-time debug log
+|   |   +-- components/
+|   |   |   +-- Navbar.tsx
+|   |   |   +-- GuestSearchForm.tsx
+|   |   |   +-- AlertCard.tsx       # Alert card with scan, match history, thumbnails
+|   |   +-- lib/
+|   |       +-- api.ts              # Typed API client (Search, Match, MonitoredSite types)
+|   |       +-- hooks.ts            # useAuth, useSearches hooks
+|
++-- backend/                  # Express API + worker (Railway)
+    +-- prisma/
+    |   +-- schema.prisma     # Full DB schema
+    +-- src/
+        +-- index.ts          # Express app, test store, notification pages
+        +-- config.ts         # Env var config + validation
+        +-- lib/
+        |   +-- prisma.ts     # Prisma client singleton
+        |   +-- crypto.ts     # AES-256-GCM encrypt/decrypt
+        +-- routes/
+        |   +-- auth.ts       # Register, login, logout, me, profile
+        |   +-- searches.ts   # CRUD, toggle, scan, group scan, credentials
+        |   +-- admin.ts      # Site management, health checks, debug log
+        +-- services/
+        |   +-- scraper/              # Adapter-based scraping framework
+        |   |   +-- index.ts          # scrapeWithAdapter() orchestrator
+        |   |   +-- types.ts          # ScrapedMatch, ScrapeResult, SiteAdapter interfaces
+        |   |   +-- adapter-registry.ts  # Domain -> adapter lookup (DB-backed, cached)
+        |   |   +-- http-client.ts    # fetchPage(), Sucuri WAF bypass, UA rotation
+        |   |   +-- adapters/
+        |   |   |   +-- base.ts             # AbstractAdapter (shared helpers)
+        |   |   |   +-- shopify.ts          # Shopify stores
+        |   |   |   +-- woocommerce.ts      # WooCommerce (API + HTML)
+        |   |   |   +-- generic-retail.ts   # BigCommerce, Magento, custom (+ link fallback)
+        |   |   |   +-- generic.ts          # Ultimate fallback
+        |   |   |   +-- forum-xenforo.ts    # XenForo forums
+        |   |   |   +-- forum-vbulletin.ts  # vBulletin forums
+        |   |   |   +-- classifieds-gunpost.ts  # GunPost.ca
+        |   |   |   +-- auction-icollector.ts   # iCollector API
+        |   |   |   +-- auction-hibid.ts    # HiBid
+        |   |   |   +-- auction-generic.ts  # Generic auction HTML
+        |   |   +-- utils/
+        |   |       +-- price.ts      # extractPrice(), extractPriceFromTitle(), extractBidPrice()
+        |   |       +-- stock.ts      # isInStock()
+        |   |       +-- url.ts        # resolveUrl(), isBareDomain(), normalizeDomain()
+        |   |       +-- html.ts       # detectSiteType(), isLoginPage()
+        |   +-- scraper.ts          # Legacy scraper (deprecated, kept for reference)
+        |   +-- site-navigator.ts   # Auto-search form detection for bare domain URLs
+        |   +-- auth-manager.ts     # Forum login (vBulletin, XenForo), session caching
+        |   +-- health-monitor.ts   # Site health checking, DB persistence
+        |   +-- queue.ts            # BullMQ queue + scheduleSearch
+        |   +-- worker.ts           # Job processor (delta detection, notifications)
+        |   +-- email.ts            # Resend email (NEW badges, landing URL)
+        |   +-- sms.ts              # Twilio SMS
+        |   +-- debugLog.ts         # In-memory event log + SSE
+        +-- middleware/
+        |   +-- auth.ts       # requireAuth, optionalAuth, requireAdmin
+        |   +-- rateLimit.ts  # express-rate-limit
+        +-- scripts/
+            +-- seed-sites.ts    # Populate MonitoredSite table (50 sites)
+            +-- test-scrape.ts   # Search URL pattern tester
+            +-- test-scraper.ts  # CLI scraper test tool
 ```
 
 ---
 
 ## Key Design Decisions
 
-1. **URL-based delta detection** instead of content hash comparison — Content hashes change when any product detail (price, title) changes, causing false "new" notifications. URL-based detection only flags genuinely new products.
+1. **Adapter-based scraping** — Each site is matched to the best adapter for its e-commerce platform (Shopify, WooCommerce, BigCommerce, Magento, etc.) via the `MonitoredSite` database table. This replaces the old monolithic scraper with a pluggable framework where adding support for a new platform means writing one adapter class.
 
-2. **Notification created before sending** — The notification ID is needed for the landing page URL embedded in the email/SMS body. So the DB record is created first with `status: 'pending'`, then updated to `sent` or `failed` after delivery.
+2. **API-first, HTML-fallback** — WooCommerce sites are scraped via the public Store API first (which returns structured JSON with prices, images, stock status). HTML scraping is only used when the API isn't available or doesn't return complete data (e.g., missing prices).
 
-3. **NotificationMatch join table** — Links specific matches to specific notifications, so the landing page shows exactly which items triggered that notification.
+3. **URL-based delta detection** instead of content hash comparison — Content hashes change when any product detail (price, title) changes, causing false "new" notifications. URL-based detection only flags genuinely new products.
 
-4. **In-memory test store** — Test products are stored in memory (not DB) so they reset on server restart. This keeps the test environment clean and separate from real data.
+4. **Notification created before sending** — The notification ID is needed for the landing page URL embedded in the email/SMS body. So the DB record is created first with `status: 'pending'`, then updated to `sent` or `failed` after delivery.
 
-5. **Admin via env var** — `ADMIN_EMAILS` is a comma-separated list. No DB column needed — checked at runtime against the JWT email claim.
+5. **MonitoredSite table** — Site configuration is stored in the database (not hardcoded) so it can be updated via the admin API. The seed script provides the initial dataset, but sites can be added/edited/disabled through the admin panel.
 
-6. **httpOnly JWT cookies** — Tokens are stored in httpOnly cookies (not localStorage) to prevent XSS access. The frontend Next.js config proxies API requests to the backend, so cookies are same-origin.
+6. **Search All as grouped searches** — Rather than a special "search all" endpoint, each Search All alert creates one `Search` per enabled site, linked by `searchAllGroupId`. This reuses the existing per-site scraping and delta detection logic.
 
-7. **`checkInterval: 0` = 10 seconds** — A special sentinel value for admin-only rapid testing. The queue converts `0` to 10,000ms instead of the normal `minutes * 60 * 1000`.
+7. **In-memory test store** — Test products are stored in memory (not DB) so they reset on server restart. This keeps the test environment clean and separate from real data.
+
+8. **Admin via env var** — `ADMIN_EMAILS` is a comma-separated list. No DB column needed — checked at runtime against the JWT email claim.
+
+9. **httpOnly JWT cookies** — Tokens are stored in httpOnly cookies (not localStorage) to prevent XSS access. The frontend Next.js config proxies API requests to the backend, so cookies are same-origin.
+
+10. **Encrypted credential storage** — Forum credentials are encrypted with AES-256-GCM (key derived from JWT_SECRET via PBKDF2) before database storage. Session cookies are cached to avoid re-logging in on every scan cycle.
 
 ---
 
-## Scraper Engine
+## Forum Authentication
 
-The scraper (`backend/src/services/scraper.ts`) handles diverse retailer page structures:
+Forums requiring login (CGN, Gun Owners of Canada) are supported:
 
-1. **Product card detection** — Tries 20+ CSS selectors in order of specificity (e-commerce → classified → generic article).
-2. **Keyword matching** — Case-insensitive text matching within detected product containers.
-3. **Auto-search fallback** — If the URL is a bare domain with no matches, the scraper:
-   - Detects search forms on the page and submits the keyword
-   - Falls back to common search URL patterns (WordPress, Shopify, Magento, Drupal)
-4. **Price extraction** — Regex-based extraction supporting `$1,299.99`, `CAD 499`, etc.
-5. **Stock detection** — Heuristic based on "in stock" / "out of stock" / disabled cart button patterns.
-6. **Deduplication** — In-scrape title-based dedup prevents the same product from appearing twice.
-7. **Anti-detection** — Random user agent rotation, randomized delays (800-2500ms), standard browser headers.
+1. User provides forum credentials when creating an alert (optional "Site Login" toggle)
+2. Credentials are encrypted with **AES-256-GCM** before storage
+3. On each scan, the worker:
+   - Checks for cached session cookies and validates them
+   - If expired or missing, decrypts the password and logs in
+   - Passes session cookies to the scraper for authenticated page fetches
+   - Caches new session cookies in the DB for reuse
+
+Supported forum software:
+- **XenForo** — Fetches CSRF token (`_xfToken`), POST login, expects `xf_session` cookie
+- **vBulletin** — POST login with `vb_login_username`/`vb_login_password`, expects `bbsessionhash` cookie
 
 ---
 
 ## Deployment
 
-### Frontend → Vercel
+### Frontend -> Vercel
 
 1. Push to GitHub
 2. Import repo in Vercel dashboard
@@ -415,7 +571,7 @@ The scraper (`backend/src/services/scraper.ts`) handles diverse retailer page st
 4. Add env var: `NEXT_PUBLIC_API_URL=https://your-backend.railway.app`
 5. Deploy — Vercel auto-detects Next.js
 
-### Backend → Railway
+### Backend -> Railway
 
 1. Push to GitHub
 2. Create Railway project, connect repo
@@ -425,6 +581,7 @@ The scraper (`backend/src/services/scraper.ts`) handles diverse retailer page st
 6. Set `BACKEND_URL` to the Railway public URL
 7. Set `FRONTEND_URL` to the Vercel URL
 8. Railway auto-detects `railway.json` and deploys
+9. Run `npx ts-node src/scripts/seed-sites.ts` to populate monitored sites
 
 ---
 

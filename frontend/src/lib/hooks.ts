@@ -77,5 +77,25 @@ export function useSearches() {
     }
   }, []);
 
-  return { searches, loading, error, refresh, toggleSearch, deleteSearch };
+  const toggleGroup = useCallback(async (groupId: string) => {
+    try {
+      const data = await searchesApi.toggleGroup(groupId);
+      setSearches((prev) =>
+        prev.map((s) => s.searchAllGroupId === groupId ? { ...s, isActive: data.isActive } : s)
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle group');
+    }
+  }, []);
+
+  const deleteGroup = useCallback(async (groupId: string) => {
+    try {
+      await searchesApi.deleteGroup(groupId);
+      setSearches((prev) => prev.filter((s) => s.searchAllGroupId !== groupId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete group');
+    }
+  }, []);
+
+  return { searches, loading, error, refresh, toggleSearch, deleteSearch, toggleGroup, deleteGroup };
 }

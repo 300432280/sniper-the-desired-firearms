@@ -57,6 +57,6 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 
 export function signToken(payload: AuthPayload): string {
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiry as string,
-  });
+    expiresIn: config.jwtExpiry,
+  } as jwt.SignOptions);
 }

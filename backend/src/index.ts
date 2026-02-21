@@ -8,7 +8,8 @@ import { generalLimiter, authLimiter } from './middleware/rateLimit';
 import authRouter from './routes/auth';
 import searchesRouter from './routes/searches';
 import adminRouter from './routes/admin';
-import { startWorker } from './services/worker';
+import { startWorker, startHealthWorker } from './services/worker';
+import { scheduleHealthChecks } from './services/queue';
 import { prisma } from './lib/prisma';
 
 // Check if the request has a valid admin JWT cookie
@@ -474,9 +475,15 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start BullMQ worker in same process for MVP
+// Start BullMQ workers in same process for MVP
 // In production, split into separate Railway service for horizontal scaling
 const worker = startWorker();
+const healthWorker = startHealthWorker();
+
+// Schedule daily health check cron
+scheduleHealthChecks().catch((err) => {
+  console.error('[Server] Failed to schedule health checks:', err.message);
+});
 
 const server = app.listen(config.port, () => {
   console.log(`[Server] Running on port ${config.port} (${config.nodeEnv})`);
@@ -486,7 +493,7 @@ const server = app.listen(config.port, () => {
 // Graceful shutdown
 const shutdown = async () => {
   console.log('[Server] Shutting down gracefully...');
-  await worker.close();
+  await Promise.all([worker.close(), healthWorker.close()]);
   server.close(() => {
     console.log('[Server] Server closed');
     process.exit(0);

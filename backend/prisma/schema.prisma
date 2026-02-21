@@ -8,22 +8,42 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String           @id @default(cuid())
+  email        String           @unique
   passwordHash String
   phone        String?
-  tier         Tier     @default(FREE)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  tier         Tier             @default(FREE)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
   searches     Search[]
+  credentials  SiteCredential[]
 
   @@map("users")
+}
+
+model SiteCredential {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain            String
+  username          String
+  encryptedPassword String
+  sessionCookies    String?
+  lastLogin         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  searches          Search[]
+
+  @@unique([userId, domain])
+  @@map("site_credentials")
 }
 
 model Search {
   id               String           @id @default(cuid())
   userId           String?
   user             User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId     String?
+  credential       SiteCredential?  @relation(fields: [credentialId], references: [id], onDelete: SetNull)
   keyword          String
   websiteUrl       String
   checkInterval    Int              @default(30)
@@ -35,6 +55,7 @@ model Search {
   lastChecked      DateTime?
   lastMatchHash    String?
   expiresAt        DateTime?
+  searchAllGroupId String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   matches          Match[]
@@ -51,6 +72,9 @@ model Match {
   price         Float?
   url           String
   hash          String
+  thumbnail     String?
+  postDate      DateTime?
+  seller        String?
   foundAt       DateTime            @default(now())
   notifications NotificationMatch[]
 
@@ -85,8 +109,56 @@ enum Tier {
   PRO
 }
 
+model SiteMap {
+  id            String   @id @default(cuid())
+  domain        String   @unique
+  siteType      String
+  listingUrls   String   @default("[]")
+  searchUrl     String?
+  discoveredAt  DateTime @default(now())
+  expiresAt     DateTime
+  hitCount      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("site_maps")
+}
+
 enum NotificationType {
   EMAIL
   SMS
   BOTH
+}
+
+model MonitoredSite {
+  id             String            @id @default(cuid())
+  domain         String            @unique
+  name           String
+  url            String
+  siteType       String            @default("generic")
+  adapterType    String            @default("generic")
+  isEnabled      Boolean           @default(true)
+  requiresSucuri Boolean           @default(false)
+  requiresAuth   Boolean           @default(false)
+  searchUrlPattern String?
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  healthChecks   SiteHealthCheck[]
+
+  @@map("monitored_sites")
+}
+
+model SiteHealthCheck {
+  id             String        @id @default(cuid())
+  siteId         String
+  site           MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  isReachable    Boolean
+  canScrape      Boolean
+  responseTimeMs Int?
+  errorMessage   String?
+  checkedAt      DateTime      @default(now())
+
+  @@index([siteId, checkedAt])
+  @@map("site_health_checks")
 }
