@@ -163,6 +163,26 @@ router.post('/', optionalAuth, async (req: Request, res: Response) => {
   }
 
   const { websiteUrls, keyword, credentialId, searchAll, ...settings } = parse.data;
+  const userTier = req.user.tier || 'FREE';
+
+  // FREE tier restrictions
+  if (userTier === 'FREE') {
+    // Force daily interval and EMAIL-only notifications
+    settings.checkInterval = 60 as CheckInterval; // Slowest allowed interval
+    settings.notificationType = 'EMAIL';
+
+    // Cap at 3 active alerts
+    const activeCount = await prisma.search.count({
+      where: { userId: req.user.userId, isActive: true },
+    });
+    if (activeCount >= 3) {
+      return res.status(403).json({
+        error: 'Free accounts are limited to 3 active alerts. Upgrade to Pro for unlimited alerts.',
+        tier: 'FREE',
+        limit: 3,
+      });
+    }
+  }
   const searches: any[] = [];
   const allMatches: any[] = [];
   let loginRequired = false;
@@ -327,6 +347,8 @@ router.get('/group/:groupId', requireAuth, async (req: Request, res: Response) =
 
     const totalMatches = searches.reduce((sum, s) => sum + s._count.matches, 0);
     const sitesWithMatches = searches.filter((s) => s._count.matches > 0).length;
+    const userTier = req.user!.tier || 'FREE';
+    const matchCap = userTier === 'FREE' ? 30 : 100;
 
     return res.json({
       groupId,
@@ -334,7 +356,8 @@ router.get('/group/:groupId', requireAuth, async (req: Request, res: Response) =
       siteCount: searches.length,
       sitesWithMatches,
       totalMatches,
-      matches: allMatches.slice(0, 100), // Cap at 100 for performance
+      tier: userTier,
+      matches: allMatches.slice(0, matchCap),
       searches: searches.map((s) => ({
         id: s.id,
         websiteUrl: s.websiteUrl,
@@ -661,13 +684,16 @@ router.get('/matches/:searchId', requireAuth, async (req: Request, res: Response
     });
     if (!search) return res.status(404).json({ error: 'Search not found' });
 
+    const userTier = req.user!.tier || 'FREE';
+    const matchLimit = userTier === 'FREE' ? 10 : 50;
+
     const matches = await prisma.match.findMany({
       where: { searchId: search.id },
       orderBy: { foundAt: 'desc' },
-      take: 50,
+      take: matchLimit,
     });
 
-    return res.json({ matches });
+    return res.json({ matches, tier: userTier });
   } catch (err) {
     console.error('[Route] Failed to load matches:', err);
     return res.status(500).json({ error: 'Failed to load match history' });

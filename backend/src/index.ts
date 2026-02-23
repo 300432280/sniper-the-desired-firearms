@@ -8,8 +8,8 @@ import { generalLimiter, authLimiter } from './middleware/rateLimit';
 import authRouter from './routes/auth';
 import searchesRouter from './routes/searches';
 import adminRouter from './routes/admin';
-import { startWorker, startHealthWorker } from './services/worker';
-import { scheduleHealthChecks } from './services/queue';
+import { startWorker, startHealthWorker, startSchedulerWorker } from './services/worker';
+import { scheduleHealthChecks, startCrawlScheduler } from './services/queue';
 import { prisma } from './lib/prisma';
 
 // Check if the request has a valid admin JWT cookie
@@ -479,10 +479,14 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // In production, split into separate Railway service for horizontal scaling
 const worker = startWorker();
 const healthWorker = startHealthWorker();
+const schedulerWorker = startSchedulerWorker();
 
-// Schedule daily health check cron
+// Schedule daily health check cron + crawl scheduler
 scheduleHealthChecks().catch((err) => {
   console.error('[Server] Failed to schedule health checks:', err.message);
+});
+startCrawlScheduler().catch((err) => {
+  console.error('[Server] Failed to start crawl scheduler:', err.message);
 });
 
 const server = app.listen(config.port, () => {
@@ -493,7 +497,7 @@ const server = app.listen(config.port, () => {
 // Graceful shutdown
 const shutdown = async () => {
   console.log('[Server] Shutting down gracefully...');
-  await Promise.all([worker.close(), healthWorker.close()]);
+  await Promise.all([worker.close(), healthWorker.close(), schedulerWorker.close()]);
   server.close(() => {
     console.log('[Server] Server closed');
     process.exit(0);

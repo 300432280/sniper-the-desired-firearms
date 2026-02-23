@@ -11,14 +11,16 @@
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
 import type { ScrapedMatch, ScrapeResult, ScrapeOptions, ExtractionOptions, SiteType } from './types';
-import { fetchPage, randomDelay, pickUserAgent } from './http-client';
+import { fetchPage, fetchPageWithMeta, randomDelay, pickUserAgent } from './http-client';
+import type { FetchResult } from './http-client';
 import { isBareDomain, resolveUrl } from './utils/url';
 import { detectSiteType, isLoginPage } from './utils/html';
 import { extractPrice, extractPriceFromTitle } from './utils/price';
 import { getAdapterForUrl } from './adapter-registry';
 
 export type { ScrapedMatch, ScrapeResult, ScrapeOptions } from './types';
-export { fetchPage } from './http-client';
+export { fetchPage, fetchPageWithMeta } from './http-client';
+export type { FetchResult, DifficultySignals } from './http-client';
 
 /**
  * Adapter-aware scrape: tries the registered adapter first (API + HTML),
@@ -57,6 +59,7 @@ export async function scrapeWithAdapter(
   }
 
   // Step 2: If API didn't find anything, fetch HTML and use adapter extraction
+  let fetchMeta: ScrapeResult['fetchMeta'];
   if (matches.length === 0) {
     try {
       // Determine which URL to scrape
@@ -71,7 +74,18 @@ export async function scrapeWithAdapter(
         }
       }
 
-      const html = await fetchPage(scrapeUrl, options.cookies);
+      const fetchResult = await fetchPageWithMeta(scrapeUrl, options.cookies, {
+        difficultyRating: options.difficultyRating,
+      });
+      const html = fetchResult.html;
+
+      // Capture fetch metadata for CrawlEvent recording
+      fetchMeta = {
+        responseTimeMs: fetchResult.responseTimeMs,
+        statusCode: fetchResult.statusCode,
+        signals: fetchResult.signals,
+        headers: fetchResult.headers,
+      };
 
       // Check for login page (forums)
       const $ = cheerio.load(html);
@@ -93,9 +107,12 @@ export async function scrapeWithAdapter(
           if (!match.seller) match.seller = hostname;
         }
 
-        // Paginate if adapter supports it
-        if (matches.length > 0 && adapter.getNextPageUrl && !options.fast) {
-          const maxPages = options.maxPages ?? 3;
+        // Paginate if adapter supports it (respect difficulty-based page limits)
+        const difficultyMaxPages = (options.difficultyRating ?? 0) > 60 ? 1
+          : (options.difficultyRating ?? 0) > 30 ? 2 : 3;
+        const maxPages = Math.min(options.maxPages ?? 3, difficultyMaxPages);
+
+        if (matches.length > 0 && adapter.getNextPageUrl && !options.fast && maxPages > 1) {
           let currentUrl = scrapeUrl;
           let currentHtml = html;
 
@@ -105,8 +122,14 @@ export async function scrapeWithAdapter(
             if (!nextUrl) break;
 
             try {
-              await randomDelay(300, 800);
-              currentHtml = await fetchPage(nextUrl, options.cookies);
+              // Difficulty-aware pagination delay
+              const paginationDelay = (options.difficultyRating ?? 0) > 30
+                ? [800, 1500] as const
+                : [300, 800] as const;
+              await randomDelay(paginationDelay[0], paginationDelay[1]);
+              currentHtml = await fetchPage(nextUrl, options.cookies, {
+                difficultyRating: options.difficultyRating,
+              });
               const $next = cheerio.load(currentHtml);
               const pageMatches = adapter.extractMatches($next, keyword, nextUrl, extractionOptions);
               if (pageMatches.length === 0) break;
@@ -155,5 +178,6 @@ export async function scrapeWithAdapter(
     loginRequired,
     adapterUsed: adapterType,
     errors: errors.length > 0 ? errors : undefined,
+    fetchMeta,
   };
 }

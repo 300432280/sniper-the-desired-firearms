@@ -216,4 +216,115 @@ router.post('/sites/:id/test', async (req: Request, res: Response) => {
   }
 });
 
+// ─── Site Dashboard (Crawl Engine) ──────────────────────────────────────────
+
+// GET /api/admin/sites/dashboard — all sites with crawl metrics and computed priority
+router.get('/sites/dashboard', async (_req: Request, res: Response) => {
+  try {
+    const sites = await prisma.monitoredSite.findMany({
+      include: {
+        crawlEvents: {
+          orderBy: { crawledAt: 'desc' },
+          take: 5,
+          select: {
+            status: true,
+            responseTimeMs: true,
+            statusCode: true,
+            matchesFound: true,
+            crawledAt: true,
+          },
+        },
+        _count: {
+          select: { crawlEvents: true },
+        },
+      },
+      orderBy: { domain: 'asc' },
+    });
+
+    // Count active searches per site
+    const searchCounts = await prisma.search.groupBy({
+      by: ['websiteUrl'],
+      where: { isActive: true },
+      _count: { id: true },
+    });
+    const searchCountMap = new Map(searchCounts.map(s => [s.websiteUrl, s._count.id]));
+
+    const dashboard = sites.map(site => {
+      const lastCrawl = site.crawlEvents[0] ?? null;
+      const activeSearches = searchCountMap.get(site.url) ?? 0;
+
+      return {
+        id: site.id,
+        domain: site.domain,
+        name: site.name,
+        url: site.url,
+        isEnabled: site.isEnabled,
+        adapterType: site.adapterType,
+        siteType: site.siteType,
+
+        // Crawl metrics
+        trafficClass: site.trafficClass,
+        difficultyScore: site.difficultyScore,
+        crawlIntervalMin: site.crawlIntervalMin,
+        nextCrawlAt: site.nextCrawlAt,
+        lastCrawlAt: site.lastCrawlAt,
+        crawlLock: site.crawlLock,
+        consecutiveFailures: site.consecutiveFailures,
+        avgResponseTimeMs: site.avgResponseTimeMs,
+
+        // Difficulty signals
+        hasWaf: site.hasWaf,
+        hasRateLimit: site.hasRateLimit,
+        hasCaptcha: site.hasCaptcha,
+        requiresSucuri: site.requiresSucuri,
+
+        // Admin overrides
+        overrideTrafficClass: site.overrideTrafficClass,
+        overrideDifficulty: site.overrideDifficulty,
+        overrideInterval: site.overrideInterval,
+
+        // Computed
+        activeSearches,
+        totalCrawlEvents: site._count.crawlEvents,
+        lastCrawl,
+        recentCrawls: site.crawlEvents,
+      };
+    });
+
+    return res.json({ sites: dashboard });
+  } catch (err) {
+    console.error('[Admin] Site dashboard error:', err);
+    return res.status(500).json({ error: 'Failed to load site dashboard' });
+  }
+});
+
+// PATCH /api/admin/sites/:id/overrides — set admin overrides for crawl scheduling
+router.patch('/sites/:id/overrides', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { overrideTrafficClass, overrideDifficulty, overrideInterval } = req.body;
+
+    const site = await prisma.monitoredSite.update({
+      where: { id },
+      data: {
+        ...(overrideTrafficClass !== undefined && { overrideTrafficClass }),
+        ...(overrideDifficulty !== undefined && { overrideDifficulty }),
+        ...(overrideInterval !== undefined && { overrideInterval }),
+      },
+    });
+
+    // Recalculate priority with overrides applied
+    const { recalculateSitePriority } = await import('../services/priority-engine');
+    await recalculateSitePriority(id);
+
+    return res.json({ site });
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+    console.error('[Admin] Override update error:', err);
+    return res.status(500).json({ error: 'Failed to update overrides' });
+  }
+});
+
 export default router;

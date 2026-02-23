@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id           String           @id @default(cuid())
-  email        String           @unique
-  passwordHash String
-  phone        String?
-  tier         Tier             @default(FREE)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  searches     Search[]
-  credentials  SiteCredential[]
+  id                String           @id @default(cuid())
+  email             String           @unique
+  passwordHash      String
+  phone             String?
+  tier              Tier             @default(FREE)
+  lastDailyDigestAt DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  searches          Search[]
+  credentials       SiteCredential[]
 
   @@map("users")
 }
@@ -131,22 +132,60 @@ enum NotificationType {
 }
 
 model MonitoredSite {
-  id             String            @id @default(cuid())
-  domain         String            @unique
-  name           String
-  url            String
-  siteType       String            @default("generic")
-  adapterType    String            @default("generic")
-  isEnabled      Boolean           @default(true)
-  requiresSucuri Boolean           @default(false)
-  requiresAuth   Boolean           @default(false)
+  id               String            @id @default(cuid())
+  domain           String            @unique
+  name             String
+  url              String
+  siteType         String            @default("generic")
+  adapterType      String            @default("generic")
+  isEnabled        Boolean           @default(true)
+  requiresSucuri   Boolean           @default(false)
+  requiresAuth     Boolean           @default(false)
   searchUrlPattern String?
-  notes          String?
+  notes            String?
+
+  // Crawl scheduling state
+  lastCrawlAt        DateTime?
+  nextCrawlAt        DateTime?
+  crawlIntervalMin   Int             @default(120)
+  crawlLock          String?
+  crawlLockExpiresAt DateTime?
+
+  // Difficulty signals (auto-measured from crawl responses)
+  difficultyScore     Int            @default(0)
+  trafficClass        String         @default("medium")
+  avgResponseTimeMs   Int?
+  consecutiveFailures Int            @default(0)
+  hasWaf              Boolean        @default(false)
+  hasRateLimit        Boolean        @default(false)
+  hasCaptcha          Boolean        @default(false)
+
+  // Admin overrides (null = auto-computed by priority engine)
+  overrideTrafficClass String?
+  overrideDifficulty   Int?
+  overrideInterval     Int?
+
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   healthChecks   SiteHealthCheck[]
+  crawlEvents    CrawlEvent[]
 
   @@map("monitored_sites")
+}
+
+model CrawlEvent {
+  id             String        @id @default(cuid())
+  siteId         String
+  site           MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  status         String        // success, fail, timeout, blocked, captcha
+  responseTimeMs Int?
+  statusCode     Int?
+  matchesFound   Int           @default(0)
+  errorMessage   String?
+  crawledAt      DateTime      @default(now())
+
+  @@index([siteId, crawledAt])
+  @@map("crawl_events")
 }
 
 model SiteHealthCheck {

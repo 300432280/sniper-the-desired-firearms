@@ -21,26 +21,80 @@ export function pickUserAgent(domain?: string): string {
 
 // ── Rate limiting ────────────────────────────────────────────────────────────
 
-/** Fixed delay to pace requests (deterministic, no randomness) */
-export function randomDelay(minMs = 800, maxMs = 2500): Promise<void> {
-  const delay = Math.round((minMs + maxMs) / 2);
+/**
+ * Human-like delay with small random jitter.
+ * Range is tight (e.g. 1.0-2.0s) to mimic a real person, not a bot.
+ */
+export function randomDelay(minMs = 1000, maxMs = 2000): Promise<void> {
+  const delay = minMs + Math.floor(Math.random() * (maxMs - minMs));
   return new Promise((resolve) => setTimeout(resolve, delay));
 }
 
 /** Per-domain rate limiter — enforces minimum gap between requests to the same domain */
 const domainLastRequest = new Map<string, number>();
-const MIN_DOMAIN_GAP_MS = 1000;
 
-async function enforceDomainRateLimit(hostname: string): Promise<void> {
+/**
+ * Enforce per-domain rate limit with difficulty-aware jitter.
+ * Easy sites: 1.0-2.0s gap
+ * Moderate (difficulty 30-60): 1.5-3.0s gap
+ * Difficult (difficulty 60+): 2.5-4.0s gap
+ */
+async function enforceDomainRateLimit(hostname: string, difficultyRating = 0): Promise<void> {
   const domain = normalizeDomain(hostname);
   const last = domainLastRequest.get(domain);
+
+  // Scale gap based on difficulty: 0 → 1.0-2.0s, 100 → 2.0-4.0s
+  const difficultyMultiplier = 1 + (difficultyRating / 100);
+  const minGap = Math.round(1000 * difficultyMultiplier);
+  const maxGap = Math.round(2000 * difficultyMultiplier);
+  const gap = minGap + Math.floor(Math.random() * (maxGap - minGap));
+
   if (last) {
     const elapsed = Date.now() - last;
-    if (elapsed < MIN_DOMAIN_GAP_MS) {
-      await new Promise((resolve) => setTimeout(resolve, MIN_DOMAIN_GAP_MS - elapsed));
+    if (elapsed < gap) {
+      await new Promise((resolve) => setTimeout(resolve, gap - elapsed));
     }
   }
   domainLastRequest.set(domain, Date.now());
+}
+
+// ── Difficulty signal detection ──────────────────────────────────────────────
+
+export interface DifficultySignals {
+  hasWaf: boolean;
+  hasRateLimit: boolean;
+  hasCaptcha: boolean;
+}
+
+/**
+ * Detect WAF, rate limiting, and CAPTCHA from HTTP response.
+ * Called after each fetch — zero extra requests.
+ */
+export function detectDifficultySignals(
+  statusCode: number,
+  headers: Record<string, any>,
+  body: string
+): DifficultySignals {
+  return {
+    hasWaf: !!(
+      headers['cf-ray'] ||
+      headers['x-sucuri-id'] ||
+      headers['x-sucuri-cache'] ||
+      (headers['server'] && /cloudflare/i.test(headers['server'])) ||
+      body.includes('sucuri_cloudproxy')
+    ),
+    hasRateLimit: !!(
+      statusCode === 429 ||
+      headers['retry-after'] ||
+      headers['x-ratelimit-remaining']
+    ),
+    hasCaptcha: !!(
+      body.includes('captcha') ||
+      body.includes('recaptcha') ||
+      body.includes('hCaptcha') ||
+      body.includes('g-recaptcha')
+    ),
+  };
 }
 
 // ── Sucuri WAF challenge solver ──────────────────────────────────────────────
@@ -125,24 +179,49 @@ function parseSetCookies(headers: Record<string, any>): string[] {
   return arr.map((c: string) => c.split(';')[0]);
 }
 
+// ── Fetch result with metadata ───────────────────────────────────────────────
+
+export interface FetchResult {
+  html: string;
+  responseTimeMs: number;
+  statusCode: number;
+  signals: DifficultySignals;
+  headers: Record<string, any>;
+}
+
 // ── Main HTTP fetch ──────────────────────────────────────────────────────────
 
 const MAX_REDIRECT_HOPS = 10;
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 2000;
 
+export interface FetchOptions {
+  difficultyRating?: number;
+}
+
 /**
  * Fetch a page with:
  * - Manual redirect following (so we can intercept Sucuri challenges at each hop)
  * - Sucuri WAF challenge auto-solving
- * - Per-domain rate limiting
+ * - Per-domain rate limiting (difficulty-aware)
  * - Retry with exponential backoff
  * - Set-Cookie collection across redirect chain
+ * - Difficulty signal detection from response
  */
-export async function fetchPage(url: string, cookies?: string): Promise<string> {
+export async function fetchPage(url: string, cookies?: string, options?: FetchOptions): Promise<string> {
+  const result = await fetchPageWithMeta(url, cookies, options);
+  return result.html;
+}
+
+/**
+ * Fetch a page and return metadata (response time, signals, status code).
+ * Used by the crawler to record CrawlEvents and update site metrics.
+ */
+export async function fetchPageWithMeta(url: string, cookies?: string, options?: FetchOptions): Promise<FetchResult> {
   let domain: string | undefined;
   try { domain = new URL(url).hostname; } catch {}
   const ua = pickUserAgent(domain);
+  const difficultyRating = options?.difficultyRating ?? 0;
   const baseHeaders: Record<string, string> = {
     'User-Agent': ua,
     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -164,7 +243,7 @@ export async function fetchPage(url: string, cookies?: string): Promise<string> 
     }
 
     try {
-      return await fetchWithRedirects(url, cookies, baseHeaders);
+      return await fetchWithRedirects(url, cookies, baseHeaders, difficultyRating);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
       const msg = lastError.message;
@@ -182,11 +261,13 @@ export async function fetchPage(url: string, cookies?: string): Promise<string> 
 async function fetchWithRedirects(
   url: string,
   cookies: string | undefined,
-  baseHeaders: Record<string, string>
-): Promise<string> {
+  baseHeaders: Record<string, string>,
+  difficultyRating: number
+): Promise<FetchResult> {
   let currentUrl = url;
   // Collect cookies from Set-Cookie across the redirect chain
   const collectedCookies: Map<string, string> = new Map();
+  const startTime = Date.now();
 
   for (let hop = 0; hop < MAX_REDIRECT_HOPS; hop++) {
     let hostname: string;
@@ -196,8 +277,8 @@ async function fetchWithRedirects(
       hostname = '';
     }
 
-    // Enforce per-domain rate limit
-    if (hostname) await enforceDomainRateLimit(hostname);
+    // Enforce per-domain rate limit with difficulty-aware jitter
+    if (hostname) await enforceDomainRateLimit(hostname, difficultyRating);
 
     // Build Cookie header
     const headers = { ...baseHeaders };
@@ -229,6 +310,10 @@ async function fetchWithRedirects(
     }
 
     const html = typeof response.data === 'string' ? response.data : '';
+    const responseTimeMs = Date.now() - startTime;
+
+    // Detect difficulty signals from response
+    const signals = detectDifficultySignals(response.status, response.headers, html);
 
     // Sucuri WAF challenge → solve and retry same URL
     if (html.includes('sucuri_cloudproxy_js')) {
@@ -239,7 +324,7 @@ async function fetchWithRedirects(
         continue; // retry same URL — cached cookie will be picked up next iteration
       }
       console.log(`[HTTP] Could not solve Sucuri challenge for ${hostname}`);
-      return html;
+      return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers };
     }
 
     // HTTP redirect — follow manually
@@ -250,11 +335,14 @@ async function fetchWithRedirects(
       continue;
     }
 
-    return html;
+    return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers };
   }
 
   // Exhausted redirect/challenge attempts — last resort direct fetch
   console.log(`[HTTP] Exhausted ${MAX_REDIRECT_HOPS} hops, falling back to direct fetch for ${currentUrl}`);
   const response = await axios.get(currentUrl, { headers: baseHeaders, timeout: 12000, maxRedirects: 5 });
-  return response.data as string;
+  const html = response.data as string;
+  const responseTimeMs = Date.now() - startTime;
+  const signals = detectDifficultySignals(response.status, response.headers, html);
+  return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers };
 }

@@ -19,6 +19,13 @@ export interface ScrapeResult {
   loginRequired?: boolean;
   adapterUsed?: string;
   errors?: string[];
+  /** Metadata from the fetch (response time, signals) — used by crawler to update site metrics */
+  fetchMeta?: {
+    responseTimeMs: number;
+    statusCode: number;
+    signals: { hasWaf: boolean; hasRateLimit: boolean; hasCaptcha: boolean };
+    headers: Record<string, any>;
+  };
 }
 
 // ── Scraping options ─────────────────────────────────────────────────────────
@@ -29,6 +36,8 @@ export interface ScrapeOptions {
   cookies?: string;
   fast?: boolean;
   maxPages?: number;
+  /** Site difficulty rating (0-100) — affects request delays and pagination behavior */
+  difficultyRating?: number;
 }
 
 export type ExtractionOptions = Pick<ScrapeOptions, 'inStockOnly' | 'maxPrice'>;

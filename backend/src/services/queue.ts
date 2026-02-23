@@ -68,6 +68,54 @@ export async function cancelSearch(searchId: string): Promise<void> {
   }
 }
 
+// ─── Crawl Scheduler Queue ────────────────────────────────────────────────────
+
+export const schedulerQueue = new Queue('scheduler', {
+  connection: redisConnection,
+  defaultJobOptions: {
+    removeOnComplete: 10,
+    removeOnFail: 20,
+    attempts: 1,
+  },
+});
+
+/**
+ * Start the unified crawl scheduler (ticks every 2 minutes).
+ * Call once at startup.
+ */
+export async function startCrawlScheduler(): Promise<void> {
+  try {
+    const jobId = 'scheduler-tick';
+
+    // Remove existing repeatable job before re-creating
+    try {
+      const repeatableJobs = await schedulerQueue.getRepeatableJobs();
+      for (const job of repeatableJobs) {
+        if (job.id === jobId) {
+          await schedulerQueue.removeRepeatableByKey(job.key);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+
+    await schedulerQueue.add(
+      'scheduler-tick',
+      {},
+      {
+        jobId,
+        repeat: {
+          every: 2 * 60 * 1000, // Every 2 minutes
+        },
+      }
+    );
+
+    console.log('[Queue] Crawl scheduler started (ticking every 2 minutes)');
+  } catch (err) {
+    console.error('[Queue] Failed to start crawl scheduler:', err instanceof Error ? err.message : err);
+  }
+}
+
 // ─── Health Check Queue ───────────────────────────────────────────────────────
 
 export const healthQueue = new Queue('health', {

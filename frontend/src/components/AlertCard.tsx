@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Match, LiveMatch, ScanResult, searchesApi } from '@/lib/api';
 import type { SearchGroup } from '@/app/dashboard/page';
 
@@ -79,6 +79,228 @@ function MatchRow({ match, showSite }: { match: Match & { websiteUrl?: string };
         <path strokeLinecap="round" strokeWidth="1.5" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
       </svg>
     </a>
+  );
+}
+
+// Scan result item row (used in grouped and ungrouped views)
+function ScanResultRow({ item, showSite }: { item: LiveMatch; showSite?: boolean }) {
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`flex items-center gap-3 px-3 py-2 border text-xs hover:border-accent/30 transition-colors cursor-pointer ${
+        item.isNew
+          ? 'bg-green-950/30 border-l-2 border-l-green-500 border-green-700/40'
+          : 'bg-surface-elevated/50 border-border/50'
+      }`}
+    >
+      {item.isNew && (
+        <span className="text-[9px] font-heading tracking-widest uppercase bg-green-600 text-white px-1.5 py-0.5 flex-shrink-0">
+          NEW
+        </span>
+      )}
+      {item.thumbnail && (
+        <img
+          src={item.thumbnail}
+          alt=""
+          className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0"
+          loading="lazy"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-foreground truncate">{item.title}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {item.seller && (
+            <span className="text-[9px] text-foreground-dim">{item.seller}</span>
+          )}
+          {showSite && (item as any).websiteUrl && (
+            <span className="text-[9px] text-foreground-dim border border-border/50 px-1 rounded">
+              {(() => { try { return new URL((item as any).websiteUrl).hostname.replace(/^www\./, ''); } catch { return ''; } })()}
+            </span>
+          )}
+        </div>
+      </div>
+      {item.price != null && (
+        <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>
+      )}
+      {item.inStock !== undefined && (
+        <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
+          item.inStock
+            ? 'text-green-400 border-green-400/30'
+            : 'text-red-400 border-red-400/30'
+        }`}>
+          {item.inStock ? 'In Stock' : 'Out'}
+        </span>
+      )}
+      <svg className="w-3.5 h-3.5 text-foreground-dim flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeWidth="1.5" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+      </svg>
+    </a>
+  );
+}
+
+// Grouped scan results — groups matches by site with collapsible sections
+function GroupedScanResults({
+  results,
+  isGroup,
+  scanMeta,
+  groupScanMeta,
+}: {
+  results: LiveMatch[];
+  isGroup: boolean;
+  scanMeta: { newCount: number; totalDbMatches: number; notificationId: string | null } | null;
+  groupScanMeta: { scannedSites: number; successCount: number; failCount: number; totalMatches: number } | null;
+}) {
+  const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
+
+  // Group results by site domain
+  const siteGroups = useMemo(() => {
+    if (!isGroup) return null; // Single-site scan, no grouping needed
+
+    const groups = new Map<string, { domain: string; items: LiveMatch[]; newCount: number }>();
+    for (const item of results) {
+      const url = (item as any).websiteUrl || '';
+      let domain: string;
+      try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch { domain = url || 'Unknown'; }
+
+      if (!groups.has(domain)) {
+        groups.set(domain, { domain, items: [], newCount: 0 });
+      }
+      const g = groups.get(domain)!;
+      g.items.push(item);
+      if (item.isNew) g.newCount++;
+    }
+
+    // Sort by new match count (desc), then total count (desc)
+    return [...groups.values()].sort((a, b) =>
+      b.newCount - a.newCount || b.items.length - a.items.length
+    );
+  }, [results, isGroup]);
+
+  const toggleSite = (domain: string) => {
+    setExpandedSites(prev => {
+      const next = new Set(prev);
+      if (next.has(domain)) next.delete(domain);
+      else next.add(domain);
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    if (siteGroups) setExpandedSites(new Set(siteGroups.map(g => g.domain)));
+  };
+  const collapseAll = () => setExpandedSites(new Set());
+
+  const newCount = results.filter(r => r.isNew).length;
+  const siteCount = siteGroups?.length ?? 1;
+
+  return (
+    <div>
+      {/* Summary bar */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] text-foreground-muted">
+          {results.length} result{results.length !== 1 ? 's' : ''}
+          {isGroup && ` across ${siteCount} site${siteCount !== 1 ? 's' : ''}`}
+          {newCount > 0 && (
+            <span className="ml-1.5 text-[9px] bg-green-600 text-white px-1.5 py-0.5 tracking-wider font-heading uppercase">
+              {newCount} NEW
+            </span>
+          )}
+          {groupScanMeta && groupScanMeta.failCount > 0 && (
+            <span className="ml-1.5 text-[9px] text-red-400">
+              ({groupScanMeta.failCount} failed)
+            </span>
+          )}
+        </p>
+        {isGroup && siteGroups && siteGroups.length > 1 && (
+          <div className="flex items-center gap-2">
+            <button onClick={expandAll} className="text-[9px] text-foreground-dim hover:text-foreground transition-colors">
+              Expand all
+            </button>
+            <button onClick={collapseAll} className="text-[9px] text-foreground-dim hover:text-foreground transition-colors">
+              Collapse all
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Grouped view for multi-site scans */}
+      {isGroup && siteGroups ? (
+        <div className="space-y-1">
+          {siteGroups.map((group) => {
+            const isExpanded = expandedSites.has(group.domain);
+            return (
+              <div key={group.domain} className="border border-border/50">
+                {/* Site header — click to expand */}
+                <button
+                  onClick={() => toggleSite(group.domain)}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-surface-elevated/30 hover:bg-surface-elevated/60 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className={`w-3 h-3 text-foreground-dim transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span className="text-xs text-foreground font-heading tracking-wide">{group.domain}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {group.newCount > 0 && (
+                      <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 font-heading tracking-wider uppercase">
+                        {group.newCount} new
+                      </span>
+                    )}
+                    <span className="text-[10px] text-foreground-muted">
+                      {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Expanded items */}
+                {isExpanded && (
+                  <div className="border-t border-border/30 space-y-px">
+                    {group.items.map((item, i) => (
+                      <ScanResultRow key={i} item={item} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Flat list for single-site scans */
+        <div className="space-y-1.5">
+          {results.map((item, i) => (
+            <ScanResultRow key={i} item={item} />
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-2">
+        <p className="text-[10px] text-foreground-dim">
+          {results.length} item{results.length !== 1 ? 's' : ''}
+          {groupScanMeta
+            ? ` from ${groupScanMeta.successCount} sites`
+            : scanMeta ? ` on site \u2014 ${scanMeta.totalDbMatches} in database` : ''
+          }
+        </p>
+        {scanMeta?.notificationId && (
+          <a
+            href={`http://localhost:4000/notifications/${scanMeta.notificationId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-heading tracking-wider uppercase text-accent hover:underline border border-accent/20 px-2 py-0.5"
+          >
+            View Notification
+          </a>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -473,83 +695,12 @@ export default function AlertCard({ search, group, onToggle, onDelete, onToggleG
           )}
 
           {scanResults && scanResults.length > 0 && (
-            <div className="space-y-1.5">
-              {scanResults.map((item, i) => (
-                <a
-                  key={i}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center gap-3 px-3 py-2 border text-xs hover:border-accent/30 transition-colors cursor-pointer ${
-                    item.isNew
-                      ? 'bg-green-950/30 border-green-700/40'
-                      : 'bg-surface-elevated/50 border-border/50'
-                  }`}
-                >
-                  {item.isNew && (
-                    <span className="text-[9px] font-heading tracking-widest uppercase bg-green-600 text-white px-1.5 py-0.5 flex-shrink-0">
-                      NEW
-                    </span>
-                  )}
-                  {item.thumbnail && (
-                    <img
-                      src={item.thumbnail}
-                      alt=""
-                      className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-foreground truncate">{item.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {item.seller && (
-                        <span className="text-[9px] text-foreground-dim">{item.seller}</span>
-                      )}
-                      {isGroup && (item as any).websiteUrl && (
-                        <span className="text-[9px] text-foreground-dim border border-border/50 px-1 rounded">
-                          {(() => { try { return new URL((item as any).websiteUrl).hostname.replace(/^www\./, ''); } catch { return ''; } })()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {item.price != null && (
-                    <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>
-                  )}
-                  {item.inStock !== undefined && (
-                    <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
-                      item.inStock
-                        ? 'text-green-400 border-green-400/30'
-                        : 'text-red-400 border-red-400/30'
-                    }`}>
-                      {item.inStock ? 'In Stock' : 'Out'}
-                    </span>
-                  )}
-                  <svg className="w-3.5 h-3.5 text-foreground-dim flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeWidth="1.5" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
-                  </svg>
-                </a>
-              ))}
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-[10px] text-foreground-dim">
-                  {scanResults.length} item{scanResults.length !== 1 ? 's' : ''}
-                  {groupScanMeta
-                    ? ` from ${groupScanMeta.successCount} sites (${groupScanMeta.failCount} failed)`
-                    : scanMeta ? ` on site — ${scanMeta.totalDbMatches} in database` : ''
-                  }
-                </p>
-                {scanMeta?.notificationId && (
-                  <a
-                    href={`http://localhost:4000/notifications/${scanMeta.notificationId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] font-heading tracking-wider uppercase text-accent hover:underline border border-accent/20 px-2 py-0.5"
-                  >
-                    View Notification
-                  </a>
-                )}
-              </div>
-            </div>
+            <GroupedScanResults
+              results={scanResults}
+              isGroup={isGroup}
+              scanMeta={scanMeta}
+              groupScanMeta={groupScanMeta}
+            />
           )}
         </div>
       )}
