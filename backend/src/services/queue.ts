@@ -25,6 +25,11 @@ export const scrapeQueue = new Queue('scrape', {
   },
 });
 
+/**
+ * @deprecated Legacy per-search scheduling. The unified crawl scheduler now handles
+ * all site-level crawling via MonitoredSite.nextCrawlAt. This function remains only
+ * for cleanup of old per-search BullMQ jobs during the migration period.
+ */
 export async function scheduleSearch(
   searchId: string,
   intervalMinutes: number

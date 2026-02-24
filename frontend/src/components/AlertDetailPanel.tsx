@@ -48,10 +48,11 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
   const [scanMeta, setScanMeta] = useState<{ newCount: number; totalDbMatches: number; notificationId: string | null } | null>(null);
   const [groupScanMeta, setGroupScanMeta] = useState<{ scannedSites: number; successCount: number; failCount: number; totalMatches: number } | null>(null);
 
-  // Match history
+  // Match history with pagination
   const [historyMatches, setHistoryMatches] = useState<(Match & { websiteUrl?: string })[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [historyTotal, setHistoryTotal] = useState(0);
 
   const handleToggle = async () => {
     setToggling(true);
@@ -74,7 +75,7 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
     } finally { setDeleting(false); }
   };
 
-  const handleScan = async () => {
+  const handleRefresh = async () => {
     setScanning(true);
     setScanError('');
     setScanResults(null);
@@ -92,10 +93,10 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
         setScanResults(data.matches);
         setScanMeta({ newCount: data.newCount, totalDbMatches: data.totalDbMatches, notificationId: data.notificationId });
         setHistoryMatches(null);
-        if (data.newCount > 0 && onRefresh) onRefresh();
+        if (onRefresh) onRefresh();
       }
     } catch (err) {
-      setScanError(err instanceof Error ? err.message : 'Scan failed');
+      setScanError(err instanceof Error ? err.message : 'Failed to refresh');
     } finally { setScanning(false); }
   };
 
@@ -110,9 +111,11 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
       if (isGroup) {
         const data = await searchesApi.getGroup(group.groupId);
         setHistoryMatches(data.matches);
+        setHistoryTotal((data as any).totalMatches ?? data.matches.length);
       } else {
         const data = await searchesApi.matches(search!.id);
         setHistoryMatches(data.matches);
+        setHistoryTotal((data as any).total ?? data.matches.length);
       }
     } catch {
       setHistoryMatches([]);
@@ -125,33 +128,52 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-border flex-shrink-0">
-        <div className="flex items-center gap-2 mb-1">
+      {/* Header with metadata */}
+      <div className="px-6 py-5 border-b border-border flex-shrink-0">
+        <div className="flex items-center gap-2 mb-2">
           <span className={`flex-shrink-0 ${isActive ? 'dot-active' : 'dot-paused'}`} />
-          <h2 className="font-heading text-xl tracking-wide">{keyword}</h2>
+          <h2 className="font-heading text-2xl tracking-wide">{keyword}</h2>
           {isGroup && (
             <span className="text-[10px] font-heading tracking-widest uppercase px-1.5 py-0.5 border border-accent/30 text-accent">
               All Sites
             </span>
           )}
         </div>
-        <p className="text-xs text-foreground-muted pl-4.5">
+        <p className="text-xs text-foreground-muted mb-3 pl-5">
           {isGroup
             ? `${group.siteCount} sites \u00B7 ${matchCount} matches \u00B7 Last: ${lastChecked}`
             : `${search!.websiteUrl} \u00B7 ${matchCount} matches \u00B7 Last: ${lastChecked}`
           }
         </p>
+        {/* Metadata badges */}
+        <div className="flex items-center gap-3 pl-5 flex-wrap">
+          <span className="text-[10px] text-foreground-dim border border-border px-2 py-0.5 font-heading uppercase tracking-wider">
+            {INTERVAL_LABELS[checkInterval] ?? `${checkInterval} min`}
+          </span>
+          <span className="text-[10px] text-foreground-dim border border-border px-2 py-0.5 font-heading uppercase tracking-wider">
+            {NOTIFY_LABELS[notificationType]}
+          </span>
+          {inStockOnly && (
+            <span className="text-[10px] text-accent border border-accent/20 px-2 py-0.5 font-heading uppercase tracking-wider">
+              In-Stock Only
+            </span>
+          )}
+          {maxPrice != null && (
+            <span className="text-[10px] text-foreground-dim border border-border px-2 py-0.5 font-heading uppercase tracking-wider">
+              Max ${maxPrice}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="px-5 py-3 border-b border-border flex items-center gap-2 flex-shrink-0 flex-wrap">
+      {/* Action buttons (separate row) */}
+      <div className="px-6 py-3 border-b border-border flex items-center gap-2 flex-shrink-0">
         <button
-          onClick={handleScan}
+          onClick={handleRefresh}
           disabled={scanning}
-          className="text-[11px] font-heading uppercase tracking-wider px-3 py-1.5 border border-blue-400/30 text-blue-400 hover:bg-blue-400/10 transition-colors disabled:opacity-40"
+          className="text-[11px] font-heading uppercase tracking-wider px-4 py-1.5 border border-blue-400/30 text-blue-400 hover:bg-blue-400/10 transition-colors disabled:opacity-40"
         >
-          {scanning ? 'Scanning...' : (isGroup ? 'Scan All' : 'Scan Now')}
+          {scanning ? 'Loading...' : (isGroup ? 'Refresh All' : 'Refresh Results')}
         </button>
         <button
           onClick={handleToggle}
@@ -175,127 +197,156 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
         >
           {deleting ? '...' : confirmDelete ? 'Confirm Delete' : 'Delete'}
         </button>
-
-        {/* Metadata badges */}
-        <div className="flex items-center gap-2 ml-auto text-[10px] text-foreground-muted">
-          <span>{INTERVAL_LABELS[checkInterval] ?? `${checkInterval} min`}</span>
-          <span>{NOTIFY_LABELS[notificationType]}</span>
-          {inStockOnly && <span className="text-accent border border-accent/20 px-1 py-px font-heading uppercase tracking-wider text-[9px]">In-Stock</span>}
-          {maxPrice && <span className="border border-border px-1 py-px font-heading uppercase tracking-wider text-[9px]">Max ${maxPrice}</span>}
-        </div>
       </div>
 
-      {/* Content area — scrollable */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-        {/* Match history toggle */}
-        <button
-          onClick={loadHistory}
-          className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted hover:text-accent transition-colors flex items-center gap-1"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-          {showHistory ? 'Hide' : 'Show'} Match History ({matchCount})
-        </button>
+      {/* Content area (scrollable) */}
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-        {/* Match history */}
-        {showHistory && (
-          <div className="space-y-1.5">
-            {historyLoading && (
-              <p className="text-xs text-foreground-muted py-3 text-center animate-pulse">Loading matches...</p>
-            )}
-            {!historyLoading && historyMatches && historyMatches.length === 0 && (
-              <p className="text-xs text-foreground-dim py-3 text-center">No matches yet.</p>
-            )}
-            {!historyLoading && historyMatches && historyMatches.length > 0 && (
-              <>
-                {historyMatches.map((match) => (
-                  <a
-                    key={match.id}
-                    href={match.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-3 py-2 bg-surface-elevated/50 border border-border/50 rounded text-xs hover:border-accent/30 transition-colors cursor-pointer"
-                  >
-                    {match.thumbnail && (
-                      <img src={match.thumbnail} alt="" className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-foreground truncate">{match.title}</p>
-                      {match.seller && <span className="text-[9px] text-foreground-dim">{match.seller}</span>}
-                    </div>
-                    {match.price != null && (
-                      <span className="text-accent font-heading flex-shrink-0">${match.price.toFixed(2)}</span>
-                    )}
-                  </a>
-                ))}
-                <p className="text-[10px] text-foreground-dim">
-                  Showing {historyMatches.length} match{historyMatches.length !== 1 ? 'es' : ''}
-                </p>
-              </>
-            )}
+        {/* Section: Results */}
+        <section>
+          <div className="flex items-center gap-3 pb-1 border-b border-border/40 mb-3">
+            <span className="text-[10px] font-heading tracking-[0.2em] uppercase text-foreground-muted">Results</span>
+            {scanResults && <span className="text-[10px] text-foreground-dim">{scanResults.length} items</span>}
           </div>
-        )}
 
-        {/* Scan error */}
-        {scanError && (
-          <div className="text-xs text-secondary border border-secondary/20 bg-secondary/5 px-3 py-2">
-            {scanError}
-          </div>
-        )}
+          {scanError && (
+            <div className="text-xs text-secondary border border-secondary/20 bg-secondary/5 px-4 py-2.5 rounded">
+              {scanError}
+            </div>
+          )}
 
-        {/* Scanning indicator */}
-        {scanning && (
-          <div className="text-xs text-foreground-muted py-6 text-center animate-pulse">
-            {isGroup ? `Scanning ${group.siteCount} sites...` : 'Scanning...'}
-          </div>
-        )}
+          {scanning && (
+            <div className="text-xs text-foreground-muted py-8 text-center animate-pulse">
+              {isGroup ? `Loading results from ${group.siteCount} sites...` : 'Loading results...'}
+            </div>
+          )}
 
-        {/* Scan results */}
-        {!scanning && scanResults && scanResults.length === 0 && (
-          <div className="text-xs text-foreground-dim py-4 text-center">
-            No items matching &quot;{keyword}&quot; found.
-          </div>
-        )}
+          {!scanning && !scanResults && (
+            <div className="text-xs text-foreground-dim py-4 text-center">
+              Click Refresh to load cached results.
+            </div>
+          )}
 
-        {scanResults && scanResults.length > 0 && (
-          <ScanResultsGrouped
-            results={scanResults}
-            isGroup={isGroup}
-            scanMeta={scanMeta}
-            groupScanMeta={groupScanMeta}
-          />
-        )}
+          {!scanning && scanResults && scanResults.length === 0 && (
+            <div className="text-xs text-foreground-dim py-6 text-center border border-border/30 rounded">
+              No items matching &quot;{keyword}&quot; found yet. Results will appear after the next crawl cycle.
+            </div>
+          )}
 
-        {/* Group sites list */}
+          {scanResults && scanResults.length > 0 && (
+            <ScanResultsGrouped
+              results={scanResults}
+              isGroup={isGroup}
+              scanMeta={scanMeta}
+              groupScanMeta={groupScanMeta}
+            />
+          )}
+        </section>
+
+        {/* Section: Match History */}
+        <section>
+          <button onClick={loadHistory} className="w-full">
+            <div className="flex items-center gap-3 pb-1 border-b border-border/40">
+              <svg className={`w-3 h-3 text-foreground-dim transition-transform duration-200 ${showHistory ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+              <span className="text-[10px] font-heading tracking-[0.2em] uppercase text-foreground-muted">Match History</span>
+              <span className="text-[10px] text-foreground-dim">{matchCount} total</span>
+            </div>
+          </button>
+
+          {showHistory && (
+            <div className="mt-3 space-y-1.5">
+              {historyLoading && (
+                <p className="text-xs text-foreground-muted py-4 text-center animate-pulse">Loading matches...</p>
+              )}
+              {!historyLoading && historyMatches && historyMatches.length === 0 && (
+                <p className="text-xs text-foreground-dim py-4 text-center">No matches yet. Results will appear after the next crawl.</p>
+              )}
+              {historyMatches && historyMatches.length > 0 && (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+                    {historyMatches.map((match) => (
+                      <a
+                        key={match.id}
+                        href={match.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 px-3 py-2.5 bg-surface-elevated/50 border border-border/50 rounded text-xs hover:border-accent/30 transition-colors cursor-pointer group"
+                      >
+                        {match.thumbnail && (
+                          <img src={match.thumbnail} alt="" className="w-12 h-12 object-cover border border-border/50 rounded flex-shrink-0" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-foreground truncate group-hover:text-accent transition-colors">{match.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {match.seller && <span className="text-[9px] text-foreground-dim">{match.seller}</span>}
+                            {(match as any).websiteUrl && (
+                              <span className="text-[9px] text-foreground-dim">
+                                {(() => { try { return new URL((match as any).websiteUrl).hostname.replace(/^www\./, ''); } catch { return ''; } })()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {match.price != null && (
+                          <span className="text-accent font-heading flex-shrink-0">${match.price.toFixed(2)}</span>
+                        )}
+                        <svg className="w-3 h-3 text-foreground-dim flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-foreground-dim pt-2">
+                    Showing {historyMatches.length} of {historyTotal} match{historyTotal !== 1 ? 'es' : ''}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Section: Monitored Sites (groups only) */}
         {isGroup && (
-          <div>
-            <p className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mb-2">
-              Monitored Sites ({group.siteCount})
-            </p>
-            <div className="grid grid-cols-2 gap-1">
+          <section>
+            <div className="flex items-center gap-3 pb-1 border-b border-border/40 mb-3">
+              <span className="text-[10px] font-heading tracking-[0.2em] uppercase text-foreground-muted">Monitored Sites</span>
+              <span className="text-[10px] text-foreground-dim">{group.siteCount} sites</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
               {group.searches.map((s) => {
                 const domain = (() => { try { return new URL(s.websiteUrl).hostname.replace(/^www\./, ''); } catch { return s.websiteUrl; } })();
                 const siteMatches = s._count?.matches ?? 0;
                 return (
-                  <div key={s.id} className="flex items-center justify-between px-2 py-1 bg-surface-elevated/50 border border-border/50 text-[10px]">
-                    <span className="truncate flex-1 text-foreground-muted">{domain}</span>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {siteMatches > 0 && <span className="text-accent">{siteMatches}</span>}
-                      <span className={`w-1.5 h-1.5 rounded-full ${s.isActive ? 'bg-green-500' : 'bg-gray-500'}`} />
+                  <a
+                    key={s.id}
+                    href={s.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between px-3 py-2 bg-surface-elevated/50 border border-border/50 rounded text-[11px] hover:border-accent/30 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.isActive ? 'bg-green-500' : 'bg-gray-500'}`} />
+                      <span className="truncate text-foreground-muted group-hover:text-accent transition-colors">{domain}</span>
                     </div>
-                  </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {siteMatches > 0 && <span className="text-accent font-heading">{siteMatches}</span>}
+                      <svg className="w-3 h-3 text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </div>
+                  </a>
                 );
               })}
             </div>
-          </div>
+          </section>
         )}
       </div>
     </div>
   );
 }
 
-// Inline grouped scan results component (same logic as AlertCard's GroupedScanResults)
+// Grouped scan results component
 function ScanResultsGrouped({
   results, isGroup, scanMeta, groupScanMeta,
 }: {
@@ -334,25 +385,28 @@ function ScanResultsGrouped({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] text-foreground-muted">
-          {results.length} result{results.length !== 1 ? 's' : ''}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[11px] text-foreground-muted">
+          {groupScanMeta ? `${groupScanMeta.totalMatches} results` : `${results.length} result${results.length !== 1 ? 's' : ''}`}
           {isGroup && siteGroups && ` across ${siteGroups.length} site${siteGroups.length !== 1 ? 's' : ''}`}
           {newCount > 0 && (
-            <span className="ml-1.5 text-[9px] bg-green-600 text-white px-1.5 py-0.5 tracking-wider font-heading uppercase">{newCount} NEW</span>
+            <span className="ml-2 text-[9px] bg-green-600 text-white px-1.5 py-0.5 tracking-wider font-heading uppercase rounded-sm">{newCount} NEW</span>
           )}
         </p>
+        {scanMeta && (
+          <p className="text-[10px] text-foreground-dim">{scanMeta.totalDbMatches} in database</p>
+        )}
       </div>
 
       {isGroup && siteGroups ? (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {siteGroups.map((sg) => {
             const isExpanded = expandedSites.has(sg.domain);
             return (
-              <div key={sg.domain} className="border border-border/50">
+              <div key={sg.domain} className="border border-border/50 rounded overflow-hidden">
                 <button
                   onClick={() => toggleSite(sg.domain)}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-surface-elevated/30 hover:bg-surface-elevated/60 transition-colors text-left"
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-surface-elevated/30 hover:bg-surface-elevated/60 transition-colors text-left"
                 >
                   <div className="flex items-center gap-2">
                     <svg className={`w-3 h-3 text-foreground-dim transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -361,23 +415,32 @@ function ScanResultsGrouped({
                     <span className="text-xs text-foreground font-heading tracking-wide">{sg.domain}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {sg.newCount > 0 && <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 font-heading tracking-wider uppercase">{sg.newCount} new</span>}
+                    {sg.newCount > 0 && <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 font-heading tracking-wider uppercase rounded-sm">{sg.newCount} new</span>}
                     <span className="text-[10px] text-foreground-muted">{sg.items.length}</span>
                   </div>
                 </button>
                 {isExpanded && (
-                  <div className="border-t border-border/30 space-y-px">
-                    {sg.items.map((item, i) => (
-                      <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
-                        className={`flex items-center gap-3 px-3 py-2 text-xs hover:border-accent/30 transition-colors cursor-pointer ${
-                          item.isNew ? 'bg-green-950/30 border-l-2 border-l-green-500' : 'bg-surface-elevated/50'
-                        }`}
-                      >
-                        {item.isNew && <span className="text-[9px] font-heading tracking-widest uppercase bg-green-600 text-white px-1.5 py-0.5 flex-shrink-0">NEW</span>}
-                        <div className="flex-1 min-w-0"><p className="text-foreground truncate">{item.title}</p></div>
-                        {item.price != null && <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>}
-                      </a>
-                    ))}
+                  <div className="border-t border-border/30">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-px">
+                      {sg.items.map((item, i) => (
+                        <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
+                          className={`flex items-center gap-3 px-4 py-2.5 text-xs hover:bg-surface-elevated/80 transition-colors cursor-pointer group ${
+                            item.isNew ? 'bg-green-950/30 border-l-2 border-l-green-500' : 'bg-surface-elevated/50'
+                          }`}
+                        >
+                          {item.isNew && <span className="text-[9px] font-heading tracking-widest uppercase bg-green-600 text-white px-1.5 py-0.5 flex-shrink-0 rounded-sm">NEW</span>}
+                          {item.thumbnail && <img src={item.thumbnail} alt="" className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-foreground truncate group-hover:text-accent transition-colors">{item.title}</p>
+                            {item.seller && <span className="text-[9px] text-foreground-dim">{item.seller}</span>}
+                          </div>
+                          {item.price != null && <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>}
+                          <svg className="w-3 h-3 text-foreground-dim flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -385,36 +448,27 @@ function ScanResultsGrouped({
           })}
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
           {results.map((item, i) => (
             <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
-              className={`flex items-center gap-3 px-3 py-2 border text-xs hover:border-accent/30 transition-colors cursor-pointer ${
+              className={`flex items-center gap-3 px-4 py-2.5 border rounded text-xs hover:border-accent/30 transition-colors cursor-pointer group ${
                 item.isNew ? 'bg-green-950/30 border-l-2 border-l-green-500 border-green-700/40' : 'bg-surface-elevated/50 border-border/50'
               }`}
             >
-              {item.isNew && <span className="text-[9px] font-heading tracking-widest uppercase bg-green-600 text-white px-1.5 py-0.5 flex-shrink-0">NEW</span>}
-              {item.thumbnail && <img src={item.thumbnail} alt="" className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+              {item.isNew && <span className="text-[9px] font-heading tracking-widest uppercase bg-green-600 text-white px-1.5 py-0.5 flex-shrink-0 rounded-sm">NEW</span>}
+              {item.thumbnail && <img src={item.thumbnail} alt="" className="w-12 h-12 object-cover border border-border/50 rounded flex-shrink-0" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
               <div className="flex-1 min-w-0">
-                <p className="text-foreground truncate">{item.title}</p>
+                <p className="text-foreground truncate group-hover:text-accent transition-colors">{item.title}</p>
                 {item.seller && <span className="text-[9px] text-foreground-dim">{item.seller}</span>}
               </div>
               {item.price != null && <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>}
+              <svg className="w-3 h-3 text-foreground-dim flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
             </a>
           ))}
         </div>
       )}
-
-      <div className="flex items-center justify-between pt-2">
-        <p className="text-[10px] text-foreground-dim">
-          {groupScanMeta ? `${groupScanMeta.successCount} sites scanned` : scanMeta ? `${scanMeta.totalDbMatches} in database` : ''}
-        </p>
-        {scanMeta?.notificationId && (
-          <a href={`http://localhost:4000/notifications/${scanMeta.notificationId}`} target="_blank" rel="noopener noreferrer"
-            className="text-[10px] font-heading tracking-wider uppercase text-accent hover:underline border border-accent/20 px-2 py-0.5">
-            View Notification
-          </a>
-        )}
-      </div>
     </div>
   );
 }
