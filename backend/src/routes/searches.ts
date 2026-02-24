@@ -322,7 +322,7 @@ router.patch('/group/:groupId/toggle', requireAuth, async (req: Request, res: Re
   }
 });
 
-// POST /api/searches/group/:groupId/scan — read cached matches from DB (no live scraping)
+// POST /api/searches/group/:groupId/scan — read cached matches, trigger crawls for empty sites
 router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Response) => {
   try {
     const { groupId } = req.params;
@@ -332,7 +332,7 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
 
     const searches = await prisma.search.findMany({
       where: { searchAllGroupId: groupId, userId: req.user!.userId },
-      select: { id: true, keyword: true, websiteUrl: true, lastChecked: true },
+      select: { id: true, keyword: true, websiteUrl: true, lastChecked: true, isActive: true },
     });
     if (searches.length === 0) return res.status(404).json({ error: 'Group not found' });
 
@@ -348,6 +348,35 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
       }),
       prisma.match.count({ where: { searchId: { in: searchIds } } }),
     ]);
+
+    // If no cached matches and searches are active, trigger immediate crawls for affected sites
+    let crawlsTriggered = 0;
+    if (totalMatches === 0) {
+      const activeDomains = [...new Set(
+        searches.filter((s) => s.isActive).map((s) => {
+          try { return new URL(s.websiteUrl).hostname.replace(/^www\./, ''); } catch { return ''; }
+        }).filter(Boolean)
+      )];
+
+      if (activeDomains.length > 0) {
+        // Set nextCrawlAt to now for sites matching these domains so scheduler picks them up
+        for (const domain of activeDomains) {
+          await prisma.monitoredSite.updateMany({
+            where: { domain, isEnabled: true, crawlLock: null },
+            data: { nextCrawlAt: new Date() },
+          });
+        }
+        crawlsTriggered = activeDomains.length;
+
+        // Trigger a scheduler tick immediately
+        try {
+          const { schedulerTick } = await import('../services/crawl-scheduler');
+          await schedulerTick();
+        } catch (e) {
+          console.error('[Route] Failed to trigger scheduler tick:', e);
+        }
+      }
+    }
 
     const annotatedMatches = matches.map((m) => ({
       title: m.title,
@@ -376,6 +405,7 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
       matches: annotatedMatches,
       page,
       totalPages: Math.ceil(totalMatches / limit),
+      crawlsTriggered: crawlsTriggered > 0 ? crawlsTriggered : undefined,
     });
   } catch (err) {
     console.error('[Route] Group scan failed:', err);
@@ -538,7 +568,7 @@ router.get('/matches/:searchId', requireAuth, async (req: Request, res: Response
   }
 });
 
-// POST /api/searches/:id/scan — read cached matches from DB (no live scraping)
+// POST /api/searches/:id/scan — read cached matches, trigger crawl if empty
 router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
   const search = await prisma.search.findFirst({
     where: { id: req.params.id, userId: req.user!.userId },
@@ -559,6 +589,21 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
       }),
       prisma.match.count({ where: { searchId: search.id } }),
     ]);
+
+    // If no cached matches and search is active, trigger immediate crawl for the site
+    if (totalDbMatches === 0 && search.isActive) {
+      try {
+        const domain = new URL(search.websiteUrl).hostname.replace(/^www\./, '');
+        await prisma.monitoredSite.updateMany({
+          where: { domain, isEnabled: true, crawlLock: null },
+          data: { nextCrawlAt: new Date() },
+        });
+        const { schedulerTick } = await import('../services/crawl-scheduler');
+        await schedulerTick();
+      } catch (e) {
+        console.error('[Route] Failed to trigger crawl for scan:', e);
+      }
+    }
 
     const lastViewed = search.lastChecked;
     const annotatedMatches = matches.map((m) => ({

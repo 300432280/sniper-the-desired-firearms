@@ -43,7 +43,11 @@ export class GenericRetailAdapter extends AbstractAdapter {
       'li.product-item',             // Magento
       '.product-items > .product-item', // Magento
       '.productborder',              // LightSpeed (gagnonsports, etc.)
+      '.product-thumb',              // OpenCart
+      '.product-layout',             // OpenCart grid/list
       'div.product',                 // Generic product div
+      '[class*="klevuProduct"]',     // Klevu JS search overlay (BigCommerce, etc.)
+      '.kuResultsListing li',        // Klevu search results list
     ];
 
     for (const selector of SELECTORS) {
@@ -88,12 +92,14 @@ export class GenericRetailAdapter extends AbstractAdapter {
 
         // Must contain keyword and be a real product link
         if (!text.toLowerCase().includes(keywordLower)) return;
-        if (text.length < 8 || text.length > 200) return;
+        if (text.length < 8 || text.length > 500) return;
         if (/^\$?\d[\d,.]*$/.test(text)) return; // Just a price
 
         // Skip navigation/breadcrumb/pagination/category links
         if (href === '#' || href === baseUrl) return;
-        if (/\/(cart|login|register|account|page\/\d|search)\b/i.test(href)) return;
+        // Skip navigation links — but check path only, not query params
+        const hrefPath = href.split('?')[0];
+        if (/\/(cart|login|register|account|page\/\d|search)\b/i.test(hrefPath)) return;
         if (this.isNavUrl(href)) return;
 
         // Resolve URL

@@ -47,14 +47,23 @@ const PEAK_HOURS_UTC = [17, 18, 19, 20, 21, 22];
 // ── Difficulty Scoring ───────────────────────────────────────────────────────
 
 /**
- * Compute difficulty score (0-100) from measurable signals.
+ * Compute difficulty score (0-100) from measurable signals + crawl outcomes.
  * Higher = harder to scrape safely.
+ *
+ * @param recentCrawlStats - Optional stats from the last N crawl events:
+ *   - zeroMatchStreak: consecutive "success" crawls with 0 matches found
+ *   - usedPlaywright: whether the current crawl fell back to Playwright
  */
-export function computeDifficulty(site: SiteMetrics, avgResponseTimeMs?: number | null): number {
+export function computeDifficulty(
+  site: SiteMetrics,
+  avgResponseTimeMs?: number | null,
+  recentCrawlStats?: { zeroMatchStreak: number; usedPlaywright?: boolean },
+): number {
   if (site.overrideDifficulty != null) return site.overrideDifficulty;
 
   let score = 0;
 
+  // ── Detection-based signals ────────────────────────────────────────────
   if (site.requiresSucuri || site.hasWaf) score += 15;
   if (site.hasRateLimit) score += 20;
   if (site.hasCaptcha) score += 25;
@@ -68,6 +77,21 @@ export function computeDifficulty(site: SiteMetrics, avgResponseTimeMs?: number 
 
   if (site.consecutiveFailures >= 5) score += 20;
   else if (site.consecutiveFailures >= 3) score += 10;
+
+  // ── Outcome-based signals ──────────────────────────────────────────────
+
+  // Zero-match streak: site returns HTTP 200 but yields no products.
+  // Strong indicator of stealth WAF blocks, wrong adapter, or broken extraction.
+  // Escalates: 3+ crawls with 0 matches = +10, 5+ = +20, 8+ = +35
+  if (recentCrawlStats) {
+    const streak = recentCrawlStats.zeroMatchStreak;
+    if (streak >= 8) score += 35;
+    else if (streak >= 5) score += 20;
+    else if (streak >= 3) score += 10;
+
+    // Playwright fallback: site requires a headless browser (JS-rendered/SPA)
+    if (recentCrawlStats.usedPlaywright) score += 10;
+  }
 
   return Math.min(score, 100);
 }

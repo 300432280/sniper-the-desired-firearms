@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 
 interface SiteDashboard {
@@ -88,6 +88,74 @@ function formatTime(dateStr: string | null): string {
 }
 
 type SortField = 'domain' | 'difficulty' | 'interval' | 'nextCrawl' | 'failures' | 'traffic' | 'searches';
+type ExpandedCell = { siteId: string; column: 'difficulty' | 'interval' } | null;
+
+/** Compute a difficulty breakdown matching priority-engine.ts logic.
+ *  The frontend knows detection-based signals but not outcome-based ones
+ *  (zero-match streak, Playwright bump) — those are computed server-side.
+ *  Any gap between signal sum and actual score = outcome-based penalties. */
+function getDifficultyBreakdown(site: SiteDashboard) {
+  const factors: { label: string; value: number }[] = [];
+
+  // Detection-based signals (known client-side)
+  if (site.requiresSucuri || site.hasWaf) factors.push({ label: 'WAF / Sucuri', value: 15 });
+  if (site.hasRateLimit) factors.push({ label: 'Rate Limit detected', value: 20 });
+  if (site.hasCaptcha) factors.push({ label: 'CAPTCHA detected', value: 25 });
+  if (site.avgResponseTimeMs) {
+    if (site.avgResponseTimeMs > 8000) factors.push({ label: `Slow response (${Math.round(site.avgResponseTimeMs)}ms > 8s)`, value: 15 });
+    else if (site.avgResponseTimeMs > 5000) factors.push({ label: `Slow response (${Math.round(site.avgResponseTimeMs)}ms > 5s)`, value: 10 });
+    else if (site.avgResponseTimeMs > 3000) factors.push({ label: `Slow response (${Math.round(site.avgResponseTimeMs)}ms > 3s)`, value: 5 });
+  }
+  if (site.consecutiveFailures >= 5) factors.push({ label: `${site.consecutiveFailures} consecutive failures (≥5)`, value: 20 });
+  else if (site.consecutiveFailures >= 3) factors.push({ label: `${site.consecutiveFailures} consecutive failures (≥3)`, value: 10 });
+
+  const signalSum = Math.min(factors.reduce((s, f) => s + f.value, 0), 100);
+  const actual = site.difficultyScore;
+
+  // Outcome-based penalties are computed server-side (zero-match streak, Playwright bump).
+  // Show the delta as a single line if the stored score exceeds the signal sum.
+  const outcomePenalty = actual - signalSum;
+  if (outcomePenalty > 0) {
+    factors.push({ label: 'Crawl outcome penalties (0-match streak / Playwright)', value: outcomePenalty });
+  }
+
+  return { factors, actual };
+}
+
+/** Compute an interval breakdown matching priority-engine.ts logic */
+function getIntervalBreakdown(site: SiteDashboard) {
+  const BASE = 120;
+  const difficulty = site.overrideDifficulty ?? site.difficultyScore;
+  const trafficClass = site.overrideTrafficClass ?? site.trafficClass;
+
+  const diffMult = 1.0 + difficulty / 50;
+  const trafficMultMap: Record<string, number> = { tiny: 4.0, small: 2.5, medium: 1.5, large: 1.0 };
+  const tMult = trafficMultMap[trafficClass] ?? 1.5;
+  const failMult = Math.min(Math.pow(1.5, site.consecutiveFailures), 8.0);
+  const wafMult = site.hasWaf ? 1.3 : 1.0;
+  const rlMult = site.hasRateLimit ? 2.0 : 1.0;
+  const capMult = site.hasCaptcha ? 3.0 : 1.0;
+
+  const trafficFloors: Record<string, number> = { tiny: 720, small: 240, medium: 60, large: 30 };
+  const floor = trafficFloors[trafficClass] ?? 60;
+
+  const raw = BASE * diffMult * tMult * failMult * wafMult * rlMult * capMult;
+  const clamped = Math.max(30, Math.min(1440, Math.round(raw)));
+  const final = Math.max(clamped, floor);
+
+  const multipliers: { label: string; value: string }[] = [
+    { label: 'Base interval', value: `${BASE}m` },
+    { label: `Difficulty (${difficulty}/100)`, value: `×${diffMult.toFixed(2)}` },
+    { label: `Traffic class (${trafficClass})`, value: `×${tMult.toFixed(1)}` },
+  ];
+  if (failMult > 1) multipliers.push({ label: `Failure backoff (${site.consecutiveFailures} fails)`, value: `×${failMult.toFixed(2)}` });
+  if (wafMult > 1) multipliers.push({ label: 'WAF penalty', value: '×1.3' });
+  if (rlMult > 1) multipliers.push({ label: 'Rate limit penalty', value: '×2.0' });
+  if (capMult > 1) multipliers.push({ label: 'CAPTCHA penalty', value: '×3.0' });
+  if (final !== clamped) multipliers.push({ label: `Traffic floor (${trafficClass})`, value: `≥${floor}m` });
+
+  return { multipliers, raw: Math.round(raw), final };
+}
 
 export default function SiteMonitorPage() {
   const [sites, setSites] = useState<SiteDashboard[]>([]);
@@ -98,6 +166,8 @@ export default function SiteMonitorPage() {
   const [filterAdapter, setFilterAdapter] = useState('');
   const [filterTraffic, setFilterTraffic] = useState('');
   const [filterEnabled, setFilterEnabled] = useState<'all' | 'enabled' | 'disabled'>('all');
+  const [expanded, setExpanded] = useState<ExpandedCell>(null);
+  const [headerInfo, setHeaderInfo] = useState<'difficulty' | 'interval' | null>(null);
 
   const fetchSites = useCallback(async () => {
     try {
@@ -247,33 +317,115 @@ export default function SiteMonitorPage() {
         </div>
       )}
 
+      {/* Header info panels */}
+      {headerInfo === 'difficulty' && (
+        <div className="border border-border bg-surface-elevated px-5 py-4 mb-2">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mb-2">How Difficulty Score is Calculated</p>
+              <p className="text-xs text-foreground-dim mb-3">Score ranges 0-100. Higher = harder to scrape safely. Each signal adds points:</p>
+              <table className="text-[10px]">
+                <tbody>
+                  {[
+                    ['WAF / Sucuri detected', '+15'],
+                    ['Rate limit detected', '+20'],
+                    ['CAPTCHA detected', '+25'],
+                    ['Requires authentication', '+5'],
+                    ['Response time > 3s / > 5s / > 8s', '+5 / +10 / +15'],
+                    ['Consecutive failures >= 3 / >= 5', '+10 / +20'],
+                    ['Playwright fallback needed', '+10 (at crawl time)'],
+                  ].map(([label, value]) => (
+                    <tr key={label} className="border-b border-border/30">
+                      <td className="py-1 pr-6 text-foreground-muted">{label}</td>
+                      <td className="py-1 text-right font-heading text-yellow-400">{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-[9px] text-foreground-dim mt-2">Click any site's difficulty score to see its specific breakdown.</p>
+            </div>
+            <button onClick={() => setHeaderInfo(null)} className="text-foreground-dim hover:text-foreground text-xs ml-4">&#x2715;</button>
+          </div>
+        </div>
+      )}
+      {headerInfo === 'interval' && (
+        <div className="border border-border bg-surface-elevated px-5 py-4 mb-2">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mb-2">How Crawl Interval is Calculated</p>
+              <p className="text-xs text-foreground-dim mb-3">Base interval (120m) is multiplied by these factors:</p>
+              <table className="text-[10px]">
+                <tbody>
+                  {[
+                    ['Difficulty multiplier', '1 + (score / 50) — e.g. score 0 = x1, score 50 = x2'],
+                    ['Traffic class', 'tiny x4, small x2.5, medium x1.5, large x1'],
+                    ['Failure backoff', '1.5^failures — exponential, capped at x8'],
+                    ['WAF detected', 'x1.3'],
+                    ['Rate limit detected', 'x2.0'],
+                    ['CAPTCHA detected', 'x3.0'],
+                    ['Peak hours (12-5pm EST)', 'x1.3'],
+                    ['Seasonal (Black Friday, Boxing Day)', 'x1.5'],
+                    ['High demand (> 5 active searches)', 'x0.8 (faster)'],
+                    ['High yield (> 5 avg matches)', 'x0.85 (faster)'],
+                  ].map(([label, value]) => (
+                    <tr key={label} className="border-b border-border/30">
+                      <td className="py-1 pr-6 text-foreground-muted">{label}</td>
+                      <td className="py-1 text-foreground-dim">{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-[9px] text-foreground-dim mt-2">
+                {'Traffic floor enforced: tiny >= 720m, small >= 240m, medium >= 60m, large >= 30m. Absolute bounds: 30m - 1440m (24h). '}
+                Click any site&apos;s interval to see its specific breakdown.
+              </p>
+            </div>
+            <button onClick={() => setHeaderInfo(null)} className="text-foreground-dim hover:text-foreground text-xs ml-4">&#x2715;</button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="border border-border overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-surface-elevated border-b border-border">
               {[
-                { field: 'domain' as SortField, label: 'Site' },
-                { field: null, label: 'Adapter' },
-                { field: 'traffic' as SortField, label: 'Traffic' },
-                { field: 'difficulty' as SortField, label: 'Difficulty' },
-                { field: 'interval' as SortField, label: 'Interval' },
-                { field: 'nextCrawl' as SortField, label: 'Next Crawl' },
-                { field: null, label: 'Last Crawl' },
-                { field: 'failures' as SortField, label: 'Failures' },
-                { field: 'searches' as SortField, label: 'Searches' },
-                { field: null, label: 'Signals' },
-                { field: null, label: 'Actions' },
+                { field: 'domain' as SortField, label: 'Site', info: null as 'difficulty' | 'interval' | null },
+                { field: null, label: 'Adapter', info: null },
+                { field: 'traffic' as SortField, label: 'Traffic', info: null },
+                { field: 'difficulty' as SortField, label: 'Difficulty', info: 'difficulty' as const },
+                { field: 'interval' as SortField, label: 'Interval', info: 'interval' as const },
+                { field: 'nextCrawl' as SortField, label: 'Next Crawl', info: null },
+                { field: null, label: 'Last Crawl', info: null },
+                { field: 'failures' as SortField, label: 'Failures', info: null },
+                { field: 'searches' as SortField, label: 'Searches', info: null },
+                { field: null, label: 'Signals', info: null },
+                { field: null, label: 'Actions', info: null },
               ].map((col) => (
                 <th
                   key={col.label}
-                  onClick={() => col.field && handleSort(col.field)}
                   className={`px-3 py-2 text-left text-[9px] font-heading tracking-widest uppercase text-foreground-muted whitespace-nowrap ${
                     col.field ? 'cursor-pointer hover:text-foreground' : ''
                   } ${sortField === col.field ? 'text-accent' : ''}`}
                 >
-                  {col.label}
-                  {sortField === col.field && (sortAsc ? ' \u2191' : ' \u2193')}
+                  <span className="inline-flex items-center gap-1">
+                    <span onClick={() => col.field && handleSort(col.field)}>
+                      {col.label}
+                      {sortField === col.field && (sortAsc ? ' \u2191' : ' \u2193')}
+                    </span>
+                    {col.info && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setHeaderInfo(prev => prev === col.info ? null : col.info); }}
+                        className={`w-3.5 h-3.5 rounded-full border text-[8px] leading-none flex items-center justify-center ${
+                          headerInfo === col.info ? 'border-accent text-accent' : 'border-foreground-dim/40 text-foreground-dim hover:text-foreground hover:border-foreground'
+                        }`}
+                        title={`How is ${col.label.toLowerCase()} calculated?`}
+                      >
+                        ?
+                      </button>
+                    )}
+                  </span>
                 </th>
               ))}
             </tr>
@@ -286,8 +438,8 @@ export default function SiteMonitorPage() {
               <tr><td colSpan={11} className="px-3 py-8 text-center text-foreground-dim">No sites match filters</td></tr>
             )}
             {filteredSites.map((site) => (
+              <React.Fragment key={site.id}>
               <tr
-                key={site.id}
                 className={`border-b border-border/50 hover:bg-surface-elevated/30 transition-colors ${
                   !site.isEnabled ? 'opacity-50' : ''
                 }`}
@@ -317,20 +469,30 @@ export default function SiteMonitorPage() {
                   </span>
                 </td>
 
-                {/* Difficulty */}
+                {/* Difficulty (clickable) */}
                 <td className="px-3 py-2.5">
-                  <span className={`font-heading font-bold ${difficultyColor(site.difficultyScore)}`}>
+                  <button
+                    onClick={() => setExpanded(prev => prev?.siteId === site.id && prev.column === 'difficulty' ? null : { siteId: site.id, column: 'difficulty' })}
+                    className={`font-heading font-bold ${difficultyColor(site.difficultyScore)} hover:underline cursor-pointer`}
+                    title="Click to see breakdown"
+                  >
                     {site.overrideDifficulty != null ? `${site.difficultyScore}*` : site.difficultyScore}
-                  </span>
+                  </button>
                 </td>
 
-                {/* Interval */}
-                <td className="px-3 py-2.5 text-foreground-muted whitespace-nowrap">
-                  {site.overrideInterval != null ? (
-                    <span className="text-orange-400">{site.overrideInterval}m*</span>
-                  ) : (
-                    `${site.crawlIntervalMin}m`
-                  )}
+                {/* Interval (clickable) */}
+                <td className="px-3 py-2.5 whitespace-nowrap">
+                  <button
+                    onClick={() => setExpanded(prev => prev?.siteId === site.id && prev.column === 'interval' ? null : { siteId: site.id, column: 'interval' })}
+                    className="text-foreground-muted hover:underline cursor-pointer"
+                    title="Click to see breakdown"
+                  >
+                    {site.overrideInterval != null ? (
+                      <span className="text-orange-400">{site.overrideInterval}m*</span>
+                    ) : (
+                      `${site.crawlIntervalMin}m`
+                    )}
+                  </button>
                 </td>
 
                 {/* Next crawl */}
@@ -397,6 +559,79 @@ export default function SiteMonitorPage() {
                   </button>
                 </td>
               </tr>
+
+              {/* Expandable explanation row */}
+              {expanded?.siteId === site.id && (
+                <tr className="bg-surface-elevated/50">
+                  <td colSpan={11} className="px-4 py-3">
+                    {expanded.column === 'difficulty' && (() => {
+                      const { factors, actual } = getDifficultyBreakdown(site);
+                      return (
+                        <div className="max-w-md">
+                          <p className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mb-2">
+                            Difficulty Breakdown — {site.domain}
+                          </p>
+                          {site.overrideDifficulty != null && (
+                            <p className="text-[10px] text-orange-400 mb-2">Manual override: {site.overrideDifficulty}</p>
+                          )}
+                          {factors.length === 0 ? (
+                            <p className="text-[10px] text-foreground-dim">No difficulty signals detected — base score is 0.</p>
+                          ) : (
+                            <table className="text-[10px] w-full">
+                              <tbody>
+                                {factors.map((f, i) => (
+                                  <tr key={i} className="border-b border-border/30">
+                                    <td className="py-1 text-foreground-muted">{f.label}</td>
+                                    <td className="py-1 text-right font-heading text-yellow-400">+{f.value}</td>
+                                  </tr>
+                                ))}
+                                <tr className="font-bold">
+                                  <td className="py-1 pt-2 text-foreground">Total</td>
+                                  <td className={`py-1 pt-2 text-right font-heading ${difficultyColor(actual)}`}>{actual}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          )}
+                          <p className="text-[9px] text-foreground-dim mt-2">
+                            Score capped at 100. Outcome penalties include zero-match streaks (+10/+20/+35) and Playwright fallback (+10).
+                          </p>
+                        </div>
+                      );
+                    })()}
+                    {expanded.column === 'interval' && (() => {
+                      const { multipliers, raw, final: finalVal } = getIntervalBreakdown(site);
+                      return (
+                        <div className="max-w-md">
+                          <p className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted mb-2">
+                            Interval Breakdown — {site.domain}
+                          </p>
+                          {site.overrideInterval != null && (
+                            <p className="text-[10px] text-orange-400 mb-2">Manual override: {site.overrideInterval}m</p>
+                          )}
+                          <table className="text-[10px] w-full">
+                            <tbody>
+                              {multipliers.map((m, i) => (
+                                <tr key={i} className="border-b border-border/30">
+                                  <td className="py-1 text-foreground-muted">{m.label}</td>
+                                  <td className="py-1 text-right font-heading text-blue-400">{m.value}</td>
+                                </tr>
+                              ))}
+                              <tr className="font-bold">
+                                <td className="py-1 pt-2 text-foreground">Result</td>
+                                <td className="py-1 pt-2 text-right font-heading text-foreground">{finalVal}m</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <p className="text-[9px] text-foreground-dim mt-2">
+                            Peak hours (×1.3), seasonal (×1.5), demand ({'>'}{' '}5 searches: ×0.8), and yield bonuses also apply at crawl time. Clamped to 30m–1440m.
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

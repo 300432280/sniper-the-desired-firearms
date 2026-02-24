@@ -73,6 +73,30 @@ export async function cancelSearch(searchId: string): Promise<void> {
   }
 }
 
+/**
+ * Remove legacy per-search repeatable jobs from the scrape queue.
+ * These are leftover from the old per-search scheduling system.
+ * Call once at startup.
+ */
+export async function cleanupLegacyJobs(): Promise<void> {
+  try {
+    const repeatableJobs = await scrapeQueue.getRepeatableJobs();
+    let removed = 0;
+    for (const job of repeatableJobs) {
+      // Legacy jobs have IDs like "search:<cuid>"
+      if (job.id?.startsWith('search:') || job.name === 'scrape-search') {
+        await scrapeQueue.removeRepeatableByKey(job.key);
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      console.log(`[Queue] Cleaned up ${removed} legacy repeatable job(s)`);
+    }
+  } catch (err) {
+    console.error('[Queue] Failed to cleanup legacy jobs:', err instanceof Error ? err.message : err);
+  }
+}
+
 // ─── Crawl Scheduler Queue ────────────────────────────────────────────────────
 
 export const schedulerQueue = new Queue('scheduler', {

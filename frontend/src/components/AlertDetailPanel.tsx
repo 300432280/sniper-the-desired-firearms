@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import type { Search, Match, LiveMatch, ScanResult } from '@/lib/api';
-import { searchesApi } from '@/lib/api';
+import type { Search, Match, LiveMatch } from '@/lib/api';
+import { searchesApi, adminApi } from '@/lib/api';
 import type { SearchGroup } from '@/app/dashboard/page';
 
 interface Props {
   search?: Search;
   group?: SearchGroup;
+  isAdmin?: boolean;
   onToggle?: (id: string) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
   onToggleGroup?: (groupId: string) => Promise<void>;
@@ -28,7 +29,7 @@ const NOTIFY_LABELS: Record<string, string> = {
   BOTH: 'Email + SMS',
 };
 
-export default function AlertDetailPanel({ search, group, onToggle, onDelete, onToggleGroup, onDeleteGroup, onRefresh }: Props) {
+export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onDelete, onToggleGroup, onDeleteGroup, onRefresh }: Props) {
   const isGroup = !!group;
   const keyword = isGroup ? group.keyword : search!.keyword;
   const isActive = isGroup ? group.isActive : search!.isActive;
@@ -47,12 +48,31 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
   const [scanError, setScanError] = useState('');
   const [scanMeta, setScanMeta] = useState<{ newCount: number; totalDbMatches: number; notificationId: string | null } | null>(null);
   const [groupScanMeta, setGroupScanMeta] = useState<{ scannedSites: number; successCount: number; failCount: number; totalMatches: number } | null>(null);
+  const [scanPage, setScanPage] = useState(1);
+  const [scanTotalPages, setScanTotalPages] = useState(1);
+  const [loadingMoreScan, setLoadingMoreScan] = useState(false);
 
   // Match history with pagination
   const [historyMatches, setHistoryMatches] = useState<(Match & { websiteUrl?: string })[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+  const [crawling, setCrawling] = useState(false);
+  const [crawlResult, setCrawlResult] = useState<string | null>(null);
+
+  const handleCrawlNow = async () => {
+    setCrawling(true);
+    setCrawlResult(null);
+    try {
+      const data = await adminApi.crawlNow();
+      setCrawlResult(data.message);
+    } catch (err) {
+      setCrawlResult(err instanceof Error ? err.message : 'Failed to trigger crawl');
+    } finally { setCrawling(false); }
+  };
 
   const handleToggle = async () => {
     setToggling(true);
@@ -81,23 +101,46 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
     setScanResults(null);
     setScanMeta(null);
     setGroupScanMeta(null);
+    setScanPage(1);
     try {
       if (isGroup) {
-        const data = await searchesApi.scanGroup(group.groupId);
+        const data = await searchesApi.scanGroup(group.groupId, 1, 50);
         setScanResults(data.matches);
         setGroupScanMeta({ scannedSites: data.scannedSites, successCount: data.successCount, failCount: data.failCount, totalMatches: data.totalMatches });
+        setScanTotalPages(data.totalPages ?? 1);
         setHistoryMatches(null);
         if (onRefresh) onRefresh();
       } else {
-        const data: ScanResult = await searchesApi.scanNow(search!.id);
+        const data = await searchesApi.scanNow(search!.id, 1, 50);
         setScanResults(data.matches);
         setScanMeta({ newCount: data.newCount, totalDbMatches: data.totalDbMatches, notificationId: data.notificationId });
+        setScanTotalPages(data.totalPages ?? 1);
         setHistoryMatches(null);
         if (onRefresh) onRefresh();
       }
     } catch (err) {
       setScanError(err instanceof Error ? err.message : 'Failed to refresh');
     } finally { setScanning(false); }
+  };
+
+  const handleLoadMoreScan = async () => {
+    const nextPage = scanPage + 1;
+    setLoadingMoreScan(true);
+    try {
+      if (isGroup) {
+        const data = await searchesApi.scanGroup(group.groupId, nextPage, 50);
+        setScanResults(prev => [...(prev || []), ...data.matches]);
+        setScanPage(nextPage);
+        setScanTotalPages(data.totalPages ?? 1);
+      } else {
+        const data = await searchesApi.scanNow(search!.id, nextPage, 50);
+        setScanResults(prev => [...(prev || []), ...data.matches]);
+        setScanPage(nextPage);
+        setScanTotalPages(data.totalPages ?? 1);
+      }
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : 'Failed to load more');
+    } finally { setLoadingMoreScan(false); }
   };
 
   const loadHistory = async () => {
@@ -107,19 +150,42 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
     }
     setHistoryLoading(true);
     setShowHistory(true);
+    setHistoryPage(1);
     try {
       if (isGroup) {
-        const data = await searchesApi.getGroup(group.groupId);
+        const data = await searchesApi.getGroup(group.groupId, 1, 50);
         setHistoryMatches(data.matches);
         setHistoryTotal((data as any).totalMatches ?? data.matches.length);
+        setHistoryTotalPages(data.totalPages ?? 1);
       } else {
-        const data = await searchesApi.matches(search!.id);
+        const data = await searchesApi.matches(search!.id, 1, 50);
         setHistoryMatches(data.matches);
-        setHistoryTotal((data as any).total ?? data.matches.length);
+        setHistoryTotal(data.total ?? data.matches.length);
+        setHistoryTotalPages(data.totalPages ?? 1);
       }
     } catch {
       setHistoryMatches([]);
     } finally { setHistoryLoading(false); }
+  };
+
+  const handleLoadMoreHistory = async () => {
+    const nextPage = historyPage + 1;
+    setLoadingMoreHistory(true);
+    try {
+      if (isGroup) {
+        const data = await searchesApi.getGroup(group.groupId, nextPage, 50);
+        setHistoryMatches(prev => [...(prev || []), ...data.matches]);
+        setHistoryPage(nextPage);
+        setHistoryTotalPages(data.totalPages ?? 1);
+      } else {
+        const data = await searchesApi.matches(search!.id, nextPage, 50);
+        setHistoryMatches(prev => [...(prev || []), ...data.matches]);
+        setHistoryPage(nextPage);
+        setHistoryTotalPages(data.totalPages ?? 1);
+      }
+    } catch {
+      // Ignore load more errors
+    } finally { setLoadingMoreHistory(false); }
   };
 
   const lastChecked = lastCheckedRaw
@@ -197,7 +263,21 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
         >
           {deleting ? '...' : confirmDelete ? 'Confirm Delete' : 'Delete'}
         </button>
+        {isAdmin && isGroup && (
+          <button
+            onClick={handleCrawlNow}
+            disabled={crawling}
+            className="text-[11px] font-heading uppercase tracking-wider px-4 py-1.5 border border-orange-500/30 text-orange-400 hover:bg-orange-500/10 transition-colors disabled:opacity-40 ml-auto"
+          >
+            {crawling ? 'Crawling...' : 'Live Scan All'}
+          </button>
+        )}
       </div>
+      {crawlResult && (
+        <div className="px-6 py-2 border-b border-border text-xs text-orange-300 bg-orange-500/5">
+          {crawlResult}
+        </div>
+      )}
 
       {/* Content area (scrollable) */}
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
@@ -223,7 +303,7 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
 
           {!scanning && !scanResults && (
             <div className="text-xs text-foreground-dim py-4 text-center">
-              Click Refresh to load cached results.
+              Click {isGroup ? 'Refresh All' : 'Refresh Results'} to load cached results.
             </div>
           )}
 
@@ -234,12 +314,23 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
           )}
 
           {scanResults && scanResults.length > 0 && (
-            <ScanResultsGrouped
-              results={scanResults}
-              isGroup={isGroup}
-              scanMeta={scanMeta}
-              groupScanMeta={groupScanMeta}
-            />
+            <>
+              <ScanResultsGrouped
+                results={scanResults}
+                isGroup={isGroup}
+                scanMeta={scanMeta}
+                groupScanMeta={groupScanMeta}
+              />
+              {scanPage < scanTotalPages && (
+                <button
+                  onClick={handleLoadMoreScan}
+                  disabled={loadingMoreScan}
+                  className="w-full mt-3 text-[11px] font-heading uppercase tracking-wider py-2 border border-accent/30 text-accent hover:bg-accent/10 transition-colors disabled:opacity-40"
+                >
+                  {loadingMoreScan ? 'Loading...' : `Load More (${scanResults.length} of ${groupScanMeta?.totalMatches ?? scanMeta?.totalDbMatches ?? '?'})`}
+                </button>
+              )}
+            </>
           )}
         </section>
 
@@ -300,6 +391,15 @@ export default function AlertDetailPanel({ search, group, onToggle, onDelete, on
                   <p className="text-[10px] text-foreground-dim pt-2">
                     Showing {historyMatches.length} of {historyTotal} match{historyTotal !== 1 ? 'es' : ''}
                   </p>
+                  {historyPage < historyTotalPages && (
+                    <button
+                      onClick={handleLoadMoreHistory}
+                      disabled={loadingMoreHistory}
+                      className="w-full mt-2 text-[11px] font-heading uppercase tracking-wider py-2 border border-accent/30 text-accent hover:bg-accent/10 transition-colors disabled:opacity-40"
+                    >
+                      {loadingMoreHistory ? 'Loading...' : 'Load More'}
+                    </button>
+                  )}
                 </>
               )}
             </div>

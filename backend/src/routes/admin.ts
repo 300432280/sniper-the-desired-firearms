@@ -327,4 +327,27 @@ router.patch('/sites/:id/overrides', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/crawl-now — force immediate crawl of all enabled sites
+router.post('/crawl-now', async (_req: Request, res: Response) => {
+  try {
+    // Set all enabled sites' nextCrawlAt to now so the scheduler picks them up immediately
+    const result = await prisma.monitoredSite.updateMany({
+      where: { isEnabled: true, crawlLock: null },
+      data: { nextCrawlAt: new Date() },
+    });
+
+    // Trigger a scheduler tick immediately instead of waiting up to 2 minutes
+    const { schedulerTick } = await import('../services/crawl-scheduler');
+    await schedulerTick();
+
+    return res.json({
+      message: `Triggered crawl for ${result.count} sites`,
+      sitesQueued: result.count,
+    });
+  } catch (err) {
+    console.error('[Admin] Force crawl error:', err);
+    return res.status(500).json({ error: 'Failed to trigger crawl' });
+  }
+});
+
 export default router;

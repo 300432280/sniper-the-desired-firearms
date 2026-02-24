@@ -193,14 +193,14 @@ export const searchesApi = {
 
   toggle: (id: string) => request<{ search: Search }>('PATCH', `/searches/${id}/toggle`),
 
-  matches: (searchId: string) =>
-    request<{ matches: Match[] }>('GET', `/searches/matches/${searchId}`),
+  matches: (searchId: string, page = 1, limit = 50) =>
+    request<{ matches: Match[]; total: number; page: number; totalPages: number }>('GET', `/searches/matches/${searchId}?page=${page}&limit=${limit}`),
 
-  scanNow: (id: string) =>
-    request<ScanResult>('POST', `/searches/${id}/scan`),
+  scanNow: (id: string, page = 1, limit = 50) =>
+    request<ScanResult & { page: number; totalPages: number }>('POST', `/searches/${id}/scan?page=${page}&limit=${limit}`),
 
-  getGroup: (groupId: string) =>
-    request<SearchAllGroupResult>('GET', `/searches/group/${groupId}`),
+  getGroup: (groupId: string, page = 1, limit = 50) =>
+    request<SearchAllGroupResult & { page: number; totalPages: number }>('GET', `/searches/group/${groupId}?page=${page}&limit=${limit}`),
 
   deleteGroup: (groupId: string) =>
     request<{ message: string }>('DELETE', `/searches/group/${groupId}`),
@@ -208,9 +208,9 @@ export const searchesApi = {
   toggleGroup: (groupId: string) =>
     request<{ isActive: boolean; count: number }>('PATCH', `/searches/group/${groupId}/toggle`),
 
-  scanGroup: (groupId: string) =>
-    request<{ scannedSites: number; successCount: number; failCount: number; totalMatches: number; matches: (LiveMatch & { websiteUrl?: string })[] }>(
-      'POST', `/searches/group/${groupId}/scan`
+  scanGroup: (groupId: string, page = 1, limit = 50) =>
+    request<{ scannedSites: number; successCount: number; failCount: number; totalMatches: number; matches: (LiveMatch & { websiteUrl?: string })[]; page: number; totalPages: number }>(
+      'POST', `/searches/group/${groupId}/scan?page=${page}&limit=${limit}`
     ),
 };
 
@@ -246,6 +246,11 @@ export const sitesApi = {
     request<{ site: { id: string; domain: string; name: string }; keyword: string; adapterUsed: string; matchCount: number; matches: LiveMatch[]; loginRequired: boolean; errors?: string[] }>(
       'POST', `/admin/sites/${id}/test`, { keyword }
     ),
+};
+
+export const adminApi = {
+  crawlNow: () =>
+    request<{ message: string; sitesQueued: number }>('POST', '/admin/crawl-now'),
 };
 
 export const healthApi = {

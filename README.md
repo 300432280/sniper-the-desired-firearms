@@ -73,6 +73,14 @@ User creates alert (keyword + URL) — or "Search All Sites"
 4. Email/SMS is sent with a link to `/notifications/{id}` — a self-contained HTML landing page.
 5. Notification status is updated to `sent` or `failed`.
 
+### Notification Tiers
+
+| Tier | Delivery | Timing |
+|------|----------|--------|
+| PRO ($14/mo) | Email + SMS | Instant (on match detection) |
+| FREE | Email only | Daily digest (6 AM UTC) |
+| Guest | Email only | 24-hour expiry, single alert |
+
 ---
 
 ## Scraper Framework
@@ -139,12 +147,103 @@ scrapeWithAdapter(url, keyword, options)
 | Classifieds | 2 | GunPost, TownPost |
 | Auctions | 4 | iCollector, HiBid Canada, Miller & Miller, Switzer's |
 
+### Playwright Fallback
+
+A shared headless Chromium instance (lazy-launched, auto-closed after 5 min idle) handles JS-rendered sites:
+
+- **Trigger conditions**: Static HTML < 2KB, or Incapsula WAF challenge detected, or 0 matches from large HTML (SPA)
+- **Anti-detection**: `--disable-blink-features=AutomationControlled`, realistic viewport/locale/user-agent
+- **Resource blocking**: Images, fonts, media, stylesheets blocked for speed
+- **Incapsula handling**: Detects `_Incapsula_Resource` challenge, waits for JS resolution + cookie set + page reload
+- **Idle management**: Browser auto-closes after 5 minutes of inactivity, graceful shutdown on SIGTERM
+
 ### HTTP Client
 
-- **Sucuri WAF bypass** — Solves JavaScript challenges, carries cookies across redirect chains, normalizes `www.` domain variants
-- **User agent rotation** — Random selection from 8 modern browser user agents
-- **Rate limiting** — Randomized delays (800–2500ms) between requests
-- **Retry with backoff** — 3 attempts with exponential backoff
+- **Sucuri WAF bypass** — Solves JavaScript challenges via `vm.runInNewContext` (Base64 decode), carries cookies across redirect chains
+- **User agent rotation** — Deterministic per-domain (MD5 hash picks from 4 UAs so the same site always sees the same browser)
+- **Rate limiting** — Difficulty-aware delays (1-4s between requests, higher for difficult sites)
+- **Retry with backoff** — 3 attempts with exponential backoff (2s base)
+- **Difficulty signal detection** — Auto-detects WAF (Cloudflare/Sucuri headers), rate limits (HTTP 429), CAPTCHAs (body keywords)
+
+---
+
+## Unified Crawl Scheduler
+
+Sites are crawled on a **site-level schedule** (not per-user). One crawl per site serves all users who have searches on that site. A BullMQ cron job ticks every 2 minutes and queues crawls for due sites.
+
+### Safety Ceilings (hard limits, no override)
+
+| Limit | Value |
+|-------|-------|
+| Max concurrent crawls | 10 |
+| Max crawls per site per hour | 4 |
+| Max global crawls per hour | 200 |
+| Crawl lock timeout | 5 minutes (auto-expire) |
+
+### Difficulty Scoring (0-100)
+
+Computed from detection signals + actual crawl outcomes:
+
+**Detection-based signals:**
+
+| Factor | Points |
+|--------|--------|
+| WAF / Sucuri detected | +15 |
+| Rate limiting (HTTP 429) | +20 |
+| CAPTCHA detected | +25 |
+| Requires authentication | +5 |
+| Slow response (>3s / >5s / >8s) | +5 / +10 / +15 |
+| Consecutive failures (3+ / 5+) | +10 / +20 |
+
+**Outcome-based signals (computed server-side from crawl history):**
+
+| Factor | Points |
+|--------|--------|
+| Zero-match streak — 3+ consecutive "success" crawls with 0 matches | +10 |
+| Zero-match streak — 5+ crawls | +20 |
+| Zero-match streak — 8+ crawls | +35 |
+| Playwright fallback used on current crawl | +10 |
+
+Score recalculates from scratch on every crawl. If a site recovers (matches found, no Playwright needed), outcome-based penalties drop off automatically.
+
+### Crawl Interval Computation
+
+```
+interval = BASE (120 min)
+         × difficulty multiplier    (1.0 + score/50)
+         × traffic class multiplier (tiny: 4x, small: 2.5x, medium: 1.5x, large: 1x)
+         × failure backoff          (1.5^failures, capped at 8x)
+         × WAF penalty              (1.3x if hasWaf)
+         × rate limit penalty       (2x if hasRateLimit)
+         × CAPTCHA penalty          (3x if hasCaptcha)
+         × peak hours factor        (1.3x during off-peak hours)
+         × seasonal factor          (1.5x during Black Friday / Boxing Day)
+         × demand bonus             (0.8x if many active searches)
+         × yield bonus              (0.85x if recent crawls found matches)
+```
+
+Clamped to 30-1440 minutes. Traffic class hard floors: tiny >= 720m, small >= 240m, medium >= 60m, large >= 30m.
+
+### Traffic Classification
+
+Automatically detected from HTTP response headers after each crawl:
+
+| Class | Criteria |
+|-------|----------|
+| `large` | CDN detected (Cloudflare, CloudFront, Fastly) + fast response (<300ms) |
+| `medium` | CDN or WAF present, or response <1s |
+| `small` | Response <3s, no CDN |
+| `tiny` | Slow response (>3s), high error rate, or 3+ consecutive failures |
+
+### Failure Backoff
+
+| Condition | Action |
+|-----------|--------|
+| Any failure | 30 min minimum interval |
+| 3+ consecutive failures | 1 hour circuit breaker |
+| 5+ consecutive failures | 6 hour backoff |
+| Blocked / CAPTCHA | 2 hour minimum |
+| 10+ consecutive failures | Site auto-disabled |
 
 ---
 
@@ -205,8 +304,26 @@ model Notification {
 
 model MonitoredSite {
   id, domain (unique), name, url, siteType, adapterType,
-  isEnabled, requiresSucuri, requiresAuth, searchUrlPattern?, notes?
-  -> healthChecks[]
+  isEnabled, requiresSucuri, requiresAuth, searchUrlPattern?, notes?,
+
+  // Crawl scheduling
+  lastCrawlAt?, nextCrawlAt?, crawlIntervalMin (default 120),
+  crawlLock?, crawlLockExpiresAt?,
+
+  // Difficulty signals (auto-measured)
+  difficultyScore (0-100), trafficClass (tiny|small|medium|large),
+  avgResponseTimeMs?, consecutiveFailures,
+  hasWaf, hasRateLimit, hasCaptcha,
+
+  // Admin overrides (null = auto-computed)
+  overrideTrafficClass?, overrideDifficulty?, overrideInterval?,
+  -> healthChecks[], crawlEvents[]
+}
+
+model CrawlEvent {
+  id, siteId, status (success|fail|timeout|blocked|captcha),
+  responseTimeMs?, statusCode?, matchesFound, errorMessage?, crawledAt
+  @@index([siteId, crawledAt])
 }
 
 model SiteHealthCheck {
@@ -225,7 +342,7 @@ model SiteMap {
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - Docker Desktop (for local PostgreSQL + Redis) **OR** remote Neon/Upstash URLs
 
 ### 1. Start infrastructure
@@ -323,9 +440,25 @@ Admin users are defined by the `ADMIN_EMAILS` environment variable. Admins get:
 1. **All Pro features unlocked** — 5-min checks, SMS, BOTH notifications (regardless of tier).
 2. **10-second test interval** — Special `checkInterval: 0` option for rapid testing.
 3. **Test Store access** — Dynamic product page at `/test-page` with add/remove/reset controls and notification preview.
-4. **Admin toolbar** in the dashboard — Quick links to Test Store, Debug Log, Match History.
+4. **Admin toolbar** in the dashboard — Quick links to Test Store, Debug Log, Match History, Site Monitor.
 5. **Debug Log SSE** — Real-time streaming of scrape events, match detections, email/SMS sends.
-6. **Site management** — CRUD for monitored sites, health check triggers, test scrape.
+6. **Site Monitor dashboard** — Crawl metrics, difficulty/interval breakdowns, signal badges, overrides.
+7. **Site management** — CRUD for monitored sites, health check triggers, test scrape, force crawl.
+
+### Site Monitor Dashboard (`/dashboard/admin/sites`)
+
+Table showing all 50+ monitored sites with:
+- Adapter type and traffic class badge
+- Difficulty score (clickable — shows factor-by-factor breakdown with outcome penalties)
+- Crawl interval (clickable — shows multiplier-by-multiplier breakdown)
+- Next crawl countdown timer
+- Last crawl status, response time, matches found
+- Consecutive failures count
+- Signal badges: WAF, Rate Limit, CAPTCHA, Sucuri
+- Active search count
+- Enable/disable toggle
+
+Features: sortable columns, filterable by adapter/traffic/enabled, auto-refreshes every 60 seconds.
 
 ### Admin Account Setup
 
@@ -409,11 +542,14 @@ The test store (`/test-page`) is a dynamic in-memory product listing page that m
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/admin/sites` | Admin | List all monitored sites |
+| GET | `/api/admin/sites` | Admin | List all monitored sites with health check |
 | POST | `/api/admin/sites` | Admin | Add monitored site |
 | PATCH | `/api/admin/sites/:id` | Admin | Update site config |
-| DELETE | `/api/admin/sites/:id` | Admin | Remove site |
-| POST | `/api/admin/sites/:id/test` | Admin | Test scrape a site |
+| DELETE | `/api/admin/sites/:id` | Admin | Remove site (cascades health checks + crawl events) |
+| POST | `/api/admin/sites/:id/test` | Admin | Test scrape a site with keyword |
+| GET | `/api/admin/sites/dashboard` | Admin | All sites with crawl metrics, difficulty, priority |
+| PATCH | `/api/admin/sites/:id/overrides` | Admin | Set admin overrides (traffic, difficulty, interval) |
+| POST | `/api/admin/crawl-now` | Admin | Force immediate crawl of all enabled sites |
 | GET | `/api/admin/health` | Admin | Latest health check results |
 | POST | `/api/admin/health/run` | Admin | Trigger manual health check |
 | POST | `/api/admin/health/prune` | Admin | Prune old health data |
@@ -454,7 +590,8 @@ firearm-alert/
 |   |   |       +-- page.tsx        # Alert list + stats
 |   |   |       +-- alerts/new/page.tsx  # Create alert / Search All
 |   |   |       +-- history/page.tsx     # All match history
-|   |   |       +-- admin/debug/page.tsx # Real-time debug log
+|   |   |       +-- admin/debug/page.tsx # Real-time debug log (SSE)
+|   |   |       +-- admin/sites/page.tsx # Site monitor dashboard (crawl metrics, difficulty breakdown)
 |   |   +-- components/
 |   |   |   +-- Navbar.tsx
 |   |   |   +-- GuestSearchForm.tsx
@@ -478,10 +615,11 @@ firearm-alert/
         |   +-- admin.ts      # Site management, health checks, debug log
         +-- services/
         |   +-- scraper/              # Adapter-based scraping framework
-        |   |   +-- index.ts          # scrapeWithAdapter() orchestrator
-        |   |   +-- types.ts          # ScrapedMatch, ScrapeResult, SiteAdapter interfaces
-        |   |   +-- adapter-registry.ts  # Domain -> adapter lookup (DB-backed, cached)
-        |   |   +-- http-client.ts    # fetchPage(), Sucuri WAF bypass, UA rotation
+        |   |   +-- index.ts              # scrapeWithAdapter() orchestrator
+        |   |   +-- types.ts              # ScrapedMatch, ScrapeResult, SiteAdapter interfaces
+        |   |   +-- adapter-registry.ts   # Domain -> adapter lookup (DB-backed, 5-min cache)
+        |   |   +-- http-client.ts        # fetchPage(), Sucuri solver, UA rotation, rate limiting
+        |   |   +-- playwright-fetcher.ts # Headless browser fallback (shared instance, idle timeout)
         |   |   +-- adapters/
         |   |   |   +-- base.ts             # AbstractAdapter (shared helpers)
         |   |   |   +-- shopify.ts          # Shopify stores
@@ -499,15 +637,18 @@ firearm-alert/
         |   |       +-- stock.ts      # isInStock()
         |   |       +-- url.ts        # resolveUrl(), isBareDomain(), normalizeDomain()
         |   |       +-- html.ts       # detectSiteType(), isLoginPage()
-        |   +-- scraper.ts          # Legacy scraper (deprecated, kept for reference)
-        |   +-- site-navigator.ts   # Auto-search form detection for bare domain URLs
-        |   +-- auth-manager.ts     # Forum login (vBulletin, XenForo), session caching
-        |   +-- health-monitor.ts   # Site health checking, DB persistence
-        |   +-- queue.ts            # BullMQ queue + scheduleSearch
-        |   +-- worker.ts           # Job processor (delta detection, notifications)
-        |   +-- email.ts            # Resend email (NEW badges, landing URL)
+        |   +-- crawl-scheduler.ts   # Unified site-level crawl scheduler (safety ceilings, locks)
+        |   +-- priority-engine.ts  # Difficulty scoring + interval computation
+        |   +-- traffic-classifier.ts # CDN/WAF-based traffic class detection
+        |   +-- worker.ts           # BullMQ workers (scrape, scheduler, health)
+        |   +-- queue.ts            # BullMQ queue definitions + cron schedules
+        |   +-- health-monitor.ts   # Daily site reachability + scrape-ability checks
+        |   +-- daily-digest.ts     # FREE-tier daily email digest
+        |   +-- email.ts            # Resend transactional email
         |   +-- sms.ts              # Twilio SMS
-        |   +-- debugLog.ts         # In-memory event log + SSE
+        |   +-- debugLog.ts         # In-memory SSE event log (500 event ring buffer)
+        |   +-- auth-manager.ts     # Forum login (vBulletin, XenForo), session caching
+        |   +-- site-navigator.ts   # Auto-search form detection for bare domain URLs
         +-- middleware/
         |   +-- auth.ts       # requireAuth, optionalAuth, requireAdmin
         |   +-- rateLimit.ts  # express-rate-limit

@@ -253,6 +253,7 @@ export default function DashboardPage() {
                   key={selectedSearch?.id || selectedGroup?.groupId}
                   search={selectedSearch}
                   group={selectedGroup}
+                  isAdmin={user?.isAdmin}
                   onToggle={toggleSearch}
                   onDelete={async (id) => { await deleteSearch(id); setSelected(null); }}
                   onToggleGroup={toggleGroup}
@@ -310,6 +311,7 @@ export default function DashboardPage() {
                   key={selectedSearch?.id || selectedGroup?.groupId}
                   search={selectedSearch}
                   group={selectedGroup}
+                  isAdmin={user?.isAdmin}
                   onToggle={toggleSearch}
                   onDelete={async (id) => { await deleteSearch(id); setSelected(null); setMobileDetailOpen(false); }}
                   onToggleGroup={toggleGroup}

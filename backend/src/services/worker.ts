@@ -78,6 +78,7 @@ async function processCrawlSite(job: Job<CrawlSiteJobData>): Promise<void> {
       matchesFound: totalMatches,
       signals: lastResult?.fetchMeta?.signals,
       headers: lastResult?.fetchMeta?.headers,
+      usedPlaywright: lastResult?.usedPlaywright,
     });
 
     pushEvent({
@@ -206,10 +207,14 @@ async function distributeMatchesToSearch(
 
 // ─── Worker Startup ──────────────────────────────────────────────────────────
 
-export function startWorker(): Worker<CrawlSiteJobData> {
-  const worker = new Worker<CrawlSiteJobData>('scrape', async (job) => {
-    // All crawl jobs go through the unified per-site processor
-    await processCrawlSite(job);
+export function startWorker(): Worker {
+  const worker = new Worker('scrape', async (job) => {
+    if (job.name === 'crawl-site') {
+      await processCrawlSite(job as Job<CrawlSiteJobData>);
+    } else {
+      // Legacy scrape-search jobs — skip silently (deprecated)
+      console.log(`[Worker] Skipping legacy job ${job.name} (${job.id})`);
+    }
   }, {
     connection: redisConnection,
     concurrency: 20,

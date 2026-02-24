@@ -18,6 +18,7 @@ export interface ScrapeResult {
   scrapedAt: Date;
   loginRequired?: boolean;
   adapterUsed?: string;
+  usedPlaywright?: boolean;
   errors?: string[];
   /** Metadata from the fetch (response time, signals) — used by crawler to update site metrics */
   fetchMeta?: {

@@ -187,8 +187,14 @@ export async function onCrawlComplete(params: {
   errorMessage?: string;
   signals?: { hasWaf: boolean; hasRateLimit: boolean; hasCaptcha: boolean };
   headers?: Record<string, any>;
+  usedPlaywright?: boolean;
 }): Promise<void> {
   const { siteId, status, responseTimeMs, statusCode, matchesFound, errorMessage, signals } = params;
+
+  if (!siteId) {
+    console.error('[CrawlScheduler] onCrawlComplete called with missing siteId, skipping');
+    return;
+  }
 
   // 1. Record CrawlEvent
   await prisma.crawlEvent.create({
@@ -260,13 +266,29 @@ export async function onCrawlComplete(params: {
     updateData.trafficClass = newTrafficClass;
   }
 
-  // 4. Compute difficulty score
+  // 4. Compute difficulty score (with outcome-based signals)
   if (!site.overrideDifficulty) {
     const { computeDifficulty } = await import('./priority-engine');
-    updateData.difficultyScore = computeDifficulty(
+
+    // Count consecutive successful crawls with 0 matches (zero-yield streak)
+    const recentEvents = await prisma.crawlEvent.findMany({
+      where: { siteId },
+      orderBy: { crawledAt: 'desc' },
+      take: 10,
+      select: { status: true, matchesFound: true },
+    });
+    let zeroMatchStreak = 0;
+    for (const ev of recentEvents) {
+      if (ev.status === 'success' && ev.matchesFound === 0) zeroMatchStreak++;
+      else break; // streak broken
+    }
+
+    const difficulty = computeDifficulty(
       { ...site, ...updateData },
-      updateData.avgResponseTimeMs ?? site.avgResponseTimeMs
+      updateData.avgResponseTimeMs ?? site.avgResponseTimeMs,
+      { zeroMatchStreak, usedPlaywright: params.usedPlaywright },
     );
+    updateData.difficultyScore = difficulty;
   }
 
   await prisma.monitoredSite.update({ where: { id: siteId }, data: updateData });
