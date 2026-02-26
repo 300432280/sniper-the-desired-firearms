@@ -1,5 +1,5 @@
 import type * as cheerio from 'cheerio';
-import type { ScrapedMatch, ExtractionOptions, ScrapeOptions } from '../types';
+import type { ScrapedMatch, ExtractionOptions, ScrapeOptions, CatalogProduct, CatalogPage } from '../types';
 import { AbstractAdapter } from './base';
 import { pickUserAgent } from '../http-client';
 import axios from 'axios';
@@ -132,5 +132,95 @@ export class ShopifyAdapter extends AbstractAdapter {
       }
     }
     return null;
+  }
+
+  // ── Catalog Crawl Methods (Phase 3) ───────────────────────────────────────
+
+  getNewArrivalsUrl(origin: string): string {
+    return `${origin}/collections/all?sort_by=created-descending`;
+  }
+
+  async fetchCatalogPage(
+    origin: string,
+    page: number,
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number },
+  ): Promise<CatalogPage> {
+    const perPage = Math.min(options?.perPage ?? 250, 250);
+    const ua = pickUserAgent(new URL(origin).hostname);
+
+    // Shopify products.json API — returns structured JSON
+    const resp = await axios.get(`${origin}/products.json`, {
+      params: { limit: perPage, page },
+      headers: { 'User-Agent': ua, Accept: 'application/json' },
+      timeout: 15000,
+      validateStatus: (s) => s === 200,
+    });
+
+    const products: any[] = resp.data?.products || [];
+    if (!Array.isArray(products) || products.length === 0) {
+      return { products: [] };
+    }
+
+    const catalogProducts: CatalogProduct[] = products.map(p => ({
+      url: `${origin}/products/${p.handle}`,
+      title: (p.title || '').trim().slice(0, 160),
+      price: p.variants?.[0]?.price ? parseFloat(p.variants[0].price) : undefined,
+      stockStatus: p.variants?.some((v: any) => v.available)
+        ? 'in_stock' as const
+        : 'out_of_stock' as const,
+      thumbnail: p.images?.[0]?.src || undefined,
+    }));
+
+    // Sort if requested (Shopify API doesn't support sort param on products.json)
+    if (options?.sortBy === 'oldest') {
+      catalogProducts.reverse();
+    }
+
+    return {
+      products: catalogProducts,
+      nextPageUrl: products.length >= perPage ? `${origin}/products.json?limit=${perPage}&page=${page + 1}` : undefined,
+    };
+  }
+
+  extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
+    const products: CatalogProduct[] = [];
+    const seen = new Set<string>();
+
+    const SELECTORS = [
+      '[data-product-id]',
+      '[class*="product-card"]',
+      '[class*="product-item"]',
+      '[class*="product-tile"]',
+      '.grid__item [class*="product"]',
+      'li[class*="product"]',
+      'article[class*="product"]',
+    ];
+
+    for (const selector of SELECTORS) {
+      $(selector).each((_, el) => {
+        const element = $(el);
+        const title = this.extractTitle(element, element.text());
+        if (!title || title.length < 3) return;
+        if (/^\$?\d[\d,.]*$/.test(title)) return;
+
+        const url = this.extractLink(element, baseUrl);
+        if (!url || seen.has(url)) return;
+        seen.add(url);
+
+        const price = this.extractPriceFromElement(element);
+        const inStock = this.isInStock(element);
+        const thumbnail = this.extractThumbnail($, element, baseUrl);
+
+        products.push({
+          url,
+          title,
+          price,
+          stockStatus: inStock ? 'in_stock' : 'out_of_stock',
+          thumbnail,
+        });
+      });
+    }
+
+    return products;
   }
 }

@@ -47,6 +47,25 @@ export type ExtractionOptions = Pick<ScrapeOptions, 'inStockOnly' | 'maxPrice'>;
 
 export type SiteType = 'retailer' | 'classifieds' | 'forum' | 'auction' | 'generic';
 
+// ── Catalog product (ProductIndex row) ──────────────────────────────────────
+
+export interface CatalogProduct {
+  url: string;
+  title: string;
+  price?: number;
+  stockStatus?: 'in_stock' | 'out_of_stock' | 'unknown';
+  thumbnail?: string;
+  category?: 'new' | 'used' | 'auction_lot' | 'classified';
+  closingAt?: Date;
+}
+
+export interface CatalogPage {
+  products: CatalogProduct[];
+  nextPageUrl?: string;
+  /** Total pages estimate (if available from API response headers) */
+  totalPages?: number;
+}
+
 // ── Adapter interface (Phase 3) ──────────────────────────────────────────────
 
 export interface SiteAdapter {
@@ -62,4 +81,13 @@ export interface SiteAdapter {
   extractMatches($: cheerio.CheerioAPI, keyword: string, baseUrl: string, options: ExtractionOptions): ScrapedMatch[];
   /** Optional: extract the next page URL for pagination */
   getNextPageUrl?($: cheerio.CheerioAPI, currentUrl: string): string | null;
+
+  // ── Catalog crawl methods (Phase 3) ─────────────────────────────────────
+
+  /** URL for "new arrivals" / "sort by newest" page (Tier 1 watermark crawl) */
+  getNewArrivalsUrl?(origin: string): string;
+  /** Fetch a catalog page via API (preferred — structured data with prices) */
+  fetchCatalogPage?(origin: string, page: number, options?: { sortBy?: 'newest' | 'oldest'; perPage?: number }): Promise<CatalogPage>;
+  /** Extract catalog products from an HTML page (fallback when no API available) */
+  extractCatalogProducts?($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[];
 }

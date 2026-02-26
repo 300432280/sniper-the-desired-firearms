@@ -349,34 +349,8 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
       prisma.match.count({ where: { searchId: { in: searchIds } } }),
     ]);
 
-    // If no cached matches and searches are active, trigger immediate crawls for affected sites
-    let crawlsTriggered = 0;
-    if (totalMatches === 0) {
-      const activeDomains = [...new Set(
-        searches.filter((s) => s.isActive).map((s) => {
-          try { return new URL(s.websiteUrl).hostname.replace(/^www\./, ''); } catch { return ''; }
-        }).filter(Boolean)
-      )];
-
-      if (activeDomains.length > 0) {
-        // Set nextCrawlAt to now for sites matching these domains so scheduler picks them up
-        for (const domain of activeDomains) {
-          await prisma.monitoredSite.updateMany({
-            where: { domain, isEnabled: true, crawlLock: null },
-            data: { nextCrawlAt: new Date() },
-          });
-        }
-        crawlsTriggered = activeDomains.length;
-
-        // Trigger a scheduler tick immediately
-        try {
-          const { schedulerTick } = await import('../services/crawl-scheduler');
-          await schedulerTick();
-        } catch (e) {
-          console.error('[Route] Failed to trigger scheduler tick:', e);
-        }
-      }
-    }
+    // Pure DB read — no crawl triggering from user endpoints.
+    // The crawl scheduler handles all crawl timing independently.
 
     const annotatedMatches = matches.map((m) => ({
       title: m.title,
@@ -405,7 +379,6 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
       matches: annotatedMatches,
       page,
       totalPages: Math.ceil(totalMatches / limit),
-      crawlsTriggered: crawlsTriggered > 0 ? crawlsTriggered : undefined,
     });
   } catch (err) {
     console.error('[Route] Group scan failed:', err);
@@ -590,20 +563,8 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
       prisma.match.count({ where: { searchId: search.id } }),
     ]);
 
-    // If no cached matches and search is active, trigger immediate crawl for the site
-    if (totalDbMatches === 0 && search.isActive) {
-      try {
-        const domain = new URL(search.websiteUrl).hostname.replace(/^www\./, '');
-        await prisma.monitoredSite.updateMany({
-          where: { domain, isEnabled: true, crawlLock: null },
-          data: { nextCrawlAt: new Date() },
-        });
-        const { schedulerTick } = await import('../services/crawl-scheduler');
-        await schedulerTick();
-      } catch (e) {
-        console.error('[Route] Failed to trigger crawl for scan:', e);
-      }
-    }
+    // Pure DB read — no crawl triggering from user endpoints.
+    // The crawl scheduler handles all crawl timing independently.
 
     const lastViewed = search.lastChecked;
     const annotatedMatches = matches.map((m) => ({

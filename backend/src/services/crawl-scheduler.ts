@@ -5,6 +5,8 @@
  * No user action ever triggers a crawl directly. The priority engine determines
  * each site's interval based on demand, difficulty, traffic class, and health.
  *
+ * v2: Integrates token budget, cold start, and tier-based catalog crawling.
+ *
  * Safety ceilings (hard limits, no override):
  * - MAX_CRAWLS_PER_SITE_PER_HOUR = 4
  * - MAX_CONCURRENT_CRAWLS = 10
@@ -16,6 +18,9 @@ import { prisma } from '../lib/prisma';
 import { scrapeQueue } from './queue';
 import { recalculateSitePriority } from './priority-engine';
 import { pushEvent } from './debugLog';
+import { getColdStartStatus } from './cold-start';
+import { getBudget } from './token-budget';
+import { parseTierState, getActiveTiers } from './catalog-crawler';
 
 // ── Safety Ceilings ──────────────────────────────────────────────────────────
 
@@ -67,8 +72,8 @@ function incrementGlobalCrawlCount(): void {
  * Main scheduler tick — runs every 2 minutes.
  * 1. Clean up expired crawl locks
  * 2. Find sites that are due for a crawl
- * 3. Enforce safety ceilings
- * 4. Queue crawl jobs for eligible sites
+ * 3. Enforce safety ceilings + cold start + token budgets
+ * 4. Queue crawl jobs: legacy keyword crawl + new catalog/watermark crawls
  */
 export async function schedulerTick(): Promise<void> {
   const now = new Date();
@@ -92,7 +97,7 @@ export async function schedulerTick(): Promise<void> {
     }
   }
 
-  // 2. Find sites due for crawling
+  // 2. Find sites due for crawling (Tier 1 — new items)
   const dueSites = await prisma.monitoredSite.findMany({
     where: {
       isEnabled: true,
@@ -136,6 +141,13 @@ export async function schedulerTick(): Promise<void> {
       continue;
     }
 
+    // Determine cold start phase for budget cap
+    const coldStart = getColdStartStatus(site.addedAt, site.baseBudget, site.coldStartOverride);
+
+    // Initialize token budget for this site (respecting cold start cap)
+    const effectiveBudgetCap = Math.min(site.baseBudget, coldStart.budgetCap);
+    getBudget(site.id, effectiveBudgetCap, site.capacity);
+
     // Acquire lock
     const lockExpiry = new Date(Date.now() + CRAWL_LOCK_TIMEOUT_MS);
     const jobId = `crawl:${site.id}:${Date.now()}`;
@@ -145,7 +157,7 @@ export async function schedulerTick(): Promise<void> {
       data: { crawlLock: jobId, crawlLockExpiresAt: lockExpiry },
     });
 
-    // Queue the crawl job
+    // Queue legacy keyword crawl (runs alongside new system during transition)
     await scrapeQueue.add('crawl-site', {
       siteId: site.id,
       domain: site.domain,
@@ -153,10 +165,48 @@ export async function schedulerTick(): Promise<void> {
       difficultyScore: site.difficultyScore,
     }, {
       jobId,
-      attempts: 1, // No auto-retry — scheduler handles backoff
+      attempts: 1,
       removeOnComplete: 50,
       removeOnFail: 100,
     });
+
+    // Queue Tier 1 watermark crawl (new catalog system)
+    await scrapeQueue.add('crawl-watermark', {
+      siteId: site.id,
+      domain: site.domain,
+      url: site.url,
+      baseBudget: effectiveBudgetCap,
+      capacity: site.capacity,
+      lastWatermarkUrl: site.lastWatermarkUrl,
+    }, {
+      jobId: `watermark:${site.id}:${Date.now()}`,
+      attempts: 1,
+      removeOnComplete: 50,
+      removeOnFail: 100,
+    });
+
+    // Queue catalog tier crawls (Tiers 2-4) if cold start allows
+    if (coldStart.catalogAllowed) {
+      const tierState = parseTierState(site.tierState);
+      const activeTiers = getActiveTiers(tierState);
+
+      if (activeTiers.tier2 || activeTiers.tier3 || activeTiers.tier4) {
+        await scrapeQueue.add('crawl-catalog', {
+          siteId: site.id,
+          domain: site.domain,
+          url: site.url,
+          baseBudget: effectiveBudgetCap,
+          capacity: site.capacity,
+          tierState: JSON.stringify(tierState),
+          activeTiers,
+        }, {
+          jobId: `catalog:${site.id}:${Date.now()}`,
+          attempts: 1,
+          removeOnComplete: 50,
+          removeOnFail: 100,
+        });
+      }
+    }
 
     incrementSiteCrawlCount(site.id);
     incrementGlobalCrawlCount();
@@ -188,6 +238,10 @@ export async function onCrawlComplete(params: {
   signals?: { hasWaf: boolean; hasRateLimit: boolean; hasCaptcha: boolean };
   headers?: Record<string, any>;
   usedPlaywright?: boolean;
+  /** Updated watermark URL from Tier 1 crawl */
+  newWatermarkUrl?: string | null;
+  /** Updated tier state from catalog crawl */
+  newTierState?: string;
 }): Promise<void> {
   const { siteId, status, responseTimeMs, statusCode, matchesFound, errorMessage, signals } = params;
 
@@ -224,6 +278,16 @@ export async function onCrawlComplete(params: {
     updateData.consecutiveFailures = site.consecutiveFailures + 1;
   }
 
+  // Update watermark if provided
+  if (params.newWatermarkUrl !== undefined) {
+    updateData.lastWatermarkUrl = params.newWatermarkUrl;
+  }
+
+  // Update tier state if provided
+  if (params.newTierState) {
+    updateData.tierState = JSON.parse(params.newTierState);
+  }
+
   // Update difficulty signals if we have them
   if (signals) {
     if (signals.hasWaf && !site.hasWaf) updateData.hasWaf = true;
@@ -234,7 +298,7 @@ export async function onCrawlComplete(params: {
   // Update average response time (rolling average over last value)
   if (responseTimeMs) {
     updateData.avgResponseTimeMs = site.avgResponseTimeMs
-      ? Math.round((site.avgResponseTimeMs * 0.7) + (responseTimeMs * 0.3)) // Weighted moving average
+      ? Math.round((site.avgResponseTimeMs * 0.7) + (responseTimeMs * 0.3))
       : responseTimeMs;
   }
 
@@ -244,7 +308,6 @@ export async function onCrawlComplete(params: {
 
     const infraSignals = detectInfraSignals(params.headers);
 
-    // Get recent crawl statuses for error rate
     const recentCrawls = await prisma.crawlEvent.findMany({
       where: { siteId },
       orderBy: { crawledAt: 'desc' },
@@ -266,34 +329,20 @@ export async function onCrawlComplete(params: {
     updateData.trafficClass = newTrafficClass;
   }
 
-  // 4. Compute difficulty score (with outcome-based signals)
+  // 4. Difficulty score — kept for legacy display
   if (!site.overrideDifficulty) {
     const { computeDifficulty } = await import('./priority-engine');
-
-    // Count consecutive successful crawls with 0 matches (zero-yield streak)
-    const recentEvents = await prisma.crawlEvent.findMany({
-      where: { siteId },
-      orderBy: { crawledAt: 'desc' },
-      take: 10,
-      select: { status: true, matchesFound: true },
-    });
-    let zeroMatchStreak = 0;
-    for (const ev of recentEvents) {
-      if (ev.status === 'success' && ev.matchesFound === 0) zeroMatchStreak++;
-      else break; // streak broken
-    }
-
     const difficulty = computeDifficulty(
       { ...site, ...updateData },
       updateData.avgResponseTimeMs ?? site.avgResponseTimeMs,
-      { zeroMatchStreak, usedPlaywright: params.usedPlaywright },
+      { zeroMatchStreak: 0, usedPlaywright: params.usedPlaywright },
     );
     updateData.difficultyScore = difficulty;
   }
 
   await prisma.monitoredSite.update({ where: { id: siteId }, data: updateData });
 
-  // 5. Recalculate priority and set nextCrawlAt
+  // 5. Recalculate pressure, capacity, interval, and nextCrawlAt
   await recalculateSitePriority(siteId);
 
   // 6. Apply backoff rules for failures
@@ -310,7 +359,6 @@ async function applyBackoff(siteId: string, status: string, failures: number): P
   if (status === 'blocked' || status === 'captcha') {
     minIntervalMin = 120; // 2 hours minimum for blocks
   } else if (failures >= 10) {
-    // Disable site after 10 consecutive failures
     await prisma.monitoredSite.update({
       where: { id: siteId },
       data: { isEnabled: false },
@@ -328,7 +376,6 @@ async function applyBackoff(siteId: string, status: string, failures: number): P
     minIntervalMin = 30; // At least 30 min after any failure
   }
 
-  // Ensure nextCrawlAt is at least minIntervalMin from now
   const minNext = new Date(Date.now() + minIntervalMin * 60 * 1000);
   const site = await prisma.monitoredSite.findUnique({
     where: { id: siteId },
@@ -347,7 +394,6 @@ async function applyBackoff(siteId: string, status: string, failures: number): P
 
 /**
  * Initialize all sites with staggered nextCrawlAt values.
- * Called once during first setup or migration.
  */
 export async function initializeCrawlSchedule(): Promise<void> {
   const sites = await prisma.monitoredSite.findMany({
@@ -359,8 +405,7 @@ export async function initializeCrawlSchedule(): Promise<void> {
 
   console.log(`[Scheduler] Initializing crawl schedule for ${sites.length} sites`);
 
-  // Stagger crawls evenly across the first interval window
-  const staggerIntervalMs = 2 * 60 * 1000; // 2 minutes between each site's first crawl
+  const staggerIntervalMs = 2 * 60 * 1000;
   const now = Date.now();
 
   for (let i = 0; i < sites.length; i++) {
@@ -369,7 +414,7 @@ export async function initializeCrawlSchedule(): Promise<void> {
       where: { id: sites[i].id },
       data: {
         nextCrawlAt: staggeredStart,
-        crawlIntervalMin: 120, // Default 2 hours until priority engine takes over
+        crawlIntervalMin: 120,
       },
     });
   }
@@ -379,10 +424,6 @@ export async function initializeCrawlSchedule(): Promise<void> {
 
 // ── Crawl Event Cleanup ──────────────────────────────────────────────────────
 
-/**
- * Prune old CrawlEvents to prevent unbounded growth.
- * Keeps last 30 days of events.
- */
 export async function pruneCrawlEvents(): Promise<number> {
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const result = await prisma.crawlEvent.deleteMany({

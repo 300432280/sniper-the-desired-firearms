@@ -8,8 +8,8 @@ import { generalLimiter, authLimiter } from './middleware/rateLimit';
 import authRouter from './routes/auth';
 import searchesRouter from './routes/searches';
 import adminRouter from './routes/admin';
-import { startWorker, startHealthWorker, startSchedulerWorker } from './services/worker';
-import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs } from './services/queue';
+import { startWorker, startHealthWorker, startSchedulerWorker, startDigestWorker } from './services/worker';
+import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs, scheduleDailyDigest } from './services/queue';
 import { prisma } from './lib/prisma';
 
 // Check if the request has a valid admin JWT cookie
@@ -480,8 +480,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 const worker = startWorker();
 const healthWorker = startHealthWorker();
 const schedulerWorker = startSchedulerWorker();
+const digestWorker = startDigestWorker();
 
-// Schedule daily health check cron + crawl scheduler
+// Schedule cron jobs + crawl scheduler
 cleanupLegacyJobs().catch((err) => {
   console.error('[Server] Failed to cleanup legacy jobs:', err.message);
 });
@@ -490,6 +491,9 @@ scheduleHealthChecks().catch((err) => {
 });
 startCrawlScheduler().catch((err) => {
   console.error('[Server] Failed to start crawl scheduler:', err.message);
+});
+scheduleDailyDigest().catch((err) => {
+  console.error('[Server] Failed to schedule daily digest:', err.message);
 });
 
 const server = app.listen(config.port, () => {
@@ -500,7 +504,7 @@ const server = app.listen(config.port, () => {
 // Graceful shutdown
 const shutdown = async () => {
   console.log('[Server] Shutting down gracefully...');
-  await Promise.all([worker.close(), healthWorker.close(), schedulerWorker.close()]);
+  await Promise.all([worker.close(), healthWorker.close(), schedulerWorker.close(), digestWorker.close()]);
   // Close Playwright browser if it was started
   try {
     const { closeBrowser } = await import('./services/scraper/playwright-fetcher');

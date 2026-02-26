@@ -156,6 +156,54 @@ export const healthQueue = new Queue('health', {
   },
 });
 
+// ─── Daily Digest Queue ───────────────────────────────────────────────────────
+
+export const digestQueue = new Queue('digest', {
+  connection: redisConnection,
+  defaultJobOptions: {
+    removeOnComplete: 10,
+    removeOnFail: 20,
+    attempts: 1,
+  },
+});
+
+/**
+ * Schedule daily digest cron job (runs at 11:00 PM UTC = 6:00 PM EST).
+ * Call once at startup.
+ */
+export async function scheduleDailyDigest(): Promise<void> {
+  try {
+    const jobId = 'daily-digest';
+
+    // Remove existing repeatable job before re-creating
+    try {
+      const repeatableJobs = await digestQueue.getRepeatableJobs();
+      for (const job of repeatableJobs) {
+        if (job.id === jobId) {
+          await digestQueue.removeRepeatableByKey(job.key);
+        }
+      }
+    } catch {
+      // Ignore if doesn't exist
+    }
+
+    await digestQueue.add(
+      'send-daily-digests',
+      {},
+      {
+        jobId,
+        repeat: {
+          pattern: '0 23 * * *', // Daily at 11:00 PM UTC (6:00 PM EST)
+        },
+      }
+    );
+
+    console.log('[Queue] Daily digest scheduled at 11:00 PM UTC (6:00 PM EST)');
+  } catch (err) {
+    console.error('[Queue] Failed to schedule daily digest:', err instanceof Error ? err.message : err);
+  }
+}
+
 /**
  * Schedule daily health check cron job (runs at 6:00 AM UTC).
  * Call once at startup.

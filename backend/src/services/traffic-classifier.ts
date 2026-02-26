@@ -38,23 +38,19 @@ export function classifyTraffic(signals: TrafficSignals): TrafficClass {
     return 'tiny';
   }
 
-  // CDN detected → at least medium, likely large
-  if (hasCdn) {
-    if (avgResponseTimeMs && avgResponseTimeMs < 500) return 'large';
-    return 'medium';
-  }
-
-  // WAF (Sucuri, Cloudflare) without full CDN → at least medium
-  if (hasWaf) {
-    return 'medium';
-  }
-
-  // Response time based classification
+  // Response time based classification (primary signal)
+  // CDN/WAF presence alone is NOT sufficient — small forums behind Cloudflare
+  // were being misclassified as "large". Response time is the better indicator.
   if (avgResponseTimeMs) {
     if (avgResponseTimeMs < 300) return 'large';       // Very fast → well-funded
     if (avgResponseTimeMs < 1000) return 'medium';     // Normal → decent hosting
     if (avgResponseTimeMs < 3000) return 'small';      // Slow-ish → shared hosting
     return 'tiny';                                      // Very slow → basic hosting
+  }
+
+  // No response time data yet — use CDN/WAF as fallback hint
+  if (hasCdn || hasWaf) {
+    return 'medium'; // Conservative default when we only have infra signals
   }
 
   // No data yet → default to medium (conservative)

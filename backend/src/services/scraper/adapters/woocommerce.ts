@@ -1,5 +1,5 @@
 import type * as cheerio from 'cheerio';
-import type { ScrapedMatch, ExtractionOptions, ScrapeOptions } from '../types';
+import type { ScrapedMatch, ExtractionOptions, ScrapeOptions, CatalogProduct, CatalogPage } from '../types';
 import { AbstractAdapter } from './base';
 import axios from 'axios';
 import { pickUserAgent } from '../http-client';
@@ -203,5 +203,126 @@ export class WooCommerceAdapter extends AbstractAdapter {
       if (href) return this.resolveUrl(href, currentUrl);
     }
     return null;
+  }
+
+  // ── Catalog Crawl Methods (Phase 3) ───────────────────────────────────────
+
+  getNewArrivalsUrl(origin: string): string {
+    return `${origin}/shop/?orderby=date`;
+  }
+
+  async fetchCatalogPage(
+    origin: string,
+    page: number,
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number },
+  ): Promise<CatalogPage> {
+    const perPage = Math.min(options?.perPage ?? 100, 100);
+    const ua = pickUserAgent(new URL(origin).hostname);
+    const headers = { 'User-Agent': ua, Accept: 'application/json' };
+    const orderby = options?.sortBy === 'oldest' ? 'date' : 'date';
+    const order = options?.sortBy === 'oldest' ? 'asc' : 'desc';
+
+    // Try WooCommerce Store API (public, no auth needed)
+    try {
+      const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
+        params: { per_page: perPage, page, orderby, order },
+        headers,
+        timeout: 15000,
+        validateStatus: (s) => s === 200,
+      });
+
+      if (Array.isArray(resp.data) && resp.data.length > 0) {
+        const totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10);
+        const products: CatalogProduct[] = resp.data.map((p: any) => ({
+          url: p.permalink || `${origin}/?p=${p.id}`,
+          title: this.decodeHtml(p.name || '').slice(0, 160),
+          price: p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined,
+          stockStatus: p.is_purchasable !== false ? 'in_stock' as const : 'out_of_stock' as const,
+          thumbnail: p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined,
+        }));
+
+        return {
+          products,
+          nextPageUrl: resp.data.length >= perPage ? undefined : undefined, // Let caller handle pagination via page param
+          totalPages: totalPages || undefined,
+        };
+      }
+    } catch { /* fall through to WP REST API */ }
+
+    // Try WordPress REST API
+    try {
+      const resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
+        params: { per_page: perPage, page, orderby: 'date', order },
+        headers,
+        timeout: 15000,
+        validateStatus: (s) => s === 200,
+      });
+
+      if (Array.isArray(resp.data) && resp.data.length > 0) {
+        const totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10);
+        const products: CatalogProduct[] = resp.data.map((p: any) => ({
+          url: p.link || `${origin}/?p=${p.id}`,
+          title: this.decodeHtml(p.title?.rendered || p.name || '').slice(0, 160),
+          price: undefined, // WP REST API doesn't reliably include prices
+          stockStatus: 'unknown' as const,
+          thumbnail: undefined,
+        }));
+
+        return {
+          products,
+          totalPages: totalPages || undefined,
+        };
+      }
+    } catch { /* no API available */ }
+
+    return { products: [] };
+  }
+
+  extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
+    const products: CatalogProduct[] = [];
+    const seen = new Set<string>();
+
+    const SELECTORS = [
+      'li.product',
+      '.woocommerce-loop-product',
+      'li[class*="product"]',
+      '[class*="product-card"]',
+      '[data-product-id]',
+      '.wd-product',
+    ];
+
+    for (const selector of SELECTORS) {
+      $(selector).each((_, el) => {
+        const element = $(el);
+
+        let titleEl = element.find('.woocommerce-loop-product__title, h2.wc-block-grid__product-title').first();
+        if (!titleEl.length) titleEl = element.find('.wd-entities-title').first();
+        if (!titleEl.length) titleEl = element.find('h2, h3, h4').first();
+        if (!titleEl.length) titleEl = element.find('[class*="title"], [class*="name"]').first();
+
+        const title = (titleEl.length ? titleEl.text() : element.text()).trim().replace(/\s+/g, ' ').slice(0, 160);
+        if (!title || title.length < 3) return;
+        if (/^\$?\d[\d,.]*$/.test(title)) return;
+
+        const url = this.extractLink(element, baseUrl);
+        if (!url || seen.has(url)) return;
+        seen.add(url);
+
+        const priceEl = element.find('.price, .woocommerce-Price-amount, [class*="price"]').first();
+        const price = this.extractPrice(priceEl.text() || '');
+        const inStock = this.isInStock(element);
+        const thumbnail = this.extractThumbnail($, element, baseUrl);
+
+        products.push({
+          url,
+          title,
+          price,
+          stockStatus: inStock ? 'in_stock' : 'out_of_stock',
+          thumbnail,
+        });
+      });
+    }
+
+    return products;
   }
 }

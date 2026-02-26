@@ -484,28 +484,54 @@ The scheduler crawls based on site type + capacity. It does not know or care abo
 
 ## 8. Cold Start: New Site Onboarding
 
-When admin adds a new MonitoredSite:
+When admin adds a new MonitoredSite, the system must build a full catalog from scratch while discovering the site's tolerance — without knowing anything about its defenses yet.
 
-### Phase 1 — Conservative Discovery (Days 1-2)
+**Goals (in priority order):**
+1. **Safety** — don't get blocked; a brand-new scraper IP hitting hard is the most suspicious pattern possible
+2. **Discovery** — feel out the site's actual tolerance (WAF, rate limits, response times)
+3. **Speed** — an empty catalog means zero matches for users, so index as fast as safely possible
 
-- Token budget hardcoded to 10 requests/hour (regardless of BASE_BUDGET setting)
+### Phase 0 — Pre-Work (Admin, before enabling crawl)
+
+Before any crawling begins, admin performs manual setup:
+
+| Task | Description |
+|------|-------------|
+| **Identify platform** | Determine the e-commerce platform (Shopify, WooCommerce, Magento, BigCommerce, LightSpeed, etc.) to select the correct adapter |
+| **Select adapter** | Assign the correct `adapterType` in the seed/admin — wrong adapter means zero extraction, wasted tokens |
+| **Set English URL** | If the site is bilingual (EN/FR), always use the English version URL (e.g., `/en/`, `?lang=en_CA`). Many Canadian retailers are bilingual. |
+| **Check WAF/defenses** | Manual visit: does the site have Cloudflare, Sucuri, CAPTCHA? Set `requiresSucuri`, `hasWaf` flags accordingly |
+| **Verify search/catalog URL** | Confirm the `searchUrlPattern` works and returns product results |
+| **Set site type** | Classify as retailer / forum / classified / auction — determines Tier 1 interval and crawl strategy |
+
+Only after Phase 0 is complete should the site be enabled for crawling.
+
+### Phase 1 — Probe (Hours 0-6)
+
+- Token budget hardcoded to **10 req/hr** (regardless of BASE_BUDGET setting)
 - Capacity initialized at 0.5 (neutral)
-- Tier 1 (new items) runs at reduced pace, catalog tiers (2-4) get minimal tokens
-- **For retailers:** Begin Tier 1 watermark crawl + Tier 2 starts with ~3 tokens/hr
-- **For forums/classifieds:** Begin Tier 1 watermark crawl. Start watermark at "now" — only capture posts going forward. Catalog tiers begin but at minimal pace.
-- **For auctions:** Crawl current active events/lots
+- **Tier 1 only** — start watermark at "now", capture new items going forward
+- No catalog tiers yet — purpose is to confirm adapter works, establish baseline response behavior, detect WAF/rate limits early
+- **For classifieds:** Watermark starts at "now" — only forward capture
+- **For auctions:** Crawl current active events/lots only
+- By end of Phase 1: ~60 crawl data points, pressure model has meaningful averages
 
-### Phase 2 — Learning (Days 3-7)
+### Phase 2 — Ramp (Hours 6-48)
 
-- Rolling pressure window accumulates real crawl data (needs 20 crawls to be fully data-driven)
-- Capacity adjusts based on actual site responses
-- Token budget gradually scales: `max(10, floor(BASE_BUDGET × capacity))` where BASE_BUDGET defaults to 60
+- Budget scales up each hour: `min(BASE_BUDGET, 10 + (hours_since_start × 2))`
+  - Hour 6: 22 req/hr → Hour 12: 34 → Hour 18: 46 → Hour 25: 60 (full budget reached)
+  - Still capped by capacity: `floor(ramp_budget × capacity)` — if site pushes back, growth slows automatically
+- **Catalog tiers (2-4) begin**, crawling newest → oldest so the most relevant products are indexed first
+- Pressure model is now data-driven (~100+ data points by hour 12)
+- A user searching during this phase already gets recent items from Tier 1 + Tier 2
 
-### Phase 3 — Steady State (Day 8+)
+### Phase 3 — Steady State (Hour 48+)
 
-- Full data-driven scheduling with full BASE_BUDGET available
-- Behaves like any other established site
+- Full BASE_BUDGET (default 60) available
 - All four tiers operating normally
+- Pressure/capacity model fully data-driven
+- Behaves like any other established site
+- Full archive (Tier 4) may still be incomplete — continues indexing via normal tier scheduling
 
 ---
 
@@ -709,7 +735,7 @@ When admin adds a new MonitoredSite:
 
 | Task | Description |
 |------|-------------|
-| Implement cold start phases | Budget capped at 10/hr for days 1-2, gradual ramp-up days 3-7 |
+| Implement cold start phases | Probe (10/hr, hours 0-6) → Ramp (`10 + hours×2`, hours 6-48) → Steady state (hour 48+) |
 | Add `addedAt` tracking to MonitoredSite | For cold start phase calculation |
 | Cold start override for admin | Admin can skip cold start for sites known to be safe |
 
@@ -812,4 +838,4 @@ When transitioning from current system to catalog-based:
 | FREE tier | No expiry, weak limit enforcement | 3 alerts, 14-day expiry, daily digest 6 PM EST |
 | Peak hours | Crawl slower during peak (wrong) | Crawl more during business hours to blend with real traffic |
 | Rate limiting | Global safety ceilings only | Per-site token bucket + min_gap spacing |
-| New site onboarding | Full speed immediately | Conservative cold start (10/hr), gradual ramp-up over 7 days |
+| New site onboarding | Full speed immediately | Conservative cold start: probe (10/hr, 6hrs) → ramp (+2/hr) → steady state (hour 48) |

@@ -144,12 +144,20 @@ model MonitoredSite {
   searchUrlPattern String?
   notes            String?
 
+  // Site classification (determines crawl strategy + base rates)
+  siteCategory       String          @default("retailer") // retailer, forum, classified, auction
+
   // Crawl scheduling state
   lastCrawlAt        DateTime?
   nextCrawlAt        DateTime?
   crawlIntervalMin   Int             @default(120)
   crawlLock          String?
   crawlLockExpiresAt DateTime?
+
+  // Pressure/capacity model (replaces old multiplier stack)
+  pressure           Float           @default(0)    // 0-1, rolling average from last 20 crawls
+  capacity           Float           @default(1)    // e^(-3 × pressure), 0.05-1.0
+  baseBudget         Int             @default(60)   // Tokens per hour (admin-configurable)
 
   // Difficulty signals (auto-measured from crawl responses)
   difficultyScore     Int            @default(0)
@@ -165,12 +173,63 @@ model MonitoredSite {
   overrideDifficulty   Int?
   overrideInterval     Int?
 
+  // Watermark tracking (Tier 1 — new items crawl)
+  lastWatermarkUrl   String?
+
+  // Tier state (JSONB tracking cycle progress for Tiers 2-4)
+  tierState          Json            @default("{}")
+
+  // Cold start tracking
+  addedAt            DateTime        @default(now())
+  coldStartOverride  Boolean         @default(false)
+
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   healthChecks   SiteHealthCheck[]
   crawlEvents    CrawlEvent[]
+  products       ProductIndex[]
 
   @@map("monitored_sites")
+}
+
+model ProductIndex {
+  id          String        @id @default(cuid())
+  siteId      String
+  site        MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  url         String
+  title       String
+  price       Float?
+  stockStatus String?       // "in_stock" | "out_of_stock" | "unknown"
+  thumbnail   String?
+  category    String?       // "new" | "used" | "auction_lot" | "classified"
+  closingAt   DateTime?     // For auction lots — enables live countdown timer
+  firstSeenAt DateTime      @default(now())
+  lastSeenAt  DateTime      @default(now())
+  isActive    Boolean       @default(true)
+
+  @@unique([siteId, url])
+  @@index([siteId, lastSeenAt])
+  @@index([title])
+  @@map("product_index")
+}
+
+model KeywordGroup {
+  id            String         @id @default(cuid())
+  canonicalName String         @unique
+  aliases       KeywordAlias[]
+  createdAt     DateTime       @default(now())
+
+  @@map("keyword_groups")
+}
+
+model KeywordAlias {
+  id      String       @id @default(cuid())
+  groupId String
+  group   KeywordGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  alias   String       @unique
+
+  @@index([alias])
+  @@map("keyword_aliases")
 }
 
 model CrawlEvent {

@@ -1,267 +1,201 @@
+/**
+ * Priority Engine v2 — Pressure/Capacity Model
+ *
+ * Replaces the old 11-multiplier interval formula with a continuous
+ * pressure/capacity model. See RELEASE-PLAN Section 4 for full design.
+ *
+ * pressure = weighted average of failure signals from last 20 crawls
+ * capacity = e^(-3 × pressure)  →  smooth 0.05-1.0 curve
+ * interval = 60 / (base_rate × capacity)  →  Tier 1 new-items interval
+ *
+ * Token budget (Section 3) governs total throughput. This engine only
+ * computes the Tier 1 crawl interval and the capacity factor.
+ */
+
 import { prisma } from '../lib/prisma';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface CrawlPriority {
   intervalMinutes: number;
-  delayBetweenRequestsMs: [number, number]; // [min, max] for random jitter
-  maxPagesPerCrawl: number;
-  preferApiOnly: boolean; // Difficult sites: skip HTML, API only
+  effectiveBudget: number;   // tokens/hour after capacity scaling
+  minGapSeconds: number;     // minimum seconds between requests to this site
 }
 
-interface SiteMetrics {
-  difficultyScore: number;
-  trafficClass: string;
-  consecutiveFailures: number;
-  hasWaf: boolean;
-  hasRateLimit: boolean;
-  hasCaptcha: boolean;
-  requiresAuth: boolean;
-  requiresSucuri: boolean;
-  overrideInterval: number | null;
-  overrideDifficulty: number | null;
-  overrideTrafficClass: string | null;
-}
+export type SiteCategory = 'retailer' | 'forum' | 'classified' | 'auction';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const BASE_INTERVAL_MIN = 120; // 2 hours default
-
-// Traffic class hard floors — no site in this class crawls faster than this
-const TRAFFIC_FLOORS: Record<string, number> = {
-  tiny: 720,   // 12 hours minimum
-  small: 240,  // 4 hours minimum
-  medium: 60,  // 1 hour minimum
-  large: 30,   // 30 minutes minimum
+// Base rate = Tier 1 new-items crawls per hour by site category
+const BASE_RATES: Record<SiteCategory, number> = {
+  forum: 4,           // every 15 min
+  classified: 4,      // every 15 min
+  retailer: 2,        // every 30 min
+  auction: 0.17,      // every ~6 hours
 };
 
-// Seasonal peak date ranges (month-day pairs, inclusive)
-const SEASONAL_PEAKS = [
-  { startMonth: 11, startDay: 15, endMonth: 12, endDay: 5 },  // Black Friday / Cyber Monday
-  { startMonth: 12, endMonth: 12, startDay: 26, endDay: 28 }, // Boxing Day
-];
+// Business hours in UTC (14-01 UTC = 9am-8pm EST)
+// Crawl MORE during business hours to blend with real traffic
+const BUSINESS_HOURS_UTC = [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1];
 
-// Peak hours in UTC (17-22 UTC = noon-5pm EST, when Canadian shoppers most active)
-const PEAK_HOURS_UTC = [17, 18, 19, 20, 21, 22];
+const PRESSURE_WINDOW = 20; // Rolling window size for pressure computation
 
-// ── Difficulty Scoring ───────────────────────────────────────────────────────
+// ── Pressure Computation ─────────────────────────────────────────────────────
+
+interface CrawlEventData {
+  status: string;
+  responseTimeMs: number | null;
+  statusCode: number | null;
+}
 
 /**
- * Compute difficulty score (0-100) from measurable signals + crawl outcomes.
- * Higher = harder to scrape safely.
+ * Compute site pressure from rolling window of recent crawl events.
  *
- * @param recentCrawlStats - Optional stats from the last N crawl events:
- *   - zeroMatchStreak: consecutive "success" crawls with 0 matches found
- *   - usedPlaywright: whether the current crawl fell back to Playwright
+ * pressure = 0.4 × failure_rate
+ *          + 0.2 × block_rate
+ *          + 0.2 × latency_score
+ *          + 0.2 × extraction_failure_rate
+ *
+ * Returns value clamped to [0, 1].
  */
-export function computeDifficulty(
-  site: SiteMetrics,
-  avgResponseTimeMs?: number | null,
-  recentCrawlStats?: { zeroMatchStreak: number; usedPlaywright?: boolean },
-): number {
-  if (site.overrideDifficulty != null) return site.overrideDifficulty;
+export function computePressure(events: CrawlEventData[]): number {
+  if (events.length === 0) return 0;
 
-  let score = 0;
+  const total = events.length;
 
-  // ── Detection-based signals ────────────────────────────────────────────
-  if (site.requiresSucuri || site.hasWaf) score += 15;
-  if (site.hasRateLimit) score += 20;
-  if (site.hasCaptcha) score += 25;
-  if (site.requiresAuth) score += 5;
+  // failure_rate: HTTP errors (non-200 responses, timeouts)
+  const failures = events.filter(e => e.status === 'fail' || e.status === 'timeout').length;
+  const failureRate = failures / total;
 
-  if (avgResponseTimeMs) {
-    if (avgResponseTimeMs > 8000) score += 15;
-    else if (avgResponseTimeMs > 5000) score += 10;
-    else if (avgResponseTimeMs > 3000) score += 5;
+  // block_rate: 429s, captchas, WAF blocks
+  const blocks = events.filter(e =>
+    e.status === 'blocked' || e.status === 'captcha' || e.statusCode === 429
+  ).length;
+  const blockRate = blocks / total;
+
+  // latency_score: normalized 0-1 (0=fast ≤500ms, 1=very slow ≥10s)
+  const responseTimes = events.map(e => e.responseTimeMs).filter((t): t is number => t != null);
+  let latencyScore = 0;
+  if (responseTimes.length > 0) {
+    const avgMs = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+    latencyScore = Math.min(1, Math.max(0, (avgMs - 500) / 9500));
   }
 
-  if (site.consecutiveFailures >= 5) score += 20;
-  else if (site.consecutiveFailures >= 3) score += 10;
+  // extraction_failure_rate: 200 OK but 0 products extracted (suspicious empty response)
+  const extractionFailures = events.filter(e =>
+    e.status === 'success' && e.statusCode === 200
+  ).length === 0 ? 0 : events.filter(e =>
+    // We don't have matchesFound in this interface — this maps to the 'success' status
+    // with empty extraction. For now, use status signals only.
+    // extraction failures show as status='fail' with a 200 statusCode
+    e.status === 'fail' && e.statusCode != null && e.statusCode >= 200 && e.statusCode < 300
+  ).length;
+  const extractionFailureRate = extractionFailures / total;
 
-  // ── Outcome-based signals ──────────────────────────────────────────────
+  const pressure = 0.4 * failureRate
+    + 0.2 * blockRate
+    + 0.2 * latencyScore
+    + 0.2 * extractionFailureRate;
 
-  // Zero-match streak: site returns HTTP 200 but yields no products.
-  // Strong indicator of stealth WAF blocks, wrong adapter, or broken extraction.
-  // Escalates: 3+ crawls with 0 matches = +10, 5+ = +20, 8+ = +35
-  if (recentCrawlStats) {
-    const streak = recentCrawlStats.zeroMatchStreak;
-    if (streak >= 8) score += 35;
-    else if (streak >= 5) score += 20;
-    else if (streak >= 3) score += 10;
+  return Math.min(1, Math.max(0, pressure));
+}
 
-    // Playwright fallback: site requires a headless browser (JS-rendered/SPA)
-    if (recentCrawlStats.usedPlaywright) score += 10;
-  }
+// ── Capacity Computation ─────────────────────────────────────────────────────
 
-  return Math.min(score, 100);
+/**
+ * Convert pressure to capacity using exponential decay.
+ * capacity = e^(-3 × pressure)
+ *
+ * | Pressure | Capacity | Interpretation         |
+ * |----------|----------|------------------------|
+ * | 0.0      | 1.00     | Fully healthy          |
+ * | 0.1      | 0.74     | Occasional hiccups     |
+ * | 0.2      | 0.55     | Some resistance        |
+ * | 0.3      | 0.41     | Moderate issues        |
+ * | 0.5      | 0.22     | Significant pushback   |
+ * | 0.7      | 0.12     | Heavy resistance       |
+ * | 1.0      | 0.05     | Nearly blocked         |
+ */
+export function computeCapacity(pressure: number): number {
+  return Math.exp(-3 * pressure);
 }
 
 // ── Crawl Priority Computation ───────────────────────────────────────────────
 
 /**
- * Compute the optimal crawl interval and behavior for a site.
- * Takes all factors into account: difficulty, traffic, failures, time, demand.
+ * Compute the Tier 1 crawl interval and token budget for a site.
+ * Replaces the old 11-multiplier computeCrawlPriority().
  */
 export function computeCrawlPriority(params: {
-  site: SiteMetrics;
-  activeSearchCount: number;
-  recentMatchYield: number; // avg matches per crawl over last 10 crawls
+  siteCategory: SiteCategory;
+  capacity: number;
+  baseBudget: number;
+  overrideInterval?: number | null;
   hourUtc?: number;
 }): CrawlPriority {
-  const { site, activeSearchCount, recentMatchYield } = params;
+  const { siteCategory, capacity, baseBudget, overrideInterval } = params;
   const hourUtc = params.hourUtc ?? new Date().getUTCHours();
 
-  // Admin override takes absolute priority
-  if (site.overrideInterval != null) {
-    const difficulty = site.overrideDifficulty ?? site.difficultyScore;
-    return {
-      intervalMinutes: site.overrideInterval,
-      ...getDifficultyBehavior(difficulty),
-    };
+  // Effective token budget: base × capacity, floor at 5
+  const effectiveBudget = Math.max(5, Math.floor(baseBudget * capacity));
+  const minGapSeconds = Math.round(3600 / effectiveBudget);
+
+  // Admin override for interval
+  if (overrideInterval != null) {
+    return { intervalMinutes: overrideInterval, effectiveBudget, minGapSeconds };
   }
 
-  const difficulty = site.overrideDifficulty ?? site.difficultyScore;
-  const trafficClass = site.overrideTrafficClass ?? site.trafficClass;
+  // Base rate for this site type
+  const baseRate = BASE_RATES[siteCategory] ?? BASE_RATES.retailer;
 
-  // ── Multipliers ──
+  // target_rate = base_rate × capacity
+  const targetRate = baseRate * capacity;
 
-  // Difficulty: 0→1x, 50→2x, 100→3x
-  const difficultyMult = 1.0 + difficulty / 50;
+  // interval = 60 / target_rate (minutes)
+  let interval = targetRate > 0 ? 60 / targetRate : 1440;
 
-  // Traffic class multiplier
-  const trafficMult: Record<string, number> = { tiny: 4.0, small: 2.5, medium: 1.5, large: 1.0 };
-  const tMult = trafficMult[trafficClass] ?? 1.5;
-
-  // Consecutive failure backoff: exponential, capped at 8x
-  const failureMult = Math.min(Math.pow(1.5, site.consecutiveFailures), 8.0);
-
-  // WAF / rate limit / CAPTCHA multipliers
-  const wafMult = site.hasWaf ? 1.3 : 1.0;
-  const rateLimitMult = site.hasRateLimit ? 2.0 : 1.0;
-  const captchaMult = site.hasCaptcha ? 3.0 : 1.0;
-
-  // Peak hours: slower during site peak traffic
-  const peakMult = PEAK_HOURS_UTC.includes(hourUtc) ? 1.3 : 1.0;
-
-  // Seasonal events: slower during high-traffic retail periods
-  const seasonMult = isSeasonalPeak() ? 1.5 : 1.0;
-
-  // Demand bonus: more active searches = slightly faster (amortized value)
-  const demandBonus = activeSearchCount > 5 ? 0.8 : activeSearchCount > 2 ? 0.9 : 1.0;
-
-  // Yield bonus: high-yield sites get crawled slightly faster
-  const yieldBonus = recentMatchYield > 5 ? 0.85 : 1.0;
-
-  // ── Compute interval ──
-
-  let interval = BASE_INTERVAL_MIN
-    * difficultyMult
-    * tMult
-    * failureMult
-    * wafMult
-    * rateLimitMult
-    * captchaMult
-    * peakMult
-    * seasonMult
-    * demandBonus
-    * yieldBonus;
-
-  // Clamp to absolute bounds: 30 min floor, 24 hr ceiling
-  interval = Math.max(30, Math.min(1440, Math.round(interval)));
-
-  // Apply traffic class hard floor
-  const trafficFloor = TRAFFIC_FLOORS[trafficClass] ?? 60;
-  interval = Math.max(interval, trafficFloor);
-
-  return {
-    intervalMinutes: interval,
-    ...getDifficultyBehavior(difficulty),
-  };
-}
-
-// ── Difficulty-Based Behavior ────────────────────────────────────────────────
-
-function getDifficultyBehavior(difficulty: number): Omit<CrawlPriority, 'intervalMinutes'> {
-  if (difficulty > 60) {
-    return {
-      delayBetweenRequestsMs: [2500, 4000],
-      maxPagesPerCrawl: 1,
-      preferApiOnly: true,
-    };
+  // Peak hour modulation: crawl more during business hours
+  if (BUSINESS_HOURS_UTC.includes(hourUtc)) {
+    interval *= 0.85;
+  } else {
+    interval *= 1.2;
   }
-  if (difficulty > 30) {
-    return {
-      delayBetweenRequestsMs: [1500, 3000],
-      maxPagesPerCrawl: 2,
-      preferApiOnly: false,
-    };
-  }
-  return {
-    delayBetweenRequestsMs: [1000, 2000],
-    maxPagesPerCrawl: 3,
-    preferApiOnly: false,
-  };
-}
 
-// ── Seasonal Peak Detection ──────────────────────────────────────────────────
+  // Clamp to [15 min, 1440 min (24 hours)]
+  interval = Math.max(15, Math.min(1440, Math.round(interval)));
 
-function isSeasonalPeak(): boolean {
-  const now = new Date();
-  const month = now.getMonth() + 1; // 1-indexed
-  const day = now.getDate();
-
-  for (const peak of SEASONAL_PEAKS) {
-    if (month >= peak.startMonth && month <= peak.endMonth) {
-      if (month === peak.startMonth && day < peak.startDay) continue;
-      if (month === peak.endMonth && day > peak.endDay) continue;
-      return true;
-    }
-  }
-  return false;
+  return { intervalMinutes: interval, effectiveBudget, minGapSeconds };
 }
 
 // ── Site Priority Recalculation ──────────────────────────────────────────────
 
 /**
- * Recalculate priority for a single site and update its crawlIntervalMin + nextCrawlAt.
+ * Recalculate pressure, capacity, and interval for a single site.
  * Called after each crawl completes.
  */
 export async function recalculateSitePriority(siteId: string): Promise<void> {
   const site = await prisma.monitoredSite.findUnique({ where: { id: siteId } });
   if (!site || !site.isEnabled) return;
 
-  // Count active searches targeting this site
-  const activeSearchCount = await prisma.search.count({
-    where: { websiteUrl: { contains: site.domain }, isActive: true },
-  });
-
-  // Compute recent match yield (avg matches over last 10 crawls)
-  const recentCrawls = await prisma.crawlEvent.findMany({
-    where: { siteId, status: 'success' },
+  // Fetch last N crawl events for pressure computation
+  const recentEvents = await prisma.crawlEvent.findMany({
+    where: { siteId },
     orderBy: { crawledAt: 'desc' },
-    take: 10,
-    select: { matchesFound: true },
+    take: PRESSURE_WINDOW,
+    select: { status: true, responseTimeMs: true, statusCode: true },
   });
-  const recentMatchYield = recentCrawls.length > 0
-    ? recentCrawls.reduce((sum, c) => sum + c.matchesFound, 0) / recentCrawls.length
-    : 0;
 
+  // Compute pressure and capacity
+  const pressure = computePressure(recentEvents);
+  const capacity = computeCapacity(pressure);
+
+  // Compute interval and budget
+  const siteCategory = (site.siteCategory || 'retailer') as SiteCategory;
   const priority = computeCrawlPriority({
-    site: {
-      difficultyScore: site.difficultyScore,
-      trafficClass: site.trafficClass,
-      consecutiveFailures: site.consecutiveFailures,
-      hasWaf: site.hasWaf,
-      hasRateLimit: site.hasRateLimit,
-      hasCaptcha: site.hasCaptcha,
-      requiresAuth: site.requiresAuth,
-      requiresSucuri: site.requiresSucuri,
-      overrideInterval: site.overrideInterval,
-      overrideDifficulty: site.overrideDifficulty,
-      overrideTrafficClass: site.overrideTrafficClass,
-    },
-    activeSearchCount,
-    recentMatchYield,
+    siteCategory,
+    capacity,
+    baseBudget: site.baseBudget ?? 60,
+    overrideInterval: site.overrideInterval,
   });
 
   const nextCrawlAt = new Date(Date.now() + priority.intervalMinutes * 60 * 1000);
@@ -269,6 +203,8 @@ export async function recalculateSitePriority(siteId: string): Promise<void> {
   await prisma.monitoredSite.update({
     where: { id: siteId },
     data: {
+      pressure,
+      capacity,
       crawlIntervalMin: priority.intervalMinutes,
       nextCrawlAt,
     },
@@ -288,4 +224,37 @@ export async function recalculateAllPriorities(): Promise<void> {
   for (const site of sites) {
     await recalculateSitePriority(site.id);
   }
+}
+
+// ── Legacy exports (kept for crawl-scheduler compatibility during transition) ─
+
+/**
+ * @deprecated Use computePressure + computeCapacity instead.
+ * Kept temporarily so crawl-scheduler.ts compiles during Phase 2 transition.
+ */
+export function computeDifficulty(
+  site: { overrideDifficulty: number | null; requiresSucuri: boolean; hasWaf: boolean; hasRateLimit: boolean; hasCaptcha: boolean; requiresAuth: boolean; consecutiveFailures: number },
+  avgResponseTimeMs?: number | null,
+  recentCrawlStats?: { zeroMatchStreak: number; usedPlaywright?: boolean },
+): number {
+  if (site.overrideDifficulty != null) return site.overrideDifficulty;
+
+  let score = 0;
+  if (site.requiresSucuri || site.hasWaf) score += 15;
+  if (site.hasRateLimit) score += 20;
+  if (site.hasCaptcha) score += 25;
+  if (site.requiresAuth) score += 5;
+
+  if (avgResponseTimeMs) {
+    if (avgResponseTimeMs > 8000) score += 15;
+    else if (avgResponseTimeMs > 5000) score += 10;
+    else if (avgResponseTimeMs > 3000) score += 5;
+  }
+
+  if (site.consecutiveFailures >= 5) score += 20;
+  else if (site.consecutiveFailures >= 3) score += 10;
+
+  if (recentCrawlStats?.usedPlaywright) score += 10;
+
+  return Math.min(score, 100);
 }

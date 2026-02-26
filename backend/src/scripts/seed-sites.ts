@@ -19,12 +19,25 @@ interface SiteSeed {
   requiresAuth?: boolean;
   searchUrlPattern?: string;
   notes?: string;
+  overrideTrafficClass?: string;
+}
+
+// Map siteType to siteCategory for the pressure/capacity model
+function deriveSiteCategory(siteType: string): string {
+  switch (siteType) {
+    case 'forum': return 'forum';
+    case 'classifieds': return 'classified';
+    case 'auction': return 'auction';
+    default: return 'retailer';
+  }
 }
 
 const SITES: SiteSeed[] = [
   // ── Shopify (confirmed) ────────────────────────────────────────────────
   { domain: 'fishingworldgc.ca', name: 'Fish World Guns', url: 'https://fishingworldgc.ca', siteType: 'retailer', adapterType: 'shopify' },
   { domain: 'jobrookoutdoors.com', name: 'Jo Brook Outdoors', url: 'https://www.jobrookoutdoors.com', siteType: 'retailer', adapterType: 'shopify' },
+  { domain: 'aagcanada.ca', name: 'AAG Canada', url: 'https://aagcanada.ca', siteType: 'retailer', adapterType: 'shopify', notes: 'Bilingual EN/CN/FR (use English)' },
+  { domain: 'groupepronature.ca', name: 'Pronature', url: 'https://groupepronature.ca/en', siteType: 'retailer', adapterType: 'shopify', notes: 'Bilingual (use /en)' },
 
   // ── WooCommerce / WordPress ────────────────────────────────────────────
   { domain: 'leverarms.com', name: 'Lever Arms', url: 'https://www.leverarms.com', siteType: 'retailer', adapterType: 'woocommerce' },
@@ -46,6 +59,10 @@ const SITES: SiteSeed[] = [
   { domain: 'precisionoptics.net', name: 'Precision Optics', url: 'https://www.precisionoptics.net', siteType: 'retailer', adapterType: 'woocommerce', notes: 'Behind Cloudflare WAF' },
   { domain: 'durhamoutdoors.ca', name: 'Durham Outdoors', url: 'https://www.durhamoutdoors.ca', siteType: 'retailer', adapterType: 'woocommerce' },
   { domain: 'northprosports.com', name: 'North Pro Sports', url: 'https://www.northprosports.com', siteType: 'retailer', adapterType: 'woocommerce' },
+  { domain: 'dantesports.com', name: 'Dante Sports', url: 'https://dantesports.com/en/', siteType: 'retailer', adapterType: 'woocommerce', notes: 'Bilingual (use /en/)' },
+  { domain: 'doctordeals.ca', name: 'Doctor Deals', url: 'https://doctordeals.ca', siteType: 'retailer', adapterType: 'woocommerce' },
+  { domain: 'alsimmonsgunshop.com', name: 'Al Simmons Gun Shop', url: 'https://alsimmonsgunshop.com', siteType: 'retailer', adapterType: 'woocommerce' },
+  { domain: 'pavillonchassepeche.ca', name: 'Pavillon Chasse Peche', url: 'https://pavillonchassepeche.ca/en/', siteType: 'retailer', adapterType: 'woocommerce', notes: 'Bilingual (use /en/)' },
 
   // ── BigCommerce ────────────────────────────────────────────────────────
   { domain: 'alflahertys.com', name: "Al Flaherty's", url: 'https://www.alflahertys.com', siteType: 'retailer', adapterType: 'generic-retail', searchUrlPattern: '/search.php?search_query={keyword}', notes: 'BigCommerce, uses Klevu search' },
@@ -68,6 +85,16 @@ const SITES: SiteSeed[] = [
   { domain: 'gagnonsports.com', name: 'Gagnon Sports', url: 'https://www.gagnonsports.com', siteType: 'retailer', adapterType: 'generic-retail' },
   { domain: 'lockharttactical.com', name: 'Lockhart Tactical', url: 'https://www.lockharttactical.com', siteType: 'retailer', adapterType: 'generic-retail', notes: 'Joomla, search may not work' },
 
+  // ── Magento ── (additional) ────────────────────────────────────────────
+  { domain: 'londerosports.com', name: 'Londero Sports', url: 'https://www.londerosports.com/en/', siteType: 'retailer', adapterType: 'generic-retail', searchUrlPattern: '/catalogsearch/result/?q={keyword}', notes: 'Magento, bilingual (use /en/), Cloudflare — may 403' },
+
+  // ── LightSpeed ──────────────────────────────────────────────────────────
+  { domain: 'fulcrum-outdoors.shoplightspeed.com', name: 'Fulcrum Outdoors', url: 'https://fulcrum-outdoors.shoplightspeed.com', siteType: 'retailer', adapterType: 'generic-retail', notes: 'LightSpeed' },
+
+  // ── GoDaddy / Odoo / Other ──────────────────────────────────────────────
+  { domain: 'liangjian.ca', name: 'Liangjian Canada', url: 'https://liangjian.ca', siteType: 'retailer', adapterType: 'generic-retail', notes: 'GoDaddy Website Builder' },
+  { domain: 'outfitters.goldnloan.com', name: "Gold'n Loan Outfitters", url: 'https://outfitters.goldnloan.com', siteType: 'retailer', adapterType: 'generic-retail', notes: 'Odoo, bilingual (use English)' },
+
   // ── Headless/SPA (limited scraping support) ────────────────────────────
   { domain: 'gotenda.com', name: 'GoTenda', url: 'https://www.gotenda.com', siteType: 'retailer', adapterType: 'generic-retail', requiresSucuri: true, notes: 'Headless SPA, 307 redirects — limited scraping' },
   { domain: 'bullseyenorth.com', name: 'Bullseye North', url: 'https://www.bullseyenorth.com', siteType: 'retailer', adapterType: 'generic-retail', notes: 'Parse error on HTTP requests — limited scraping' },
@@ -81,7 +108,7 @@ const SITES: SiteSeed[] = [
 
   // ── Forums ───────────────────────────────────────────────────────────────
   { domain: 'canadiangunnutz.com', name: 'Canadian Gun Nutz', url: 'https://www.canadiangunnutz.com', siteType: 'forum', adapterType: 'forum-xenforo', requiresAuth: true, searchUrlPattern: '/forum/search/?q={keyword}&t=post' },
-  { domain: 'gunownersofcanada.ca', name: 'Gun Owners of Canada', url: 'https://www.gunownersofcanada.ca', siteType: 'forum', adapterType: 'forum-xenforo', requiresAuth: true, searchUrlPattern: '/search/?q={keyword}&t=post' },
+  { domain: 'gunownersofcanada.ca', name: 'Gun Owners of Canada', url: 'https://www.gunownersofcanada.ca', siteType: 'forum', adapterType: 'forum-xenforo', requiresAuth: true, searchUrlPattern: '/search/?q={keyword}&t=post', overrideTrafficClass: 'small' },
 
   // ── Classifieds ──────────────────────────────────────────────────────────
   { domain: 'gunpost.ca', name: 'GunPost', url: 'https://www.gunpost.ca', siteType: 'classifieds', adapterType: 'classifieds-gunpost', searchUrlPattern: '/ads?key={keyword}' },
@@ -158,11 +185,13 @@ async function main() {
         url: site.url,
         siteType: site.siteType,
         adapterType: site.adapterType,
+        siteCategory: deriveSiteCategory(site.siteType),
         isEnabled: true,
         requiresSucuri: site.requiresSucuri ?? false,
         requiresAuth: site.requiresAuth ?? false,
         searchUrlPattern: site.searchUrlPattern ?? null,
         notes: site.notes ?? null,
+        overrideTrafficClass: site.overrideTrafficClass ?? null,
       },
       create: {
         domain: site.domain,
@@ -170,10 +199,12 @@ async function main() {
         url: site.url,
         siteType: site.siteType,
         adapterType: site.adapterType,
+        siteCategory: deriveSiteCategory(site.siteType),
         requiresSucuri: site.requiresSucuri ?? false,
         requiresAuth: site.requiresAuth ?? false,
         searchUrlPattern: site.searchUrlPattern ?? null,
         notes: site.notes ?? null,
+        overrideTrafficClass: site.overrideTrafficClass ?? null,
       },
     });
 

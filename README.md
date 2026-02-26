@@ -1,6 +1,10 @@
 # FirearmAlert
 
-Canadian firearm market monitoring web app. Monitors 50+ retailer websites, classifieds, forums, and auction platforms for user-defined keywords and sends email/SMS alerts when **new** matches are found. Uses an adapter-based scraping framework with platform-specific adapters for Shopify, WooCommerce, BigCommerce, Magento, and more. Supports "Search All Sites" to scan across the entire monitored network in one click. Includes authenticated forum scanning with encrypted credential storage and a built-in test store for end-to-end testing.
+Canadian firearm market monitoring web app. Monitors 60+ retailer websites, classifieds, forums, and auction platforms for user-defined keywords and sends email/SMS alerts when **new** matches are found.
+
+**v2 Architecture:** Catalog-based indexing — crawl site catalogs, store all products in a local ProductIndex, match user keywords against the DB. Crawl load is proportional to number of sites (60), not users or keywords. Uses a continuous pressure/capacity model with per-site token budgets and date-based catalog tiers for full catalog refresh.
+
+Uses an adapter-based scraping framework with platform-specific adapters for Shopify, WooCommerce, BigCommerce, Magento, and more. Supports "Search All Sites" to scan across the entire monitored network in one click. Includes authenticated forum scanning with encrypted credential storage and a built-in test store for end-to-end testing.
 
 ---
 
@@ -24,28 +28,53 @@ Canadian firearm market monitoring web app. Monitors 50+ retailer websites, clas
 
 ## Architecture Overview
 
+### v2 Catalog-Based Indexing Flow
+
 ```
-User creates alert (keyword + URL) — or "Search All Sites"
+Crawl Scheduler (every 2 min tick)
         |
         v
-  +-------------+     +--------------+
-  | Express API |---->| PostgreSQL   |  (Search, Match, MonitoredSite, Notification)
-  +------+------+     +--------------+
-         |
-         v
-  +-------------+     +--------------+
-  | BullMQ      |<--->| Redis        |  (Repeating jobs)
-  | Worker      |     +--------------+
-  +------+------+
-         | every N minutes (or 10s in test mode)
-         v
+  Find due sites (nextCrawlAt <= now, not locked)
+        |
+        +---> Tier 1: Watermark Crawl (new items)
+        |       Paginate from newest until hitting lastWatermarkUrl
+        |       -> Insert new products into ProductIndex
+        |       -> Run keyword matcher against all active Searches
+        |       -> Notify PRO users instantly, queue FREE for daily digest
+        |
+        +---> Tiers 2-4: Catalog Refresh (date-based)
+                Tier 2 (0-7d, 5hr cooldown) | Tier 3 (8-21d, 9hr cooldown) | Tier 4 (22+d, 17hr cooldown)
+                -> Update prices, stock status, detect removed products
+                -> Run keyword matcher on updated products
+
+Token Budget: 60 req/hr per site (scaled by capacity), Tier 1 reserves 70%
+```
+
+### Keyword Matching (Zero HTTP)
+
+```
+User creates alert (keyword)
+        |
+        v
+  Expand keyword via KeywordAlias table (e.g., "ruger 1022" -> "ruger 10/22", "10/22", "ruger 10 22")
+        |
+        v
+  Query ProductIndex with all aliases (SQL, instant)
+        |
+        v
+  Return existing matches immediately + monitor for new products going forward
+```
+
+### Legacy Keyword Crawl (transition period)
+
+```
   +--------------------+
   | Adapter Registry   |  Domain -> adapter lookup (cached 5min)
   +--------+-----------+
            |
            v
   +-----------------------+
-  | Scraper Engine (v2)   |
+  | Scraper Engine        |
   | 1. Try API (WC Store) |
   | 2. Fetch HTML         |
   | 3. Adapter extraction |
@@ -75,11 +104,13 @@ User creates alert (keyword + URL) — or "Search All Sites"
 
 ### Notification Tiers
 
-| Tier | Delivery | Timing |
-|------|----------|--------|
-| PRO ($14/mo) | Email + SMS | Instant (on match detection) |
-| FREE | Email only | Daily digest (6 AM UTC) |
-| Guest | Email only | 24-hour expiry, single alert |
+| Tier | Active Alerts | Alert Duration | Delivery | Timing |
+|------|---------------|----------------|----------|--------|
+| PRO ($14/mo) | Unlimited | Never expires | Email + SMS | Instant (on match detection) |
+| FREE | 3 max | 14 days per alert | Email only | Daily digest (6 PM EST / 11 PM UTC) |
+| Guest | Search only | — | — | — |
+
+**FREE tier rules:** Each alert auto-expires 14 days after creation. "Search All Sites" counts as 1 alert toward the 3-alert limit (the group, not per-site). User can recreate the same keyword alert to reset the 14-day clock.
 
 ---
 
@@ -134,15 +165,15 @@ scrapeWithAdapter(url, keyword, options)
 - **Price from forum titles** — Extracts "$450 OBO" patterns from marketplace thread titles
 - **Auction bid prices** — Extracts "Current Bid: $1,200" patterns
 
-### Monitored Sites (50 active)
+### Monitored Sites (60+ active)
 
 | Category | Count | Examples |
 |----------|-------|---------|
-| Retailers (WooCommerce) | 17 | Lever Arms, Corwin Arms, Rangeview Sports, Marstar, CTC Supplies |
+| Retailers (WooCommerce) | 20+ | Lever Arms, Corwin Arms, Rangeview Sports, Marstar, CTC Supplies, Bullseye London |
 | Retailers (BigCommerce) | 8 | Wolverine Supplies, Al Flaherty's, The Ammo Source, Frontier Firearms |
 | Retailers (Magento) | 3 | Ellwood Epps, RDSC, True North Arms |
-| Retailers (Shopify) | 2 | Fish World Guns, Jo Brook Outdoors |
-| Retailers (Other) | 12 | iRunGuns, Reliable Gun, Cabela's, Bass Pro, Canadian Tire, SAIL |
+| Retailers (Shopify) | 3 | Fish World Guns, Jo Brook Outdoors, Tenda Canada |
+| Retailers (Other) | 15+ | iRunGuns, Reliable Gun, Cabela's, Bass Pro, Canadian Tire, SAIL, Prophet River |
 | Forums | 2 | Canadian Gun Nutz (XenForo), Gun Owners of Canada (XenForo) |
 | Classifieds | 2 | GunPost, TownPost |
 | Auctions | 4 | iCollector, HiBid Canada, Miller & Miller, Switzer's |
@@ -171,6 +202,11 @@ A shared headless Chromium instance (lazy-launched, auto-closed after 5 min idle
 
 Sites are crawled on a **site-level schedule** (not per-user). One crawl per site serves all users who have searches on that site. A BullMQ cron job ticks every 2 minutes and queues crawls for due sites.
 
+Each scheduler tick queues up to 3 job types per site:
+1. **crawl-site** — Legacy keyword crawl (kept during transition)
+2. **crawl-watermark** — Tier 1 new items (watermark-based)
+3. **crawl-catalog** — Tiers 2-4 catalog refresh (date-based)
+
 ### Safety Ceilings (hard limits, no override)
 
 | Limit | Value |
@@ -180,60 +216,89 @@ Sites are crawled on a **site-level schedule** (not per-user). One crawl per sit
 | Max global crawls per hour | 200 |
 | Crawl lock timeout | 5 minutes (auto-expire) |
 
-### Difficulty Scoring (0-100)
+### Pressure/Capacity Model (v2)
 
-Computed from detection signals + actual crawl outcomes:
+Replaces the old 11-multiplier interval formula with a smooth, continuous model.
 
-**Detection-based signals:**
-
-| Factor | Points |
-|--------|--------|
-| WAF / Sucuri detected | +15 |
-| Rate limiting (HTTP 429) | +20 |
-| CAPTCHA detected | +25 |
-| Requires authentication | +5 |
-| Slow response (>3s / >5s / >8s) | +5 / +10 / +15 |
-| Consecutive failures (3+ / 5+) | +10 / +20 |
-
-**Outcome-based signals (computed server-side from crawl history):**
-
-| Factor | Points |
-|--------|--------|
-| Zero-match streak — 3+ consecutive "success" crawls with 0 matches | +10 |
-| Zero-match streak — 5+ crawls | +20 |
-| Zero-match streak — 8+ crawls | +35 |
-| Playwright fallback used on current crawl | +10 |
-
-Score recalculates from scratch on every crawl. If a site recovers (matches found, no Playwright needed), outcome-based penalties drop off automatically.
-
-### Crawl Interval Computation
+**Step 1 — Site Pressure** (rolling window of last 20 crawls):
 
 ```
-interval = BASE (120 min)
-         × difficulty multiplier    (1.0 + score/50)
-         × traffic class multiplier (tiny: 4x, small: 2.5x, medium: 1.5x, large: 1x)
-         × failure backoff          (1.5^failures, capped at 8x)
-         × WAF penalty              (1.3x if hasWaf)
-         × rate limit penalty       (2x if hasRateLimit)
-         × CAPTCHA penalty          (3x if hasCaptcha)
-         × peak hours factor        (1.3x during off-peak hours)
-         × seasonal factor          (1.5x during Black Friday / Boxing Day)
-         × demand bonus             (0.8x if many active searches)
-         × yield bonus              (0.85x if recent crawls found matches)
+pressure = 0.4 × failure_rate          (HTTP errors / total crawls)
+         + 0.2 × block_rate            (429 + captcha + WAF / total)
+         + 0.2 × latency_score         (normalized 0-1: 0=fast, 1=very slow)
+         + 0.2 × extraction_failure_rate (200 OK but 0 matches / total)
+
+Clamped to [0, 1]
 ```
 
-Clamped to 30-1440 minutes. Traffic class hard floors: tiny >= 720m, small >= 240m, medium >= 60m, large >= 30m.
+**Step 2 — Capacity:**
 
-### Traffic Classification
+```
+capacity = e^(-3 × pressure)
+```
 
-Automatically detected from HTTP response headers after each crawl:
+| Pressure | Capacity | Interpretation |
+|----------|----------|---------------|
+| 0.0 | 1.00 | Fully healthy |
+| 0.1 | 0.74 | Occasional hiccups |
+| 0.3 | 0.41 | Moderate issues |
+| 0.5 | 0.22 | Significant pushback |
+| 1.0 | 0.05 | Nearly blocked |
 
-| Class | Criteria |
-|-------|----------|
-| `large` | CDN detected (Cloudflare, CloudFront, Fastly) + fast response (<300ms) |
-| `medium` | CDN or WAF present, or response <1s |
-| `small` | Response <3s, no CDN |
-| `tiny` | Slow response (>3s), high error rate, or 3+ consecutive failures |
+**Step 3 — Interval Computation:**
+
+```
+Base rate by site type:
+  Forum / Classified: 4/hour (every 15 min)
+  Retailer:           2/hour (every 30 min)
+  Auction:            0.17/hour (every 6 hours)
+
+target_rate = base_rate × capacity
+interval = 60 / target_rate  (minutes), clamped to [15, 1440]
+
+Peak hours (9 AM - 9 PM EST): interval × 0.85 (crawl more to blend with real traffic)
+Off-peak: interval × 1.2
+```
+
+### Token Budget System
+
+Each site has a **base hourly request budget** (default 60 req/hr, admin-configurable). Effective budget is scaled by capacity:
+
+```
+effective_budget = max(5, floor(BASE_BUDGET × capacity))
+min_gap = 3600 / effective_budget  (seconds between any request to same site)
+
+Example: capacity=0.86 → effective=51 tokens/hr, min_gap=70s
+Example: capacity=0.22 → effective=13 tokens/hr, min_gap=277s
+```
+
+**Tier allocation:**
+- Tier 1 (new items): Reserves 70% of effective budget
+- Tiers 2-4 (catalog): Share remaining 30% + unused Tier 1 tokens
+- When multiple catalog tiers are active: split 35% / 35% / 30% (Tier 2/3/4)
+
+### Date-Based Catalog Tiers
+
+| Tier | Date Range | Cooldown | Purpose |
+|------|-----------|----------|---------|
+| Tier 1 | Newest items | Every interval | Watermark crawl — paginate from newest until hitting last-known product |
+| Tier 2 (Recent) | 0-7 days back | 5 hours | Re-verify recent products (price changes, stock) |
+| Tier 3 (Aging) | 8-21 days back | 9 hours | Catch slower-moving inventory |
+| Tier 4 (Archive) | 22+ days back | 17 hours | Full catalog refresh at low priority |
+
+Each tier operates in cycles with absolute date snapshots. If a cycle can't finish in one hour, it continues the next hour. Cooldown timer starts after cycle completion.
+
+### Cold Start (New Site Onboarding)
+
+When a new site is added, the system conservatively discovers its tolerance:
+
+| Phase | Duration | Budget Cap | Catalog Tiers |
+|-------|----------|-----------|---------------|
+| Probe | Hours 0-6 | 10 req/hr (hard cap) | Tier 1 only |
+| Ramp | Hours 6-48 | `min(BASE, 10 + hours×2)` | All tiers begin |
+| Steady | Hour 48+ | Full BASE_BUDGET | Normal operation |
+
+Admin can skip cold start via `coldStartOverride` for sites known to be safe.
 
 ### Failure Backoff
 
@@ -249,7 +314,7 @@ Automatically detected from HTTP response headers after each crawl:
 
 ## Search All Sites
 
-The "Search All Sites" feature creates a grouped alert that scans across all 50 enabled monitored sites simultaneously.
+The "Search All Sites" feature creates a grouped alert that scans across all 60+ enabled monitored sites simultaneously.
 
 ### How it works:
 
@@ -310,6 +375,13 @@ model MonitoredSite {
   lastCrawlAt?, nextCrawlAt?, crawlIntervalMin (default 120),
   crawlLock?, crawlLockExpiresAt?,
 
+  // v2 catalog fields
+  lastWatermarkUrl?,          // Last-known product URL for Tier 1 watermark crawl
+  tierState (Json),           // Per-tier cycle state: date snapshot, page progress, status
+  addedAt,                    // For cold start phase calculation
+  coldStartOverride (false),  // Admin can skip cold start for known-safe sites
+  baseBudget (60),            // Hourly token budget (admin-configurable)
+
   // Difficulty signals (auto-measured)
   difficultyScore (0-100), trafficClass (tiny|small|medium|large),
   avgResponseTimeMs?, consecutiveFailures,
@@ -317,7 +389,29 @@ model MonitoredSite {
 
   // Admin overrides (null = auto-computed)
   overrideTrafficClass?, overrideDifficulty?, overrideInterval?,
-  -> healthChecks[], crawlEvents[]
+  -> healthChecks[], crawlEvents[], products[]
+}
+
+// v2: Catalog-based product index (stores all discovered products from all sites)
+model ProductIndex {
+  id, siteId, url, title, price?, stockStatus?, thumbnail?,
+  category? ("new"|"used"|"auction_lot"|"classified"),
+  closingAt?,           // For auction lots
+  firstSeenAt, lastSeenAt, isActive
+  @@unique([siteId, url])
+  @@index([siteId, lastSeenAt])
+  @@index([title])
+}
+
+// v2: Keyword alias system (maps variations to canonical form)
+model KeywordGroup {
+  id, canonicalName (unique)   // e.g. "Ruger 10/22"
+  -> aliases[]
+}
+
+model KeywordAlias {
+  id, groupId, alias (unique)  // e.g. "ruger 1022", "10/22", "ruger 10 22"
+  @@index([alias])
 }
 
 model CrawlEvent {
@@ -408,13 +502,15 @@ npm run db:push
 
 Runs `prisma db push` — creates tables from the schema and generates the Prisma client.
 
-### 6. Seed monitored sites
+### 6. Seed monitored sites and keywords
 
 ```bash
 cd backend && npx ts-node src/scripts/seed-sites.ts
+cd backend && npx ts-node src/scripts/seed-keywords.ts
 ```
 
-Populates the `MonitoredSite` table with 50 Canadian firearm retailer/forum/auction sites, each tagged with the correct adapter type and search URL pattern.
+- **seed-sites.ts**: Populates the `MonitoredSite` table with 60+ Canadian firearm retailer/forum/auction sites, each tagged with the correct adapter type, search URL pattern, and site category.
+- **seed-keywords.ts**: Populates the `KeywordGroup` and `KeywordAlias` tables with 68 keyword groups and 238 aliases covering common firearm models (Ruger, CZ, Glock, etc.), calibers (.22 LR, 9mm, .308, etc.), and optics (Vortex, Holosun, Aimpoint).
 
 ### 7. Start both servers
 
@@ -447,15 +543,16 @@ Admin users are defined by the `ADMIN_EMAILS` environment variable. Admins get:
 
 ### Site Monitor Dashboard (`/dashboard/admin/sites`)
 
-Table showing all 50+ monitored sites with:
+Table showing all 60+ monitored sites with:
 - Adapter type and traffic class badge
-- Difficulty score (clickable — shows factor-by-factor breakdown with outcome penalties)
-- Crawl interval (clickable — shows multiplier-by-multiplier breakdown)
+- Capacity gauge (v2 pressure/capacity model) and difficulty score
+- Crawl interval with pressure breakdown (clickable)
 - Next crawl countdown timer
 - Last crawl status, response time, matches found
 - Consecutive failures count
 - Signal badges: WAF, Rate Limit, CAPTCHA, Sucuri
 - Active search count
+- ProductIndex count per site
 - Enable/disable toggle
 
 Features: sortable columns, filterable by adapter/traffic/enabled, auto-refreshes every 60 seconds.
@@ -616,14 +713,14 @@ firearm-alert/
         +-- services/
         |   +-- scraper/              # Adapter-based scraping framework
         |   |   +-- index.ts              # scrapeWithAdapter() orchestrator
-        |   |   +-- types.ts              # ScrapedMatch, ScrapeResult, SiteAdapter interfaces
+        |   |   +-- types.ts              # ScrapedMatch, ScrapeResult, SiteAdapter, CatalogProduct interfaces
         |   |   +-- adapter-registry.ts   # Domain -> adapter lookup (DB-backed, 5-min cache)
         |   |   +-- http-client.ts        # fetchPage(), Sucuri solver, UA rotation, rate limiting
         |   |   +-- playwright-fetcher.ts # Headless browser fallback (shared instance, idle timeout)
         |   |   +-- adapters/
         |   |   |   +-- base.ts             # AbstractAdapter (shared helpers)
-        |   |   |   +-- shopify.ts          # Shopify stores
-        |   |   |   +-- woocommerce.ts      # WooCommerce (API + HTML)
+        |   |   |   +-- shopify.ts          # Shopify stores (+ catalog via /products.json API)
+        |   |   |   +-- woocommerce.ts      # WooCommerce (API + HTML + catalog via Store/REST API)
         |   |   |   +-- generic-retail.ts   # BigCommerce, Magento, custom (+ link fallback)
         |   |   |   +-- generic.ts          # Ultimate fallback
         |   |   |   +-- forum-xenforo.ts    # XenForo forums
@@ -637,50 +734,67 @@ firearm-alert/
         |   |       +-- stock.ts      # isInStock()
         |   |       +-- url.ts        # resolveUrl(), isBareDomain(), normalizeDomain()
         |   |       +-- html.ts       # detectSiteType(), isLoginPage()
-        |   +-- crawl-scheduler.ts   # Unified site-level crawl scheduler (safety ceilings, locks)
-        |   +-- priority-engine.ts  # Difficulty scoring + interval computation
+        |   +-- crawl-scheduler.ts    # Unified crawl scheduler (safety ceilings, locks, cold start, token budgets)
+        |   +-- priority-engine.ts    # Pressure/capacity model + interval computation
         |   +-- traffic-classifier.ts # CDN/WAF-based traffic class detection
-        |   +-- worker.ts           # BullMQ workers (scrape, scheduler, health)
-        |   +-- queue.ts            # BullMQ queue definitions + cron schedules
-        |   +-- health-monitor.ts   # Daily site reachability + scrape-ability checks
-        |   +-- daily-digest.ts     # FREE-tier daily email digest
-        |   +-- email.ts            # Resend transactional email
-        |   +-- sms.ts              # Twilio SMS
-        |   +-- debugLog.ts         # In-memory SSE event log (500 event ring buffer)
-        |   +-- auth-manager.ts     # Forum login (vBulletin, XenForo), session caching
-        |   +-- site-navigator.ts   # Auto-search form detection for bare domain URLs
+        |   +-- token-budget.ts       # v2: Per-site token bucket (Tier 1 reservation, catalog allocation, min_gap)
+        |   +-- cold-start.ts         # v2: New site onboarding phases (Probe → Ramp → Steady)
+        |   +-- watermark-crawler.ts  # v2: Tier 1 watermark crawl (paginate from newest until known product)
+        |   +-- catalog-crawler.ts    # v2: Tiers 2-4 date-based catalog refresh (cycle state management)
+        |   +-- keyword-matcher.ts    # v2: Alias expansion + word-boundary matching + ProductIndex search
+        |   +-- free-tier.ts          # v2: FREE tier lifecycle (14-day expiry, 3-alert cap)
+        |   +-- worker.ts            # BullMQ workers (scrape, scheduler, health, digest, watermark, catalog)
+        |   +-- queue.ts             # BullMQ queue definitions + cron schedules
+        |   +-- health-monitor.ts    # Daily site reachability + scrape-ability checks
+        |   +-- daily-digest.ts      # FREE-tier daily email digest (6 PM EST / 11 PM UTC)
+        |   +-- email.ts             # Resend transactional email
+        |   +-- sms.ts               # Twilio SMS
+        |   +-- debugLog.ts          # In-memory SSE event log (500 event ring buffer)
+        |   +-- auth-manager.ts      # Forum login (vBulletin, XenForo), session caching
+        |   +-- site-navigator.ts    # Auto-search form detection for bare domain URLs
         +-- middleware/
         |   +-- auth.ts       # requireAuth, optionalAuth, requireAdmin
         |   +-- rateLimit.ts  # express-rate-limit
         +-- scripts/
-            +-- seed-sites.ts    # Populate MonitoredSite table (50 sites)
-            +-- test-scrape.ts   # Search URL pattern tester
-            +-- test-scraper.ts  # CLI scraper test tool
+            +-- seed-sites.ts     # Populate MonitoredSite table (60+ sites)
+            +-- seed-keywords.ts  # Populate KeywordGroup + KeywordAlias tables (68 groups, 238 aliases)
+            +-- test-scrape.ts    # Search URL pattern tester
+            +-- test-scraper.ts   # CLI scraper test tool
 ```
 
 ---
 
 ## Key Design Decisions
 
-1. **Adapter-based scraping** — Each site is matched to the best adapter for its e-commerce platform (Shopify, WooCommerce, BigCommerce, Magento, etc.) via the `MonitoredSite` database table. This replaces the old monolithic scraper with a pluggable framework where adding support for a new platform means writing one adapter class.
+1. **Catalog-based indexing (v2)** — Crawl site catalogs and store all products in a local `ProductIndex`. User keywords are matched against the DB (SQL query, zero HTTP). Crawl load is proportional to number of sites (~60), not number of users or keywords. This replaces the old per-keyword HTTP request model.
 
-2. **API-first, HTML-fallback** — WooCommerce sites are scraped via the public Store API first (which returns structured JSON with prices, images, stock status). HTML scraping is only used when the API isn't available or doesn't return complete data (e.g., missing prices).
+2. **Continuous pressure/capacity model (v2)** — Replaces the old 11-multiplier interval formula with a smooth exponential decay: `capacity = e^(-3 × pressure)`. No step functions, no oscillation, gradual recovery. Each successful crawl nudges the rolling average slightly.
 
-3. **URL-based delta detection** instead of content hash comparison — Content hashes change when any product detail (price, title) changes, causing false "new" notifications. URL-based detection only flags genuinely new products.
+3. **Date-based catalog tiers (v2)** — Full catalog refresh uses 4 tiers with different priorities: Tier 1 (watermark, new items), Tier 2 (recent 0-7d), Tier 3 (aging 8-21d), Tier 4 (archive 22+d). Each tier operates in cycles with absolute date snapshots and cooldown periods.
 
-4. **Notification created before sending** — The notification ID is needed for the landing page URL embedded in the email/SMS body. So the DB record is created first with `status: 'pending'`, then updated to `sent` or `failed` after delivery.
+4. **Per-site token budgets (v2)** — Each site has an hourly token budget (default 60 req/hr) scaled by capacity. Tier 1 reserves 70%, remaining flows to catalog tiers. Min-gap spacing (`3600/effective_budget` seconds) prevents burst patterns.
 
-5. **MonitoredSite table** — Site configuration is stored in the database (not hardcoded) so it can be updated via the admin API. The seed script provides the initial dataset, but sites can be added/edited/disabled through the admin panel.
+5. **Keyword alias expansion (v2)** — `KeywordGroup` and `KeywordAlias` tables map variations to canonical forms (e.g., "ruger 1022" → "Ruger 10/22"). Word-boundary matching prevents false positives. 68 pre-seeded groups cover common firearms, calibers, and optics.
 
-6. **Search All as grouped searches** — Rather than a special "search all" endpoint, each Search All alert creates one `Search` per enabled site, linked by `searchAllGroupId`. This reuses the existing per-site scraping and delta detection logic.
+6. **Adapter-based scraping** — Each site is matched to the best adapter for its e-commerce platform (Shopify, WooCommerce, BigCommerce, Magento, etc.) via the `MonitoredSite` database table. Adding support for a new platform means writing one adapter class.
 
-7. **In-memory test store** — Test products are stored in memory (not DB) so they reset on server restart. This keeps the test environment clean and separate from real data.
+7. **API-first, HTML-fallback** — WooCommerce sites are scraped via the public Store API first (which returns structured JSON with prices, images, stock status). HTML scraping is only used when the API isn't available or doesn't return complete data.
 
-8. **Admin via env var** — `ADMIN_EMAILS` is a comma-separated list. No DB column needed — checked at runtime against the JWT email claim.
+8. **URL-based delta detection** instead of content hash comparison — Content hashes change when any product detail (price, title) changes, causing false "new" notifications. URL-based detection only flags genuinely new products.
 
-9. **httpOnly JWT cookies** — Tokens are stored in httpOnly cookies (not localStorage) to prevent XSS access. The frontend Next.js config proxies API requests to the backend, so cookies are same-origin.
+9. **Notification created before sending** — The notification ID is needed for the landing page URL embedded in the email/SMS body. So the DB record is created first with `status: 'pending'`, then updated to `sent` or `failed` after delivery.
 
-10. **Encrypted credential storage** — Forum credentials are encrypted with AES-256-GCM (key derived from JWT_SECRET via PBKDF2) before database storage. Session cookies are cached to avoid re-logging in on every scan cycle.
+10. **FREE tier lifecycle (v2)** — 3-alert cap with 14-day auto-expiry. "Search All" counts as 1 alert toward the limit. Daily digest at 6 PM EST instead of instant notifications. Encourages PRO upgrade without hard-blocking.
+
+11. **Cold start onboarding (v2)** — New sites start at 10 req/hr (Probe phase), ramp up over 48 hours, then reach full budget. Prevents getting blocked by hitting unknown sites too hard. Admin can skip for known-safe sites.
+
+12. **Search All as grouped searches** — Each Search All alert creates one `Search` per enabled site, linked by `searchAllGroupId`. This reuses existing per-site scraping and delta detection logic.
+
+13. **In-memory test store** — Test products are stored in memory (not DB) so they reset on server restart. Keeps the test environment clean and separate from real data.
+
+14. **httpOnly JWT cookies** — Tokens are stored in httpOnly cookies (not localStorage) to prevent XSS access. The frontend Next.js config proxies API requests to the backend, so cookies are same-origin.
+
+15. **Encrypted credential storage** — Forum credentials are encrypted with AES-256-GCM (key derived from JWT_SECRET via PBKDF2) before database storage. Session cookies are cached to avoid re-logging in on every scan cycle.
 
 ---
 
@@ -722,7 +836,7 @@ Supported forum software:
 6. Set `BACKEND_URL` to the Railway public URL
 7. Set `FRONTEND_URL` to the Vercel URL
 8. Railway auto-detects `railway.json` and deploys
-9. Run `npx ts-node src/scripts/seed-sites.ts` to populate monitored sites
+9. Run `npx ts-node src/scripts/seed-sites.ts` and `npx ts-node src/scripts/seed-keywords.ts` to populate monitored sites and keyword aliases
 
 ---
 

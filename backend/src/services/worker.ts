@@ -9,12 +9,35 @@ import { config } from '../config';
 import { runHealthChecks, pruneOldHealthChecks } from './health-monitor';
 import { schedulerTick, onCrawlComplete, initializeCrawlSchedule, pruneCrawlEvents } from './crawl-scheduler';
 import { sendDailyDigests } from './daily-digest';
+import { crawlWatermark } from './watermark-crawler';
+import { crawlCatalogTier, parseTierState, startTierCycle, updateTierProgress, type TierState } from './catalog-crawler';
+import { expireFreeAlerts } from './free-tier';
+import { allocateCatalogTokens } from './token-budget';
 
 interface CrawlSiteJobData {
   siteId: string;
   domain: string;
   url: string;
   difficultyScore: number;
+}
+
+interface WatermarkJobData {
+  siteId: string;
+  domain: string;
+  url: string;
+  baseBudget: number;
+  capacity: number;
+  lastWatermarkUrl: string | null;
+}
+
+interface CatalogJobData {
+  siteId: string;
+  domain: string;
+  url: string;
+  baseBudget: number;
+  capacity: number;
+  tierState: string;
+  activeTiers: { tier2: boolean; tier3: boolean; tier4: boolean };
 }
 
 // ─── Crawl-Site Job Processor (Unified Scheduler) ────────────────────────────
@@ -205,14 +228,96 @@ async function distributeMatchesToSearch(
   }
 }
 
+// ─── Watermark Crawl Job Processor (Tier 1 — New Items) ─────────────────────
+
+async function processWatermarkCrawl(job: Job<WatermarkJobData>): Promise<void> {
+  const { siteId, domain, url, baseBudget, capacity, lastWatermarkUrl } = job.data;
+
+  console.log(`[WatermarkWorker] Tier 1 watermark crawl: ${domain}`);
+  pushEvent({ type: 'scrape_start', websiteUrl: url, message: `Watermark crawl: ${domain}` });
+
+  const result = await crawlWatermark({ siteId, url, domain, baseBudget, capacity, lastWatermarkUrl });
+
+  // Record crawl event and update watermark
+  await onCrawlComplete({
+    siteId,
+    status: result.status,
+    responseTimeMs: result.responseTimeMs,
+    statusCode: result.statusCode,
+    matchesFound: result.productsFound,
+    errorMessage: result.errorMessage,
+    signals: result.signals,
+    headers: result.headers,
+    newWatermarkUrl: result.newWatermarkUrl,
+  });
+
+  pushEvent({
+    type: result.status === 'success' ? 'scrape_done' : 'scrape_fail',
+    websiteUrl: url,
+    message: `Watermark crawl ${result.status}: ${domain} — ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens`,
+  });
+}
+
+// ─── Catalog Crawl Job Processor (Tiers 2-4 — Full Catalog Refresh) ─────────
+
+async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
+  const { siteId, domain, url, baseBudget, capacity, activeTiers } = job.data;
+  const tierState = parseTierState(job.data.tierState);
+
+  console.log(`[CatalogWorker] Catalog crawl: ${domain} (tiers: ${Object.entries(activeTiers).filter(([, v]) => v).map(([k]) => k).join(',')})`);
+
+  // Allocate tokens across active tiers
+  const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers);
+
+  const updatedState: TierState = { ...tierState };
+
+  for (const tier of [2, 3, 4] as const) {
+    const tierKey = `tier${tier}` as keyof typeof activeTiers;
+    if (!activeTiers[tierKey] || allocation[tierKey] <= 0) continue;
+
+    // Start new cycle if idle or cooldown expired
+    let cycleState = updatedState[tierKey];
+    if (cycleState.status === 'idle' || cycleState.status === 'cooldown') {
+      cycleState = startTierCycle(tier);
+      updatedState[tierKey] = cycleState;
+    }
+
+    const result = await crawlCatalogTier({
+      siteId,
+      url,
+      domain,
+      tier,
+      tierState: cycleState,
+      tokensAllocated: allocation[tierKey],
+      baseBudget,
+      capacity,
+    });
+
+    updatedState[tierKey] = updateTierProgress(cycleState, result.pagesScanned, result.cycleComplete, tier);
+
+    console.log(`[CatalogWorker] Tier ${tier} ${result.status}: ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens${result.cycleComplete ? ' (cycle complete)' : ''}`);
+  }
+
+  // Persist updated tier state
+  await prisma.monitoredSite.update({
+    where: { id: siteId },
+    data: { tierState: updatedState as any },
+  });
+
+  pushEvent({ type: 'info', message: `Catalog crawl complete: ${domain}` });
+}
+
 // ─── Worker Startup ──────────────────────────────────────────────────────────
 
 export function startWorker(): Worker {
   const worker = new Worker('scrape', async (job) => {
     if (job.name === 'crawl-site') {
       await processCrawlSite(job as Job<CrawlSiteJobData>);
+    } else if (job.name === 'crawl-watermark') {
+      await processWatermarkCrawl(job as Job<WatermarkJobData>);
+    } else if (job.name === 'crawl-catalog') {
+      await processCatalogCrawl(job as Job<CatalogJobData>);
     } else {
-      // Legacy scrape-search jobs — skip silently (deprecated)
       console.log(`[Worker] Skipping legacy job ${job.name} (${job.id})`);
     }
   }, {
@@ -282,12 +387,12 @@ export function startHealthWorker(): Worker {
       console.log(`[HealthWorker] Pruned ${prunedCrawls} old crawl events`);
     }
 
-    // Send daily digest emails to FREE-tier users
-    try {
-      const digestResult = await sendDailyDigests();
-      console.log(`[HealthWorker] Daily digest: ${digestResult.sent} sent, ${digestResult.skipped} skipped`);
-    } catch (err) {
-      console.error(`[HealthWorker] Daily digest failed:`, err instanceof Error ? err.message : err);
+    // Daily digest moved to its own cron (11 PM UTC / 6 PM EST) — see startDigestWorker()
+
+    // Expire FREE user alerts past 14-day window
+    const expiredAlerts = await expireFreeAlerts();
+    if (expiredAlerts.expired > 0) {
+      console.log(`[HealthWorker] Expired ${expiredAlerts.expired} FREE user alerts`);
     }
 
     pushEvent({
@@ -313,5 +418,32 @@ export function startHealthWorker(): Worker {
   });
 
   console.log('[HealthWorker] Health check worker started');
+  return worker;
+}
+
+// ─── Digest Worker ───────────────────────────────────────────────────────────
+
+export function startDigestWorker(): Worker {
+  const worker = new Worker('digest', async (_job: Job) => {
+    console.log(`[DigestWorker] Sending daily digests (6 PM EST)...`);
+    pushEvent({ type: 'info', message: 'Daily digest started' });
+
+    try {
+      const result = await sendDailyDigests();
+      console.log(`[DigestWorker] Daily digest: ${result.sent} sent, ${result.skipped} skipped`);
+      pushEvent({ type: 'info', message: `Daily digest complete: ${result.sent} sent, ${result.skipped} skipped` });
+    } catch (err) {
+      console.error(`[DigestWorker] Daily digest failed:`, err instanceof Error ? err.message : err);
+    }
+  }, {
+    connection: redisConnection,
+    concurrency: 1,
+  });
+
+  worker.on('error', (err) => {
+    console.error(`[DigestWorker] Worker error: ${err.message}`);
+  });
+
+  console.log('[DigestWorker] Digest worker started');
   return worker;
 }
