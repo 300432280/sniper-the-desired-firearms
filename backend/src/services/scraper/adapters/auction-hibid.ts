@@ -3,6 +3,9 @@ import type { ScrapedMatch, ExtractionOptions, CatalogProduct } from '../types';
 import { AbstractAdapter } from './base';
 import { extractBidPrice } from '../utils/price';
 
+/** Only index lots whose title matches firearm-related keywords (firearms, ammo, optics, parts, knives, gear). */
+const FIREARMS_RELEVANCE = /\b(rifle|shotgun|handgun|pistol|revolver|carbine|firearm|muzzleloader|receiver|ammunit|ammo|cartridge|shotshell|rimfire|centerfire|reload|brass|primer|scope|riflescope|red[\s-]?dot|holographic|rangefinder|binocular|optic|magnifier|knife|knives|blade|bayonet|machete|magazine|trigger|barrel|stock|grip|handguard|bipod|sling|holster|choke|suppressor|silencer|muzzle[\s-]?brake|compensator|gun[\s-]?safe|cleaning[\s-]?kit|bore[\s-]?snake|ear[\s-]?muff|ruger|remington|glock|sig\s?sauer|smith.*wesson|s&w|browning|winchester|benelli|beretta|mossberg|savage|tikka|henry|marlin|colt|stoeger|franchi|weatherby|howa|bergara|sks|norinco|cz[\s-]?\d|tavor|iwi|derya|kel[\s-]?tec|kriss|kodiak|stag[\s-]?\d|eotech|aimpoint|holosun|trijicon|vortex|leupold|bushnell|nightforce|hornady|federal\s+\w+\s+grain|cci|fiocchi|22[\s-]?lr|223[\s-]?rem|308[\s-]?win|5\.56|9mm|12[\s-]?gauge|20[\s-]?gauge|45[\s-]?acp|6\.5[\s-]?creedmoor|300[\s-]?win|7\.62|caliber|gauge)\b/i;
+
 /**
  * HiBid auction adapter — HiBid-specific selectors.
  */
@@ -138,6 +141,10 @@ export class HiBidAdapter extends AbstractAdapter {
         if (/^\$?\d[\d,.]*$/.test(rawTitle)) return;
 
         const cleanTitle = rawTitle.replace(/^(?:Lot\s+)?\d+[A-Za-z]?\s*\|\s*/, '').trim() || rawTitle;
+
+        // Only index firearm-related lots — skip coins, art, furniture, etc.
+        if (!FIREARMS_RELEVANCE.test(cleanTitle)) return;
+
         const url = this.extractLink(element, baseUrl);
         if (!url || seen.has(url)) return;
         seen.add(url);

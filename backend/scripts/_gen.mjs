@@ -1,1 +1,0 @@
-import{writeFileSync}from"fs";writeFileSync("d:/VScode/Projects/firearm-alert/backend/scripts/diagnose-extractions.js",content);console.log("ok");

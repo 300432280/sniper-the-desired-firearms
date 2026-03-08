@@ -351,12 +351,16 @@ export class WooCommerceAdapter extends AbstractAdapter {
             // Store API has richer data — merge over WP REST entry
             const existing = seen.get(url);
             const storeThumb = p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined;
+            const storeCats = Array.isArray(p.categories)
+              ? p.categories.map((c: any) => c.name || c.slug).filter(Boolean).join(',')
+              : undefined;
             seen.set(url, {
               url,
               title: this.decodeHtml(p.name || '').slice(0, 160),
               price: p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined,
               stockStatus: p.is_purchasable !== false ? 'in_stock' as const : 'out_of_stock' as const,
               thumbnail: storeThumb || existing?.thumbnail,
+              sourceCategory: storeCats || existing?.sourceCategory,
             });
           }
         }

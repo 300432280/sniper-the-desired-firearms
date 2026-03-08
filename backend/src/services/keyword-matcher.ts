@@ -217,7 +217,7 @@ export async function searchProductIndex(
   keyword: string,
   siteIds?: string[],
   options?: { inStockOnly?: boolean },
-): Promise<Array<{ url: string; title: string; price: number | null; thumbnail: string | null; siteId: string; firstSeenAt: Date; stockStatus: string | null }>> {
+): Promise<Array<{ url: string; title: string; price: number | null; regularPrice: number | null; thumbnail: string | null; siteId: string; firstSeenAt: Date; stockStatus: string | null }>> {
   const aliases = await expandKeyword(keyword);
 
   // Build OR conditions for all aliases — search both title and tags
@@ -249,6 +249,7 @@ export async function searchProductIndex(
       url: p.url,
       title: p.title,
       price: p.price,
+      regularPrice: p.regularPrice ?? null,
       thumbnail: p.thumbnail,
       siteId: p.siteId,
       firstSeenAt: p.firstSeenAt,

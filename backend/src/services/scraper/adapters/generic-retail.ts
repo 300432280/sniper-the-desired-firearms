@@ -75,7 +75,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
         // Skip category/nav URLs that aren't actual product pages
         if (this.isNavUrl(productUrl)) return;
 
-        const price = this.extractPriceFromElement(element);
+        const { price, regularPrice } = this.extractPricesFromElement(element);
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
@@ -83,7 +83,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
         if (options.maxPrice && price && price > options.maxPrice) return;
 
         seen.add(titleKey);
-        matches.push({ title: rawTitle, price, url: productUrl, inStock, thumbnail });
+        matches.push({ title: rawTitle, price, regularPrice, url: productUrl, inStock, thumbnail });
       });
     }
 
@@ -126,17 +126,20 @@ export class GenericRetailAdapter extends AbstractAdapter {
         // Walk up to find the product container — go higher than just the immediate parent
         const parent = this.findProductContainer($, a);
         let price: number | undefined;
+        let regularPrice: number | undefined;
         let thumbnail: string | undefined;
 
         if (parent && parent.length) {
-          price = this.extractPriceFromElement(parent);
+          const prices = this.extractPricesFromElement(parent);
+          price = prices.price;
+          regularPrice = prices.regularPrice;
           thumbnail = this.extractThumbnail($, parent, baseUrl);
         }
 
         if (options.maxPrice && price && price > options.maxPrice) return;
 
         seen.add(titleKey);
-        matches.push({ title: text.slice(0, 160), price, url: fullUrl, inStock: true, thumbnail });
+        matches.push({ title: text.slice(0, 160), price, regularPrice, url: fullUrl, inStock: true, thumbnail });
       });
     }
 
@@ -280,6 +283,21 @@ export class GenericRetailAdapter extends AbstractAdapter {
       // Ecwid on WordPress — homepage has .grid-product cards
       urls.push(`${origin}/`);
     }
+    if (origin.includes('bullseyenorth.com')) {
+      // Custom retail CMS — products at /shop/slug, category pages at root level
+      // Breadcrumbs show "Home / Firearms / ...", "Home / Magazines / ..."
+      urls.push(
+        `${origin}/firearms`,
+        `${origin}/ammunition`,
+        `${origin}/magazines`,
+        `${origin}/reloading`,
+        `${origin}/optics`,
+        `${origin}/knives`,
+        `${origin}/accessories`,
+        `${origin}/on-sale`,
+        `${origin}/shop`,
+      );
+    }
 
     return urls;
   }
@@ -380,7 +398,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
         if (this.isNavUrl(url)) return;
         seen.add(url);
 
-        const price = this.extractPriceFromElement(element);
+        const { price, regularPrice } = this.extractPricesFromElement(element);
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
@@ -388,6 +406,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
           url,
           title,
           price,
+          regularPrice,
           stockStatus: inStock ? 'in_stock' : 'out_of_stock',
           thumbnail,
         });
@@ -432,13 +451,14 @@ export class GenericRetailAdapter extends AbstractAdapter {
         seen.add(fullUrl);
 
         const parent = this.findProductContainer($, a);
-        const price = parent?.length ? this.extractPriceFromElement(parent) : undefined;
+        const prices = parent?.length ? this.extractPricesFromElement(parent) : {};
         const thumbnail = parent?.length ? this.extractThumbnail($, parent, baseUrl) : undefined;
 
         products.push({
           url: fullUrl,
           title: text.slice(0, 160),
-          price,
+          price: prices.price,
+          regularPrice: prices.regularPrice,
           stockStatus: 'in_stock',
           thumbnail,
         });

@@ -13,6 +13,7 @@ import { crawlWatermark } from './watermark-crawler';
 import { crawlCatalogTier, parseTierState, startTierCycle, updateTierProgress, type TierState } from './catalog-crawler';
 import { expireFreeAlerts } from './free-tier';
 import { allocateCatalogTokens } from './token-budget';
+import { classifyProduct } from './product-classifier';
 import { resolveTuning } from './crawl-tuning';
 
 interface CrawlSiteJobData {
@@ -111,6 +112,10 @@ async function processCrawlSite(job: Job<CrawlSiteJobData>): Promise<void> {
         try {
           const stockVal = product.inStock === false ? 'out_of_stock' : product.inStock ? 'in_stock' : null;
           const hasRealStock = !!stockVal;
+          const productType = classifyProduct({
+            title: product.title,
+            url: product.url,
+          });
           const update: Record<string, any> = {
             title: product.title,
             lastSeenAt: new Date(),
@@ -119,6 +124,7 @@ async function processCrawlSite(job: Job<CrawlSiteJobData>): Promise<void> {
           if (hasRealStock) update.stockStatus = stockVal;
           if (product.price != null) update.price = product.price;
           if (product.thumbnail) update.thumbnail = product.thumbnail;
+          if (productType) update.productType = productType;
 
           await prisma.productIndex.upsert({
             where: { siteId_url: { siteId, url: product.url } },
@@ -130,6 +136,7 @@ async function processCrawlSite(job: Job<CrawlSiteJobData>): Promise<void> {
               price: product.price ?? null,
               stockStatus: stockVal,
               thumbnail: product.thumbnail ?? null,
+              productType: productType ?? null,
             },
           });
           indexed++;

@@ -124,40 +124,120 @@ export abstract class AbstractAdapter implements SiteAdapter {
     return resolveUrl(href, baseUrl);
   }
 
-  /** Standard price extraction from an element */
+  /** Extract both sale and regular prices from an element */
+  protected extractPricesFromElement(element: cheerio.Cheerio<any>): { price?: number; regularPrice?: number } {
+    const result = this._extractPriceInternal(element);
+    if (!result.price) return {};
+    // Only set regularPrice if it's actually higher than the sale price
+    if (result.regularPrice && result.regularPrice > result.price) {
+      return result;
+    }
+    return { price: result.price };
+  }
+
+  /** Standard price extraction from an element — prioritizes sale/discount prices */
   protected extractPriceFromElement(element: cheerio.Cheerio<any>): number | undefined {
-    // Try specific "current price" selectors first (BigCommerce, WooCommerce, Magento)
+    return this._extractPriceInternal(element).price;
+  }
+
+  private _extractPriceInternal(element: cheerio.Cheerio<any>): { price?: number; regularPrice?: number } {
+    // Try to find a struck-through / regular price for the regularPrice field
+    let regularPrice: number | undefined;
+    const struckEls = element.find('del [class*="price"], s [class*="price"], strike [class*="price"], del, s, strike');
+    struckEls.each((_, el) => {
+      if (regularPrice) return;
+      const p = extractPrice(element.find(el).text());
+      if (p) regularPrice = p;
+    });
+    // Also check elements with "regular" or "was" in class name
+    if (!regularPrice) {
+      const regEl = element.find('[class*="regular"], [class*="was-price"], [class*="old-price"], [class*="original"]').first();
+      if (regEl.length) {
+        const p = extractPrice(regEl.text());
+        if (p) regularPrice = p;
+      }
+    }
+    // Check for "Regular Price:" text pattern
+    if (!regularPrice) {
+      const regMatch = element.text().match(/(?:Regular\s*Price|Was|MSRP)[:\s]*(?:CAD\s*|C)?\$\s*([\d,]+(?:\.\d{1,2})?)/i);
+      if (regMatch) {
+        const v = parseFloat(regMatch[1].replace(/,/g, ''));
+        if (v >= 10) regularPrice = v;
+      }
+    }
+
+    // 1. Try sale/discount price selectors first (these are the CURRENT price the customer pays)
+    const saleSelectors = [
+      '.special-price .price',     // Magento sale price
+      '.price-sale',               // Generic sale price
+      '.sale-price',               // Generic
+      '.current-price .price',     // BigCommerce sale price
+      'ins .woocommerce-Price-amount', // WooCommerce sale (inside <ins>)
+      '[class*="sale"] [class*="price"]', // Generic sale container
+    ];
+    for (const sel of saleSelectors) {
+      const el = element.find(sel).first();
+      if (el.length) {
+        const price = extractPrice(el.text());
+        if (price) return { price, regularPrice };
+      }
+    }
+
+    // 2. Try specific "current price" selectors (BigCommerce, WooCommerce, Schema.org)
     const specificSelectors = [
       '.price--withoutTax',        // BigCommerce current price
       '.price--main',              // BigCommerce variant
-      '.current-price .price',     // BigCommerce sale price
       '.woocommerce-Price-amount',  // WooCommerce
       '[itemprop="price"]',        // Schema.org
-      '.special-price .price',     // Magento sale price
     ];
     for (const sel of specificSelectors) {
       const el = element.find(sel).first();
       if (el.length) {
         const price = extractPrice(el.text());
-        if (price) return price;
+        if (price) return { price, regularPrice };
       }
     }
 
-    // Try all price-like elements, pick the first with an actual value
+    // 3. Try all price-like elements, but skip struck-through / "was" / "regular" prices
     const priceEls = element.find(
       '[class*="price"], [class*="cost"], [class*="amount"], [class*="field-price"]'
     );
-    let result: number | undefined;
+    const prices: number[] = [];
     priceEls.each((_, el) => {
-      if (result) return;
-      const text = element.find(el).text().trim();
+      const priceEl = element.find(el);
+      const text = priceEl.text().trim();
+      // Skip struck-through prices (original/regular price)
+      if (priceEl.is('del, s, strike') || priceEl.closest('del, s, strike').length) return;
+      if (priceEl.hasClass('price-regular') || /\bregular\b|\bwas\b|\bmsrp\b|\boriginal\b/i.test(priceEl.attr('class') || '')) return;
       const price = extractPrice(text);
-      if (price) result = price;
+      if (price) prices.push(price);
     });
-    if (result) return result;
+    // If we found multiple prices, the lower one is likely the sale price
+    if (prices.length > 1) {
+      const salePrice = Math.min(...prices);
+      // If no regularPrice found yet, the higher price is likely the regular
+      if (!regularPrice) regularPrice = Math.max(...prices);
+      return { price: salePrice, regularPrice };
+    }
+    if (prices.length === 1) return { price: prices[0], regularPrice };
 
-    // Last resort: extract from element's full text
-    return extractPrice(element.text());
+    // 4. Last resort: extract from element's full text
+    const fullText = element.text();
+    const allPrices: number[] = [];
+    const priceRegex = /(?:CAD\s*|C)?\$\s*([\d,]+(?:\.\d{1,2})?)/g;
+    let m: RegExpExecArray | null;
+    while ((m = priceRegex.exec(fullText)) !== null) {
+      const v = parseFloat(m[1].replace(/,/g, ''));
+      if (v >= 10) allPrices.push(v);
+    }
+    if (allPrices.length > 1) {
+      const salePrice = Math.min(...allPrices);
+      if (!regularPrice) regularPrice = Math.max(...allPrices);
+      return { price: salePrice, regularPrice };
+    }
+    if (allPrices.length === 1) return { price: allPrices[0], regularPrice };
+
+    return {};
   }
 
   // ── URL & title filters (shared across adapters) ────────────────────

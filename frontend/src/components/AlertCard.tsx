@@ -73,7 +73,12 @@ function MatchRow({ match, showSite }: { match: Match & { websiteUrl?: string };
         </div>
       </div>
       {match.price != null && (
-        <span className="text-accent font-heading flex-shrink-0">${match.price.toFixed(2)}</span>
+        <span className="flex items-center gap-1.5 flex-shrink-0">
+          {match.regularPrice != null && match.regularPrice > match.price && (
+            <span className="text-foreground-dim line-through text-[10px]">${match.regularPrice.toFixed(2)}</span>
+          )}
+          <span className="text-accent font-heading">${match.price.toFixed(2)}</span>
+        </span>
       )}
       {match.stockStatus && match.stockStatus !== 'unknown' && (
         <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
@@ -130,7 +135,12 @@ function ScanResultRow({ item, showSite }: { item: LiveMatch; showSite?: boolean
         </div>
       </div>
       {item.price != null && (
-        <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>
+        <span className="flex items-center gap-1.5 flex-shrink-0">
+          {item.regularPrice != null && item.regularPrice > item.price && (
+            <span className="text-foreground-dim line-through text-[10px]">${typeof item.regularPrice === 'number' ? item.regularPrice.toFixed(2) : item.regularPrice}</span>
+          )}
+          <span className="text-accent font-heading">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>
+        </span>
       )}
       {(() => {
         const stock = item.stockStatus ?? (item.inStock !== undefined ? (item.inStock ? 'in_stock' : 'out_of_stock') : null);

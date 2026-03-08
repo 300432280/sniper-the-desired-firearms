@@ -368,6 +368,7 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
     const annotatedMatches = matches.map((m) => ({
       title: m.title,
       price: m.price,
+      regularPrice: m.regularPrice,
       url: m.url,
       thumbnail: m.thumbnail || groupThumbnailMap.get(m.url) || null,
       seller: m.seller,
@@ -620,6 +621,7 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
             searchId: search.id,
             title: p.title,
             price: p.price,
+            regularPrice: p.regularPrice,
             url: p.url,
             hash: `pi:scan`,
             thumbnail: p.thumbnail,
@@ -664,6 +666,7 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
     const annotatedMatches = matches.map((m) => ({
       title: m.title,
       price: m.price,
+      regularPrice: m.regularPrice,
       url: m.url,
       thumbnail: m.thumbnail || thumbnailMap.get(m.url) || null,
       seller: m.seller,

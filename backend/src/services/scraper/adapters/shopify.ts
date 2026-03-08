@@ -184,6 +184,7 @@ export class ShopifyAdapter extends AbstractAdapter {
           : 'out_of_stock' as const,
         thumbnail: p.images?.[0]?.src || undefined,
         tags,
+        sourceCategory: p.product_type || undefined,
       };
     });
 

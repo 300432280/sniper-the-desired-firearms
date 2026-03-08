@@ -20,6 +20,7 @@ import { consumeToken, getCatalogRemaining, allocateCatalogTokens } from './toke
 import { matchNewProducts } from './keyword-matcher';
 import { pushEvent } from './debugLog';
 import type { CatalogProduct } from './scraper/types';
+import { classifyProduct } from './product-classifier';
 import * as cheerio from 'cheerio';
 
 // ── Tier Configuration ──────────────────────────────────────────────────────
@@ -391,6 +392,14 @@ async function saveProducts(
       // Build update fields — only overwrite stock/price/thumbnail if new data is meaningful
       // This prevents WP REST API crawls (unknown stock, no price) from clobbering
       // good data that was already set by Store API enrichment or backfill scripts.
+      // Classify product type if not already set
+      const productType = product.productType || classifyProduct({
+        title: product.title,
+        url: product.url,
+        tags: product.tags,
+        sourceCategory: product.sourceCategory,
+      });
+
       const hasRealStock = product.stockStatus && product.stockStatus !== 'unknown';
       const update: Record<string, any> = {
         title: product.title,
@@ -402,7 +411,9 @@ async function saveProducts(
       };
       if (hasRealStock) update.stockStatus = product.stockStatus;
       if (product.price != null) update.price = product.price;
+      if (product.regularPrice != null) update.regularPrice = product.regularPrice;
       if (product.thumbnail) update.thumbnail = product.thumbnail;
+      if (productType) update.productType = productType;
 
       const result = await prisma.productIndex.upsert({
         where: { siteId_url: { siteId, url: product.url } },
@@ -412,10 +423,12 @@ async function saveProducts(
           url: product.url,
           title: product.title,
           price: product.price ?? null,
+          regularPrice: product.regularPrice ?? null,
           stockStatus: product.stockStatus ?? null,
           thumbnail: product.thumbnail ?? null,
           category: product.category ?? null,
           tags: product.tags ?? null,
+          productType: productType ?? null,
           closingAt: product.closingAt ?? null,
         },
       });

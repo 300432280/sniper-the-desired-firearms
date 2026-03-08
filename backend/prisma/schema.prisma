@@ -71,6 +71,7 @@ model Match {
   search        Search              @relation(fields: [searchId], references: [id], onDelete: Cascade)
   title         String
   price         Float?
+  regularPrice  Float?              // Original price before discount (for strikethrough display)
   url           String
   hash          String
   thumbnail     String?
@@ -195,12 +196,14 @@ model ProductIndex {
   siteId      String
   site        MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
   url         String
-  title       String
-  price       Float?
-  stockStatus String?       // "in_stock" | "out_of_stock" | "unknown"
+  title        String
+  price        Float?
+  regularPrice Float?              // Original price before discount (for strikethrough display)
+  stockStatus  String?       // "in_stock" | "out_of_stock" | "unknown"
   thumbnail   String?
   category    String?       // "new" | "used" | "auction_lot" | "classified"
   tags        String?       // Comma-separated product tags from source (e.g. Shopify)
+  productType String?       // "firearm" | "ammunition" | "optics" | "parts" | "gear" | "knives" | "other"
   closingAt   DateTime?     // For auction lots — enables live countdown timer
   firstSeenAt DateTime      @default(now())
   lastSeenAt  DateTime      @default(now())

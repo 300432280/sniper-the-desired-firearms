@@ -82,11 +82,15 @@ export function computePressure(events: CrawlEventData[], options?: PressureOpti
   // latency_score: normalized 0-1
   // Standard sites: 500ms → 0, 10s → 1 (fast HTTP fetches)
   // WAF/Playwright sites: 5s → 0, 45s → 1 (Playwright overhead is normal)
+  // Auto-detect: if avg response time > 5s, site likely uses Playwright fallback
+  // consistently — use the wider range so normal Playwright latency doesn't
+  // artificially inflate pressure.
   const responseTimes = events.map(e => e.responseTimeMs).filter((t): t is number => t != null);
   let latencyScore = 0;
   if (responseTimes.length > 0) {
     const avgMs = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
-    if (options?.hasWaf) {
+    const usesPlaywright = options?.hasWaf || avgMs > 5000;
+    if (usesPlaywright) {
       latencyScore = Math.min(1, Math.max(0, (avgMs - 5000) / 40000));
     } else {
       latencyScore = Math.min(1, Math.max(0, (avgMs - 500) / 9500));

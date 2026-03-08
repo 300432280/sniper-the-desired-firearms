@@ -157,13 +157,15 @@ scrapeWithAdapter(url, keyword, options)
 ### Extraction Features
 
 - **Smart title extraction** — Prefers `.card-title`, `.product-title`, `[class*="title"]` over raw h-tags (avoids grabbing brand-only headings on BigCommerce)
-- **Multi-strategy price extraction** — Tries platform-specific price classes (`.price--withoutTax`, `.woocommerce-Price-amount`), then iterates all `[class*="price"]` elements, then falls back to full-text regex
+- **Multi-strategy price extraction** — Tries sale/discount selectors first (`.special-price`, `.price-sale`, `ins .woocommerce-Price-amount`), then platform-specific classes (`.price--withoutTax`, `.woocommerce-Price-amount`), then iterates all `[class*="price"]` elements (skipping struck-through/regular prices), then falls back to full-text regex. Extracts both sale price and regular price — when multiple prices are found, lowest is sale, highest is regular.
+- **Sale price + strikethrough display** — `regularPrice` field tracks the original price before discount. Frontend shows strikethrough regular price next to the sale price (e.g., ~~$599.99~~ $449.99).
 - **Lazy-load thumbnail handling** — Prefers `data-src` over `src`, detects placeholder/loading SVGs
 - **Link-based fallback** — When no product card selectors match, extracts from `<a>` tags whose text contains the keyword
 - **WooCommerce API** — Tries Store API and WP REST API before HTML (5s timeout in fast mode)
-- **Stock detection** — Heuristic based on "in stock" / "out of stock" / disabled cart button patterns
+- **Stock detection** — Heuristic based on "in stock" / "out of stock" / disabled cart button patterns. Detects OOS signals including "notify me when", "back in stock", "email when available", "waitlist", "pre-order", "currently unavailable", "coming soon".
 - **Price from forum titles** — Extracts "$450 OBO" patterns from marketplace thread titles
 - **Auction bid prices** — Extracts "Current Bid: $1,200" patterns
+- **Product classification** — 7-category system (firearm, ammunition, optics, parts, gear, knives, other) with 4-layer fallback: source category → strong pattern match → brand+model → caliber-based. Handles edge cases like magazines (parts, not firearms), grain weights in ammo (JS regex word boundary quirk), and barrel length vs parts disambiguation.
 
 ### Monitored Sites (60+ active)
 
@@ -229,6 +231,10 @@ pressure = 0.4 × failure_rate          (HTTP errors / total crawls)
          + 0.2 × extraction_failure_rate (200 OK but 0 matches / total)
 
 Clamped to [0, 1]
+
+Latency score auto-adapts to site type:
+  Standard sites: 500ms → 0, 10s → 1
+  Playwright-heavy sites (hasWaf or avgMs > 5s): 5s → 0, 45s → 1
 ```
 
 **Step 2 — Capacity:**
@@ -376,7 +382,7 @@ model Search {
 }
 
 model Match {
-  id, searchId, title, price?, url, hash, thumbnail?, postDate?, seller?, foundAt
+  id, searchId, title, price?, regularPrice?, url, hash, thumbnail?, postDate?, seller?, foundAt
   @@unique([searchId, url])
 }
 
@@ -401,19 +407,20 @@ model MonitoredSite {
   baseBudget (60),            // Hourly token budget (admin-configurable)
 
   // Difficulty signals (auto-measured)
-  difficultyScore (0-100), trafficClass (tiny|small|medium|large),
   avgResponseTimeMs?, consecutiveFailures,
   hasWaf, hasRateLimit, hasCaptcha,
 
-  // Admin overrides (null = auto-computed)
-  overrideTrafficClass?, overrideDifficulty?, overrideInterval?,
+  // Per-site crawl tuning (JSON overrides, null fields -> use defaults)
+  crawlTuning? (Json),  // baseBudget, tier1IntervalMin, cooldowns, share percentages
   -> healthChecks[], crawlEvents[], products[]
 }
 
 // v2: Catalog-based product index (stores all discovered products from all sites)
 model ProductIndex {
-  id, siteId, url, title, price?, stockStatus?, thumbnail?,
+  id, siteId, url, title, price?, regularPrice?, stockStatus?, thumbnail?,
   category? ("new"|"used"|"auction_lot"|"classified"),
+  productType? ("firearm"|"ammunition"|"optics"|"parts"|"gear"|"knives"|"other"),
+  tags?,                // Comma-separated product tags from source
   closingAt?,           // For auction lots
   firstSeenAt, lastSeenAt, isActive
   @@unique([siteId, url])

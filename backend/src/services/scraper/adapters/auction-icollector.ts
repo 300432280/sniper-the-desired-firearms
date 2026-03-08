@@ -48,6 +48,7 @@ export class ICollectorAdapter extends AbstractAdapter {
         page: 1,
         isCurrent: 1,
         keywords: keyword,
+        categoryId: 880000,      // Firearms & Gun Auctions only
         sortBy: 'TimeLeft',
         searchFields: 'ItemName',
         exactKeywords: 'false',
@@ -63,7 +64,9 @@ export class ICollectorAdapter extends AbstractAdapter {
     });
 
     const data = response.data;
-    const items: ICollectorItem[] = data.ItemResults || [];
+    // Filter to Canadian auctions only (API doesn't support server-side country filter)
+    const items: ICollectorItem[] = (data.ItemResults || [])
+      .filter((item: ICollectorItem) => item.AuctionCountry === 'Canada');
     const totalCount: number = data.ItemCount || 0;
     const keywordLower = keyword.toLowerCase();
 
@@ -191,6 +194,7 @@ export class ICollectorAdapter extends AbstractAdapter {
         page,
         isCurrent: 1,
         keywords: '',
+        categoryId: 880000,      // Firearms & Gun Auctions only
         sortBy: 'TimeLeft',
         searchFields: 'ItemName',
         exactKeywords: 'false',
@@ -205,7 +209,9 @@ export class ICollectorAdapter extends AbstractAdapter {
       timeout: 20000,
     });
 
-    const items: ICollectorItem[] = resp.data?.ItemResults || [];
+    // Filter to Canadian auctions only (API doesn't support server-side country filter)
+    const items: ICollectorItem[] = (resp.data?.ItemResults || [])
+      .filter((item: ICollectorItem) => item.AuctionCountry === 'Canada');
     const totalCount: number = resp.data?.ItemCount || 0;
 
     if (!Array.isArray(items) || items.length === 0) {

@@ -53,6 +53,7 @@ export interface Match {
   searchId: string;
   title: string;
   price?: number | null;
+  regularPrice?: number | null;
   url: string;
   hash: string;
   foundAt: string;
@@ -65,6 +66,7 @@ export interface Match {
 export interface LiveMatch {
   title: string;
   price?: number;
+  regularPrice?: number;
   url: string;
   inStock?: boolean;
   stockStatus?: string | null;
