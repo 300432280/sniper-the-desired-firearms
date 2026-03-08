@@ -75,6 +75,13 @@ function MatchRow({ match, showSite }: { match: Match & { websiteUrl?: string };
       {match.price != null && (
         <span className="text-accent font-heading flex-shrink-0">${match.price.toFixed(2)}</span>
       )}
+      {match.stockStatus && match.stockStatus !== 'unknown' && (
+        <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
+          match.stockStatus === 'out_of_stock' ? 'text-red-400 border-red-400/30' : 'text-green-400 border-green-400/30'
+        }`}>
+          {match.stockStatus === 'out_of_stock' ? 'Sold Out' : 'In Stock'}
+        </span>
+      )}
       <svg className="w-3.5 h-3.5 text-foreground-dim flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeWidth="1.5" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
       </svg>
@@ -125,15 +132,18 @@ function ScanResultRow({ item, showSite }: { item: LiveMatch; showSite?: boolean
       {item.price != null && (
         <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>
       )}
-      {item.inStock !== undefined && (
-        <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
-          item.inStock
-            ? 'text-green-400 border-green-400/30'
-            : 'text-red-400 border-red-400/30'
-        }`}>
-          {item.inStock ? 'In Stock' : 'Out'}
-        </span>
-      )}
+      {(() => {
+        const stock = item.stockStatus ?? (item.inStock !== undefined ? (item.inStock ? 'in_stock' : 'out_of_stock') : null);
+        if (!stock || stock === 'unknown') return null;
+        const isOut = stock === 'out_of_stock';
+        return (
+          <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
+            isOut ? 'text-red-400 border-red-400/30' : 'text-green-400 border-green-400/30'
+          }`}>
+            {isOut ? 'Sold Out' : 'In Stock'}
+          </span>
+        );
+      })()}
       <svg className="w-3.5 h-3.5 text-foreground-dim flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeWidth="1.5" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
       </svg>
@@ -154,13 +164,24 @@ function GroupedScanResults({
   groupScanMeta: { scannedSites: number; successCount: number; failCount: number; totalMatches: number } | null;
 }) {
   const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc'>('default');
+
+  // Sort results
+  const sortedResults = useMemo(() => {
+    if (sortBy === 'default') return results;
+    return [...results].sort((a, b) => {
+      const pa = a.price ?? (sortBy === 'price_asc' ? Infinity : -Infinity);
+      const pb = b.price ?? (sortBy === 'price_asc' ? Infinity : -Infinity);
+      return sortBy === 'price_asc' ? pa - pb : pb - pa;
+    });
+  }, [results, sortBy]);
 
   // Group results by site domain
   const siteGroups = useMemo(() => {
     if (!isGroup) return null; // Single-site scan, no grouping needed
 
     const groups = new Map<string, { domain: string; items: LiveMatch[]; newCount: number }>();
-    for (const item of results) {
+    for (const item of sortedResults) {
       const url = (item as any).websiteUrl || '';
       let domain: string;
       try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch { domain = url || 'Unknown'; }
@@ -177,7 +198,7 @@ function GroupedScanResults({
     return [...groups.values()].sort((a, b) =>
       b.newCount - a.newCount || b.items.length - a.items.length
     );
-  }, [results, isGroup]);
+  }, [sortedResults, isGroup]);
 
   const toggleSite = (domain: string) => {
     setExpandedSites(prev => {
@@ -214,16 +235,27 @@ function GroupedScanResults({
             </span>
           )}
         </p>
-        {isGroup && siteGroups && siteGroups.length > 1 && (
-          <div className="flex items-center gap-2">
-            <button onClick={expandAll} className="text-[9px] text-foreground-dim hover:text-foreground transition-colors">
-              Expand all
-            </button>
-            <button onClick={collapseAll} className="text-[9px] text-foreground-dim hover:text-foreground transition-colors">
-              Collapse all
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Sort button */}
+          <button
+            onClick={() => setSortBy(prev => prev === 'default' ? 'price_asc' : prev === 'price_asc' ? 'price_desc' : 'default')}
+            className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+              sortBy !== 'default' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+            }`}
+          >
+            {sortBy === 'price_asc' ? 'Price ↑' : sortBy === 'price_desc' ? 'Price ↓' : 'Price'}
+          </button>
+          {isGroup && siteGroups && siteGroups.length > 1 && (
+            <>
+              <button onClick={expandAll} className="text-[9px] text-foreground-dim hover:text-foreground transition-colors">
+                Expand all
+              </button>
+              <button onClick={collapseAll} className="text-[9px] text-foreground-dim hover:text-foreground transition-colors">
+                Collapse all
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Grouped view for multi-site scans */}
@@ -274,7 +306,7 @@ function GroupedScanResults({
       ) : (
         /* Flat list for single-site scans */
         <div className="space-y-1.5">
-          {results.map((item, i) => (
+          {sortedResults.map((item, i) => (
             <ScanResultRow key={i} item={item} />
           ))}
         </div>
@@ -330,6 +362,7 @@ export default function AlertCard({ search, group, onToggle, onDelete, onToggleG
   const [showHistory, setShowHistory] = useState(false);
   const [historyMatches, setHistoryMatches] = useState<(Match & { websiteUrl?: string })[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySortBy, setHistorySortBy] = useState<'default' | 'price_asc' | 'price_desc'>('default');
 
   // Group sites list
   const [showSites, setShowSites] = useState(false);
@@ -616,12 +649,24 @@ export default function AlertCard({ search, group, onToggle, onDelete, onToggleG
                 </span>
               )}
             </span>
-            <button
-              onClick={() => setShowHistory(false)}
-              className="text-[10px] text-foreground-dim hover:text-foreground transition-colors"
-            >
-              Close
-            </button>
+            <div className="flex items-center gap-2">
+              {historyMatches && historyMatches.length > 1 && (
+                <button
+                  onClick={() => setHistorySortBy(prev => prev === 'default' ? 'price_asc' : prev === 'price_asc' ? 'price_desc' : 'default')}
+                  className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+                    historySortBy !== 'default' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+                  }`}
+                >
+                  {historySortBy === 'price_asc' ? 'Price ↑' : historySortBy === 'price_desc' ? 'Price ↓' : 'Price'}
+                </button>
+              )}
+              <button
+                onClick={() => setShowHistory(false)}
+                className="text-[10px] text-foreground-dim hover:text-foreground transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
 
           {historyLoading && (
@@ -638,11 +683,21 @@ export default function AlertCard({ search, group, onToggle, onDelete, onToggleG
 
           {!historyLoading && historyMatches && historyMatches.length > 0 && (
             <div className="space-y-1.5">
-              {historyMatches.map((match) => (
-                <MatchRow key={match.id} match={match} showSite={isGroup} />
-              ))}
+              {(() => {
+                const sorted = historySortBy === 'default'
+                  ? historyMatches
+                  : [...historyMatches].sort((a, b) => {
+                      const pa = a.price ?? (historySortBy === 'price_asc' ? Infinity : -Infinity);
+                      const pb = b.price ?? (historySortBy === 'price_asc' ? Infinity : -Infinity);
+                      return historySortBy === 'price_asc' ? pa - pb : pb - pa;
+                    });
+                return sorted.map((match) => (
+                  <MatchRow key={match.id} match={match} showSite={isGroup} />
+                ));
+              })()}
               <p className="text-[10px] text-foreground-dim pt-1">
-                Showing {historyMatches.length} match{historyMatches.length !== 1 ? 'es' : ''} (newest first)
+                Showing {historyMatches.length} match{historyMatches.length !== 1 ? 'es' : ''}
+                {historySortBy === 'default' ? ' (newest first)' : historySortBy === 'price_asc' ? ' (cheapest first)' : ' (most expensive first)'}
               </p>
             </div>
           )}

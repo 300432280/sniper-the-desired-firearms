@@ -13,12 +13,12 @@ import { crawlWatermark } from './watermark-crawler';
 import { crawlCatalogTier, parseTierState, startTierCycle, updateTierProgress, type TierState } from './catalog-crawler';
 import { expireFreeAlerts } from './free-tier';
 import { allocateCatalogTokens } from './token-budget';
+import { resolveTuning } from './crawl-tuning';
 
 interface CrawlSiteJobData {
   siteId: string;
   domain: string;
   url: string;
-  difficultyScore: number;
 }
 
 interface WatermarkJobData {
@@ -28,6 +28,7 @@ interface WatermarkJobData {
   baseBudget: number;
   capacity: number;
   lastWatermarkUrl: string | null;
+  hasWaf?: boolean;
 }
 
 interface CatalogJobData {
@@ -38,6 +39,8 @@ interface CatalogJobData {
   capacity: number;
   tierState: string;
   activeTiers: { tier2: boolean; tier3: boolean; tier4: boolean };
+  hasWaf?: boolean;
+  crawlTuning?: unknown;
 }
 
 // ─── Crawl-Site Job Processor (Unified Scheduler) ────────────────────────────
@@ -48,10 +51,10 @@ interface CatalogJobData {
  * then distributes results to all matching searches.
  */
 async function processCrawlSite(job: Job<CrawlSiteJobData>): Promise<void> {
-  const { siteId, domain, url, difficultyScore } = job.data;
+  const { siteId, domain, url } = job.data;
   const startTime = Date.now();
 
-  console.log(`[CrawlWorker] Crawling ${domain} (difficulty: ${difficultyScore})`);
+  console.log(`[CrawlWorker] Crawling ${domain}`);
   pushEvent({ type: 'scrape_start', websiteUrl: url, message: `Scheduled crawl: ${domain}` });
 
   // Find all active searches targeting this site
@@ -77,18 +80,67 @@ async function processCrawlSite(job: Job<CrawlSiteJobData>): Promise<void> {
 
   try {
     // Scrape for each unique keyword
+    const allScrapedProducts = new Map<string, { title: string; url: string; price?: number; thumbnail?: string; inStock?: boolean }>();
+
     for (const keyword of keywords) {
       const result = await scrapeWithAdapter(url, keyword, {
         fast: true,
-        difficultyRating: difficultyScore,
+        difficultyRating: 0,
       });
       lastResult = result;
       totalMatches += result.matches.length;
+
+      // Collect all products for ProductIndex (deduped by URL)
+      for (const m of result.matches) {
+        if (!allScrapedProducts.has(m.url)) {
+          allScrapedProducts.set(m.url, { title: m.title, url: m.url, price: m.price, thumbnail: m.thumbnail, inStock: m.inStock });
+        }
+      }
 
       // Distribute results to all searches with this keyword on this site
       const matchingSearches = searches.filter(s => s.keyword === keyword);
       for (const search of matchingSearches) {
         await distributeMatchesToSearch(search, result);
+      }
+    }
+
+    // Save scraped products to ProductIndex (so keyword search also populates the index)
+    if (allScrapedProducts.size > 0) {
+      let indexed = 0;
+      for (const product of allScrapedProducts.values()) {
+        try {
+          const stockVal = product.inStock === false ? 'out_of_stock' : product.inStock ? 'in_stock' : null;
+          const hasRealStock = !!stockVal;
+          const update: Record<string, any> = {
+            title: product.title,
+            lastSeenAt: new Date(),
+            isActive: true,
+          };
+          if (hasRealStock) update.stockStatus = stockVal;
+          if (product.price != null) update.price = product.price;
+          if (product.thumbnail) update.thumbnail = product.thumbnail;
+
+          await prisma.productIndex.upsert({
+            where: { siteId_url: { siteId, url: product.url } },
+            update,
+            create: {
+              siteId,
+              url: product.url,
+              title: product.title,
+              price: product.price ?? null,
+              stockStatus: stockVal,
+              thumbnail: product.thumbnail ?? null,
+            },
+          });
+          indexed++;
+        } catch (err) {
+          if (!(err instanceof Error && err.message.includes('Unique constraint'))) {
+            console.error(`[CrawlWorker] Failed to index product ${product.url}:`, err);
+          }
+        }
+      }
+      if (indexed > 0) {
+        console.log(`[CrawlWorker] Indexed ${indexed} products to ProductIndex for ${domain}`);
       }
     }
 
@@ -231,12 +283,12 @@ async function distributeMatchesToSearch(
 // ─── Watermark Crawl Job Processor (Tier 1 — New Items) ─────────────────────
 
 async function processWatermarkCrawl(job: Job<WatermarkJobData>): Promise<void> {
-  const { siteId, domain, url, baseBudget, capacity, lastWatermarkUrl } = job.data;
+  const { siteId, domain, url, baseBudget, capacity, lastWatermarkUrl, hasWaf } = job.data;
 
   console.log(`[WatermarkWorker] Tier 1 watermark crawl: ${domain}`);
   pushEvent({ type: 'scrape_start', websiteUrl: url, message: `Watermark crawl: ${domain}` });
 
-  const result = await crawlWatermark({ siteId, url, domain, baseBudget, capacity, lastWatermarkUrl });
+  const result = await crawlWatermark({ siteId, url, domain, baseBudget, capacity, lastWatermarkUrl, hasWaf });
 
   // Record crawl event and update watermark
   await onCrawlComplete({
@@ -263,11 +315,12 @@ async function processWatermarkCrawl(job: Job<WatermarkJobData>): Promise<void> 
 async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
   const { siteId, domain, url, baseBudget, capacity, activeTiers } = job.data;
   const tierState = parseTierState(job.data.tierState);
+  const tuning = resolveTuning(job.data.crawlTuning);
 
   console.log(`[CatalogWorker] Catalog crawl: ${domain} (tiers: ${Object.entries(activeTiers).filter(([, v]) => v).map(([k]) => k).join(',')})`);
 
-  // Allocate tokens across active tiers
-  const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers);
+  // Allocate tokens across active tiers using per-site tuning
+  const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers, tuning);
 
   const updatedState: TierState = { ...tierState };
 
@@ -291,9 +344,12 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
       tokensAllocated: allocation[tierKey],
       baseBudget,
       capacity,
+      hasWaf: job.data.hasWaf,
     });
 
-    updatedState[tierKey] = updateTierProgress(cycleState, result.pagesScanned, result.cycleComplete, tier);
+    // Pass per-site cooldown override for this tier
+    const cooldownMap = { tier2: tuning.t2CooldownHrs, tier3: tuning.t3CooldownHrs, tier4: tuning.t4CooldownHrs };
+    updatedState[tierKey] = updateTierProgress(cycleState, result.pagesScanned, result.cycleComplete, tier, cooldownMap[tierKey]);
 
     console.log(`[CatalogWorker] Tier ${tier} ${result.status}: ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens${result.cycleComplete ? ' (cycle complete)' : ''}`);
   }

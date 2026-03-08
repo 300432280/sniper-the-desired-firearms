@@ -56,6 +56,7 @@ export interface CatalogProduct {
   stockStatus?: 'in_stock' | 'out_of_stock' | 'unknown';
   thumbnail?: string;
   category?: 'new' | 'used' | 'auction_lot' | 'classified';
+  tags?: string;        // Comma-separated product tags from source
   closingAt?: Date;
 }
 
@@ -86,8 +87,17 @@ export interface SiteAdapter {
 
   /** URL for "new arrivals" / "sort by newest" page (Tier 1 watermark crawl) */
   getNewArrivalsUrl?(origin: string): string;
+  /** Multiple fallback URLs for new arrivals (tried in order if primary returns 0 products) */
+  getNewArrivalsUrls?(origin: string): string[];
+  /**
+   * URLs for full catalog crawl (Tiers 2-4 catalog refresh).
+   * Returns site-specific category/listing page URLs that cover the full product catalog.
+   * Used by the catalog crawler to update prices, stock, thumbnails, and detect removed products.
+   * Separate from getNewArrivalsUrls() which targets new-product discovery (Tier 1 watermark).
+   */
+  getCatalogUrls?(origin: string): string[];
   /** Fetch a catalog page via API (preferred — structured data with prices) */
-  fetchCatalogPage?(origin: string, page: number, options?: { sortBy?: 'newest' | 'oldest'; perPage?: number }): Promise<CatalogPage>;
+  fetchCatalogPage?(origin: string, page: number, options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string }): Promise<CatalogPage>;
   /** Extract catalog products from an HTML page (fallback when no API available) */
   extractCatalogProducts?($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[];
 }

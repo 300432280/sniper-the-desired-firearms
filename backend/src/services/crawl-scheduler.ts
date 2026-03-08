@@ -101,6 +101,7 @@ export async function schedulerTick(): Promise<void> {
   const dueSites = await prisma.monitoredSite.findMany({
     where: {
       isEnabled: true,
+      isPaused: false,
       crawlLock: null, // Not currently being crawled
       OR: [
         { nextCrawlAt: { lte: now } },
@@ -162,7 +163,6 @@ export async function schedulerTick(): Promise<void> {
       siteId: site.id,
       domain: site.domain,
       url: site.url,
-      difficultyScore: site.difficultyScore,
     }, {
       jobId,
       attempts: 1,
@@ -178,6 +178,7 @@ export async function schedulerTick(): Promise<void> {
       baseBudget: effectiveBudgetCap,
       capacity: site.capacity,
       lastWatermarkUrl: site.lastWatermarkUrl,
+      hasWaf: site.hasWaf,
     }, {
       jobId: `watermark:${site.id}:${Date.now()}`,
       attempts: 1,
@@ -199,6 +200,8 @@ export async function schedulerTick(): Promise<void> {
           capacity: site.capacity,
           tierState: JSON.stringify(tierState),
           activeTiers,
+          hasWaf: site.hasWaf,
+          crawlTuning: site.crawlTuning,
         }, {
           jobId: `catalog:${site.id}:${Date.now()}`,
           attempts: 1,
@@ -300,44 +303,6 @@ export async function onCrawlComplete(params: {
     updateData.avgResponseTimeMs = site.avgResponseTimeMs
       ? Math.round((site.avgResponseTimeMs * 0.7) + (responseTimeMs * 0.3))
       : responseTimeMs;
-  }
-
-  // 3. Update traffic class dynamically (piggyback on crawl data)
-  if (!site.overrideTrafficClass && params.headers) {
-    const { classifyTraffic, detectInfraSignals, computeErrorRate } = await import('./traffic-classifier');
-
-    const infraSignals = detectInfraSignals(params.headers);
-
-    const recentCrawls = await prisma.crawlEvent.findMany({
-      where: { siteId },
-      orderBy: { crawledAt: 'desc' },
-      take: 10,
-      select: { status: true },
-    });
-    const errorRate = computeErrorRate(recentCrawls.map(c => c.status));
-
-    const newTrafficClass = classifyTraffic({
-      avgResponseTimeMs: updateData.avgResponseTimeMs ?? site.avgResponseTimeMs,
-      recentErrorRate: errorRate,
-      hasCdn: infraSignals.hasCdn,
-      hasWaf: infraSignals.hasWaf || site.hasWaf,
-      requiresSucuri: site.requiresSucuri,
-      serverType: infraSignals.serverType,
-      consecutiveFailures: updateData.consecutiveFailures ?? site.consecutiveFailures,
-    });
-
-    updateData.trafficClass = newTrafficClass;
-  }
-
-  // 4. Difficulty score — kept for legacy display
-  if (!site.overrideDifficulty) {
-    const { computeDifficulty } = await import('./priority-engine');
-    const difficulty = computeDifficulty(
-      { ...site, ...updateData },
-      updateData.avgResponseTimeMs ?? site.avgResponseTimeMs,
-      { zeroMatchStreak: 0, usedPlaywright: params.usedPlaywright },
-    );
-    updateData.difficultyScore = difficulty;
   }
 
   await prisma.monitoredSite.update({ where: { id: siteId }, data: updateData });

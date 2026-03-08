@@ -11,7 +11,7 @@ interface DebugEvent {
   keyword?: string;
   websiteUrl?: string;
   message: string;
-  data?: unknown;
+  data?: Array<{ title: string; price?: number; url: string }> | Record<string, unknown> | null;
 }
 
 const TYPE_COLORS: Record<string, string> = {

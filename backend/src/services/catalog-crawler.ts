@@ -47,8 +47,10 @@ export interface TierCycleState {
   /** Absolute date range snapshot (ISO strings) */
   dateRangeStart?: string;
   dateRangeEnd?: string;
-  /** Current page in the catalog crawl */
+  /** Current page in the catalog crawl (API-based path) */
   currentPage: number;
+  /** Current URL index in the catalog URL list (HTML-based path, for resume) */
+  currentUrlIndex?: number;
   /** When this cycle started */
   cycleStartedAt?: string;
   /** When cooldown ends (cycle can restart) */
@@ -103,6 +105,7 @@ export async function crawlCatalogTier(params: {
   tokensAllocated: number;
   baseBudget: number;
   capacity: number;
+  hasWaf?: boolean;
 }): Promise<CatalogCrawlResult> {
   const { siteId, url, tier, tierState, tokensAllocated } = params;
   const { adapter } = await getAdapterForUrl(url);
@@ -115,17 +118,19 @@ export async function crawlCatalogTier(params: {
   const allProducts: CatalogProduct[] = [];
 
   try {
-    let page = tierState.currentPage || 1;
+    // API-based catalog crawl (preferred — Shopify, WooCommerce, iCollector)
+    if (adapter.fetchCatalogPage) {
+      let page = tierState.currentPage || 1;
 
-    while (tokensUsed < tokensAllocated) {
-      consumeToken(siteId, tier);
-      tokensUsed++;
+      while (tokensUsed < tokensAllocated) {
+        consumeToken(siteId, tier);
+        tokensUsed++;
 
-      // API-based catalog crawl (preferred)
-      if (adapter.fetchCatalogPage) {
         const catalogPage = await adapter.fetchCatalogPage(origin, page, {
           sortBy: 'newest',
           perPage: 50,
+          dateAfter: tierState.dateRangeStart || undefined,
+          dateBefore: tierState.dateRangeEnd || undefined,
         });
         pagesScanned++;
 
@@ -134,9 +139,6 @@ export async function crawlCatalogTier(params: {
           break;
         }
 
-        // Filter products within the tier's date range
-        // (API doesn't support date filtering natively for most platforms,
-        //  so we filter by ProductIndex firstSeenAt after save)
         allProducts.push(...catalogPage.products);
         productsFound += catalogPage.products.length;
 
@@ -148,40 +150,108 @@ export async function crawlCatalogTier(params: {
         page++;
         await randomDelay(300, 800);
       }
-      // HTML-based catalog crawl (fallback)
-      else if (adapter.extractCatalogProducts) {
-        // Build the catalog page URL
-        const pageUrl = page === 1
-          ? `${origin}/shop/`
-          : `${origin}/shop/page/${page}/`;
-
-        const fetchResult = await fetchPageWithMeta(pageUrl, undefined, { difficultyRating: 0 });
-        const $ = cheerio.load(fetchResult.html);
-        pagesScanned++;
-
-        const products = adapter.extractCatalogProducts($, pageUrl);
-        if (products.length === 0) {
-          cycleComplete = true;
-          break;
-        }
-
-        allProducts.push(...products);
-        productsFound += products.length;
-
-        // Check for next page
-        const nextUrl = adapter.getNextPageUrl?.($, pageUrl);
-        if (!nextUrl) {
-          cycleComplete = true;
-          break;
-        }
-
-        page++;
-        await randomDelay(300, 800);
+    }
+    // HTML-based catalog crawl — uses adapter's catalog URLs with pagination
+    // (BigCommerce, Magento, custom PHP, etc.)
+    else if (adapter.extractCatalogProducts) {
+      // Get catalog URLs from adapter — prefer getCatalogUrls() (designed for full catalog refresh),
+      // fall back to getNewArrivalsUrls() (watermark URLs also work for catalog), then generic /shop/
+      const rawUrls: string[] = [];
+      if (adapter.getCatalogUrls) {
+        rawUrls.push(...adapter.getCatalogUrls(origin));
+      } else if (adapter.getNewArrivalsUrls) {
+        rawUrls.push(...adapter.getNewArrivalsUrls(origin));
+      } else if (adapter.getNewArrivalsUrl) {
+        rawUrls.push(adapter.getNewArrivalsUrl(origin));
       } else {
-        // No catalog crawl method available
-        cycleComplete = true;
-        break;
+        rawUrls.push(`${origin}/shop/`);
       }
+      const catalogUrls = [...new Set(rawUrls)];
+
+      // Resume from tracked URL index (persisted across ticks for partial cycles)
+      let urlIdx = tierState.currentUrlIndex ?? 0;
+
+      while (urlIdx < catalogUrls.length && tokensUsed < tokensAllocated) {
+        let currentUrl: string | null = catalogUrls[urlIdx];
+
+        while (currentUrl && tokensUsed < tokensAllocated) {
+          consumeToken(siteId, tier);
+          tokensUsed++;
+
+          let html = '';
+
+          // For WAF sites (e.g. alflahertys), use Playwright directly
+          if (params.hasWaf) {
+            try {
+              const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+              const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
+              html = pwResult.html;
+            } catch {
+              break; // Playwright failed, try next URL
+            }
+          } else {
+            try {
+              const fetchResult = await fetchPageWithMeta(currentUrl, undefined, { difficultyRating: 0 });
+              html = fetchResult.html;
+            } catch {
+              break; // Fetch failed, try next URL
+            }
+
+            // Playwright fallback if static HTML looks blocked/empty
+            const isBlocked = html.length < 2000 ||
+              /Incapsula|Access Denied|403 Forbidden|challenge-platform|Just a moment/i.test(html);
+            if (isBlocked && html.length > 0) {
+              try {
+                const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+                const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
+                html = pwResult.html;
+              } catch { /* continue with what we have */ }
+            }
+          }
+
+          const $ = cheerio.load(html);
+          pagesScanned++;
+
+          let products = adapter.extractCatalogProducts($, currentUrl);
+
+          // Playwright fallback: large HTML but 0 products (SPA/AJAX-loaded content)
+          if (products.length === 0 && !params.hasWaf && html.length > 5000) {
+            try {
+              const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+              const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
+              if (pwResult.html.length > html.length) {
+                const $pw = cheerio.load(pwResult.html);
+                products = adapter.extractCatalogProducts($pw, currentUrl);
+              }
+            } catch { /* continue */ }
+          }
+
+          if (products.length === 0) break; // No products on this URL, try next
+
+          allProducts.push(...products);
+          productsFound += products.length;
+
+          // Check for next page (BigCommerce: ?page=N, Magento: ?p=N, etc.)
+          const nextUrl: string | null = adapter.getNextPageUrl?.($, currentUrl) ?? null;
+          if (!nextUrl) break;
+          currentUrl = nextUrl;
+
+          await randomDelay(300, 800);
+        }
+
+        urlIdx++;
+      }
+
+      // Persist URL position for resume on next tick (mutates tierState which
+      // is spread by updateTierProgress, so it's preserved in the tier state JSON)
+      tierState.currentUrlIndex = urlIdx;
+
+      if (urlIdx >= catalogUrls.length) {
+        cycleComplete = true;
+      }
+    } else {
+      // No catalog crawl method available
+      cycleComplete = true;
     }
 
     // Save products to ProductIndex
@@ -218,7 +288,7 @@ export async function crawlCatalogTier(params: {
 
 /**
  * Determine which catalog tiers should run this hour for a site.
- * Called by the scheduler tick.
+ * Called by the scheduler tick. Accepts optional per-site cooldown overrides.
  */
 export function getActiveTiers(tierState: TierState): { tier2: boolean; tier3: boolean; tier4: boolean } {
   const now = new Date();
@@ -265,11 +335,13 @@ export function startTierCycle(tier: 2 | 3 | 4): TierCycleState {
 
 /**
  * Transition a tier to cooldown after cycle completes.
+ * Accepts optional per-site cooldown override (hours). Falls back to TIER_CONFIGS default.
  */
-export function completeTierCycle(tier: 2 | 3 | 4, cycleState: TierCycleState): TierCycleState {
+export function completeTierCycle(tier: 2 | 3 | 4, cycleState: TierCycleState, cooldownHoursOverride?: number): TierCycleState {
   const config = TIER_CONFIGS.find(c => c.tier === tier)!;
+  const cooldownHours = cooldownHoursOverride ?? config.cooldownHours;
   const cycleStart = cycleState.cycleStartedAt ? new Date(cycleState.cycleStartedAt) : new Date();
-  const cooldownEnd = new Date(cycleStart.getTime() + config.cooldownHours * 60 * 60 * 1000);
+  const cooldownEnd = new Date(cycleStart.getTime() + cooldownHours * 60 * 60 * 1000);
 
   // If cycle took longer than cooldown, start next cycle immediately
   if (cooldownEnd <= new Date()) {
@@ -292,9 +364,10 @@ export function updateTierProgress(
   pagesScanned: number,
   cycleComplete: boolean,
   tier: 2 | 3 | 4,
+  cooldownHoursOverride?: number,
 ): TierCycleState {
   if (cycleComplete) {
-    return completeTierCycle(tier, tierState);
+    return completeTierCycle(tier, tierState, cooldownHoursOverride);
   }
 
   return {
@@ -315,18 +388,25 @@ async function saveProducts(
 
   for (const product of products) {
     try {
+      // Build update fields — only overwrite stock/price/thumbnail if new data is meaningful
+      // This prevents WP REST API crawls (unknown stock, no price) from clobbering
+      // good data that was already set by Store API enrichment or backfill scripts.
+      const hasRealStock = product.stockStatus && product.stockStatus !== 'unknown';
+      const update: Record<string, any> = {
+        title: product.title,
+        category: product.category ?? null,
+        tags: product.tags ?? null,
+        closingAt: product.closingAt ?? null,
+        lastSeenAt: new Date(),
+        isActive: true,
+      };
+      if (hasRealStock) update.stockStatus = product.stockStatus;
+      if (product.price != null) update.price = product.price;
+      if (product.thumbnail) update.thumbnail = product.thumbnail;
+
       const result = await prisma.productIndex.upsert({
         where: { siteId_url: { siteId, url: product.url } },
-        update: {
-          title: product.title,
-          price: product.price ?? null,
-          stockStatus: product.stockStatus ?? null,
-          thumbnail: product.thumbnail ?? null,
-          category: product.category ?? null,
-          closingAt: product.closingAt ?? null,
-          lastSeenAt: new Date(),
-          isActive: true,
-        },
+        update,
         create: {
           siteId,
           url: product.url,
@@ -335,6 +415,7 @@ async function saveProducts(
           stockStatus: product.stockStatus ?? null,
           thumbnail: product.thumbnail ?? null,
           category: product.category ?? null,
+          tags: product.tags ?? null,
           closingAt: product.closingAt ?? null,
         },
       });

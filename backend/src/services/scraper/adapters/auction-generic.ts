@@ -1,5 +1,5 @@
 import type * as cheerio from 'cheerio';
-import type { ScrapedMatch, ExtractionOptions } from '../types';
+import type { ScrapedMatch, ExtractionOptions, CatalogProduct } from '../types';
 import { AbstractAdapter } from './base';
 import { extractBidPrice } from '../utils/price';
 
@@ -71,5 +71,63 @@ export class GenericAuctionAdapter extends AbstractAdapter {
     }
 
     return matches;
+  }
+
+  // ── Catalog Crawl Methods (Phase 3) ───────────────────────────────────────
+
+  getNewArrivalsUrl(origin: string): string {
+    return `${origin}/`;
+  }
+
+  extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
+    const products: CatalogProduct[] = [];
+    const seen = new Set<string>();
+
+    const LOT_SELECTORS = [
+      '[class*="lot-item"]',
+      '[class*="lotItem"]',
+      '[class*="lot-card"]',
+      '[class*="catalog-item"]',
+      '[class*="auction-item"]',
+      '[class*="auction-lot"]',
+      '.lot',
+      '[class*="item-card"]',
+      '[class*="item-listing"]',
+      '[class*="asset-card"]',
+    ];
+
+    for (const selector of LOT_SELECTORS) {
+      $(selector).each((_, el) => {
+        const element = $(el);
+
+        let titleEl = element.find('[class*="lot-title"], [class*="lot-name"], [class*="lotTitle"]').first();
+        if (!titleEl.length) titleEl = element.find('h3, h4, h2').first();
+        if (!titleEl.length) titleEl = element.find('[class*="title"], [class*="name"], [class*="description"]').first();
+
+        const rawTitle = (titleEl.length ? titleEl.text() : element.text()).trim().replace(/\s+/g, ' ').slice(0, 160);
+        if (!rawTitle || rawTitle.length < 3) return;
+        if (/^\$?\d[\d,.]*$/.test(rawTitle)) return;
+
+        const cleanTitle = rawTitle.replace(/^\d+[A-Za-z]?\s*-\s*/, '');
+        const url = this.extractLink(element, baseUrl);
+        if (!url || seen.has(url)) return;
+        seen.add(url);
+
+        const bidEl = element.find('[class*="current-bid"], [class*="winning-bid"], [class*="bid-amount"], [class*="estimate"], [class*="price"], [class*="hammer"]').first();
+        const price = bidEl.length ? extractBidPrice(bidEl.text()) : extractBidPrice(element.text());
+        const thumbnail = this.extractThumbnail($, element, baseUrl);
+
+        products.push({
+          url,
+          title: cleanTitle || rawTitle,
+          price,
+          stockStatus: 'in_stock',
+          thumbnail,
+          category: 'auction_lot',
+        });
+      });
+    }
+
+    return products;
   }
 }

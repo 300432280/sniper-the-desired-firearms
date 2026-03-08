@@ -1,6 +1,6 @@
 import type * as cheerio from 'cheerio';
 import axios from 'axios';
-import type { ScrapedMatch, ExtractionOptions, ScrapeOptions } from '../types';
+import type { ScrapedMatch, ExtractionOptions, ScrapeOptions, CatalogProduct, CatalogPage } from '../types';
 import { AbstractAdapter } from './base';
 import { pickUserAgent } from '../http-client';
 
@@ -168,5 +168,64 @@ export class ICollectorAdapter extends AbstractAdapter {
     }
 
     return matches;
+  }
+
+  // ── Catalog Crawl Methods (Phase 3) ───────────────────────────────────────
+
+  getNewArrivalsUrl(origin: string): string {
+    return `${origin}/`;
+  }
+
+  async fetchCatalogPage(
+    origin: string,
+    page: number,
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number },
+  ): Promise<CatalogPage> {
+    const API_URL = 'https://www.icollector.com/handlers/controls/CloudsearchItemSearch.ashx';
+    const perPage = Math.min(options?.perPage ?? 100, 100);
+
+    const resp = await axios.get(API_URL, {
+      params: {
+        command: 'searchitems',
+        unitsPerPage: perPage,
+        page,
+        isCurrent: 1,
+        keywords: '',
+        sortBy: 'TimeLeft',
+        searchFields: 'ItemName',
+        exactKeywords: 'false',
+        hasImage: 'false',
+      },
+      headers: {
+        'User-Agent': pickUserAgent('icollector.com'),
+        Accept: 'application/json, text/javascript, */*; q=0.01',
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: 'https://www.icollector.com/search.aspx',
+      },
+      timeout: 20000,
+    });
+
+    const items: ICollectorItem[] = resp.data?.ItemResults || [];
+    const totalCount: number = resp.data?.ItemCount || 0;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return { products: [] };
+    }
+
+    const products: CatalogProduct[] = items.map(item => ({
+      url: icollectorFriendlyUrl(item.ItemTitle || '', item.ItemID),
+      title: (item.ItemTitle || '').trim().slice(0, 160),
+      price: item.ItemCurrentBidAmount > 0 ? item.ItemCurrentBidAmount : undefined,
+      stockStatus: 'in_stock' as const,
+      thumbnail: item.ImageUrl || undefined,
+      category: 'auction_lot' as const,
+    })).filter(p => p.title.length >= 3);
+
+    const totalPages = Math.ceil(totalCount / perPage);
+    return {
+      products,
+      nextPageUrl: page < totalPages ? `page${page + 1}` : undefined,
+      totalPages,
+    };
   }
 }

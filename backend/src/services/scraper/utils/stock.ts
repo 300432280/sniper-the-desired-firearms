@@ -3,7 +3,7 @@ import type * as cheerio from 'cheerio';
 /** Determine whether a product element indicates the item is in stock */
 export function isInStock(element: cheerio.Cheerio<any>): boolean {
   const text = element.text().toLowerCase();
-  const outTerms = ['out of stock', 'sold out', 'unavailable', 'backordered', 'discontinued'];
+  const outTerms = ['out of stock', 'out-of-stock', 'temporarily out', 'sold out', 'unavailable', 'backordered', 'discontinued'];
   const inTerms = ['in stock', 'add to cart', 'buy now', 'available', 'order now'];
 
   if (outTerms.some((t) => text.includes(t))) return false;

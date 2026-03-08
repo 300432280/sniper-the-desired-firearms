@@ -2,11 +2,14 @@
  * Token Budget System — per-site request budget with tier allocation.
  *
  * Each site has a base hourly budget (default 60 req/hr), scaled by capacity.
- * Tier 1 (new items) reserves 70% of the effective budget.
- * Remaining 30% (+ unused Tier 1 tokens) flows to catalog tiers (2-4).
+ * Tier 1 (new items) reserves a configurable % of the effective budget.
+ * Remaining tokens (+ unused Tier 1 tokens) flow to catalog tiers (2-4).
  *
+ * All percentages/shares are configurable per-site via CrawlTuning.
  * The min_gap ensures requests are evenly spaced within each hour.
  */
+
+import { CrawlTuning, TUNING_DEFAULTS } from './crawl-tuning';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,11 +39,7 @@ export interface TierAllocation {
 
 const budgets = new Map<string, TokenBudgetState>();
 
-const TIER1_RESERVATION = 0.70;
 const HOUR_MS = 60 * 60 * 1000;
-
-// Catalog tier shares of remaining budget (after Tier 1)
-const CATALOG_SHARES = { tier2: 0.35, tier3: 0.35, tier4: 0.30 };
 
 // ── Budget Operations ────────────────────────────────────────────────────────
 
@@ -102,9 +101,10 @@ export function consumeToken(siteId: string, tier: 1 | 2 | 3 | 4): void {
 /**
  * Get remaining tokens for Tier 1 this hour.
  */
-export function getTier1Remaining(siteId: string, baseBudget: number, capacity: number): number {
+export function getTier1Remaining(siteId: string, baseBudget: number, capacity: number, tuning?: CrawlTuning): number {
   const budget = getBudget(siteId, baseBudget, capacity);
-  const tier1Budget = Math.floor(budget.effectiveBudget * TIER1_RESERVATION);
+  const reservePct = (tuning?.tier1ReservePct ?? TUNING_DEFAULTS.tier1ReservePct) / 100;
+  const tier1Budget = Math.floor(budget.effectiveBudget * reservePct);
   return Math.max(0, tier1Budget - budget.tier1Used);
 }
 
@@ -120,16 +120,24 @@ export function getCatalogRemaining(siteId: string, baseBudget: number, capacity
 
 /**
  * Compute token allocation for active catalog tiers.
- * Distributes remaining tokens proportionally based on which tiers are active.
+ * Distributes remaining tokens based on per-site tuning shares.
+ * Tier 2 gets the larger of its share or whatever remains after T3+T4.
  */
 export function allocateCatalogTokens(
   siteId: string,
   baseBudget: number,
   capacity: number,
   activeTiers: { tier2: boolean; tier3: boolean; tier4: boolean },
+  tuning?: CrawlTuning,
 ): TierAllocation {
+  const t = tuning ?? TUNING_DEFAULTS;
+  const reservePct = t.tier1ReservePct / 100;
+  const t2Share = t.t2SharePct / 100;
+  const t3Share = t.t3SharePct / 100;
+  const t4Share = t.t4SharePct / 100;
+
   const budget = getBudget(siteId, baseBudget, capacity);
-  const tier1Budget = Math.floor(budget.effectiveBudget * TIER1_RESERVATION);
+  const tier1Budget = Math.floor(budget.effectiveBudget * reservePct);
   const tier1Remaining = Math.max(0, tier1Budget - budget.tier1Used);
 
   // Catalog tiers get: base catalog allocation + unused Tier 1 overflow
@@ -139,19 +147,23 @@ export function allocateCatalogTokens(
   const remaining = Math.max(0, budget.effectiveBudget - budget.tokensUsed);
   const catalogRemaining = Math.max(0, remaining - tier1Remaining);
 
-  // Count active tiers and their shares
-  const active: Array<{ key: 'tier2' | 'tier3' | 'tier4'; share: number }> = [];
-  if (activeTiers.tier2) active.push({ key: 'tier2', share: CATALOG_SHARES.tier2 });
-  if (activeTiers.tier3) active.push({ key: 'tier3', share: CATALOG_SHARES.tier3 });
-  if (activeTiers.tier4) active.push({ key: 'tier4', share: CATALOG_SHARES.tier4 });
-
   const allocation: TierAllocation = { tier1: tier1Remaining, tier2: 0, tier3: 0, tier4: 0 };
 
-  if (active.length === 0 || catalogRemaining <= 0) return allocation;
+  if (catalogRemaining <= 0) return allocation;
 
-  const totalShare = active.reduce((sum, t) => sum + t.share, 0);
-  for (const t of active) {
-    allocation[t.key] = Math.floor(catalogRemaining * (t.share / totalShare));
+  // Allocate Tier 3 and Tier 4 first by their shares
+  if (activeTiers.tier3) {
+    allocation.tier3 = Math.floor(catalogRemaining * t3Share);
+  }
+  if (activeTiers.tier4) {
+    allocation.tier4 = Math.floor(catalogRemaining * t4Share);
+  }
+
+  // Tier 2 gets the larger of: its share, or whatever remains after T3+T4
+  if (activeTiers.tier2) {
+    const baseShare = Math.floor(catalogRemaining * t2Share);
+    const afterT3T4 = catalogRemaining - allocation.tier3 - allocation.tier4;
+    allocation.tier2 = Math.max(baseShare, afterT3T4);
   }
 
   return allocation;

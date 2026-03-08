@@ -288,6 +288,24 @@ Example: capacity=0.22 → effective=13 tokens/hr, min_gap=277s
 
 Each tier operates in cycles with absolute date snapshots. If a cycle can't finish in one hour, it continues the next hour. Cooldown timer starts after cycle completion.
 
+### Catalog URL Resolution
+
+The catalog crawler uses two separate URL strategies depending on whether the adapter has a structured API:
+
+| Path | Adapters | URL Source | How it works |
+|------|----------|------------|--------------|
+| **API-based** | Shopify, WooCommerce, iCollector | `fetchCatalogPage(origin, page)` | Paginated JSON API — structured data with prices, stock, images. No HTML URLs needed. |
+| **HTML-based** | GenericRetail (BigCommerce, Magento, custom PHP) | `getCatalogUrls(origin)` | Per-site category/listing page URLs crawled with Cheerio + optional Playwright for WAF sites. |
+
+**`getCatalogUrls()`** vs **`getNewArrivalsUrls()`** — the adapter provides two separate URL methods:
+
+- **`getNewArrivalsUrls(origin)`** — Used by **Tier 1 watermark crawl**. Returns URLs sorted by newest products (e.g. `/new-arrivals`, `/search?sort=newest`). Purpose: discover new items quickly.
+- **`getCatalogUrls(origin)`** — Used by **Tiers 2-4 catalog refresh**. Returns full category/listing page URLs (e.g. `/categories.php`, `/firearms/`, `/ammunition/`). Purpose: update prices, stock, thumbnails across the full catalog.
+
+Both methods share site-specific URLs via a private `_getSiteSpecificUrls()` helper (DRY), but append different generic fallback patterns. The catalog crawler prefers `getCatalogUrls()`, falling back to `getNewArrivalsUrls()` for adapters that haven't implemented the catalog method yet.
+
+For WAF-protected sites (e.g. alflahertys.com with Incapsula), the catalog crawler automatically uses Playwright (headless browser) instead of static HTTP fetches.
+
 ### Cold Start (New Site Onboarding)
 
 When a new site is added, the system conservatively discovers its tolerance:
@@ -761,6 +779,83 @@ firearm-alert/
             +-- test-scrape.ts    # Search URL pattern tester
             +-- test-scraper.ts   # CLI scraper test tool
 ```
+
+---
+
+## WooCommerce Dual API Strategy
+
+WooCommerce sites expose two public APIs with different data coverage. The adapter stitches them together:
+
+| API | Endpoint | Products Returned | Has Price | Has Stock | Has Images |
+|-----|----------|-------------------|-----------|-----------|------------|
+| **WP REST API** | `/wp-json/wp/v2/product` | ALL published | No | No | Only via `_embed=wp:featuredmedia` (many have `featured_media=0`) |
+| **Store API** | `/wp-json/wc/store/v1/products` | **In-stock only** | Yes (cents) | Yes (`is_purchasable`) | Yes |
+
+**Key behaviors discovered through site verification:**
+- Store API **only returns purchasable in-stock items** — confirmed on alsimmonsgunshop.com (179/1586 in Store API) and budgetshootersupply.ca (1595/2707)
+- "Not in Store API" reliably means out of stock (all missing items have `status=publish, type=product`)
+- `_embed=wp:featuredmedia` is the only way to get thumbnails from WP REST API, but `featured_media=0` (no featured image) is common — returns no image data
+- **CRITICAL**: Never use `_fields` parameter with `_embed` — WordPress strips `_embedded` data when `_fields` is present
+- For out-of-stock products missing thumbnails/prices, fallback to HTML scraping: `og:image` meta tag for thumbnails, `<bdi>` tags or `woocommerce-Price-amount` for prices
+
+**Data regression prevention:** Three locations upsert into ProductIndex (`catalog-crawler.ts`, `watermark-crawler.ts`, `worker.ts`). All use conditional updates — only write `stockStatus`, `price`, and `thumbnail` when the new value is real (not null/unknown), preventing API gaps from overwriting good data.
+
+---
+
+## Site-Specific Crawl Techniques
+
+Each site type has unique quirks that require special handling. This section documents platform-specific behaviors so future changes don't regress fixes.
+
+### WooCommerce Sites (20+)
+- **Dual API merge**: WP REST for full catalog + Store API for enrichment (prices, stock, thumbnails)
+- **Search**: Store API search first (rich data), WP REST search fallback (finds OOS items). WP REST search matches against full product content (title + description), so results are trusted without strict keyword filtering
+- **Keyword matching**: Must check title + URL slug + tags. URL slugs use hyphens as word separators (e.g., `7x57mauser` in URL → split on `-` → match against "mauser")
+- **Search limit**: 100 results per API call (increased from 25 to capture all matches)
+- **Thumbnails**: `_embed=wp:featuredmedia` for WP REST, `images[0].src` for Store API. Fallback: `og:image` from product page HTML
+- **Prices for OOS items**: Not available from either API. Must scrape from product page HTML (`<bdi>`, `product:price:amount` meta tag, JSON-LD `price` field)
+
+### Shopify Sites (3)
+- **Catalog**: `/products.json` API with pagination — structured JSON, reliable
+- **Tags**: Available in API response, stored in ProductIndex `tags` column (comma-separated)
+- **URL encoding**: Unicode characters in handles create duplicate URLs. Fixed with `decodeURIComponent()` normalization
+- **Body HTML**: Available in API but NOT stored (copyright risk per user preference)
+
+### BigCommerce Sites (8) — via GenericRetailAdapter
+- **No public API**: HTML scraping only via category pages
+- **Dirty titles**: HTML scraper can grab sibling elements (price labels, "Add to Cart" buttons, stock badges) alongside product titles
+- **Category pages as products**: Category pages use `.card` CSS class — same as product cards. `isCategoryPageUrl()` and `CATEGORY_NAMES` regex filter these out
+- **Klevu search**: Some BigCommerce sites (e.g., Al Flaherty's) use Klevu for search. Images use non-standard `origin` attribute instead of `src`/`data-src`
+- **Incapsula WAF**: Some sites (e.g., alflahertys.com) require Playwright for catalog crawling due to Incapsula JavaScript challenge
+
+### Auction Sites (iCollector, HiBid, Generic)
+- **Closing dates**: Auction lots have `closingAt` timestamp for bid deadline tracking
+- **Bid prices**: Extract "Current Bid: $X" patterns instead of retail prices
+- **Lot-based**: Products are lots within auctions, URLs may change between auction events
+
+### Forum / Classified Sites (CGN, GunPost, TownPost)
+- **Authentication**: Forums require login — encrypted credential storage with AES-256-GCM
+- **Price in title**: Extract "$450 OBO" patterns from thread/ad titles
+- **Cloudflare**: GunPost/TownPost behind Cloudflare — Playwright fallback needed
+
+---
+
+## Site Verification
+
+Universal verification script for data quality auditing:
+
+```bash
+node backend/scripts/verify-site.js <domain-or-name>
+```
+
+Checks: site config, product index health (stock/price/thumbnail coverage), live API comparison (WooCommerce), stock accuracy spot-check, match count comparison, duplicates, data quality (dirty titles, category pages, junk entries), crawl health (recent events, errors, tier coverage).
+
+### Data Fix Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `fix-thumbnails-ogimage.js <domain>` | Backfill thumbnails via Store API + og:image HTML scraping |
+| `fix-stock-and-prices.js` | Cross-check stock via Store API, scrape OOS prices from HTML |
+| `verify-site.js <domain>` | Universal site verification with severity-rated summary |
 
 ---
 

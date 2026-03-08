@@ -60,6 +60,8 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
   const [historyPage, setHistoryPage] = useState(1);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+  const [historySortBy, setHistorySortBy] = useState<'default' | 'price_asc' | 'price_desc'>('default');
+  const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [crawling, setCrawling] = useState(false);
   const [crawlResult, setCrawlResult] = useState<string | null>(null);
 
@@ -286,7 +288,21 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
         <section>
           <div className="flex items-center gap-3 pb-1 border-b border-border/40 mb-3">
             <span className="text-[10px] font-heading tracking-[0.2em] uppercase text-foreground-muted">Results</span>
-            {scanResults && <span className="text-[10px] text-foreground-dim">{scanResults.length} items</span>}
+            {scanResults && <span className="text-[10px] text-foreground-dim">
+              {showInStockOnly
+                ? `${scanResults.filter(r => { const s = r.stockStatus ?? (r.inStock !== undefined ? (r.inStock ? 'in_stock' : 'out_of_stock') : null); return s !== 'out_of_stock'; }).length} of ${scanResults.length} items`
+                : `${scanResults.length} items`}
+            </span>}
+            {scanResults && scanResults.length > 0 && (
+              <button
+                onClick={() => setShowInStockOnly(prev => !prev)}
+                className={`ml-auto text-[9px] px-2 py-0.5 border transition-colors font-heading uppercase tracking-wider ${
+                  showInStockOnly ? 'text-green-400 border-green-400/30 bg-green-400/5' : 'text-foreground-dim border-border/50 hover:text-foreground'
+                }`}
+              >
+                {showInStockOnly ? 'In Stock' : 'All'}
+              </button>
+            )}
           </div>
 
           {scanError && (
@@ -316,7 +332,10 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
           {scanResults && scanResults.length > 0 && (
             <>
               <ScanResultsGrouped
-                results={scanResults}
+                results={showInStockOnly ? scanResults.filter(r => {
+                  const stock = r.stockStatus ?? (r.inStock !== undefined ? (r.inStock ? 'in_stock' : 'out_of_stock') : null);
+                  return stock !== 'out_of_stock';
+                }) : scanResults}
                 isGroup={isGroup}
                 scanMeta={scanMeta}
                 groupScanMeta={groupScanMeta}
@@ -336,15 +355,39 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
 
         {/* Section: Match History */}
         <section>
-          <button onClick={loadHistory} className="w-full">
-            <div className="flex items-center gap-3 pb-1 border-b border-border/40">
+          <div className="flex items-center gap-3 pb-1 border-b border-border/40">
+            <button onClick={loadHistory} className="flex items-center gap-3">
               <svg className={`w-3 h-3 text-foreground-dim transition-transform duration-200 ${showHistory ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
               <span className="text-[10px] font-heading tracking-[0.2em] uppercase text-foreground-muted">Match History</span>
-              <span className="text-[10px] text-foreground-dim">{matchCount} total</span>
-            </div>
-          </button>
+              <span className="text-[10px] text-foreground-dim">
+                {showInStockOnly && historyMatches
+                  ? `${historyMatches.filter(m => m.stockStatus !== 'out_of_stock').length} of ${matchCount}`
+                  : `${matchCount} total`}
+              </span>
+            </button>
+            {showHistory && historyMatches && historyMatches.length > 1 && (
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowInStockOnly(prev => !prev)}
+                  className={`text-[9px] px-1.5 py-0.5 border transition-colors font-heading uppercase tracking-wider ${
+                    showInStockOnly ? 'text-green-400 border-green-400/30 bg-green-400/5' : 'text-foreground-dim border-border/50 hover:text-foreground'
+                  }`}
+                >
+                  {showInStockOnly ? 'In Stock' : 'All'}
+                </button>
+                <button
+                  onClick={() => setHistorySortBy(prev => prev === 'default' ? 'price_asc' : prev === 'price_asc' ? 'price_desc' : 'default')}
+                  className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+                    historySortBy !== 'default' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+                  }`}
+                >
+                  {historySortBy === 'price_asc' ? 'Price ↑' : historySortBy === 'price_desc' ? 'Price ↓' : 'Price'}
+                </button>
+              </div>
+            )}
+          </div>
 
           {showHistory && (
             <div className="mt-3 space-y-1.5">
@@ -357,7 +400,18 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
               {historyMatches && historyMatches.length > 0 && (
                 <>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
-                    {historyMatches.map((match) => (
+                    {(() => {
+                      let filtered = showInStockOnly
+                        ? historyMatches.filter(m => m.stockStatus !== 'out_of_stock')
+                        : historyMatches;
+                      const sorted = historySortBy === 'default'
+                        ? filtered
+                        : [...filtered].sort((a, b) => {
+                            const pa = a.price ?? (historySortBy === 'price_asc' ? Infinity : -Infinity);
+                            const pb = b.price ?? (historySortBy === 'price_asc' ? Infinity : -Infinity);
+                            return historySortBy === 'price_asc' ? pa - pb : pb - pa;
+                          });
+                      return sorted.map((match) => (
                       <a
                         key={match.id}
                         href={match.url}
@@ -382,14 +436,30 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
                         {match.price != null && (
                           <span className="text-accent font-heading flex-shrink-0">${match.price.toFixed(2)}</span>
                         )}
+                        {match.stockStatus && match.stockStatus !== 'unknown' && (
+                          <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
+                            match.stockStatus === 'out_of_stock' ? 'text-red-400 border-red-400/30' : 'text-green-400 border-green-400/30'
+                          }`}>
+                            {match.stockStatus === 'out_of_stock' ? 'Sold Out' : 'In Stock'}
+                          </span>
+                        )}
                         <svg className="w-3 h-3 text-foreground-dim flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
                       </a>
-                    ))}
+                      ));
+                    })()}
                   </div>
                   <p className="text-[10px] text-foreground-dim pt-2">
-                    Showing {historyMatches.length} of {historyTotal} match{historyTotal !== 1 ? 'es' : ''}
+                    {(() => {
+                      const filteredCount = showInStockOnly
+                        ? historyMatches.filter(m => m.stockStatus !== 'out_of_stock').length
+                        : historyMatches.length;
+                      const label = showInStockOnly ? `${filteredCount} in-stock of ${historyTotal}` : `Showing ${historyMatches.length} of ${historyTotal}`;
+                      return label;
+                    })()}
+                    {' match'}{historyTotal !== 1 ? 'es' : ''}
+                    {historySortBy === 'default' ? ' (newest first)' : historySortBy === 'price_asc' ? ' (cheapest first)' : ' (most expensive first)'}
                   </p>
                   {historyPage < historyTotalPages && (
                     <button
@@ -535,6 +605,17 @@ function ScanResultsGrouped({
                             {item.seller && <span className="text-[9px] text-foreground-dim">{item.seller}</span>}
                           </div>
                           {item.price != null && <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>}
+                          {(() => {
+                            const stock = item.stockStatus ?? (item.inStock !== undefined ? (item.inStock ? 'in_stock' : 'out_of_stock') : null);
+                            if (!stock || stock === 'unknown') return null;
+                            return (
+                              <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
+                                stock === 'out_of_stock' ? 'text-red-400 border-red-400/30' : 'text-green-400 border-green-400/30'
+                              }`}>
+                                {stock === 'out_of_stock' ? 'Sold Out' : 'In Stock'}
+                              </span>
+                            );
+                          })()}
                           <svg className="w-3 h-3 text-foreground-dim flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
@@ -562,6 +643,17 @@ function ScanResultsGrouped({
                 {item.seller && <span className="text-[9px] text-foreground-dim">{item.seller}</span>}
               </div>
               {item.price != null && <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>}
+              {(() => {
+                const stock = item.stockStatus ?? (item.inStock !== undefined ? (item.inStock ? 'in_stock' : 'out_of_stock') : null);
+                if (!stock || stock === 'unknown') return null;
+                return (
+                  <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
+                    stock === 'out_of_stock' ? 'text-red-400 border-red-400/30' : 'text-green-400 border-green-400/30'
+                  }`}>
+                    {stock === 'out_of_stock' ? 'Sold Out' : 'In Stock'}
+                  </span>
+                );
+              })()}
               <svg className="w-3 h-3 text-foreground-dim flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>

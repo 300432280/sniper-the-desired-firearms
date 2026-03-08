@@ -59,6 +59,7 @@ export interface Match {
   thumbnail?: string | null;
   postDate?: string | null;
   seller?: string | null;
+  stockStatus?: string | null;
 }
 
 export interface LiveMatch {
@@ -66,6 +67,7 @@ export interface LiveMatch {
   price?: number;
   url: string;
   inStock?: boolean;
+  stockStatus?: string | null;
   isNew?: boolean;
   thumbnail?: string;
   seller?: string;

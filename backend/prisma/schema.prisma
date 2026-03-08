@@ -139,6 +139,7 @@ model MonitoredSite {
   siteType         String            @default("generic")
   adapterType      String            @default("generic")
   isEnabled        Boolean           @default(true)
+  isPaused         Boolean           @default(false)
   requiresSucuri   Boolean           @default(false)
   requiresAuth     Boolean           @default(false)
   searchUrlPattern String?
@@ -160,18 +161,14 @@ model MonitoredSite {
   baseBudget         Int             @default(60)   // Tokens per hour (admin-configurable)
 
   // Difficulty signals (auto-measured from crawl responses)
-  difficultyScore     Int            @default(0)
-  trafficClass        String         @default("medium")
   avgResponseTimeMs   Int?
   consecutiveFailures Int            @default(0)
   hasWaf              Boolean        @default(false)
   hasRateLimit        Boolean        @default(false)
   hasCaptcha          Boolean        @default(false)
 
-  // Admin overrides (null = auto-computed by priority engine)
-  overrideTrafficClass String?
-  overrideDifficulty   Int?
-  overrideInterval     Int?
+  // Per-site crawl tuning (JSON overrides, null fields → use global defaults)
+  crawlTuning        Json?
 
   // Watermark tracking (Tier 1 — new items crawl)
   lastWatermarkUrl   String?
@@ -185,9 +182,10 @@ model MonitoredSite {
 
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-  healthChecks   SiteHealthCheck[]
-  crawlEvents    CrawlEvent[]
-  products       ProductIndex[]
+  healthChecks    SiteHealthCheck[]
+  crawlEvents     CrawlEvent[]
+  products        ProductIndex[]
+  dismissedIssues DismissedIssue[]
 
   @@map("monitored_sites")
 }
@@ -202,6 +200,7 @@ model ProductIndex {
   stockStatus String?       // "in_stock" | "out_of_stock" | "unknown"
   thumbnail   String?
   category    String?       // "new" | "used" | "auction_lot" | "classified"
+  tags        String?       // Comma-separated product tags from source (e.g. Shopify)
   closingAt   DateTime?     // For auction lots — enables live countdown timer
   firstSeenAt DateTime      @default(now())
   lastSeenAt  DateTime      @default(now())
@@ -259,4 +258,17 @@ model SiteHealthCheck {
 
   @@index([siteId, checkedAt])
   @@map("site_health_checks")
+}
+
+model DismissedIssue {
+  id                String        @id @default(cuid())
+  siteId            String
+  site              MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  issueType         String        // e.g. "waf_blocked", "no_products", "consecutive_failures"
+  dismissedAt       DateTime      @default(now())
+  conditionSnapshot String?       // snapshot when dismissed; if condition changes, issue re-surfaces
+
+  @@unique([siteId, issueType])
+  @@index([siteId])
+  @@map("dismissed_issues")
 }

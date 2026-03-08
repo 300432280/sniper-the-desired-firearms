@@ -1,5 +1,5 @@
 import type * as cheerio from 'cheerio';
-import type { ScrapedMatch, ExtractionOptions } from '../types';
+import type { ScrapedMatch, ExtractionOptions, CatalogProduct } from '../types';
 import { AbstractAdapter } from './base';
 import { extractBidPrice } from '../utils/price';
 
@@ -25,9 +25,9 @@ export class HiBidAdapter extends AbstractAdapter {
     const seen = new Set<string>();
 
     const LOT_SELECTORS = [
+      '.lot-tile',                 // HiBid lot tiles (exact class — avoids matching sub-elements)
       '[class*="lotContainer"]',
       '[class*="LotTile"]',
-      '[class*="lot-tile"]',
       '[class*="lot-item"]',
       '[class*="lotItem"]',
       '[class*="catalog-item"]',
@@ -41,16 +41,12 @@ export class HiBidAdapter extends AbstractAdapter {
         const text = element.text();
         if (!text.toLowerCase().includes(keywordLower)) return;
 
-        let titleEl = element.find('[class*="lot-title"], [class*="lotTitle"], [class*="lot-name"]').first();
-        if (!titleEl.length) titleEl = element.find('h3, h4, h2').first();
-        if (!titleEl.length) titleEl = element.find('[class*="title"], [class*="name"], [class*="description"]').first();
-
-        const rawTitle = (titleEl.length ? titleEl.text() : text).trim().replace(/\s+/g, ' ').slice(0, 160);
+        const rawTitle = this.extractHiBidTitle(element);
         if (!rawTitle || rawTitle.length < 3) return;
         if (/^\$?\d[\d,.]*$/.test(rawTitle)) return;
         if (!rawTitle.toLowerCase().includes(keywordLower)) return;
 
-        const cleanTitle = rawTitle.replace(/^\d+[A-Za-z]?\s*-\s*/, '');
+        const cleanTitle = rawTitle.replace(/^(?:Lot\s+)?\d+[A-Za-z]?\s*\|\s*/, '').trim() || rawTitle;
         const titleKey = cleanTitle.toLowerCase().slice(0, 60);
         if (seen.has(titleKey)) return;
 
@@ -69,5 +65,98 @@ export class HiBidAdapter extends AbstractAdapter {
     }
 
     return matches;
+  }
+
+  /**
+   * Extract title from HiBid lot element.
+   * HiBid uses: .live-catalog-lot-lead-container > a (link text is the title)
+   * Also tries standard heading/title selectors as fallback.
+   */
+  private extractHiBidTitle(element: cheerio.Cheerio<any>): string {
+    // HiBid-specific: lot lead link text
+    const leadLink = element.find('.live-catalog-lot-lead-container a, [class*="lot-lead"] a').first();
+    if (leadLink.length) {
+      const text = leadLink.text().trim();
+      if (text.length >= 3) return text.replace(/\s+/g, ' ').slice(0, 160);
+    }
+
+    // Standard title selectors
+    let titleEl = element.find('[class*="lot-title"], [class*="lotTitle"], [class*="lot-name"]').first();
+    if (!titleEl.length) titleEl = element.find('h3, h4, h2').first();
+    if (!titleEl.length) titleEl = element.find('[class*="title"], [class*="name"], [class*="description"]').first();
+    if (titleEl.length) {
+      const text = titleEl.text().trim();
+      if (text.length >= 3) return text.replace(/\s+/g, ' ').slice(0, 160);
+    }
+
+    // Last resort: first a[href*="/lot/"] link text
+    const lotLink = element.find('a[href*="/lot/"]').first();
+    if (lotLink.length) {
+      const text = lotLink.text().trim();
+      if (text.length >= 3) return text.replace(/\s+/g, ' ').slice(0, 160);
+    }
+
+    return '';
+  }
+
+  // ── Catalog Crawl Methods (Phase 3) ───────────────────────────────────────
+
+  getNewArrivalsUrl(origin: string): string {
+    return `${origin}/lots`;
+  }
+
+  getNewArrivalsUrls(origin: string): string[] {
+    return [
+      `${origin}/lots`,                 // Main lot listing (most products)
+      `${origin}/auctions/current`,     // Current auctions page
+      `${origin}/catalog/`,
+      `${origin}/`,
+    ];
+  }
+
+  extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
+    const products: CatalogProduct[] = [];
+    const seen = new Set<string>();
+
+    const LOT_SELECTORS = [
+      '.lot-tile',                 // HiBid lot tiles (exact class — avoids matching sub-elements)
+      '[class*="lotContainer"]',
+      '[class*="LotTile"]',
+      '[class*="lot-item"]',
+      '[class*="lotItem"]',
+      '[class*="catalog-item"]',
+      '[class*="auction-item"]',
+      '[class*="item-card"]',
+    ];
+
+    for (const selector of LOT_SELECTORS) {
+      $(selector).each((_, el) => {
+        const element = $(el);
+
+        const rawTitle = this.extractHiBidTitle(element);
+        if (!rawTitle || rawTitle.length < 3) return;
+        if (/^\$?\d[\d,.]*$/.test(rawTitle)) return;
+
+        const cleanTitle = rawTitle.replace(/^(?:Lot\s+)?\d+[A-Za-z]?\s*\|\s*/, '').trim() || rawTitle;
+        const url = this.extractLink(element, baseUrl);
+        if (!url || seen.has(url)) return;
+        seen.add(url);
+
+        const bidEl = element.find('[class*="current-bid"], [class*="winning-bid"], [class*="bid-amount"], [class*="price"]').first();
+        const price = bidEl.length ? extractBidPrice(bidEl.text()) : extractBidPrice(element.text());
+        const thumbnail = this.extractThumbnail($, element, baseUrl);
+
+        products.push({
+          url,
+          title: cleanTitle || rawTitle,
+          price,
+          stockStatus: 'in_stock',
+          thumbnail,
+          category: 'auction_lot',
+        });
+      });
+    }
+
+    return products;
   }
 }

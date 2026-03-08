@@ -7,6 +7,8 @@ import { cancelSearch } from '../services/queue';
 import { encryptPassword } from '../lib/crypto';
 import { guestSearchLimiter } from '../middleware/rateLimit';
 import { pushEvent } from '../services/debugLog';
+import { searchProductIndex } from '../services/keyword-matcher';
+import { config } from '../config';
 
 const router = Router();
 
@@ -124,7 +126,8 @@ router.post('/', optionalAuth, async (req: Request, res: Response) => {
   }
 
   const { websiteUrls, keyword, credentialId, searchAll, ...settings } = parse.data;
-  const userTier = req.user.tier || 'FREE';
+  const isAdmin = config.adminEmails.includes(req.user.email);
+  const userTier = isAdmin ? 'PRO' : (req.user.tier || 'FREE');
 
   // FREE tier restrictions
   if (userTier === 'FREE') {
@@ -352,11 +355,21 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
     // Pure DB read — no crawl triggering from user endpoints.
     // The crawl scheduler handles all crawl timing independently.
 
+    // Enrich with ProductIndex thumbnails for matches that lack them
+    const matchUrlsNoThumb = matches.filter(m => !m.thumbnail).map(m => m.url);
+    const piThumbnails = matchUrlsNoThumb.length > 0
+      ? await prisma.productIndex.findMany({
+          where: { url: { in: matchUrlsNoThumb }, thumbnail: { not: null } },
+          select: { url: true, thumbnail: true },
+        })
+      : [];
+    const groupThumbnailMap = new Map(piThumbnails.map(p => [p.url, p.thumbnail]));
+
     const annotatedMatches = matches.map((m) => ({
       title: m.title,
       price: m.price,
       url: m.url,
-      thumbnail: m.thumbnail,
+      thumbnail: m.thumbnail || groupThumbnailMap.get(m.url) || null,
       seller: m.seller,
       postDate: m.postDate,
       foundAt: m.foundAt,
@@ -534,14 +547,28 @@ router.get('/matches/:searchId', requireAuth, async (req: Request, res: Response
       prisma.match.count({ where: { searchId: search.id } }),
     ]);
 
-    return res.json({ matches, total, page, totalPages: Math.ceil(total / limit) });
+    // Enrich matches with stockStatus from ProductIndex
+    const matchUrls = matches.map(m => m.url);
+    const products = matchUrls.length > 0
+      ? await prisma.productIndex.findMany({
+          where: { url: { in: matchUrls } },
+          select: { url: true, stockStatus: true },
+        })
+      : [];
+    const stockMap = new Map(products.map(p => [p.url, p.stockStatus]));
+    const enrichedMatches = matches.map(m => ({
+      ...m,
+      stockStatus: stockMap.get(m.url) || null,
+    }));
+
+    return res.json({ matches: enrichedMatches, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('[Route] Failed to load matches:', err);
     return res.status(500).json({ error: 'Failed to load match history' });
   }
 });
 
-// POST /api/searches/:id/scan — read cached matches, trigger crawl if empty
+// POST /api/searches/:id/scan — query ProductIndex for keyword matches (zero HTTP)
 router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
   const search = await prisma.search.findFirst({
     where: { id: req.params.id, userId: req.user!.userId },
@@ -553,6 +580,76 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
   const skip = (page - 1) * limit;
 
   try {
+    // Resolve the MonitoredSite for this search's URL
+    let searchDomain: string;
+    try {
+      searchDomain = new URL(search.websiteUrl).hostname.replace(/^www\./, '');
+    } catch {
+      searchDomain = search.websiteUrl;
+    }
+
+    const site = await prisma.monitoredSite.findFirst({
+      where: { domain: { contains: searchDomain } },
+      select: { id: true },
+    });
+
+    // Query ProductIndex for keyword matches (zero HTTP, instant SQL)
+    // Respect search.inStockOnly — if user didn't ask for in-stock only, show everything
+    const indexMatches = site
+      ? await searchProductIndex(search.keyword, [site.id], { inStockOnly: search.inStockOnly })
+      : [];
+    const indexUrls = new Set(indexMatches.map(p => p.url));
+    // Build URL → stockStatus/thumbnail lookups for response annotation
+    const stockStatusMap = new Map(indexMatches.map(p => [p.url, p.stockStatus]));
+    const thumbnailMap = new Map(indexMatches.filter(p => p.thumbnail).map(p => [p.url, p.thumbnail]));
+
+    // Sync Match table with ProductIndex
+    if (indexUrls.size > 0) {
+      const existingUrls = new Set(
+        (await prisma.match.findMany({
+          where: { searchId: search.id },
+          select: { url: true },
+        })).map(m => m.url),
+      );
+
+      // Insert new products not yet in Match table
+      const newProducts = indexMatches.filter(p => !existingUrls.has(p.url));
+      if (newProducts.length > 0) {
+        await prisma.match.createMany({
+          data: newProducts.map(p => ({
+            searchId: search.id,
+            title: p.title,
+            price: p.price,
+            url: p.url,
+            hash: `pi:scan`,
+            thumbnail: p.thumbnail,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // Backfill thumbnails: update existing matches that have null thumbnail
+      // but ProductIndex now has one (e.g. catalog crawl discovered the image)
+      const thumbUpdates = indexMatches.filter(p => p.thumbnail && existingUrls.has(p.url));
+      for (const p of thumbUpdates) {
+        await prisma.match.updateMany({
+          where: { searchId: search.id, url: p.url, thumbnail: null },
+          data: { thumbnail: p.thumbnail },
+        });
+      }
+
+      // Remove Match records for products no longer in ProductIndex at all
+      const staleUrls = [...existingUrls].filter(u => !indexUrls.has(u));
+      if (staleUrls.length > 0) {
+        await prisma.match.deleteMany({
+          where: { searchId: search.id, url: { in: staleUrls } },
+        });
+      }
+
+      console.log(`[ScanNow] ${searchDomain} "${search.keyword}" — ${indexUrls.size} matches, +${newProducts.length} new, -${staleUrls.length} removed`);
+    }
+
+    // Read back synced matches (paginated)
     const [matches, totalDbMatches] = await Promise.all([
       prisma.match.findMany({
         where: { searchId: search.id },
@@ -563,18 +660,16 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
       prisma.match.count({ where: { searchId: search.id } }),
     ]);
 
-    // Pure DB read — no crawl triggering from user endpoints.
-    // The crawl scheduler handles all crawl timing independently.
-
     const lastViewed = search.lastChecked;
     const annotatedMatches = matches.map((m) => ({
       title: m.title,
       price: m.price,
       url: m.url,
-      thumbnail: m.thumbnail,
+      thumbnail: m.thumbnail || thumbnailMap.get(m.url) || null,
       seller: m.seller,
       postDate: m.postDate,
       isNew: lastViewed ? m.foundAt > lastViewed : true,
+      stockStatus: stockStatusMap.get(m.url) || null,
     }));
 
     const newCount = annotatedMatches.filter((m) => m.isNew).length;
@@ -595,8 +690,8 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
       notificationId: null,
     });
   } catch (err) {
-    console.error(`[Route] Failed to load cached results for ${search.websiteUrl}:`, err instanceof Error ? err.message : err);
-    return res.status(500).json({ error: 'Failed to load cached results', matches: [] });
+    console.error(`[ScanNow] Failed for ${search.websiteUrl}:`, err instanceof Error ? err.message : err);
+    return res.status(500).json({ error: 'Failed to scan', matches: [] });
   }
 });
 

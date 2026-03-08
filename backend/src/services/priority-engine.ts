@@ -13,6 +13,7 @@
  */
 
 import { prisma } from '../lib/prisma';
+import { resolveTuning } from './crawl-tuning';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,11 @@ interface CrawlEventData {
   statusCode: number | null;
 }
 
+interface PressureOptions {
+  /** WAF/Playwright sites have inherently higher latency — use a wider range */
+  hasWaf?: boolean;
+}
+
 /**
  * Compute site pressure from rolling window of recent crawl events.
  *
@@ -58,7 +64,7 @@ interface CrawlEventData {
  *
  * Returns value clamped to [0, 1].
  */
-export function computePressure(events: CrawlEventData[]): number {
+export function computePressure(events: CrawlEventData[], options?: PressureOptions): number {
   if (events.length === 0) return 0;
 
   const total = events.length;
@@ -73,12 +79,18 @@ export function computePressure(events: CrawlEventData[]): number {
   ).length;
   const blockRate = blocks / total;
 
-  // latency_score: normalized 0-1 (0=fast ≤500ms, 1=very slow ≥10s)
+  // latency_score: normalized 0-1
+  // Standard sites: 500ms → 0, 10s → 1 (fast HTTP fetches)
+  // WAF/Playwright sites: 5s → 0, 45s → 1 (Playwright overhead is normal)
   const responseTimes = events.map(e => e.responseTimeMs).filter((t): t is number => t != null);
   let latencyScore = 0;
   if (responseTimes.length > 0) {
     const avgMs = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
-    latencyScore = Math.min(1, Math.max(0, (avgMs - 500) / 9500));
+    if (options?.hasWaf) {
+      latencyScore = Math.min(1, Math.max(0, (avgMs - 5000) / 40000));
+    } else {
+      latencyScore = Math.min(1, Math.max(0, (avgMs - 500) / 9500));
+    }
   }
 
   // extraction_failure_rate: 200 OK but 0 products extracted (suspicious empty response)
@@ -130,19 +142,19 @@ export function computeCrawlPriority(params: {
   siteCategory: SiteCategory;
   capacity: number;
   baseBudget: number;
-  overrideInterval?: number | null;
+  tier1IntervalMin?: number | null;
   hourUtc?: number;
 }): CrawlPriority {
-  const { siteCategory, capacity, baseBudget, overrideInterval } = params;
+  const { siteCategory, capacity, baseBudget, tier1IntervalMin } = params;
   const hourUtc = params.hourUtc ?? new Date().getUTCHours();
 
   // Effective token budget: base × capacity, floor at 5
   const effectiveBudget = Math.max(5, Math.floor(baseBudget * capacity));
   const minGapSeconds = Math.round(3600 / effectiveBudget);
 
-  // Admin override for interval
-  if (overrideInterval != null) {
-    return { intervalMinutes: overrideInterval, effectiveBudget, minGapSeconds };
+  // Per-site tier 1 interval override from crawlTuning
+  if (tier1IntervalMin != null) {
+    return { intervalMinutes: tier1IntervalMin, effectiveBudget, minGapSeconds };
   }
 
   // Base rate for this site type
@@ -185,17 +197,18 @@ export async function recalculateSitePriority(siteId: string): Promise<void> {
     select: { status: true, responseTimeMs: true, statusCode: true },
   });
 
-  // Compute pressure and capacity
-  const pressure = computePressure(recentEvents);
+  // Compute pressure and capacity (WAF sites get wider latency tolerance)
+  const pressure = computePressure(recentEvents, { hasWaf: site.hasWaf });
   const capacity = computeCapacity(pressure);
 
-  // Compute interval and budget
+  // Compute interval and budget using per-site tuning
+  const tuning = resolveTuning(site.crawlTuning);
   const siteCategory = (site.siteCategory || 'retailer') as SiteCategory;
   const priority = computeCrawlPriority({
     siteCategory,
     capacity,
-    baseBudget: site.baseBudget ?? 60,
-    overrideInterval: site.overrideInterval,
+    baseBudget: tuning.baseBudget,
+    tier1IntervalMin: tuning.tier1IntervalMin,
   });
 
   const nextCrawlAt = new Date(Date.now() + priority.intervalMinutes * 60 * 1000);
@@ -226,35 +239,3 @@ export async function recalculateAllPriorities(): Promise<void> {
   }
 }
 
-// ── Legacy exports (kept for crawl-scheduler compatibility during transition) ─
-
-/**
- * @deprecated Use computePressure + computeCapacity instead.
- * Kept temporarily so crawl-scheduler.ts compiles during Phase 2 transition.
- */
-export function computeDifficulty(
-  site: { overrideDifficulty: number | null; requiresSucuri: boolean; hasWaf: boolean; hasRateLimit: boolean; hasCaptcha: boolean; requiresAuth: boolean; consecutiveFailures: number },
-  avgResponseTimeMs?: number | null,
-  recentCrawlStats?: { zeroMatchStreak: number; usedPlaywright?: boolean },
-): number {
-  if (site.overrideDifficulty != null) return site.overrideDifficulty;
-
-  let score = 0;
-  if (site.requiresSucuri || site.hasWaf) score += 15;
-  if (site.hasRateLimit) score += 20;
-  if (site.hasCaptcha) score += 25;
-  if (site.requiresAuth) score += 5;
-
-  if (avgResponseTimeMs) {
-    if (avgResponseTimeMs > 8000) score += 15;
-    else if (avgResponseTimeMs > 5000) score += 10;
-    else if (avgResponseTimeMs > 3000) score += 5;
-  }
-
-  if (site.consecutiveFailures >= 5) score += 20;
-  else if (site.consecutiveFailures >= 3) score += 10;
-
-  if (recentCrawlStats?.usedPlaywright) score += 10;
-
-  return Math.min(score, 100);
-}

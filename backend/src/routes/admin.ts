@@ -3,7 +3,10 @@ import { requireAdmin } from '../middleware/auth';
 import { getEvents, subscribe } from '../services/debugLog';
 import { runHealthChecks, getHealthSummary, pruneOldHealthChecks } from '../services/health-monitor';
 import { prisma } from '../lib/prisma';
+import { Prisma } from '@prisma/client';
 import { invalidateAdapterCache } from '../services/scraper/adapter-registry';
+import { computeCrawlPriority } from '../services/priority-engine';
+import { resolveTuning, TUNING_DEFAULTS } from '../services/crawl-tuning';
 
 const router = Router();
 
@@ -138,7 +141,7 @@ router.post('/sites', async (req: Request, res: Response) => {
 router.patch('/sites/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, url, siteType, adapterType, isEnabled, requiresSucuri, requiresAuth, searchUrlPattern, notes } = req.body;
+    const { name, url, siteType, adapterType, isEnabled, isPaused, requiresSucuri, requiresAuth, searchUrlPattern, notes } = req.body;
 
     const site = await prisma.monitoredSite.update({
       where: { id },
@@ -148,6 +151,7 @@ router.patch('/sites/:id', async (req: Request, res: Response) => {
         ...(siteType !== undefined && { siteType }),
         ...(adapterType !== undefined && { adapterType }),
         ...(isEnabled !== undefined && { isEnabled }),
+        ...(isPaused !== undefined && { isPaused }),
         ...(requiresSucuri !== undefined && { requiresSucuri }),
         ...(requiresAuth !== undefined && { requiresAuth }),
         ...(searchUrlPattern !== undefined && { searchUrlPattern }),
@@ -163,6 +167,30 @@ router.patch('/sites/:id', async (req: Request, res: Response) => {
     }
     console.error('[Admin] Update site error:', err);
     return res.status(500).json({ error: 'Failed to update site' });
+  }
+});
+
+// PATCH /api/admin/sites/batch — batch update isEnabled or isPaused for multiple sites
+router.patch('/sites/batch', async (req: Request, res: Response) => {
+  try {
+    const { siteIds, isEnabled, isPaused } = req.body;
+    if (!Array.isArray(siteIds) || siteIds.length === 0) {
+      return res.status(400).json({ error: 'siteIds (array) is required' });
+    }
+    if (typeof isEnabled !== 'boolean' && typeof isPaused !== 'boolean') {
+      return res.status(400).json({ error: 'isEnabled (boolean) or isPaused (boolean) is required' });
+    }
+    const data: Record<string, boolean> = {};
+    if (typeof isEnabled === 'boolean') data.isEnabled = isEnabled;
+    if (typeof isPaused === 'boolean') data.isPaused = isPaused;
+    await prisma.monitoredSite.updateMany({
+      where: { id: { in: siteIds } },
+      data,
+    });
+    return res.json({ updated: siteIds.length, ...data });
+  } catch (err) {
+    console.error('[Admin] Batch update error:', err);
+    return res.status(500).json({ error: 'Failed to batch update sites' });
   }
 });
 
@@ -235,7 +263,7 @@ router.get('/sites/dashboard', async (_req: Request, res: Response) => {
           },
         },
         _count: {
-          select: { crawlEvents: true },
+          select: { crawlEvents: true, products: true },
         },
       },
       orderBy: { domain: 'asc' },
@@ -253,18 +281,36 @@ router.get('/sites/dashboard', async (_req: Request, res: Response) => {
       const lastCrawl = site.crawlEvents[0] ?? null;
       const activeSearches = searchCountMap.get(site.url) ?? 0;
 
+      // Compute v2 interval and budget dynamically using per-site tuning
+      const tuning = resolveTuning(site.crawlTuning);
+      const siteCategory = (site.siteCategory || 'retailer') as 'forum' | 'classified' | 'retailer' | 'auction';
+      const priority = computeCrawlPriority({
+        siteCategory,
+        capacity: site.capacity ?? 1,
+        baseBudget: tuning.baseBudget,
+        tier1IntervalMin: tuning.tier1IntervalMin,
+      });
+
       return {
         id: site.id,
         domain: site.domain,
         name: site.name,
         url: site.url,
         isEnabled: site.isEnabled,
+        isPaused: site.isPaused,
         adapterType: site.adapterType,
         siteType: site.siteType,
+        siteCategory: site.siteCategory,
+
+        // v2 pressure/capacity model
+        pressure: site.pressure,
+        capacity: site.capacity,
+        baseBudget: site.baseBudget,
+        effectiveBudget: priority.effectiveBudget,
+        minGapSeconds: priority.minGapSeconds,
+        v2IntervalMin: priority.intervalMinutes,
 
         // Crawl metrics
-        trafficClass: site.trafficClass,
-        difficultyScore: site.difficultyScore,
         crawlIntervalMin: site.crawlIntervalMin,
         nextCrawlAt: site.nextCrawlAt,
         lastCrawlAt: site.lastCrawlAt,
@@ -272,16 +318,21 @@ router.get('/sites/dashboard', async (_req: Request, res: Response) => {
         consecutiveFailures: site.consecutiveFailures,
         avgResponseTimeMs: site.avgResponseTimeMs,
 
+        // v2 catalog fields
+        lastWatermarkUrl: site.lastWatermarkUrl,
+        tierState: site.tierState,
+        addedAt: site.addedAt,
+        coldStartOverride: site.coldStartOverride,
+        productCount: site._count.products,
+
         // Difficulty signals
         hasWaf: site.hasWaf,
         hasRateLimit: site.hasRateLimit,
         hasCaptcha: site.hasCaptcha,
         requiresSucuri: site.requiresSucuri,
 
-        // Admin overrides
-        overrideTrafficClass: site.overrideTrafficClass,
-        overrideDifficulty: site.overrideDifficulty,
-        overrideInterval: site.overrideInterval,
+        // Per-site crawl tuning
+        crawlTuning: site.crawlTuning,
 
         // Computed
         activeSearches,
@@ -298,33 +349,318 @@ router.get('/sites/dashboard', async (_req: Request, res: Response) => {
   }
 });
 
-// PATCH /api/admin/sites/:id/overrides — set admin overrides for crawl scheduling
-router.patch('/sites/:id/overrides', async (req: Request, res: Response) => {
+// GET /api/admin/site-issues — actionable alerts for sites with problems
+router.get('/site-issues', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { overrideTrafficClass, overrideDifficulty, overrideInterval } = req.body;
+    const showDismissed = req.query.showDismissed === 'true';
 
-    const site = await prisma.monitoredSite.update({
-      where: { id },
-      data: {
-        ...(overrideTrafficClass !== undefined && { overrideTrafficClass }),
-        ...(overrideDifficulty !== undefined && { overrideDifficulty }),
-        ...(overrideInterval !== undefined && { overrideInterval }),
+    const sites = await prisma.monitoredSite.findMany({
+      where: { isEnabled: true, isPaused: false },
+      select: {
+        id: true,
+        domain: true,
+        url: true,
+        adapterType: true,
+        siteType: true,
+        consecutiveFailures: true,
+        hasWaf: true,
+        hasCaptcha: true,
+        hasRateLimit: true,
+        requiresAuth: true,
+        lastCrawlAt: true,
+        avgResponseTimeMs: true,
+        notes: true,
+        _count: { select: { products: true } },
+        crawlEvents: {
+          orderBy: { crawledAt: 'desc' },
+          take: 5,
+          select: { status: true, errorMessage: true, crawledAt: true },
+        },
       },
+      orderBy: { domain: 'asc' },
     });
 
-    // Recalculate priority with overrides applied
+    // Load dismissed issues
+    const dismissed = await prisma.dismissedIssue.findMany();
+    const dismissedMap = new Map(dismissed.map(d => [`${d.siteId}:${d.issueType}`, d]));
+
+    // Count active searches per site for "no_active_searches" detection
+    const searchCounts = await prisma.search.groupBy({
+      by: ['websiteUrl'],
+      where: { isActive: true },
+      _count: true,
+    });
+    const searchCountMap = new Map<string, number>();
+    for (const sc of searchCounts) {
+      try {
+        const hostname = new URL(sc.websiteUrl).hostname.replace(/^www\./, '');
+        searchCountMap.set(hostname, (searchCountMap.get(hostname) || 0) + sc._count);
+      } catch {}
+    }
+
+    interface SiteIssue {
+      id: string;
+      domain: string;
+      severity: 'critical' | 'warning' | 'info';
+      issueType: string;
+      issue: string;
+      detail: string;
+      suggestion: string;
+      issueKey: string;
+      isDismissed: boolean;
+    }
+
+    const issues: SiteIssue[] = [];
+
+    function addIssue(
+      siteId: string, domain: string, severity: 'critical' | 'warning' | 'info',
+      issueType: string, issue: string, detail: string, suggestion: string,
+      conditionSnapshot?: string,
+    ) {
+      const issueKey = `${siteId}:${issueType}`;
+      const dismissal = dismissedMap.get(issueKey);
+      let isDismissed = false;
+
+      if (dismissal) {
+        // Check staleness: if condition worsened significantly, void the dismissal
+        if (conditionSnapshot && dismissal.conditionSnapshot &&
+            conditionSnapshot !== dismissal.conditionSnapshot) {
+          isDismissed = false; // Condition changed — re-surface
+        } else {
+          isDismissed = true;
+        }
+      }
+
+      if (!isDismissed || showDismissed) {
+        issues.push({ id: siteId, domain, severity, issueType, issue, detail, suggestion, issueKey, isDismissed });
+      }
+    }
+
+    for (const site of sites) {
+      const activeSearches = searchCountMap.get(site.domain) || 0;
+
+      // Critical: 5+ consecutive failures
+      if (site.consecutiveFailures >= 5) {
+        addIssue(site.id, site.domain, 'critical', 'consecutive_failures',
+          'Repeated crawl failures', `${site.consecutiveFailures} consecutive failures`,
+          'Check if site is down or blocking. Consider pausing until resolved.',
+          `failures:${site.consecutiveFailures}`);
+      } else if (site.consecutiveFailures >= 3) {
+        addIssue(site.id, site.domain, 'warning', 'multiple_failures',
+          'Multiple crawl failures', `${site.consecutiveFailures} consecutive failures`,
+          'Monitor closely. Circuit breaker may activate at 5 failures.',
+          `failures:${site.consecutiveFailures}`);
+      }
+
+      // Warning: WAF/CAPTCHA detected
+      if (site.hasWaf || site.hasCaptcha) {
+        const blockers = [site.hasWaf && 'WAF', site.hasCaptcha && 'CAPTCHA'].filter(Boolean).join(', ');
+        addIssue(site.id, site.domain, 'warning', 'waf_blocked',
+          'Security block detected', `Detected: ${blockers}`,
+          'Site uses Playwright bypass. Check if products are being indexed.');
+      }
+
+      // Warning: 0 products indexed despite being crawled
+      if (site._count.products === 0 && site.lastCrawlAt) {
+        const daysSinceCrawl = (Date.now() - site.lastCrawlAt.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceCrawl < 7) {
+          // Distinguish between adapter mismatch and general failure
+          if (site.consecutiveFailures === 0) {
+            addIssue(site.id, site.domain, 'warning', 'adapter_mismatch',
+              'Adapter finds no products', 'Site reachable but 0 products extracted',
+              'HTML selectors may be outdated. Check adapter compatibility.');
+          } else {
+            addIssue(site.id, site.domain, 'warning', 'no_products',
+              'No products indexed', 'Crawled recently but 0 products in catalog',
+              'API or HTML extraction may be failing. Check adapter compatibility.');
+          }
+        }
+      }
+
+      // Info: auth required
+      if (site.requiresAuth) {
+        addIssue(site.id, site.domain, 'info', 'auth_required',
+          'Auth required', 'Site requires login credentials',
+          'Configure SiteCredential or pause until auth is implemented.');
+      }
+
+      // Warning: SPA/headless site (limited scraping)
+      if (site.notes && /\b(SPA|Headless|Wix|FastSimon)\b/i.test(site.notes)) {
+        addIssue(site.id, site.domain, 'warning', 'spa_limited',
+          'JS-heavy / SPA site', `${site.notes?.slice(0, 80)}`,
+          'Client-side rendering limits scraping. Playwright may only partially work.');
+      }
+
+      // Info: very slow response time
+      if (site.avgResponseTimeMs && site.avgResponseTimeMs > 15000) {
+        addIssue(site.id, site.domain, 'info', 'slow_response',
+          'Slow response time', `Average ${Math.round(site.avgResponseTimeMs / 1000)}s response time`,
+          'High latency increases pressure and reduces capacity.');
+      }
+
+      // Warning: all recent crawls failed (but consecutive counter not yet 3)
+      if (site.crawlEvents.length >= 3 && site.crawlEvents.every(e => e.status !== 'success')) {
+        const lastError = site.crawlEvents[0]?.errorMessage || 'Unknown error';
+        if (site.consecutiveFailures < 3) {
+          addIssue(site.id, site.domain, 'warning', 'all_recent_failed',
+            'All recent crawls failed', `Last error: ${lastError.slice(0, 100)}`,
+            'Review crawl logs for this site.');
+        }
+      }
+
+      // Info: no active searches targeting this site
+      if (activeSearches === 0) {
+        addIssue(site.id, site.domain, 'info', 'no_active_searches',
+          'No active searches', 'No user alerts target this site',
+          'Only watermark/catalog crawls run. Keyword search is skipped.');
+      }
+
+      // Info: never crawled
+      if (!site.lastCrawlAt) {
+        addIssue(site.id, site.domain, 'info', 'never_crawled',
+          'Never crawled', 'Site has never been crawled',
+          'May be newly added. Will be picked up on next scheduler tick.');
+      }
+    }
+
+    // Sort: critical first, then warning, then info
+    const severityOrder = { critical: 0, warning: 1, info: 2 };
+    issues.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+    const activeIssues = issues.filter(i => !i.isDismissed);
+    const dismissedIssues = issues.filter(i => i.isDismissed);
+
+    return res.json({
+      totalIssues: activeIssues.length,
+      totalDismissed: dismissedIssues.length,
+      critical: activeIssues.filter(i => i.severity === 'critical').length,
+      warning: activeIssues.filter(i => i.severity === 'warning').length,
+      info: activeIssues.filter(i => i.severity === 'info').length,
+      issues,
+    });
+  } catch (err) {
+    console.error('[Admin] Site issues error:', err);
+    return res.status(500).json({ error: 'Failed to compute site issues' });
+  }
+});
+
+// POST /api/admin/site-issues/dismiss — dismiss an issue
+router.post('/site-issues/dismiss', async (req: Request, res: Response) => {
+  try {
+    const { siteId, issueType, conditionSnapshot } = req.body;
+    if (!siteId || !issueType) {
+      return res.status(400).json({ error: 'siteId and issueType are required' });
+    }
+    await prisma.dismissedIssue.upsert({
+      where: { siteId_issueType: { siteId, issueType } },
+      update: { dismissedAt: new Date(), conditionSnapshot: conditionSnapshot ?? null },
+      create: { siteId, issueType, conditionSnapshot: conditionSnapshot ?? null },
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin] Dismiss issue error:', err);
+    return res.status(500).json({ error: 'Failed to dismiss issue' });
+  }
+});
+
+// DELETE /api/admin/site-issues/dismiss — restore a dismissed issue
+router.delete('/site-issues/dismiss', async (req: Request, res: Response) => {
+  try {
+    const { siteId, issueType } = req.body;
+    if (!siteId || !issueType) {
+      return res.status(400).json({ error: 'siteId and issueType are required' });
+    }
+    await prisma.dismissedIssue.deleteMany({
+      where: { siteId, issueType },
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin] Restore issue error:', err);
+    return res.status(500).json({ error: 'Failed to restore issue' });
+  }
+});
+
+// POST /api/admin/sites/:id/set-waf — quick toggle WAF flag
+router.post('/sites/:id/set-waf', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { hasWaf } = req.body;
+    if (typeof hasWaf !== 'boolean') {
+      return res.status(400).json({ error: 'hasWaf must be a boolean' });
+    }
+    await prisma.monitoredSite.update({
+      where: { id },
+      data: { hasWaf },
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin] Set WAF error:', err);
+    return res.status(500).json({ error: 'Failed to update WAF flag' });
+  }
+});
+
+// PATCH /api/admin/sites/:id/tuning — update per-site crawl tuning overrides
+router.patch('/sites/:id/tuning', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ error: 'Request body must be a JSON object with tuning fields' });
+    }
+
+    // Merge with existing tuning (partial updates)
+    const existing = await prisma.monitoredSite.findUnique({ where: { id }, select: { crawlTuning: true } });
+    if (!existing) return res.status(404).json({ error: 'Site not found' });
+
+    const merged = { ...(existing.crawlTuning as Record<string, unknown> ?? {}), ...updates };
+
+    // Sync baseBudget column if included (backward compat)
+    const data: Record<string, unknown> = { crawlTuning: merged };
+    if (updates.baseBudget != null) {
+      data.baseBudget = updates.baseBudget;
+    }
+
+    await prisma.monitoredSite.update({ where: { id }, data });
+
+    // Recalculate priority with new tuning
     const { recalculateSitePriority } = await import('../services/priority-engine');
     await recalculateSitePriority(id);
 
-    return res.json({ site });
+    const updated = await prisma.monitoredSite.findUnique({ where: { id }, select: { crawlTuning: true, baseBudget: true, crawlIntervalMin: true, pressure: true, capacity: true } });
+    return res.json({ success: true, ...updated });
   } catch (err: any) {
-    if (err.code === 'P2025') {
-      return res.status(404).json({ error: 'Site not found' });
-    }
-    console.error('[Admin] Override update error:', err);
-    return res.status(500).json({ error: 'Failed to update overrides' });
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Site not found' });
+    console.error('[Admin] Tuning update error:', err);
+    return res.status(500).json({ error: 'Failed to update tuning' });
   }
+});
+
+// DELETE /api/admin/sites/:id/tuning — reset all tuning to defaults
+router.delete('/sites/:id/tuning', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.monitoredSite.update({
+      where: { id },
+      data: { crawlTuning: Prisma.JsonNull, baseBudget: TUNING_DEFAULTS.baseBudget },
+    });
+
+    // Recalculate priority with defaults
+    const { recalculateSitePriority } = await import('../services/priority-engine');
+    await recalculateSitePriority(id);
+
+    const updated = await prisma.monitoredSite.findUnique({ where: { id }, select: { crawlTuning: true, baseBudget: true, crawlIntervalMin: true, pressure: true, capacity: true } });
+    return res.json({ success: true, ...updated });
+  } catch (err: any) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Site not found' });
+    console.error('[Admin] Tuning reset error:', err);
+    return res.status(500).json({ error: 'Failed to reset tuning' });
+  }
+});
+
+// GET /api/admin/tuning/defaults — return global default values for frontend display
+router.get('/tuning/defaults', (_req: Request, res: Response) => {
+  return res.json(TUNING_DEFAULTS);
 });
 
 // POST /api/admin/crawl-now — force immediate crawl of all enabled sites

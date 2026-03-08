@@ -50,9 +50,14 @@ export function matchesKeyword(title: string, keyword: string): boolean {
   const idx = titleLower.indexOf(kw);
   if (idx === -1) return false;
 
+  // Require word boundary on the left only (no alphanumeric before).
+  // Right side is unrestricted so model variants match naturally:
+  //   "sks" → "SKS45", "SKS-45", "SKS 45"    ✓
+  //   "german" → "Germany"                     ✓
+  //   "mauser" → "Mausers"                     ✓
+  // Left boundary still prevents mid-word matches like "DESKTOP" matching "skt".
   const charBefore = idx > 0 ? titleLower[idx - 1] : ' ';
-  const charAfter = idx + kw.length < titleLower.length ? titleLower[idx + kw.length] : ' ';
-  return !/[a-z0-9]/i.test(charBefore) && !/[a-z0-9]/i.test(charAfter);
+  return !/[a-z0-9]/i.test(charBefore);
 }
 
 // ── Match New Products ──────────────────────────────────────────────────────
@@ -79,6 +84,14 @@ export async function matchNewProducts(
 
   if (searches.length === 0) return { matchesCreated: 0, notificationsSent: 0 };
 
+  // Build siteId → domain map so we can match products to searches by site
+  const siteIds = [...new Set(products.map(p => p.siteId))];
+  const sites = await prisma.monitoredSite.findMany({
+    where: { id: { in: siteIds } },
+    select: { id: true, domain: true },
+  });
+  const siteIdToDomain = new Map(sites.map(s => [s.id, s.domain]));
+
   // Build keyword → aliases map (cached for this batch)
   const keywordAliasCache = new Map<string, string[]>();
 
@@ -94,11 +107,24 @@ export async function matchNewProducts(
     }
     const aliases = keywordAliasCache.get(keyword)!;
 
-    // Check which products match this search
+    // Extract the domain from the search's websiteUrl for site filtering
+    let searchDomain: string;
+    try {
+      searchDomain = new URL(search.websiteUrl).hostname.replace(/^www\./, '');
+    } catch {
+      continue; // Skip searches with invalid URLs
+    }
+
+    // Check title and URL slug (hyphens → spaces) so keywords in caliber
+    // designations like "7x57mauser" in a URL match "mauser" via word boundary.
     const matchingProducts = products.filter(product => {
-      // Only match products from sites this search monitors
-      // The search.websiteUrl contains the domain, so check if it matches the product's site
-      return aliases.some(alias => matchesKeyword(product.title, alias));
+      const productDomain = siteIdToDomain.get(product.siteId);
+      if (!productDomain) return false;
+      if (productDomain.replace(/^www\./, '') !== searchDomain) return false;
+      const urlSlug = product.url.split('/').pop()?.replace(/-/g, ' ') || '';
+      return aliases.some(alias =>
+        matchesKeyword(product.title, alias) || matchesKeyword(urlSlug, alias),
+      );
     });
 
     if (matchingProducts.length === 0) continue;
@@ -190,26 +216,35 @@ export async function matchNewProducts(
 export async function searchProductIndex(
   keyword: string,
   siteIds?: string[],
-): Promise<Array<{ url: string; title: string; price: number | null; thumbnail: string | null; siteId: string; firstSeenAt: Date }>> {
+  options?: { inStockOnly?: boolean },
+): Promise<Array<{ url: string; title: string; price: number | null; thumbnail: string | null; siteId: string; firstSeenAt: Date; stockStatus: string | null }>> {
   const aliases = await expandKeyword(keyword);
 
-  // Build OR conditions for all aliases (word boundary matching in SQL is expensive,
-  // so we do a broad ILIKE filter then refine in JS)
+  // Build OR conditions for all aliases — search both title and tags
+  // (word boundary matching in SQL is expensive, so we do a broad ILIKE filter then refine in JS)
   const products = await prisma.productIndex.findMany({
     where: {
       isActive: true,
       ...(siteIds && siteIds.length > 0 ? { siteId: { in: siteIds } } : {}),
-      OR: aliases.map(alias => ({
-        title: { contains: alias, mode: 'insensitive' as const },
-      })),
+      ...(options?.inStockOnly ? { stockStatus: { not: 'out_of_stock' } } : {}),
+      OR: aliases.flatMap(alias => [
+        { title: { contains: alias, mode: 'insensitive' as const } },
+        { tags: { contains: alias, mode: 'insensitive' as const } },
+        { url: { contains: alias, mode: 'insensitive' as const } },
+      ]),
     },
     orderBy: { firstSeenAt: 'desc' },
     take: 200,
   });
 
-  // Refine with word-boundary matching
+  // Refine with word-boundary matching on title, tags, or URL slug
   return products
-    .filter(p => aliases.some(alias => matchesKeyword(p.title, alias)))
+    .filter(p => {
+      const urlSlug = p.url.split('/').pop()?.replace(/-/g, ' ') || '';
+      return aliases.some(alias =>
+        matchesKeyword(p.title, alias) || (p.tags && matchesKeyword(p.tags, alias)) || matchesKeyword(urlSlug, alias)
+      );
+    })
     .map(p => ({
       url: p.url,
       title: p.title,
@@ -217,5 +252,6 @@ export async function searchProductIndex(
       thumbnail: p.thumbnail,
       siteId: p.siteId,
       firstSeenAt: p.firstSeenAt,
+      stockStatus: p.stockStatus,
     }));
 }

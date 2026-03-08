@@ -46,11 +46,18 @@ export class ShopifyAdapter extends AbstractAdapter {
         const title = (product.title || '').trim();
         if (!title || !title.toLowerCase().includes(keywordLower)) continue;
 
-        const productUrl = product.url
+        let productUrl = product.url
           ? (product.url.startsWith('http') ? product.url : `${origin}${product.url}`)
           : origin;
+        // Strip Shopify search tracking params to avoid duplicate ProductIndex entries
+        try {
+          const u = new URL(productUrl);
+          ['_pos', '_psq', '_ss', '_v', '_fid'].forEach(p => u.searchParams.delete(p));
+          productUrl = u.toString().replace(/\?$/, '');
+        } catch { /* keep original URL if parse fails */ }
 
-        const price = product.price ? parseFloat(product.price) / 100 : undefined;
+        // Shopify suggest API returns price as dollars (e.g. "999.00"), NOT cents
+        const price = product.price ? parseFloat(product.price) : undefined;
         const thumbnail = product.image || product.featured_image?.url || undefined;
 
         if (options.maxPrice && price && price > options.maxPrice) continue;
@@ -102,11 +109,13 @@ export class ShopifyAdapter extends AbstractAdapter {
         const rawTitle = this.extractTitle(element, text);
         if (!rawTitle || rawTitle.length < 3) return;
         if (/^\$?\d[\d,.]*$/.test(rawTitle)) return;
+        if (this.isNavTitle(rawTitle)) return;
 
         const titleKey = rawTitle.toLowerCase().slice(0, 60);
         if (seen.has(titleKey)) return;
 
         const productUrl = this.extractLink(element, baseUrl);
+        if (this.isNavUrl(productUrl)) return;
         const price = this.extractPriceFromElement(element);
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
@@ -161,15 +170,22 @@ export class ShopifyAdapter extends AbstractAdapter {
       return { products: [] };
     }
 
-    const catalogProducts: CatalogProduct[] = products.map(p => ({
-      url: `${origin}/products/${p.handle}`,
-      title: (p.title || '').trim().slice(0, 160),
-      price: p.variants?.[0]?.price ? parseFloat(p.variants[0].price) : undefined,
-      stockStatus: p.variants?.some((v: any) => v.available)
-        ? 'in_stock' as const
-        : 'out_of_stock' as const,
-      thumbnail: p.images?.[0]?.src || undefined,
-    }));
+    const catalogProducts: CatalogProduct[] = products.map(p => {
+      const tags = Array.isArray(p.tags) && p.tags.length > 0
+        ? p.tags.join(',')
+        : (typeof p.tags === 'string' && p.tags ? p.tags : undefined);
+
+      return {
+        url: (() => { try { return decodeURIComponent(`${origin}/products/${p.handle}`); } catch { return `${origin}/products/${p.handle}`; } })(),
+        title: (p.title || '').trim().slice(0, 160),
+        price: p.variants?.[0]?.price ? parseFloat(p.variants[0].price) : undefined,
+        stockStatus: p.variants?.some((v: any) => v.available)
+          ? 'in_stock' as const
+          : 'out_of_stock' as const,
+        thumbnail: p.images?.[0]?.src || undefined,
+        tags,
+      };
+    });
 
     // Sort if requested (Shopify API doesn't support sort param on products.json)
     if (options?.sortBy === 'oldest') {
@@ -191,9 +207,11 @@ export class ShopifyAdapter extends AbstractAdapter {
       '[class*="product-card"]',
       '[class*="product-item"]',
       '[class*="product-tile"]',
+      '[class*="product-block"]',       // Custom Shopify themes (Jo Brook, etc.)
       '.grid__item [class*="product"]',
       'li[class*="product"]',
       'article[class*="product"]',
+      'div.product',                    // Generic product div
     ];
 
     for (const selector of SELECTORS) {

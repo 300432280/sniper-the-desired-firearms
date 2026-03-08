@@ -18,6 +18,12 @@ import { matchNewProducts } from './keyword-matcher';
 import type { CatalogProduct } from './scraper/types';
 import * as cheerio from 'cheerio';
 
+/** Reject nav/utility URLs that should never be stored as watermarks */
+function isNavOrUtilityUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  return /\/(wishlist|cart|checkout|account|login|register|registration|giftcert|contact|about|faq|privacy|terms|shipping|returns|blog|news|pages?\/|#|mailto:)/i.test(lower);
+}
+
 interface WatermarkResult {
   status: 'success' | 'fail' | 'timeout' | 'blocked';
   productsFound: number;
@@ -42,8 +48,9 @@ export async function crawlWatermark(params: {
   baseBudget: number;
   capacity: number;
   lastWatermarkUrl: string | null;
+  hasWaf?: boolean;
 }): Promise<WatermarkResult> {
-  const { siteId, url, baseBudget, capacity, lastWatermarkUrl } = params;
+  const { siteId, url, baseBudget, capacity, lastWatermarkUrl, hasWaf } = params;
   const startTime = Date.now();
 
   const { adapter } = await getAdapterForUrl(url);
@@ -56,25 +63,31 @@ export async function crawlWatermark(params: {
   let hitWatermark = false;
 
   try {
-    // Determine the starting URL for new arrivals
-    let pageUrl: string | undefined;
-    if (adapter.getNewArrivalsUrl) {
-      pageUrl = adapter.getNewArrivalsUrl(origin);
-    } else if (adapter.fetchCatalogPage) {
-      // Use API-based catalog with newest sort
+    // Try API-based catalog first (structured data with prices, preferred)
+    if (adapter.fetchCatalogPage) {
       let page = 1;
+      let apiWorked = false;
       while (getTier1Remaining(siteId, baseBudget, capacity) > 0) {
         consumeToken(siteId, 1);
         tokensUsed++;
 
-        const catalogPage = await adapter.fetchCatalogPage(origin, page, { sortBy: 'newest', perPage: 50 });
+        let catalogPage;
+        try {
+          catalogPage = await adapter.fetchCatalogPage(origin, page, { sortBy: 'newest', perPage: 50 });
+        } catch {
+          break; // API failed, fall through to HTML
+        }
         pagesScanned++;
 
         if (catalogPage.products.length === 0) break;
+        apiWorked = true;
 
         // Set watermark to the newest product on first page
         if (page === 1 && catalogPage.products.length > 0) {
-          newWatermarkUrl = catalogPage.products[0].url;
+          const candidate = catalogPage.products[0].url;
+          if (!isNavOrUtilityUrl(candidate)) {
+            newWatermarkUrl = candidate;
+          }
         }
 
         // Check each product against watermark
@@ -92,63 +105,160 @@ export async function crawlWatermark(params: {
         await randomDelay(300, 800);
       }
 
-      // Save to ProductIndex and run keyword matcher
-      const savedProducts = await saveProducts(siteId, allNewProducts);
-      if (savedProducts.length > 0) {
-        await matchNewProducts(savedProducts);
-      }
+      if (apiWorked) {
+        // Save to ProductIndex and run keyword matcher
+        const savedProducts = await saveProducts(siteId, allNewProducts);
+        if (savedProducts.length > 0) {
+          await matchNewProducts(savedProducts);
+        }
 
-      return {
-        status: 'success',
-        productsFound: allNewProducts.length,
-        pagesScanned,
-        tokensUsed,
-        newWatermarkUrl: newWatermarkUrl || lastWatermarkUrl,
-      };
-    } else {
-      // HTML-based: use search URL sorted by newest, or base URL
-      pageUrl = `${origin}/`;
+        return {
+          status: 'success',
+          productsFound: allNewProducts.length,
+          pagesScanned,
+          tokensUsed,
+          newWatermarkUrl: newWatermarkUrl || lastWatermarkUrl,
+        };
+      }
+      // API returned 0 products — fall through to HTML-based crawl
     }
 
-    // HTML-based watermark crawl
-    let currentUrl = pageUrl;
-    while (currentUrl && getTier1Remaining(siteId, baseBudget, capacity) > 0) {
-      consumeToken(siteId, 1);
-      tokensUsed++;
+    // Build list of HTML URLs to try for new arrivals (in priority order)
+    const candidateUrls: string[] = [];
+    if (adapter.getNewArrivalsUrls) {
+      candidateUrls.push(...adapter.getNewArrivalsUrls(origin));
+    } else if (adapter.getNewArrivalsUrl) {
+      candidateUrls.push(adapter.getNewArrivalsUrl(origin));
+    } else {
+      candidateUrls.push(`${origin}/`);
+    }
 
-      const fetchResult = await fetchPageWithMeta(currentUrl, undefined, { difficultyRating: 0 });
-      pagesScanned++;
+    // HTML-based watermark crawl — try each candidate URL until one yields products
+    let foundProducts = false;
+    for (const startUrl of candidateUrls) {
+      if (foundProducts) break;
+      if (getTier1Remaining(siteId, baseBudget, capacity) <= 0) break;
 
-      const $ = cheerio.load(fetchResult.html);
-      let products: CatalogProduct[] = [];
+      let currentUrl: string | null = startUrl;
+      while (currentUrl && getTier1Remaining(siteId, baseBudget, capacity) > 0) {
+        consumeToken(siteId, 1);
+        tokensUsed++;
 
-      if (adapter.extractCatalogProducts) {
-        products = adapter.extractCatalogProducts($, currentUrl);
-      }
+        let html = '';
 
-      if (products.length === 0) break;
+        // For known WAF sites, skip static fetch and go straight to Playwright
+        if (hasWaf) {
+          try {
+            const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+            console.log(`[WatermarkCrawler] WAF site ${params.domain}, using Playwright for ${currentUrl}`);
+            const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
+            html = pwResult.html;
+            // Log if Playwright returned suspiciously small content (WAF may not have resolved)
+            if (html.length < 2000) {
+              console.log(`[WatermarkCrawler] WAF site ${params.domain}: Playwright returned only ${html.length}b — WAF challenge may not have resolved`);
+            }
+          } catch (err) {
+            console.log(`[WatermarkCrawler] WAF site ${params.domain}: Playwright failed — ${err instanceof Error ? err.message : err}`);
+            break; // Playwright failed on WAF site, try next candidate URL
+          }
+        } else {
+          try {
+            const fetchResult = await fetchPageWithMeta(currentUrl, undefined, { difficultyRating: 0 });
+            html = fetchResult.html;
+          } catch {
+            // Static fetch failed — try Playwright before giving up
+            try {
+              const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+              console.log(`[WatermarkCrawler] Static fetch failed for ${currentUrl}, trying Playwright`);
+              const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
+              html = pwResult.html;
+            } catch {
+              break; // Both failed, try next candidate URL
+            }
+          }
 
-      // Set watermark to the newest product on first page
-      if (pagesScanned === 1 && products.length > 0) {
-        newWatermarkUrl = products[0].url;
-      }
-
-      for (const product of products) {
-        if (lastWatermarkUrl && product.url === lastWatermarkUrl) {
-          hitWatermark = true;
-          break;
+          // Playwright fallback: if static HTML is too small or WAF-blocked, try headless browser
+          const isBlockedOrEmpty = html.length < 2000 || html.includes('_Incapsula_Resource') ||
+            html.includes('Access Denied') || html.includes('403 Forbidden') ||
+            html.includes('cf-browser-verification') || html.includes('challenge-platform') ||
+            html.includes('Just a moment...') || html.includes('Checking your browser') ||
+            html.includes('Attention Required') || html.includes('cf-challenge');
+          if (isBlockedOrEmpty && html.length > 0) {
+            try {
+              const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+              console.log(`[WatermarkCrawler] Static HTML blocked/small (${html.length}b) for ${currentUrl}, trying Playwright`);
+              const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
+              html = pwResult.html;
+            } catch {
+              // Playwright also failed, continue with what we have
+            }
+          }
         }
-        allNewProducts.push(product);
-      }
 
-      if (hitWatermark) break;
+        pagesScanned++;
 
-      // Get next page
-      const nextUrl = adapter.getNextPageUrl?.($, currentUrl) ?? null;
-      if (!nextUrl) break;
-      currentUrl = nextUrl;
-      if (currentUrl) {
-        await randomDelay(300, 800);
+        const $ = cheerio.load(html);
+        let products: CatalogProduct[] = [];
+
+        if (adapter.extractCatalogProducts) {
+          products = adapter.extractCatalogProducts($, currentUrl);
+        }
+
+        // Playwright fallback: static HTML is large but yielded 0 products → likely AJAX-loaded
+        if (products.length === 0 && !hasWaf && html.length > 5000) {
+          try {
+            const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+            console.log(`[WatermarkCrawler] ${params.domain}: 0 products from ${html.length}b static HTML, trying Playwright fallback`);
+            const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
+            if (pwResult.html.length > html.length) {
+              const $pw = cheerio.load(pwResult.html);
+              if (adapter.extractCatalogProducts) {
+                products = adapter.extractCatalogProducts($pw, currentUrl);
+                if (products.length > 0) {
+                  console.log(`[WatermarkCrawler] ${params.domain}: Playwright found ${products.length} products`);
+                }
+              }
+            }
+          } catch {
+            // Playwright also failed, continue
+          }
+        }
+
+        if (products.length === 0) {
+          console.log(`[WatermarkCrawler] ${params.domain}: 0 products from ${currentUrl} (HTML: ${html.length}b)`);
+          break; // No products on this URL, try next candidate
+        }
+
+        foundProducts = true;
+
+        // Set watermark to the newest product on first page
+        // Validate it looks like a real product URL (not a nav/utility page)
+        if (!newWatermarkUrl && products.length > 0) {
+          const candidate = products[0].url;
+          if (!isNavOrUtilityUrl(candidate)) {
+            newWatermarkUrl = candidate;
+          } else if (products.length > 1 && !isNavOrUtilityUrl(products[1].url)) {
+            newWatermarkUrl = products[1].url;
+          }
+        }
+
+        for (const product of products) {
+          if (lastWatermarkUrl && product.url === lastWatermarkUrl) {
+            hitWatermark = true;
+            break;
+          }
+          allNewProducts.push(product);
+        }
+
+        if (hitWatermark) break;
+
+        // Get next page
+        const nextUrl: string | null = adapter.getNextPageUrl?.($, currentUrl) ?? null;
+        if (!nextUrl) break;
+        currentUrl = nextUrl;
+        if (currentUrl) {
+          await randomDelay(300, 800);
+        }
       }
     }
 
@@ -203,18 +313,25 @@ async function saveProducts(
 
   for (const product of products) {
     try {
+      // Only overwrite stock/price/thumbnail if new data is meaningful —
+      // prevents WP REST API data (unknown stock, no price) from clobbering
+      // good data already set by Store API or backfill.
+      const hasRealStock = product.stockStatus && product.stockStatus !== 'unknown';
+      const update: Record<string, any> = {
+        title: product.title,
+        category: product.category ?? null,
+        tags: product.tags ?? null,
+        closingAt: product.closingAt ?? null,
+        lastSeenAt: new Date(),
+        isActive: true,
+      };
+      if (hasRealStock) update.stockStatus = product.stockStatus;
+      if (product.price != null) update.price = product.price;
+      if (product.thumbnail) update.thumbnail = product.thumbnail;
+
       const result = await prisma.productIndex.upsert({
         where: { siteId_url: { siteId, url: product.url } },
-        update: {
-          title: product.title,
-          price: product.price ?? null,
-          stockStatus: product.stockStatus ?? null,
-          thumbnail: product.thumbnail ?? null,
-          category: product.category ?? null,
-          closingAt: product.closingAt ?? null,
-          lastSeenAt: new Date(),
-          isActive: true,
-        },
+        update,
         create: {
           siteId,
           url: product.url,
@@ -223,6 +340,7 @@ async function saveProducts(
           stockStatus: product.stockStatus ?? null,
           thumbnail: product.thumbnail ?? null,
           category: product.category ?? null,
+          tags: product.tags ?? null,
           closingAt: product.closingAt ?? null,
         },
       });

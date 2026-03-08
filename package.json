@@ -17,6 +17,7 @@
     "db:generate": "npm run db:generate --workspace=backend"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "tsx": "^4.21.0"
   }
 }

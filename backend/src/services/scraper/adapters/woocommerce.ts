@@ -26,10 +26,12 @@ export class WooCommerceAdapter extends AbstractAdapter {
   async searchViaApi(origin: string, keyword: string, options: ScrapeOptions): Promise<ScrapedMatch[]> {
     const ua = pickUserAgent(new URL(origin).hostname);
     const headers = { 'User-Agent': ua, Accept: 'application/json' };
-    const limit = options.fast ? 10 : 25;
+    const limit = options.fast ? 10 : 100;
     const apiTimeout = options.fast ? 5000 : 10000;
 
-    // Try WooCommerce Store API first (public, no auth)
+    const seen = new Map<string, ScrapedMatch>(); // URL → match (Store API data preferred)
+
+    // Try WooCommerce Store API (rich data: prices, thumbnails, stock)
     try {
       const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
         params: { search: keyword, per_page: limit },
@@ -37,25 +39,29 @@ export class WooCommerceAdapter extends AbstractAdapter {
         timeout: apiTimeout,
         validateStatus: (s) => s === 200,
       });
-      if (Array.isArray(resp.data) && resp.data.length > 0) {
-        return this.parseStoreApiProducts(resp.data, keyword, origin, options);
+      if (Array.isArray(resp.data)) {
+        for (const m of this.parseStoreApiProducts(resp.data, keyword, origin, options)) {
+          if (!this.isCategoryPageUrl(m.url)) seen.set(m.url, m);
+        }
       }
     } catch { /* fall through */ }
 
-    // Try WordPress REST API
+    // Also try WordPress REST API (finds out-of-stock products Store API hides)
     try {
       const resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
-        params: { search: keyword, per_page: limit },
+        params: { search: keyword, per_page: limit, _embed: 'wp:featuredmedia' },
         headers,
         timeout: apiTimeout,
         validateStatus: (s) => s === 200,
       });
-      if (Array.isArray(resp.data) && resp.data.length > 0) {
-        return this.parseWpApiProducts(resp.data, keyword, origin, options);
+      if (Array.isArray(resp.data)) {
+        for (const m of this.parseWpApiProducts(resp.data, keyword, origin, options)) {
+          if (!this.isCategoryPageUrl(m.url) && !seen.has(m.url)) seen.set(m.url, m);
+        }
       }
     } catch { /* fall through */ }
 
-    return []; // API not available, will fall back to HTML
+    return [...seen.values()];
   }
 
   private parseStoreApiProducts(
@@ -108,10 +114,18 @@ export class WooCommerceAdapter extends AbstractAdapter {
 
       const url = p.link || `${origin}/?p=${p.id}`;
 
+      // Extract thumbnail from _embedded featured media (if _embed was requested)
+      const embedded = p._embedded?.['wp:featuredmedia']?.[0];
+      const thumbnail = embedded?.media_details?.sizes?.thumbnail?.source_url
+        || embedded?.media_details?.sizes?.medium?.source_url
+        || embedded?.source_url
+        || undefined;
+
       matches.push({
         title: name.slice(0, 160),
         url,
-        inStock: true,
+        thumbnail,
+        inStock: undefined, // WP REST API doesn't provide stock status
       });
     }
 
@@ -171,11 +185,14 @@ export class WooCommerceAdapter extends AbstractAdapter {
         const rawTitle = (titleEl.length ? titleEl.text() : text).trim().replace(/\s+/g, ' ').slice(0, 160);
         if (!rawTitle || rawTitle.length < 3) return;
         if (/^\$?\d[\d,.]*$/.test(rawTitle)) return;
+        if (this.isNavTitle(rawTitle)) return;
 
         const titleKey = rawTitle.toLowerCase().slice(0, 60);
         if (seen.has(titleKey)) return;
 
         const productUrl = this.extractLink(element, baseUrl);
+        if (this.isNavUrl(productUrl)) return;
+        if (this.isCategoryPageUrl(productUrl)) return;
 
         // WooCommerce price structure
         const priceEl = element.find('.price, .woocommerce-Price-amount, [class*="price"]').first();
@@ -211,71 +228,145 @@ export class WooCommerceAdapter extends AbstractAdapter {
     return `${origin}/shop/?orderby=date`;
   }
 
+  getNewArrivalsUrls(origin: string): string[] {
+    const urls: string[] = [];
+
+    // Site-specific category pages for WAF-blocked WooCommerce sites
+    // whose /shop/ page shows category grids instead of products
+    if (origin.includes('doctordeals.ca')) {
+      urls.push(
+        `${origin}/product-category/gun-shop/firearms/rifles/`,
+        `${origin}/product-category/gun-shop/firearms/shotguns/`,
+        `${origin}/product-category/gun-shop/firearms/non-restricted/`,
+        `${origin}/product-category/gun-shop/firearms/used-and-war/`,
+        `${origin}/product-category/gun-shop/ammunition/`,
+        `${origin}/product-category/gun-shop/optics-sights/`,
+      );
+    }
+    if (origin.includes('g4cgunstore.com')) {
+      urls.push(
+        `${origin}/product-category/firearms/rifles/non-restricted-rifles/`,
+        `${origin}/product-category/firearms/handguns/pistols/`,
+        `${origin}/product-category/firearms/shotguns/`,
+        `${origin}/product-category/firearms/rifles/restricted-rifles/`,
+        `${origin}/product-category/new-arrivals/`,
+        `${origin}/product-category/ammunition/`,
+      );
+    }
+    if (origin.includes('corwin-arms.com')) {
+      // WooCommerce — /shop redirects to homepage, add category pages
+      urls.push(
+        `${origin}/product-category/firearms/`,
+        `${origin}/product-category/clearance/`,
+      );
+    }
+
+    urls.push(
+      `${origin}/shop/?orderby=date`,
+      `${origin}/?post_type=product&orderby=date&order=desc`,
+      `${origin}/product/`,
+      `${origin}/products/`,
+      `${origin}/`,                     // Homepage fallback (some themes only show products here)
+    );
+
+    return urls;
+  }
+
+  /** Returns true for WooCommerce category-page URLs that aren't real products */
+  private isCategoryPageUrl(url: string): boolean {
+    return /\/product-category\//i.test(url);
+  }
+
   async fetchCatalogPage(
     origin: string,
     page: number,
-    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number },
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string },
   ): Promise<CatalogPage> {
     const perPage = Math.min(options?.perPage ?? 100, 100);
     const ua = pickUserAgent(new URL(origin).hostname);
     const headers = { 'User-Agent': ua, Accept: 'application/json' };
-    const orderby = options?.sortBy === 'oldest' ? 'date' : 'date';
     const order = options?.sortBy === 'oldest' ? 'asc' : 'desc';
+    const hasDateFilter = !!(options?.dateAfter || options?.dateBefore);
 
-    // Try WooCommerce Store API (public, no auth needed)
+    const seen = new Map<string, CatalogProduct>(); // URL → product (Store API data preferred)
+    let totalPages: number | undefined;
+
+    // 1. WP REST API first — returns ALL published products (including out-of-stock)
+    //    Supports `after`/`before` ISO 8601 date params for tier date filtering
     try {
-      const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
-        params: { per_page: perPage, page, orderby, order },
-        headers,
-        timeout: 15000,
-        validateStatus: (s) => s === 200,
-      });
+      const params: Record<string, any> = {
+        per_page: perPage, page, orderby: 'date', order,
+        _embed: 'wp:featuredmedia',
+      };
+      if (options?.dateAfter) params.after = options.dateAfter;
+      if (options?.dateBefore) params.before = options.dateBefore;
 
-      if (Array.isArray(resp.data) && resp.data.length > 0) {
-        const totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10);
-        const products: CatalogProduct[] = resp.data.map((p: any) => ({
-          url: p.permalink || `${origin}/?p=${p.id}`,
-          title: this.decodeHtml(p.name || '').slice(0, 160),
-          price: p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined,
-          stockStatus: p.is_purchasable !== false ? 'in_stock' as const : 'out_of_stock' as const,
-          thumbnail: p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined,
-        }));
-
-        return {
-          products,
-          nextPageUrl: resp.data.length >= perPage ? undefined : undefined, // Let caller handle pagination via page param
-          totalPages: totalPages || undefined,
-        };
-      }
-    } catch { /* fall through to WP REST API */ }
-
-    // Try WordPress REST API
-    try {
       const resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
-        params: { per_page: perPage, page, orderby: 'date', order },
+        params,
         headers,
         timeout: 15000,
         validateStatus: (s) => s === 200,
       });
 
-      if (Array.isArray(resp.data) && resp.data.length > 0) {
-        const totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10);
-        const products: CatalogProduct[] = resp.data.map((p: any) => ({
-          url: p.link || `${origin}/?p=${p.id}`,
-          title: this.decodeHtml(p.title?.rendered || p.name || '').slice(0, 160),
-          price: undefined, // WP REST API doesn't reliably include prices
-          stockStatus: 'unknown' as const,
-          thumbnail: undefined,
-        }));
-
-        return {
-          products,
-          totalPages: totalPages || undefined,
-        };
+      if (Array.isArray(resp.data)) {
+        totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10) || undefined;
+        for (const p of resp.data) {
+          const url = p.link || `${origin}/?p=${p.id}`;
+          if (this.isCategoryPageUrl(url)) continue;
+          const embedded = p._embedded?.['wp:featuredmedia']?.[0];
+          const thumb = embedded?.media_details?.sizes?.thumbnail?.source_url
+            || embedded?.media_details?.sizes?.medium?.source_url
+            || embedded?.source_url
+            || undefined;
+          seen.set(url, {
+            url,
+            title: this.decodeHtml(p.title?.rendered || p.name || '').slice(0, 160),
+            price: undefined,
+            stockStatus: 'unknown' as const,
+            thumbnail: thumb,
+          });
+        }
       }
-    } catch { /* no API available */ }
+    } catch { /* fall through */ }
 
-    return { products: [] };
+    // 2. Store API — enrich with prices, thumbnails, stock for in-stock products
+    //    Skip when date filtering is active: Store API doesn't support before/after,
+    //    so its pagination won't align with the WP REST date-filtered results.
+    if (!hasDateFilter) {
+      try {
+        const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
+          params: { per_page: perPage, page, orderby: 'date', order },
+          headers,
+          timeout: 15000,
+          validateStatus: (s) => s === 200,
+        });
+
+        if (Array.isArray(resp.data)) {
+          if (!totalPages) {
+            totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10) || undefined;
+          }
+          for (const p of resp.data) {
+            const url = p.permalink || `${origin}/?p=${p.id}`;
+            if (this.isCategoryPageUrl(url)) continue;
+            // Store API has richer data — merge over WP REST entry
+            const existing = seen.get(url);
+            const storeThumb = p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined;
+            seen.set(url, {
+              url,
+              title: this.decodeHtml(p.name || '').slice(0, 160),
+              price: p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined,
+              stockStatus: p.is_purchasable !== false ? 'in_stock' as const : 'out_of_stock' as const,
+              thumbnail: storeThumb || existing?.thumbnail,
+            });
+          }
+        }
+      } catch { /* Store API unavailable — WP REST results still usable */ }
+    }
+
+    return {
+      products: [...seen.values()],
+      totalPages,
+    };
   }
 
   extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
@@ -289,6 +380,8 @@ export class WooCommerceAdapter extends AbstractAdapter {
       '[class*="product-card"]',
       '[data-product-id]',
       '.wd-product',
+      '.product-small',                // Flatsome theme (doctordeals, etc.)
+      'div[class*="product"][class*="type-product"]', // Generic div-based WooCommerce products
     ];
 
     for (const selector of SELECTORS) {
@@ -303,9 +396,12 @@ export class WooCommerceAdapter extends AbstractAdapter {
         const title = (titleEl.length ? titleEl.text() : element.text()).trim().replace(/\s+/g, ' ').slice(0, 160);
         if (!title || title.length < 3) return;
         if (/^\$?\d[\d,.]*$/.test(title)) return;
+        if (this.isNavTitle(title)) return;
 
         const url = this.extractLink(element, baseUrl);
         if (!url || seen.has(url)) return;
+        if (this.isNavUrl(url)) return;
+        if (this.isCategoryPageUrl(url)) return;
         seen.add(url);
 
         const priceEl = element.find('.price, .woocommerce-Price-amount, [class*="price"]').first();

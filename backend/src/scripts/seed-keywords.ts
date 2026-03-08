@@ -101,6 +101,9 @@ const KEYWORD_GROUPS: KeywordGroupSeed[] = [
   { canonical: 'Marlin 1895', aliases: ['marlin 1895', 'marlin 1895 sbl', '1895 sbl'] },
   { canonical: 'Marlin Model 60', aliases: ['marlin 60', 'marlin model 60'] },
 
+  // ── Derya ─────────────────────────────────────────────────────────────
+  { canonical: 'Derya TM-22', aliases: ['tm-22', 'tm22', 'derya tm-22', 'derya tm22'] },
+
   // ── Stag / WK180 / Canadian rifles ────────────────────────────────────
   { canonical: 'WK180-C', aliases: ['wk180-c', 'wk180c', 'wk 180c', 'wk180', 'kodiak wk180'] },
   { canonical: 'WS-MCR', aliases: ['ws-mcr', 'ws mcr', 'wsmcr', 'wolverine ws-mcr'] },
