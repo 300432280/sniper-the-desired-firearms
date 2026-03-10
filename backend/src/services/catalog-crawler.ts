@@ -19,7 +19,7 @@ import { fetchPageWithMeta, randomDelay } from './scraper/http-client';
 import { consumeToken, getCatalogRemaining, allocateCatalogTokens } from './token-budget';
 import { matchNewProducts } from './keyword-matcher';
 import { pushEvent } from './debugLog';
-import type { CatalogProduct } from './scraper/types';
+import type { CatalogProduct, Stream, StreamTierState, SiteStreamState } from './scraper/types';
 import { classifyProduct } from './product-classifier';
 import * as cheerio from 'cheerio';
 
@@ -52,6 +52,8 @@ export interface TierCycleState {
   currentPage: number;
   /** Current URL index in the catalog URL list (HTML-based path, for resume) */
   currentUrlIndex?: number;
+  /** Resume URL within current catalog URL when tokens ran out mid-pagination */
+  currentPageUrl?: string;
   /** When this cycle started */
   cycleStartedAt?: string;
   /** When cooldown ends (cycle can restart) */
@@ -173,7 +175,9 @@ export async function crawlCatalogTier(params: {
       let urlIdx = tierState.currentUrlIndex ?? 0;
 
       while (urlIdx < catalogUrls.length && tokensUsed < tokensAllocated) {
-        let currentUrl: string | null = catalogUrls[urlIdx];
+        // Resume from saved page URL if tokens ran out mid-pagination last tick
+        let currentUrl: string | null = tierState.currentPageUrl ?? catalogUrls[urlIdx];
+        tierState.currentPageUrl = undefined; // Clear after resuming
 
         while (currentUrl && tokensUsed < tokensAllocated) {
           consumeToken(siteId, tier);
@@ -240,11 +244,16 @@ export async function crawlCatalogTier(params: {
           await randomDelay(300, 800);
         }
 
-        urlIdx++;
+        // Only advance to next URL if inner loop finished naturally (not token exhaustion)
+        if (tokensUsed < tokensAllocated) {
+          urlIdx++;
+        } else if (currentUrl) {
+          // Tokens ran out mid-pagination — save the next page URL for resume
+          tierState.currentPageUrl = currentUrl;
+        }
       }
 
-      // Persist URL position for resume on next tick (mutates tierState which
-      // is spread by updateTierProgress, so it's preserved in the tier state JSON)
+      // Persist URL position for resume on next tick
       tierState.currentUrlIndex = urlIdx;
 
       if (urlIdx >= catalogUrls.length) {
@@ -374,6 +383,288 @@ export function updateTierProgress(
   return {
     ...tierState,
     currentPage: tierState.currentPage + pagesScanned,
+  };
+}
+
+// ── Stream-Based Catalog Crawl (Phase 2) ────────────────────────────────────
+
+interface StreamCrawlResult {
+  streamId: string;
+  tier: 2 | 3 | 4;
+  status: 'success' | 'fail' | 'partial';
+  productsFound: number;
+  pagesScanned: number;
+  tokensUsed: number;
+  cycleComplete: boolean;
+  /** Total pages discovered (for updating stream page ranges) */
+  totalPagesDiscovered?: number;
+  errorMessage?: string;
+}
+
+/**
+ * Crawl a single stream for a specific tier.
+ * API streams use date-range filtering. HTML streams use page-range division.
+ */
+export async function crawlStreamTier(params: {
+  siteId: string;
+  url: string;
+  domain: string;
+  stream: Stream;
+  tier: 2 | 3 | 4;
+  tierState: StreamTierState;
+  tokensAllocated: number;
+  hasWaf?: boolean;
+}): Promise<StreamCrawlResult> {
+  const { siteId, url, stream, tier, tierState, tokensAllocated } = params;
+  const { adapter } = await getAdapterForUrl(url);
+  const origin = new URL(url).origin;
+
+  let pagesScanned = 0;
+  let tokensUsed = 0;
+  let productsFound = 0;
+  let cycleComplete = false;
+  let totalPagesDiscovered: number | undefined;
+  const allProducts: CatalogProduct[] = [];
+
+  try {
+    if (stream.type === 'api' && adapter.fetchCatalogPage) {
+      // ── API stream: use date ranges (same as legacy, but scoped to one stream)
+      let page = tierState.currentPage || 1;
+
+      while (tokensUsed < tokensAllocated) {
+        consumeToken(siteId, tier);
+        tokensUsed++;
+
+        const catalogPage = await adapter.fetchCatalogPage(origin, page, {
+          sortBy: 'newest',
+          perPage: 50,
+          dateAfter: tierState.dateRangeStart || undefined,
+          dateBefore: tierState.dateRangeEnd || undefined,
+        });
+        pagesScanned++;
+
+        if (catalogPage.totalPages) totalPagesDiscovered = catalogPage.totalPages;
+
+        if (catalogPage.products.length === 0) {
+          cycleComplete = true;
+          break;
+        }
+
+        allProducts.push(...catalogPage.products);
+        productsFound += catalogPage.products.length;
+
+        if (!catalogPage.nextPageUrl && (!catalogPage.totalPages || page >= catalogPage.totalPages)) {
+          cycleComplete = true;
+          break;
+        }
+
+        page++;
+        await randomDelay(300, 800);
+      }
+
+      // Update resume position
+      tierState.currentPage = page;
+
+    } else if (stream.type === 'html' && adapter.extractCatalogProducts) {
+      // ── HTML stream: crawl one URL with page-range boundaries
+      let currentUrl: string | null = tierState.currentPageUrl ?? stream.url;
+      tierState.currentPageUrl = undefined;
+
+      // Skip to pageRangeStart if resuming from beginning
+      let currentPageNum = tierState.currentPage || tierState.pageRangeStart || 1;
+      const pageRangeEnd = tierState.pageRangeEnd;
+
+      while (currentUrl && tokensUsed < tokensAllocated) {
+        // Stop if we've exceeded this tier's page range
+        if (pageRangeEnd != null && currentPageNum > pageRangeEnd) {
+          cycleComplete = true;
+          break;
+        }
+
+        consumeToken(siteId, tier);
+        tokensUsed++;
+
+        let html = '';
+
+        if (params.hasWaf) {
+          try {
+            const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+            const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
+            html = pwResult.html;
+          } catch {
+            break;
+          }
+        } else {
+          try {
+            const fetchResult = await fetchPageWithMeta(currentUrl, undefined, { difficultyRating: 0 });
+            html = fetchResult.html;
+          } catch {
+            break;
+          }
+
+          const isBlocked = html.length < 2000 ||
+            /Incapsula|Access Denied|403 Forbidden|challenge-platform|Just a moment/i.test(html);
+          if (isBlocked && html.length > 0) {
+            try {
+              const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+              const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
+              html = pwResult.html;
+            } catch { /* continue with what we have */ }
+          }
+        }
+
+        const $ = cheerio.load(html);
+        pagesScanned++;
+
+        let products = adapter.extractCatalogProducts($, currentUrl);
+
+        if (products.length === 0 && !params.hasWaf && html.length > 5000) {
+          try {
+            const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+            const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
+            if (pwResult.html.length > html.length) {
+              const $pw = cheerio.load(pwResult.html);
+              products = adapter.extractCatalogProducts($pw, currentUrl);
+            }
+          } catch { /* continue */ }
+        }
+
+        if (products.length === 0) {
+          // No products = end of this stream's pages
+          cycleComplete = true;
+          break;
+        }
+
+        allProducts.push(...products);
+        productsFound += products.length;
+
+        const nextUrl: string | null = adapter.getNextPageUrl?.($, currentUrl) ?? null;
+        if (!nextUrl) {
+          // No next page = we've discovered total pages for this stream
+          totalPagesDiscovered = currentPageNum;
+          cycleComplete = true;
+          break;
+        }
+
+        currentUrl = nextUrl;
+        currentPageNum++;
+        await randomDelay(300, 800);
+      }
+
+      // Save resume position
+      if (!cycleComplete && currentUrl) {
+        tierState.currentPage = currentPageNum;
+        tierState.currentPageUrl = currentUrl;
+      } else {
+        tierState.currentPage = currentPageNum;
+      }
+    } else {
+      cycleComplete = true;
+    }
+
+    // Save products to ProductIndex
+    const savedProducts = await saveProducts(siteId, allProducts);
+    if (savedProducts.length > 0) {
+      await matchNewProducts(savedProducts);
+    }
+
+    return {
+      streamId: stream.id,
+      tier,
+      status: cycleComplete ? 'success' : 'partial',
+      productsFound,
+      pagesScanned,
+      tokensUsed,
+      cycleComplete,
+      totalPagesDiscovered,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return {
+      streamId: stream.id,
+      tier,
+      status: 'fail',
+      productsFound,
+      pagesScanned,
+      tokensUsed,
+      cycleComplete: false,
+      errorMessage: msg,
+    };
+  }
+}
+
+/**
+ * Check if a stream tier is active (ready to run or in progress).
+ */
+export function isStreamTierActive(state: StreamTierState, now: Date = new Date()): boolean {
+  if (state.status === 'in_progress') return true;
+  if (state.status === 'cooldown' && state.cooldownEndsAt) {
+    return new Date(state.cooldownEndsAt) <= now;
+  }
+  return true; // idle = ready
+}
+
+/**
+ * Start a new cycle for a stream tier.
+ * API streams snapshot date boundaries. HTML streams use page ranges.
+ */
+export function startStreamTierCycle(
+  stream: Stream,
+  tier: 2 | 3 | 4,
+  existing: StreamTierState,
+): StreamTierState {
+  const config = TIER_CONFIGS.find(c => c.tier === tier)!;
+  const now = new Date();
+
+  if (stream.type === 'api') {
+    // API streams use date ranges
+    const dateRangeEnd = new Date(now);
+    dateRangeEnd.setDate(dateRangeEnd.getDate() - config.daysBackEnd);
+    const dateRangeStart = config.daysBackStart != null
+      ? new Date(now.getTime() - config.daysBackStart * 24 * 60 * 60 * 1000)
+      : undefined;
+
+    return {
+      ...existing,
+      status: 'in_progress',
+      currentPage: 1,
+      currentPageUrl: undefined,
+      dateRangeStart: dateRangeStart?.toISOString(),
+      dateRangeEnd: dateRangeEnd.toISOString(),
+      cycleStartedAt: now.toISOString(),
+    };
+  }
+
+  // HTML streams use page ranges (preserved from existing state)
+  return {
+    ...existing,
+    status: 'in_progress',
+    currentPage: existing.pageRangeStart || 1,
+    currentPageUrl: undefined,
+    cycleStartedAt: now.toISOString(),
+  };
+}
+
+/**
+ * Complete a stream tier cycle → transition to cooldown.
+ */
+export function completeStreamTierCycle(
+  state: StreamTierState,
+  cooldownHours: number,
+): StreamTierState {
+  const cycleStart = state.cycleStartedAt ? new Date(state.cycleStartedAt) : new Date();
+  const cooldownEnd = new Date(cycleStart.getTime() + cooldownHours * 60 * 60 * 1000);
+
+  if (cooldownEnd <= new Date()) {
+    return { ...state, status: 'idle', currentPage: state.pageRangeStart || 1, lastRefreshedAt: new Date().toISOString() };
+  }
+
+  return {
+    ...state,
+    status: 'cooldown',
+    currentPage: state.pageRangeStart || 1,
+    cooldownEndsAt: cooldownEnd.toISOString(),
+    lastRefreshedAt: new Date().toISOString(),
   };
 }
 

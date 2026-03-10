@@ -351,6 +351,11 @@ export class GenericRetailAdapter extends AbstractAdapter {
     const products: CatalogProduct[] = [];
     const seen = new Set<string>();
 
+    // Derive category tag from the catalog page URL path
+    // e.g., "/ammunition" → "ammunition", "/firearms/rifles" → "firearms,rifles"
+    // Also check breadcrumbs on the page for richer category info
+    const categoryTag = this._deriveCategoryTag($, baseUrl);
+
     // Same selectors as extractMatches, but without keyword filtering
     const SELECTORS = [
       '[data-product-id]',
@@ -409,6 +414,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
           regularPrice,
           stockStatus: inStock ? 'in_stock' : 'out_of_stock',
           thumbnail,
+          tags: categoryTag,
         });
       });
     }
@@ -461,6 +467,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
           regularPrice: prices.regularPrice,
           stockStatus: 'in_stock',
           thumbnail,
+          tags: categoryTag,
         });
       });
     }
@@ -484,6 +491,41 @@ export class GenericRetailAdapter extends AbstractAdapter {
       if (href) return this.resolveUrl(href, currentUrl);
     }
     return null;
+  }
+
+  /**
+   * Derive a category tag from the catalog page URL path and/or breadcrumbs.
+   * Returns a comma-separated string like "ammunition" or "firearms,rifles", or undefined.
+   */
+  private _deriveCategoryTag($: cheerio.CheerioAPI, pageUrl: string): string | undefined {
+    // 1. Try breadcrumbs on the page (most accurate)
+    const breadcrumbSel = '.breadcrumb, [class*="breadcrumb"], nav[aria-label="breadcrumb"], .crumbs, #breadcrumbs';
+    const bcEl = $(breadcrumbSel).first();
+    if (bcEl.length) {
+      const crumbs = bcEl.find('a, span, li')
+        .map((_, el) => $(el).text().trim().toLowerCase())
+        .get()
+        .filter(t => t.length > 1 && !/^(home|all|shop|products?|store|catalog)$/i.test(t));
+      if (crumbs.length > 0) {
+        // Deduplicate and take up to 3
+        return [...new Set(crumbs)].slice(0, 3).join(',');
+      }
+    }
+
+    // 2. Fall back to URL path segments
+    try {
+      const path = new URL(pageUrl).pathname;
+      const segments = path.split('/').filter(Boolean)
+        .map(s => decodeURIComponent(s).replace(/[-_+]/g, ' ').toLowerCase())
+        .filter(s => !/^\d+$/.test(s))                          // skip numeric IDs
+        .filter(s => !/^(shop|products?|catalog|page|index|all|categories?)$/i.test(s)) // skip generic
+        .filter(s => s.length > 1 && s.length < 40);
+      if (segments.length > 0) {
+        return segments.slice(0, 3).join(',');
+      }
+    } catch { /* ignore */ }
+
+    return undefined;
   }
 
   /** Walk up from a link element to find the nearest product-like container */

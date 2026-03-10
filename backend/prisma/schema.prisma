@@ -177,6 +177,9 @@ model MonitoredSite {
   // Tier state (JSONB tracking cycle progress for Tiers 2-4)
   tierState          Json            @default("{}")
 
+  // Stream state (per-stream tier structure — Phase 2)
+  streamState        Json?
+
   // Cold start tracking
   addedAt            DateTime        @default(now())
   coldStartOverride  Boolean         @default(false)

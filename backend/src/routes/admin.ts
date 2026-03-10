@@ -321,6 +321,7 @@ router.get('/sites/dashboard', async (_req: Request, res: Response) => {
         // v2 catalog fields
         lastWatermarkUrl: site.lastWatermarkUrl,
         tierState: site.tierState,
+        streamState: site.streamState,
         addedAt: site.addedAt,
         coldStartOverride: site.coldStartOverride,
         productCount: site._count.products,

@@ -152,14 +152,20 @@ export class ShopifyAdapter extends AbstractAdapter {
   async fetchCatalogPage(
     origin: string,
     page: number,
-    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number },
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string },
   ): Promise<CatalogPage> {
     const perPage = Math.min(options?.perPage ?? 250, 250);
     const ua = pickUserAgent(new URL(origin).hostname);
 
     // Shopify products.json API — returns structured JSON
+    // Uses `updated_at_min`/`updated_at_max` to filter by modification date,
+    // catching restocks (inventory changes update updated_at) and price changes.
+    const apiParams: Record<string, any> = { limit: perPage, page };
+    if (options?.dateAfter) apiParams.updated_at_min = options.dateAfter;
+    if (options?.dateBefore) apiParams.updated_at_max = options.dateBefore;
+
     const resp = await axios.get(`${origin}/products.json`, {
-      params: { limit: perPage, page },
+      params: apiParams,
       headers: { 'User-Agent': ua, Accept: 'application/json' },
       timeout: 15000,
       validateStatus: (s) => s === 200,

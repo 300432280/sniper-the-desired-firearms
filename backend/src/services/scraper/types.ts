@@ -71,7 +71,62 @@ export interface CatalogPage {
   totalPages?: number;
 }
 
-// ── Adapter interface (Phase 3) ──────────────────────────────────────────────
+// ── Stream types (Per-stream tier structure) ─────────────────────────────────
+
+/** A stream is a paginated product list that can be crawled independently. */
+export interface Stream {
+  /** Unique ID within the site, e.g. "api", "firearms", "ammunition" */
+  id: string;
+  /** Base URL for this stream */
+  url: string;
+  /** Sort parameter to append for newest-first, e.g. "?sort=newest" */
+  sortParam?: string;
+  /** Estimated total pages from previous crawls */
+  totalPages?: number;
+  /** Category derived from URL path (for classification + domain priority) */
+  category?: string;
+  /** How to crawl this stream */
+  type: 'api' | 'html';
+}
+
+/** Per-stream per-tier state tracking. */
+export interface StreamTierState {
+  streamId: string;
+  tier: 2 | 3 | 4;
+  /** Resume page within this tier's range */
+  currentPage: number;
+  /** Resume URL for HTML pagination mid-page */
+  currentPageUrl?: string;
+  /** First page this tier owns */
+  pageRangeStart: number;
+  /** Last page (undefined for T4 = open-ended) */
+  pageRangeEnd?: number;
+  /** ISO string — when this tier last completed on this stream */
+  lastRefreshedAt?: string;
+  cycleStartedAt?: string;
+  cooldownEndsAt?: string;
+  /** Absolute date range for API streams (ISO strings) */
+  dateRangeStart?: string;
+  dateRangeEnd?: string;
+  status: 'idle' | 'in_progress' | 'cooldown';
+}
+
+/** Full stream state stored on MonitoredSite (JSON column). */
+export interface SiteStreamState {
+  /** Detected streams for this site */
+  streams: Stream[];
+  /** Per-stream per-tier state, keyed by "streamId:tier" e.g. "firearms:2" */
+  tiers: Record<string, StreamTierState>;
+  /** When streams were last detected */
+  detectedAt?: string;
+}
+
+/** Priority function: sort streams by crawl priority (highest first). */
+export type StreamPriority = (
+  streams: Array<Stream & { lastRefreshedAt?: string }>,
+) => Array<Stream & { lastRefreshedAt?: string }>;
+
+// ── Adapter interface ────────────────────────────────────────────────────────
 
 export interface SiteAdapter {
   /** Human-readable name, e.g. "Shopify", "iCollector" */

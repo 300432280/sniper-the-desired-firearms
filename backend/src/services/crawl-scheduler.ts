@@ -21,6 +21,7 @@ import { pushEvent } from './debugLog';
 import { getColdStartStatus } from './cold-start';
 import { getBudget } from './token-budget';
 import { parseTierState, getActiveTiers } from './catalog-crawler';
+import { detectStreams, initStreamState, parseStreamState } from './stream-detector';
 
 // ── Safety Ceilings ──────────────────────────────────────────────────────────
 
@@ -191,6 +192,25 @@ export async function schedulerTick(): Promise<void> {
       const tierState = parseTierState(site.tierState);
       const activeTiers = getActiveTiers(tierState);
 
+      // Detect streams if not yet initialized (Phase 2)
+      let streamState = parseStreamState(site.streamState);
+      if (!streamState) {
+        try {
+          const streams = await detectStreams(site.url);
+          if (streams.length > 0) {
+            streamState = initStreamState(streams);
+            await prisma.monitoredSite.update({
+              where: { id: site.id },
+              data: { streamState: streamState as any },
+            });
+            console.log(`[Scheduler] Detected ${streams.length} stream(s) for ${site.domain}: ${streams.map(s => s.id).join(', ')}`);
+          }
+        } catch (err) {
+          console.error(`[Scheduler] Stream detection failed for ${site.domain}:`, err instanceof Error ? err.message : err);
+          // Continue with legacy path
+        }
+      }
+
       if (activeTiers.tier2 || activeTiers.tier3 || activeTiers.tier4) {
         await scrapeQueue.add('crawl-catalog', {
           siteId: site.id,
@@ -202,6 +222,7 @@ export async function schedulerTick(): Promise<void> {
           activeTiers,
           hasWaf: site.hasWaf,
           crawlTuning: site.crawlTuning,
+          streamState: streamState ?? undefined,
         }, {
           jobId: `catalog:${site.id}:${Date.now()}`,
           attempts: 1,

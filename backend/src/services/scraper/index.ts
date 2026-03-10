@@ -94,14 +94,14 @@ export async function scrapeWithAdapter(
       errors.push(`HTML scrape failed: ${msg}`);
     }
 
-    // Step 2b: If HTML is suspiciously small (SPA/WAF block), try Playwright
+    // Step 2b: If HTML is suspiciously small/empty (SPA/WAF block/fetch failure), try Playwright
     // Uses paginated fetcher to also capture JS-based pagination (Klevu, etc.)
     const isEmptyHtml = html.length < 2000 || html.includes('_Incapsula_Resource');
     let playwrightExtraPages: string[] = [];
-    if (isEmptyHtml && html.length > 0) {
+    if (isEmptyHtml) {
       try {
         const { fetchWithPlaywrightPaginated } = await import('./playwright-fetcher');
-        console.log(`[ScraperV2] Static HTML too small (${html.length} bytes), trying Playwright for ${scrapeUrl}`);
+        console.log(`[ScraperV2] ${html.length === 0 ? 'Static fetch failed' : `${html.length} bytes`}, trying Playwright for ${scrapeUrl}`);
         const pwResult = await fetchWithPlaywrightPaginated(scrapeUrl, {
           timeout: 45000,
           maxPages: options.fast ? 1 : 3,

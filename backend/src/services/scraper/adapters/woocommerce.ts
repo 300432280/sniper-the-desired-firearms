@@ -292,14 +292,18 @@ export class WooCommerceAdapter extends AbstractAdapter {
     let totalPages: number | undefined;
 
     // 1. WP REST API first — returns ALL published products (including out-of-stock)
-    //    Supports `after`/`before` ISO 8601 date params for tier date filtering
+    //    Uses `modified_after`/`modified_before` + `orderby=modified` to catch restocks,
+    //    price changes, and any product modification — not just newly published products.
+    //    Falls back to `after`/`before` + `orderby=date` when no date filter (page-aligned with Store API).
     try {
       const params: Record<string, any> = {
-        per_page: perPage, page, orderby: 'date', order,
+        per_page: perPage, page,
+        orderby: hasDateFilter ? 'modified' : 'date',
+        order,
         _embed: 'wp:featuredmedia',
       };
-      if (options?.dateAfter) params.after = options.dateAfter;
-      if (options?.dateBefore) params.before = options.dateBefore;
+      if (options?.dateAfter) params.modified_after = options.dateAfter;
+      if (options?.dateBefore) params.modified_before = options.dateBefore;
 
       const resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
         params,

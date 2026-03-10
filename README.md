@@ -2,7 +2,7 @@
 
 Canadian firearm market monitoring web app. Monitors 60+ retailer websites, classifieds, forums, and auction platforms for user-defined keywords and sends email/SMS alerts when **new** matches are found.
 
-**v2 Architecture:** Catalog-based indexing — crawl site catalogs, store all products in a local ProductIndex, match user keywords against the DB. Crawl load is proportional to number of sites (60), not users or keywords. Uses a continuous pressure/capacity model with per-site token budgets and date-based catalog tiers for full catalog refresh.
+**v2.1 Architecture:** Catalog-based indexing with per-stream tier engine — each category/endpoint is an independent stream with its own tier structure. API sites use modification-date filtering; HTML sites use page-range division across tiers. 82,000+ products indexed across 55+ sites. Uses a pressure/capacity model with per-site token budgets, admin-tunable crawl parameters, and a pluggable domain priority system (firearms 3x, ammunition 2x weighting).
 
 Uses an adapter-based scraping framework with platform-specific adapters for Shopify, WooCommerce, BigCommerce, Magento, and more. Supports "Search All Sites" to scan across the entire monitored network in one click. Includes authenticated forum scanning with encrypted credential storage and a built-in test store for end-to-end testing.
 
@@ -293,6 +293,19 @@ Example: capacity=0.22 → effective=13 tokens/hr, min_gap=277s
 | Tier 4 (Archive) | 22+ days back | 17 hours | Full catalog refresh at low priority |
 
 Each tier operates in cycles with absolute date snapshots. If a cycle can't finish in one hour, it continues the next hour. Cooldown timer starts after cycle completion.
+
+### Per-Stream Tier Engine (v2.1)
+
+Each category/endpoint is an independent **stream** with its own tier structure:
+
+- **API sites** (Shopify, WooCommerce): 1 stream — modification-date filtering handles tier division (`modified_after`/`modified_before` for WooCommerce, `updated_at_min` for Shopify)
+- **HTML sites** (GenericRetail): N streams — one per catalog URL, with page-range division (T2: pages 1-30%, T3: 30-65%, T4: 65-end)
+
+**Stream priority**: Each tier picks one stream per tick (highest priority) and concentrates all tokens on it. Default rotation is staleness-based (most stale first). Firearms domain plugin adds weighting: firearms streams 3x, ammunition 2x, rest 1x.
+
+**Stream detection**: Automatic on first catalog crawl — detects streams from adapter capabilities, persists to `streamState` JSON column. Backward-compatible: sites without `streamState` use legacy per-tier path.
+
+**Per-site crawl tuning**: Admin can override base budget, T1 reserve %, tier cooldowns, and catalog share percentages per site via `crawlTuning` JSON column. Live formula preview in admin panel.
 
 ### Catalog URL Resolution
 
@@ -950,6 +963,61 @@ Supported forum software:
 | Guest search creation | 3 requests | 1 hour |
 
 Rate limits use in-memory storage and reset on server restart.
+
+---
+
+## Changelog
+
+### 2026-03-09 — Per-Stream Tier Engine + Keyword Matching Overhaul
+
+#### Phase 1: Crawl Bug Fixes
+- **Pagination resume**: Fixed bug where tokens running out mid-pagination skipped remaining pages permanently. Now saves `currentPageUrl` and resumes from exact position next tick.
+- **WooCommerce modification-date filtering**: Switched from `after`/`before` (publish date) to `modified_after`/`modified_before` + `orderby=modified`. Now catches restocks, price changes, and any product modification.
+- **Shopify updated_at filtering**: Added `updated_at_min`/`updated_at_max` to `/products.json` calls for restock detection.
+
+#### Phase 2: Per-Stream Tier Engine
+- **Stream detection** (`stream-detector.ts`): API sites get 1 stream; HTML sites get N streams from catalog URLs with page-range division (T2: 1-30%, T3: 30-65%, T4: 65-end).
+- **Stream priority** (`stream-priority.ts`): General-purpose staleness rotation — most stale stream crawled first.
+- **Firearms priority plugin** (`stream-priority-firearms.ts`): Domain-specific weighting — firearms 3x, ammunition 2x, rest 1x. Decoupled from engine.
+- **Stream crawl functions** (`catalog-crawler.ts`): `crawlStreamTier()` handles both API (date ranges) and HTML (page ranges) streams.
+- **Scheduler integration** (`crawl-scheduler.ts`): Auto-detects streams on first catalog crawl, persists to DB, backward-compatible with legacy path.
+- **Worker integration** (`worker.ts`): `processStreamCatalogCrawl()` picks one stream per tier (highest priority), concentrates all tokens.
+- **Schema**: Added `streamState Json?` to MonitoredSite.
+
+#### Per-Site Crawl Tuning
+- **Tuning JSON column** (`crawlTuning`): Per-site overrides for base budget, T1 reserve %, tier cooldowns, catalog share percentages.
+- **Admin endpoints**: `PATCH /api/admin/sites/:id/tuning` and `DELETE /api/admin/sites/:id/tuning`.
+- **Frontend panel**: Live formula preview with Save and Reset to Default.
+
+#### Keyword Matching Improvements
+- **Space/hyphen normalization**: "AR-15", "AR 15", "AR15" all match each other. Works for all model names (TM22, CX-4, GSG-16, Type 81, X-Bolt, AK-47, etc.).
+- **Flexible regex matching**: Per-character regex with optional `[\s\-]?` separators.
+- **SQL query variants**: `searchProductIndex()` includes stripped variants in ILIKE queries.
+- **Playwright fallback fix**: Now triggers when static fetch completely fails (not just small HTML).
+
+#### New Files
+| File | Purpose |
+|------|---------|
+| `stream-detector.ts` | Detect streams per site, initialize state, compute page ranges |
+| `stream-priority.ts` | General-purpose staleness-based stream rotation |
+| `stream-priority-firearms.ts` | Firearms domain priority plugin (3x/2x/1x weighting) |
+| `crawl-tuning.ts` | Per-site tuning defaults and resolver |
+
+### 2026-03-08 — Sale Price Extraction + Product Classifier
+- Regular price extraction alongside sale prices
+- Product type classification (firearm, ammunition, optics, parts)
+- Stock status detection improvements
+
+### 2026-03-06 — Crawl Engine v2
+- Catalog indexing with ProductIndex table (82,000+ products)
+- Pressure/capacity priority model with per-site token budgets
+- 4-tier crawl system (watermark + catalog tiers)
+- Tier-aware notifications (PRO = instant, FREE = daily digest)
+
+### 2026-03-04 — Unified Crawl Engine
+- Priority-based scheduling replacing per-user cron jobs
+- Safety ceilings and circuit breaker backoff
+- Master-detail admin UI
 
 ---
 
