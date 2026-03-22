@@ -27,7 +27,7 @@ import * as cheerio from 'cheerio';
  * Detect total pages from HTML pagination links on the first page.
  * Looks for common patterns: numbered page links, "last" links, "of N" text.
  */
-function detectTotalPagesFromHtml($: cheerio.CheerioAPI, currentUrl: string): number | undefined {
+export function detectTotalPagesFromHtml($: cheerio.CheerioAPI, currentUrl: string): number | undefined {
   let maxPage = 0;
 
   // Strategy 1: Find numbered page links in pagination containers

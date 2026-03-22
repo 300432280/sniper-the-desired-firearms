@@ -11,6 +11,7 @@
 
 import type { Stream, SiteStreamState, StreamTierState } from './scraper/types';
 import { getAdapterForUrl } from './scraper/adapter-registry';
+import { detectTotalPagesFromHtml } from './catalog-crawler';
 
 /**
  * Derive a category tag from a URL path segment.
@@ -98,20 +99,70 @@ export async function detectStreams(siteUrl: string): Promise<Stream[]> {
 }
 
 /**
+ * Probe streams to discover totalPages at bootstrap time.
+ * For HTML streams: fetch page 1 and detect pagination from HTML.
+ * For page-partitioned API streams (Shopify): fetch page 1 to count products.
+ * This avoids the "all tiers start at page 1" bootstrap problem.
+ */
+export async function probeStreamTotalPages(streams: Stream[], siteUrl: string): Promise<void> {
+  const { adapter } = await getAdapterForUrl(siteUrl);
+
+  for (const stream of streams) {
+    if (stream.type === 'api') continue; // Date-partitioned APIs don't need page ranges
+
+    try {
+      if (adapter.fetchCatalogPage) {
+        // Page-partitioned API (e.g. Shopify) — fetch page 1 to discover total
+        const result = await adapter.fetchCatalogPage(new URL(siteUrl).origin, 1, { perPage: 250 });
+        if (result.totalPages) {
+          stream.totalPages = result.totalPages;
+        } else if (result.products.length > 0 && result.products.length < 250) {
+          stream.totalPages = 1; // Less than a full page = single page
+        }
+      } else if (stream.url) {
+        // HTML stream — fetch and detect pagination
+        const { fetchPage } = await import('./scraper/http-client');
+        const html = await fetchPage(stream.url);
+        if (html && html.length > 500) {
+          const cheerio = await import('cheerio');
+          const $ = cheerio.load(html);
+          const detected = detectTotalPagesFromHtml($, stream.url);
+          if (detected) stream.totalPages = detected;
+        }
+      }
+    } catch {
+      // Probe failure is non-fatal — tiers will discover pages on first crawl
+    }
+
+    // Rate limit between probes
+    await new Promise(r => setTimeout(r, 500));
+  }
+}
+
+/**
  * Initialize stream state for a site from detected streams.
- * Sets up empty tier states for each stream.
+ * Sets up tier states with page ranges from totalPages (if discovered during probe).
  */
 export function initStreamState(streams: Stream[]): SiteStreamState {
   const tiers: Record<string, StreamTierState> = {};
 
   for (const stream of streams) {
+    // If totalPages was discovered during probe, compute ranges upfront
+    const ranges = stream.totalPages && stream.totalPages > 0
+      ? computePageRanges(stream.totalPages)
+      : null;
+
     for (const tier of [2, 3, 4] as const) {
       const key = `${stream.id}:${tier}`;
+      const tierKey = `t${tier}` as 't2' | 't3' | 't4';
+      const range = ranges ? ranges[tierKey] : null;
+
       tiers[key] = {
         streamId: stream.id,
         tier,
-        currentPage: 0,
-        pageRangeStart: 1,
+        currentPage: range ? range[0] : 1,
+        pageRangeStart: range ? range[0] : 1,
+        pageRangeEnd: range ? range[1] : undefined,
         status: 'idle',
       };
     }

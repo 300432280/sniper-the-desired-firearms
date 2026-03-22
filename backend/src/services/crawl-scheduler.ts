@@ -21,7 +21,7 @@ import { pushEvent } from './debugLog';
 import { getColdStartStatus } from './cold-start';
 import { getBudget } from './token-budget';
 import { parseTierState, getActiveTiers } from './catalog-crawler';
-import { detectStreams, initStreamState, parseStreamState } from './stream-detector';
+import { detectStreams, initStreamState, parseStreamState, probeStreamTotalPages } from './stream-detector';
 
 // ── Safety Ceilings ──────────────────────────────────────────────────────────
 
@@ -222,12 +222,15 @@ export async function schedulerTick(): Promise<void> {
         try {
           const streams = await detectStreams(site.url);
           if (streams.length > 0) {
+            // Probe totalPages upfront so tiers start with proper page ranges
+            await probeStreamTotalPages(streams, site.url);
             streamState = initStreamState(streams);
+            const pagesInfo = streams.filter(s => s.totalPages).map(s => `${s.id}:${s.totalPages}p`).join(', ');
             await prisma.monitoredSite.update({
               where: { id: site.id },
               data: { streamState: streamState as any },
             });
-            console.log(`[Scheduler] Detected ${streams.length} stream(s) for ${site.domain}: ${streams.map(s => s.id).join(', ')}`);
+            console.log(`[Scheduler] Detected ${streams.length} stream(s) for ${site.domain}: ${streams.map(s => s.id).join(', ')}${pagesInfo ? ` (pages: ${pagesInfo})` : ''}`);
           }
         } catch (err) {
           console.error(`[Scheduler] Stream detection failed for ${site.domain}:`, err instanceof Error ? err.message : err);
