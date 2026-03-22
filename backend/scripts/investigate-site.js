@@ -726,6 +726,111 @@ async function probeC2_ProductSpotCheck(site) {
   return { probe: 'C2-spot-check', verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', issues, details: results };
 }
 
+// ── Probe C3: Data Accuracy — title, price, completeness vs live site ────
+async function probeC3_DataAccuracy(site) {
+  var results = [];
+  var issues = [];
+
+  // Get 8 random active products WITH prices (so we can compare)
+  var products = await prisma.productIndex.findMany({
+    where: { siteId: site.id, isActive: true, price: { not: null } },
+    select: { url: true, title: true, price: true, stockStatus: true },
+    take: 200,
+  });
+
+  if (products.length < 3) {
+    results.push(info('Not enough priced products to spot-check data accuracy'));
+    return { probe: 'C3-data-accuracy', verdict: 'SKIP', issues, details: results };
+  }
+
+  var shuffled = products.sort(function() { return 0.5 - Math.random(); });
+  var sample = shuffled.slice(0, 8);
+
+  var titleMismatches = 0;
+  var priceMismatches = 0;
+  var checked = 0;
+
+  for (var product of sample) {
+    await delay(600);
+    var resp = await safeFetch(product.url, 10000);
+
+    if (resp.status !== 200 || resp.data.length < 500) {
+      results.push(info(`"${product.title.substring(0, 40)}..." — HTTP ${resp.status}, skipped`));
+      continue;
+    }
+
+    checked++;
+    var html = resp.data;
+    var htmlLower = html.toLowerCase();
+
+    // ── Title check: extract h1 from live page and compare against our DB title
+    var pageTitleMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    var pageTitle = pageTitleMatch ? pageTitleMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : null;
+
+    if (pageTitle) {
+      var dbNorm = product.title.replace(/\s+/g, ' ').trim().toLowerCase();
+      var pageNorm = pageTitle.toLowerCase();
+      // Exact match after normalization, or DB title is a substring of page title (truncation is OK)
+      var titleMatch = dbNorm === pageNorm || pageNorm.startsWith(dbNorm) || dbNorm.startsWith(pageNorm);
+
+      if (!titleMatch) {
+        titleMismatches++;
+        issues.push(makeIssue('TITLE_MISMATCH',
+          'DB: "' + product.title.substring(0, 60) + '" vs Page: "' + pageTitle.substring(0, 60) + '"',
+          { dbTitle: product.title, pageTitle: pageTitle, url: product.url },
+          'medium'));
+        results.push(warn('Title mismatch: DB="' + product.title.substring(0, 45) + '" vs Page="' + pageTitle.substring(0, 45) + '"'));
+      }
+    }
+
+    // ── Price check: does our price appear on the page?
+    if (product.price) {
+      var priceStr = product.price.toFixed(2);
+      var priceInt = Math.round(product.price).toString();
+      var priceOnPage = html.includes(priceStr) || html.includes(priceInt + '.') || html.includes('$' + priceStr) || html.includes('$' + priceInt);
+
+      if (!priceOnPage) {
+        priceMismatches++;
+        var priceMatches = html.match(/\$[\d,]+\.\d{2}/g) || [];
+        var uniquePrices = Array.from(new Set(priceMatches)).slice(0, 5);
+        issues.push(makeIssue('PRICE_MISMATCH',
+          'DB price $' + priceStr + ' not found on page. Page prices: ' + (uniquePrices.join(', ') || 'none found'),
+          { dbPrice: product.price, pagePrices: uniquePrices, url: product.url },
+          'high'));
+        results.push(fail('Price mismatch: DB=$' + priceStr + ' not on page. Found: ' + (uniquePrices.join(', ') || 'none') + ' — ' + product.url.substring(0, 60)));
+      }
+    }
+  }
+
+  if (checked === 0) {
+    results.push(info('Could not fetch any product pages (WAF or timeout)'));
+    return { probe: 'C3-data-accuracy', verdict: 'SKIP', issues, details: results };
+  }
+
+  results.push(info('Checked ' + checked + ' products: ' + titleMismatches + ' title mismatches, ' + priceMismatches + ' price mismatches'));
+
+  if (titleMismatches === 0 && priceMismatches === 0) {
+    results.push(pass('All sampled products match live site data'));
+  }
+
+  if (priceMismatches >= 3) {
+    issues.push(makeIssue('SYSTEMATIC_PRICE_ERRORS',
+      priceMismatches + '/' + checked + ' products have wrong prices — adapter price extraction may be broken',
+      { priceMismatches: priceMismatches, checked: checked },
+      'high'));
+  }
+  if (titleMismatches >= 3) {
+    issues.push(makeIssue('SYSTEMATIC_TITLE_ERRORS',
+      titleMismatches + '/' + checked + ' products have wrong titles — adapter title extraction may be broken',
+      { titleMismatches: titleMismatches, checked: checked },
+      'high'));
+  }
+
+  var hasFail = issues.some(function(i) { return i.severity === 'high'; });
+  var hasWarn = issues.some(function(i) { return i.severity === 'medium'; });
+  return { probe: 'C3-data-accuracy', verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', issues: issues, details: results };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -779,7 +884,8 @@ async function investigateSite(domain, options) {
       { name: 'B1', fn: function() { return probeB1_PlatformDetect(site); } },
       { name: 'B4', fn: function() { return probeB4_Pagination(site); } },
       { name: 'C1', fn: function() { return probeC1_MultiKeywordSearch(site); } },
-      { name: 'C2', fn: function() { return probeC2_ProductSpotCheck(site); } }
+      { name: 'C2', fn: function() { return probeC2_ProductSpotCheck(site); } },
+      { name: 'C3', fn: function() { return probeC3_DataAccuracy(site); } }
     );
   }
 
