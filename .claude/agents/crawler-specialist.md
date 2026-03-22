@@ -1,6 +1,6 @@
 ---
 name: crawler-specialist
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 description: Web crawling and scraping specialist for adapter development and site monitoring
 ---
 

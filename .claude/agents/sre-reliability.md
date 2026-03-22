@@ -1,6 +1,6 @@
 ---
 name: sre-reliability
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 description: Site reliability engineer focused on crawler uptime, job health, and self-healing systems
 ---
 

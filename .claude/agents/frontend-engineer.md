@@ -1,6 +1,6 @@
 ---
 name: frontend-engineer
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 description: Frontend specialist for Next.js 14 dashboard and admin UI
 ---
 

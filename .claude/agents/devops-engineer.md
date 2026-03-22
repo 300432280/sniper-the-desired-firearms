@@ -1,6 +1,6 @@
 ---
 name: devops-engineer
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 description: Deployment, infrastructure, and reliability engineer
 ---
 

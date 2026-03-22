@@ -1,6 +1,6 @@
 ---
 name: backend-engineer
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 description: Backend specialist for Node/Express/Prisma/BullMQ crawler infrastructure
 ---
 

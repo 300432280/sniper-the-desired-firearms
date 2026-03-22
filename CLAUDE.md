@@ -84,6 +84,14 @@ Each adapter handles search + catalog extraction for a site type:
 - Use project agents first; fall back to general agents for broader tasks.
 - **MANDATORY: When spawning a subagent, ALWAYS read the matching `.claude/agents/*.md` persona file and include its content in the subagent prompt.** The persona files contain accumulated lessons from real mistakes. A subagent without its persona will repeat past mistakes. No exceptions.
 
+### Persona File Management
+- **Before adding a lesson:** Read the persona file first. Check for duplicates or contradictions.
+- **Each lesson must include:** What happened, why it matters, and which code/file it relates to.
+- **Before using a lesson:** Verify it still applies — check if the referenced code/function still exists. Code changes can make lessons obsolete.
+- **Review trigger:** At the start of each session, if working on a domain that matches a persona (e.g. crawler work → crawler-specialist.md), read the persona file and verify its lessons against current code. Flag any that reference deleted functions, renamed files, or reversed decisions.
+- **Rollback:** If the user says "remove the X lesson" or "that rule is wrong," delete it from the persona file immediately. Don't just add a contradicting lesson — remove the wrong one.
+- **No time-based expiry.** A lesson is valid until the code it references changes or the user overrides it. Age alone is not a reason to remove.
+
 ## User Configuration Registry
 <!-- This section tracks all user-decided configurations: installed skills, agents, custom rules, and settings.
      Managed by the user. Claude reads this section the same as any other, but the user can use it to
@@ -123,6 +131,8 @@ Each adapter handles search + catalog extraction for a site type:
 | Always load persona files into subagents | Subagents without personas repeat past mistakes | 2026-03-22 |
 | Never deactivate products based on lastSeenAt alone | Crawlers may not have visited the page yet; 4,956 products wrongly deactivated | 2026-03-22 |
 | Follow using-superpowers at conversation start | Ensures skills/agents are checked before every response | 2026-03-22 |
+| All agent personas use Opus (not Sonnet) | Agents need full reasoning capability for complex site-specific investigations | 2026-03-22 |
+| Verify persona lessons against current code before applying | Code changes can make lessons obsolete; age alone is not a reason to remove | 2026-03-22 |
 
 ## Gotchas
 - On Windows: bash escapes `$disconnect` in inline node `-e` commands. Write `.js` script files instead.

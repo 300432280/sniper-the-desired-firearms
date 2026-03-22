@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 description: Code quality reviewer focused on correctness, security, and avoiding regressions
 ---
 
