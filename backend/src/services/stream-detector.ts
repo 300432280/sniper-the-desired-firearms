@@ -68,13 +68,19 @@ export async function detectStreams(siteUrl: string): Promise<Stream[]> {
       rawUrls.push(`${origin}/shop/`);
     }
 
-    const seen = new Set<string>();
+    const seenUrls = new Set<string>();
+    const seenIds = new Set<string>();
     for (const url of rawUrls) {
-      if (seen.has(url)) continue;
-      seen.add(url);
+      if (seenUrls.has(url)) continue;
+      seenUrls.add(url);
 
       const category = deriveCategoryFromUrl(url);
       const id = category || `html-${streams.length}`;
+
+      // Deduplicate by stream id — two URLs mapping to the same id
+      // (e.g. /ads and /ads?sort_by=...) would create conflicting tier states
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
 
       streams.push({
         id,

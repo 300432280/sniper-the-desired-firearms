@@ -154,15 +154,18 @@ export class ShopifyAdapter extends AbstractAdapter {
     page: number,
     options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string },
   ): Promise<CatalogPage> {
-    const perPage = Math.min(options?.perPage ?? 250, 250);
+    // Always use 250 (Shopify max) regardless of caller's perPage —
+    // Shopify's API handles it efficiently and this minimizes pages needed.
+    const perPage = 250;
     const ua = pickUserAgent(new URL(origin).hostname);
 
-    // Shopify products.json API — returns structured JSON
-    // Uses `updated_at_min`/`updated_at_max` to filter by modification date,
-    // catching restocks (inventory changes update updated_at) and price changes.
+    // Shopify public /products.json API — returns structured JSON.
+    // NOTE: updated_at_min/max are IGNORED by the public (storefront) API.
+    // They only work on the authenticated Admin API. We intentionally skip
+    // sending them to avoid false confidence in date-range filtering.
+    // All tiers will crawl the full catalog, which is fine — Shopify catalogs
+    // are typically small enough (≤10 pages at 250/page) to cover quickly.
     const apiParams: Record<string, any> = { limit: perPage, page };
-    if (options?.dateAfter) apiParams.updated_at_min = options.dateAfter;
-    if (options?.dateBefore) apiParams.updated_at_max = options.dateBefore;
 
     const resp = await axios.get(`${origin}/products.json`, {
       params: apiParams,

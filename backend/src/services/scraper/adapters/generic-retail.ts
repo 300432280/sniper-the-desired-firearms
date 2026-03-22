@@ -1,6 +1,8 @@
 import type * as cheerio from 'cheerio';
-import type { ScrapedMatch, ExtractionOptions, CatalogProduct } from '../types';
+import type { ScrapedMatch, ExtractionOptions, CatalogProduct, CatalogPage } from '../types';
 import { AbstractAdapter } from './base';
+import axios from 'axios';
+import { fetchPageWithMeta } from '../http-client';
 
 /**
  * Generic retail adapter — fallback for non-Shopify, non-WooCommerce retailers.
@@ -46,6 +48,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '[class*="product-thumb"]',    // OpenCart (including product-thumb_ variants)
       '[class*="product-layout"]',   // OpenCart grid/list (including product-layout_ variants)
       'div.product',                 // Generic product div
+      'a.product',                   // Anchor-based product card (bullseyenorth ColdFusion)
       '[class*="klevuProduct"]',     // Klevu JS search overlay (BigCommerce, etc.)
       '.kuResultsListing li',        // Klevu search results list
       '[class*="hikashop_product"]', // HikaShop (Joomla — e.g. lockharttactical.com)
@@ -218,14 +221,17 @@ export class GenericRetailAdapter extends AbstractAdapter {
       // BigCommerce + Klevu JS overlay — products only render on LEAF category pages.
       // Navigation pages (/categories.php, /firearms-and-ammunition/) list subcategory
       // links but do NOT render Klevu product cards.
+      // Updated 2026-03-22: handguns & riflescopes pages removed by site;
+      // added long-range-precision, used-firearms, airguns.
       urls.push(
         `${origin}/shooting-supplies-firearms-ammunition/firearms/rifles/`,
         `${origin}/shooting-supplies-firearms-and-ammunition/firearms/shotguns/`,
-        `${origin}/shooting-supplies-firearms-ammunition/firearms/handguns/`,
+        `${origin}/shooting-supplies-firearms-and-ammunition/firearms/long-range-precision/`,
+        `${origin}/shooting-supplies-firearms-and-ammunition/firearms/used-firearms/`,
+        `${origin}/shooting-supplies-and-firearms/firearms/airguns-500fps-or-more-pal-required/`,
         `${origin}/shooting-supplies-firearms-ammunition/ammunition/centerfire-ammunition/`,
         `${origin}/shooting-supplies-firearms-ammunition/ammunition/rimfire-ammunition/`,
         `${origin}/shooting-supplies-firearms-ammunition/ammunition/shotgun-ammunition/`,
-        `${origin}/shooting-supplies-firearms-ammunition/optics/riflescopes/`,
         `${origin}/als-bargains/`,
       );
     }
@@ -347,6 +353,127 @@ export class GenericRetailAdapter extends AbstractAdapter {
     return [...new Set(urls)]; // Deduplicate (site-specific may overlap with generic)
   }
 
+  // ── Klevu API integration (alflahertys.com) ──────────────────────────────
+  // Products are rendered entirely by Klevu JS overlay — no server-side HTML.
+  // The Klevu search API is public (key embedded in page source) and returns
+  // structured product data with prices, stock status, images, and URLs.
+
+  private static KLEVU_CONFIG = {
+    apiKey: 'klevu-170966446878517137',
+    endpoint: 'https://uscs33v2.ksearchnet.com/cs/v2/search',
+    perPage: 36,
+    // Map category URL slugs → Klevu categoryPath strings.
+    // These paths are found via klevu_pageCategory in the page source.
+    categoryPaths: [
+      { slug: 'rifles', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Rifles' },
+      { slug: 'shotguns', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Shotguns' },
+      { slug: 'long-range-precision', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Long Range Precision' },
+      { slug: 'used-firearms', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Used Firearms' },
+      { slug: 'airguns', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Airguns 500FPS or More - PAL Required' },
+      { slug: 'centerfire-ammunition', path: 'Shooting Supplies, Firearms & Ammunition;Ammunition;Centerfire Ammunition' },
+      { slug: 'rimfire-ammunition', path: 'Shooting Supplies, Firearms & Ammunition;Ammunition;Rimfire Ammunition' },
+      { slug: 'shotgun-ammunition', path: 'Shooting Supplies, Firearms & Ammunition;Ammunition;Shotgun Ammunition' },
+    ],
+  };
+
+  /** Discover the Klevu categoryPath for a page by reading klevu_pageCategory from the HTML. */
+  private async _resolveKlevuCategoryPath(pageUrl: string): Promise<string | null> {
+    // First check static map using URL slug
+    const urlLower = pageUrl.toLowerCase();
+    for (const { slug, path } of GenericRetailAdapter.KLEVU_CONFIG.categoryPaths) {
+      if (urlLower.includes(slug)) return path;
+    }
+    // Fallback: fetch the page and extract klevu_pageCategory
+    try {
+      const result = await fetchPageWithMeta(pageUrl);
+      const match = result.html.match(/var\s+klevu_pageCategory\s*=\s*["']([^"']+)/);
+      if (match) return match[1].replace(/&amp;/g, '&');
+    } catch { /* ignore — will fall through to HTML extraction */ }
+    return null;
+  }
+
+  /**
+   * Fetch a catalog page for alflahertys.com via the Klevu search API.
+   * Returns null for non-alflahertys sites (falls through to HTML-based extraction).
+   */
+  async fetchCatalogPage(
+    origin: string,
+    page: number,
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string },
+  ): Promise<CatalogPage> {
+    // Only use Klevu API for alflahertys.com
+    if (!origin.includes('alflahertys.com')) {
+      return { products: [] };
+    }
+
+    const perPage = options?.perPage || GenericRetailAdapter.KLEVU_CONFIG.perPage;
+    const offset = (page - 1) * perPage;
+    const allProducts: CatalogProduct[] = [];
+    let hasMore = false;
+
+    // Iterate all known categories and fetch products
+    // On page 1 we sweep all categories; subsequent pages continue the sweep
+    for (const { path, slug } of GenericRetailAdapter.KLEVU_CONFIG.categoryPaths) {
+      try {
+        const response = await axios.post(GenericRetailAdapter.KLEVU_CONFIG.endpoint, {
+          context: { apiKeys: [GenericRetailAdapter.KLEVU_CONFIG.apiKey] },
+          recordQueries: [{
+            id: 'cat',
+            typeOfRequest: 'CATNAV',
+            settings: {
+              query: { categoryPath: path },
+              limit: perPage,
+              offset,
+              // Klevu CATNAV only supports RELEVANCE, PRICE_ASC/DESC, NAME_ASC/DESC
+              // (NEW_ARRIVAL returns 500). RELEVANCE is the best default.
+              sort: 'RELEVANCE',
+              fields: ['name', 'url', 'price', 'salePrice', 'image', 'sku', 'inStock', 'id'],
+            },
+          }],
+        }, {
+          timeout: 15000,
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const qr = response.data?.queryResults?.[0];
+        if (!qr?.records?.length) continue;
+
+        const total = qr.meta?.totalResultsFound || 0;
+        if (offset + perPage < total) hasMore = true;
+
+        for (const r of qr.records) {
+          if (!r.name || !r.url) continue;
+          allProducts.push({
+            url: r.url,
+            title: (r.name || '').trim().slice(0, 160),
+            price: r.salePrice ? parseFloat(r.salePrice) : (r.price ? parseFloat(r.price) : undefined),
+            regularPrice: r.salePrice && r.price && parseFloat(r.price) > parseFloat(r.salePrice)
+              ? parseFloat(r.price) : undefined,
+            stockStatus: r.inStock === 'yes' ? 'in_stock' : 'out_of_stock',
+            thumbnail: r.image || undefined,
+            tags: slug,
+            sourceCategory: path.split(';').pop() || undefined,
+          });
+        }
+      } catch (err) {
+        console.log(`[GenericRetail] Klevu API error for ${slug}: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+
+    // Deduplicate by URL (products may appear in multiple categories)
+    const seen = new Set<string>();
+    const deduped = allProducts.filter(p => {
+      if (seen.has(p.url)) return false;
+      seen.add(p.url);
+      return true;
+    });
+
+    return {
+      products: deduped,
+      nextPageUrl: hasMore ? `klevu://page/${page + 1}` : undefined,
+    };
+  }
+
   extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
     const products: CatalogProduct[] = [];
     const seen = new Set<string>();
@@ -377,6 +504,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.product-thumb',              // OpenCart
       '.product-layout',             // OpenCart
       'div.product',
+      'a.product',                   // Anchor-based product card (bullseyenorth ColdFusion)
       '[class*="klevuProduct"]',     // Klevu JS search overlay (BigCommerce, etc.)
       '.kuResultsListing li',        // Klevu search results list
       '[class*="hikashop_product"]', // HikaShop (Joomla)
@@ -534,7 +662,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
     const container = el.closest(
       '[class*="productborder"], [class*="product-card"], [class*="product-item"], ' +
       '[class*="product-tile"], [class*="item-card"], [class*="grid-item"], ' +
-      'li.product, div.product, article, .card, [data-product-id], [data-product]'
+      'li.product, div.product, a.product, article, .card, [data-product-id], [data-product]'
     );
     if (container.length) return container;
 

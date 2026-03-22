@@ -97,7 +97,7 @@ const SITES: SiteSeed[] = [
 
   // ── Headless/SPA (limited scraping support) ────────────────────────────
   { domain: 'gotenda.com', name: 'GoTenda', url: 'https://www.gotenda.com', siteType: 'retailer', adapterType: 'generic-retail', requiresSucuri: true, hasWaf: true, notes: 'Headless SPA, 307 redirects, Sucuri WAF — limited scraping' },
-  { domain: 'bullseyenorth.com', name: 'Bullseye North', url: 'https://www.bullseyenorth.com', siteType: 'retailer', adapterType: 'generic-retail', notes: 'Parse error on HTTP requests — limited scraping' },
+  { domain: 'bullseyenorth.com', name: 'Bullseye North', url: 'https://www.bullseyenorth.com', siteType: 'retailer', adapterType: 'generic-retail', hasWaf: true, notes: 'ColdFusion CMS, malformed HTTP headers (trailing spaces) break Axios+undici — needs Playwright. Products use a.product selector.' },
   { domain: 'hical.ca', name: 'Hi-Cal', url: 'https://hical.ca', siteType: 'retailer', adapterType: 'generic-retail', notes: 'Headless SPA, returns empty HTML' },
 
   // ── Big Box / Other Retailers ────────────────────────────────────────────

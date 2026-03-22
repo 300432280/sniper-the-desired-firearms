@@ -147,10 +147,10 @@ export class GunpostAdapter extends AbstractAdapter {
   }
 
   getNewArrivalsUrls(origin: string): string[] {
+    // Only the sorted URL — /ads without sort_by creates a duplicate "ads" stream
+    // with the same id but unsorted results, which breaks tier page-range logic.
     return [
       `${origin}/ads?sort_by=date_pub&sort_order=DESC`,
-      `${origin}/ads`,
-      `${origin}/`,
     ];
   }
 
