@@ -208,7 +208,24 @@ export interface FetchOptions {
  * - Set-Cookie collection across redirect chain
  * - Difficulty signal detection from response
  */
+/** Block SSRF: reject internal/private network URLs */
+function validateExternalUrl(url: string): void {
+  const parsed = new URL(url);
+  const hostname = parsed.hostname.toLowerCase();
+  const blocked = [
+    'localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]',
+    '169.254.169.254', // cloud metadata
+    'metadata.google.internal',
+  ];
+  if (blocked.includes(hostname)) throw new Error(`SSRF blocked: ${hostname}`);
+  // Block private IP ranges
+  if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(hostname)) throw new Error(`SSRF blocked: private IP ${hostname}`);
+  // Block non-HTTP schemes
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error(`SSRF blocked: invalid protocol ${parsed.protocol}`);
+}
+
 export async function fetchPage(url: string, cookies?: string, options?: FetchOptions): Promise<string> {
+  validateExternalUrl(url);
   const result = await fetchPageWithMeta(url, cookies, options);
   return result.html;
 }

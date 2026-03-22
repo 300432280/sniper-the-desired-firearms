@@ -341,6 +341,9 @@ export default function NewAlertPage() {
             </div>
             <button
               type="button"
+              role="switch"
+              aria-checked={searchAll}
+              aria-label="Search All Canadian Sites"
               onClick={() => setSearchAll((v) => !v)}
               className={`relative inline-flex items-center w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
                 searchAll ? 'bg-accent' : 'bg-surface-elevated border border-border-strong'
@@ -507,6 +510,9 @@ export default function NewAlertPage() {
             </div>
             <button
               type="button"
+              role="switch"
+              aria-checked={inStockOnly}
+              aria-label="In-Stock Only"
               onClick={() => setInStockOnly((v) => !v)}
               className={`relative inline-flex items-center w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
                 inStockOnly ? 'bg-accent' : 'bg-surface-elevated border border-border-strong'
@@ -553,6 +559,9 @@ export default function NewAlertPage() {
             </div>
             <button
               type="button"
+              role="switch"
+              aria-checked={needsLogin}
+              aria-label="Site Login"
               onClick={async () => {
                 const next = !needsLogin;
                 setNeedsLogin(next);

@@ -18,7 +18,7 @@ export async function sendAlertSms(
   backendUrl: string
 ): Promise<void> {
   const twilioClient = getClient();
-  if (!twilioClient) {
+  if (!twilioClient || !config.twilioFromNumber) {
     throw new Error('Twilio not configured');
   }
 

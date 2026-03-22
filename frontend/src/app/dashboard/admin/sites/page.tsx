@@ -1184,6 +1184,7 @@ export default function SiteMonitorPage() {
               ].map((col) => (
                 <th
                   key={col.label || 'actions'}
+                  aria-sort={col.field && sortField === col.field ? (sortAsc ? 'ascending' : 'descending') : undefined}
                   className={`px-2.5 py-2 text-left text-[9px] font-heading tracking-widest uppercase text-foreground-muted whitespace-nowrap ${
                     col.field ? 'cursor-pointer hover:text-foreground' : ''
                   } ${sortField === col.field ? 'text-accent' : ''}`}
@@ -1224,6 +1225,10 @@ export default function SiteMonitorPage() {
               <React.Fragment key={site.id}>
               <tr
                 onClick={() => setExpanded(isExpanded ? null : site.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(isExpanded ? null : site.id); } }}
+                tabIndex={0}
+                role="button"
+                aria-expanded={isExpanded}
                 className={`border-b border-border/50 hover:bg-surface-elevated/30 transition-colors cursor-pointer ${
                   !site.isEnabled ? 'opacity-50' : site.isPaused ? 'opacity-60 bg-yellow-400/[0.03]' : ''
                 }`}

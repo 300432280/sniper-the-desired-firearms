@@ -77,6 +77,7 @@ function incrementGlobalCrawlCount(): void {
  * 4. Queue crawl jobs: legacy keyword crawl + new catalog/watermark crawls
  */
 export async function schedulerTick(): Promise<void> {
+  try {
   const now = new Date();
 
   // 1. Clean up expired locks (crashed workers, stuck jobs)
@@ -266,6 +267,9 @@ export async function schedulerTick(): Promise<void> {
       type: 'info',
       message: `Scheduler: queued ${queued} crawl(s) of ${dueSites.length} due sites`,
     });
+  }
+  } catch (err) {
+    console.error('[Scheduler] schedulerTick failed:', err instanceof Error ? err.message : err);
   }
 }
 

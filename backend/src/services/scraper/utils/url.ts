@@ -1,7 +1,7 @@
 /** Resolve a relative href against a base URL */
 export function resolveUrl(href: string, baseUrl: string): string {
   try {
-    if (!href || href === '#') return baseUrl;
+    if (!href || href === '#') return '';
     if (href.startsWith('http')) return href;
     // .aspx relative paths (e.g. "LotDetail.aspx?id=123") should resolve from origin root
     if (/^[a-zA-Z][\w-]*\.aspx/i.test(href)) {

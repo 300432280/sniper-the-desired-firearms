@@ -1,7 +1,7 @@
 import type * as cheerio from 'cheerio';
 
-/** Determine whether a product element indicates the item is in stock */
-export function isInStock(element: cheerio.Cheerio<any>): boolean {
+/** Determine whether a product element indicates the item is in stock. Returns undefined if unknown. */
+export function isInStock(element: cheerio.Cheerio<any>): boolean | undefined {
   const text = element.text().toLowerCase();
 
   // Out-of-stock signals (check first — takes priority)
@@ -25,6 +25,6 @@ export function isInStock(element: cheerio.Cheerio<any>): boolean {
   ).first();
   if (btn.length && (btn.attr('disabled') !== undefined || btn.hasClass('disabled'))) return false;
 
-  // Default: unknown (callers should treat as 'unknown' rather than assuming in-stock)
-  return true;
+  // Default: unknown — no signal either way
+  return undefined;
 }

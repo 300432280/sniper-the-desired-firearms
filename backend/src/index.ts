@@ -9,7 +9,7 @@ import authRouter from './routes/auth';
 import searchesRouter from './routes/searches';
 import adminRouter from './routes/admin';
 import { startWorker, startHealthWorker, startSchedulerWorker, startDigestWorker } from './services/worker';
-import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs, scheduleDailyDigest } from './services/queue';
+import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs, scheduleDailyDigest, redisConnection } from './services/queue';
 import { prisma } from './lib/prisma';
 
 /** Escape HTML special characters to prevent XSS */
@@ -45,6 +45,9 @@ app.use(
   })
 );
 
+// Trust proxy for correct client IP behind Railway/Vercel reverse proxy
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -67,14 +70,17 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/searches', searchesRouter);
 app.use('/api/admin', adminRouter);
 
-// Health check endpoint (used by Railway) — verifies DB connectivity
+// Health check endpoint (used by Railway) — verifies DB + Redis connectivity
 app.get('/health', async (_req, res) => {
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await Promise.all([
+      prisma.$queryRaw`SELECT 1`,
+      redisConnection.ping(),
+    ]);
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   } catch (err) {
-    console.error('[Health] DB check failed:', err);
-    res.status(503).json({ status: 'degraded', error: 'Database unreachable', timestamp: new Date().toISOString() });
+    console.error('[Health] Health check failed:', err);
+    res.status(503).json({ status: 'degraded', error: 'Service dependency unreachable', timestamp: new Date().toISOString() });
   }
 });
 

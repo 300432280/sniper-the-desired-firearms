@@ -25,7 +25,9 @@ function deriveCategoryFromUrl(url: string): string | undefined {
     // Skip generic segments
     const skip = new Set(['shop', 'products', 'product', 'product-category', 'collections', 'category', 'all']);
     const meaningful = segments.filter(s => !skip.has(s));
-    return meaningful[meaningful.length - 1] || segments[segments.length - 1] || undefined;
+    // Join all meaningful segments to avoid collisions (e.g. /firearms/rifles vs /used/rifles)
+    if (meaningful.length > 0) return meaningful.join('-');
+    return segments[segments.length - 1] || undefined;
   } catch {
     return undefined;
   }
@@ -135,7 +137,8 @@ export function parseStreamState(json: unknown): SiteStreamState | null {
  */
 export function computePageRanges(totalPages: number): { t2: [number, number]; t3: [number, number]; t4: [number, number | undefined] } {
   if (totalPages <= 1) {
-    return { t2: [1, 1], t3: [1, 1], t4: [1, undefined] };
+    // Single page: only T2 crawls it, T3/T4 have no work (start > end)
+    return { t2: [1, 1], t3: [2, 1], t4: [2, undefined] };
   }
   const t2End = Math.max(1, Math.ceil(totalPages * 0.3));
   const t3End = Math.max(t2End + 1, Math.ceil(totalPages * 0.65));
