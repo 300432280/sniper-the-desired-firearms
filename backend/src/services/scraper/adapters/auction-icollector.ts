@@ -32,6 +32,7 @@ function icollectorFriendlyUrl(title: string, itemId: number): string {
 export class ICollectorAdapter extends AbstractAdapter {
   name = 'iCollector';
   siteType = 'auction' as const;
+  supportsDateFilter = false; // CloudSearch API has no date filtering, uses isCurrent flag
 
   getSearchUrl(origin: string, keyword: string): string {
     return `${origin}/search/?q=${encodeURIComponent(keyword)}`;

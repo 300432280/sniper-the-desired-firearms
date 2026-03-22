@@ -11,6 +11,7 @@ import { fetchPageWithMeta } from '../http-client';
 export class GenericRetailAdapter extends AbstractAdapter {
   name = 'GenericRetail';
   siteType = 'retailer' as const;
+  supportsDateFilter = false; // Klevu API (alflahertys) and HTML scraping have no date filtering
 
   getSearchUrl(origin: string, keyword: string): string {
     return `${origin}/search?q=${encodeURIComponent(keyword)}`;
