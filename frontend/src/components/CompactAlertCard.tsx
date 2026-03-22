@@ -12,6 +12,7 @@ interface Props {
 
 export default function CompactAlertCard({ search, group, isSelected, onClick }: Props) {
   const isGroup = !!group;
+  if (!isGroup && !search) return null;
   const keyword = isGroup ? group.keyword : search!.keyword;
   const isActive = isGroup ? group.isActive : search!.isActive;
   const matchCount = isGroup ? group.totalMatches : (search!._count?.matches ?? 0);

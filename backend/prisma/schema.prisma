@@ -62,6 +62,9 @@ model Search {
   matches          Match[]
   notifications    Notification[]
 
+  @@index([userId])
+  @@index([websiteUrl])
+  @@index([searchAllGroupId])
   @@map("searches")
 }
 
@@ -93,6 +96,7 @@ model Notification {
   status   String              @default("sent")
   matches  NotificationMatch[]
 
+  @@index([searchId])
   @@map("notifications")
 }
 

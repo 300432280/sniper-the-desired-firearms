@@ -12,6 +12,17 @@ import { startWorker, startHealthWorker, startSchedulerWorker, startDigestWorker
 import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs, scheduleDailyDigest } from './services/queue';
 import { prisma } from './lib/prisma';
 
+/** Escape HTML special characters to prevent XSS */
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Check if the request has a valid admin JWT cookie
 function isAdmin(req: express.Request): boolean {
   const token = req.cookies?.token as string | undefined;
@@ -39,14 +50,32 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(generalLimiter);
 
+// Security headers
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 // Routes
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/searches', searchesRouter);
 app.use('/api/admin', adminRouter);
 
-// Health check endpoint (used by Railway)
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check endpoint (used by Railway) — verifies DB connectivity
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  } catch (err) {
+    console.error('[Health] DB check failed:', err);
+    res.status(503).json({ status: 'degraded', error: 'Database unreachable', timestamp: new Date().toISOString() });
+  }
 });
 
 // ── Dynamic Test Page ──────────────────────────────────────────────────
@@ -110,9 +139,9 @@ app.get('/test-page', async (req, res) => {
   const productCards = testProducts.map((p) => `
     <div class="product-card">
       <div class="product-info">
-        <h3 class="product-title">${p.title}</h3>
+        <h3 class="product-title">${escapeHtml(p.title)}</h3>
         <span class="price">$${p.price.toFixed(2)}</span>
-        <span class="stock">${p.stock}</span>
+        <span class="stock">${escapeHtml(p.stock)}</span>
         <a href="http://localhost:${config.port}/test-page/${p.slug}">View Details</a>
       </div>
       ${admin ? `<div class="product-actions">
@@ -141,7 +170,7 @@ app.get('/test-page', async (req, res) => {
           <span style="color:#6B7280; font-size:11px; font-family:monospace; min-width:42px;">${time}</span>
           <span style="font-size:9px; padding:2px 6px; letter-spacing:0.1em; text-transform:uppercase; background:${statusColor}; color:#fff;">${n.status}</span>
           <span style="font-size:9px; padding:2px 6px; letter-spacing:0.1em; text-transform:uppercase; border:1px solid #1E1E1E; color:#6B7280;">${n.type}</span>
-          <span style="color:#E2E2E2; font-size:12px; flex:1;">"${n.search.keyword}" &mdash; ${n._count.matches} item(s)</span>
+          <span style="color:#E2E2E2; font-size:12px; flex:1;">"${escapeHtml(n.search.keyword)}" &mdash; ${n._count.matches} item(s)</span>
           <a href="/notifications/${n.id}" target="_blank" style="color:#4D7A3C; font-size:10px; text-transform:uppercase; letter-spacing:0.15em; border:1px solid rgba(77,122,60,0.3); padding:3px 10px; text-decoration:none;">Preview</a>
         </div>`;
       }).join('');
@@ -421,11 +450,11 @@ app.get('/notifications/:id', async (req, res) => {
       <div style="background:#161616; border:1px solid #1E1E1E; padding:14px 18px; margin:8px 0; display:flex; align-items:center; justify-content:space-between;">
         <div style="flex:1;">
           <span style="display:inline-block; background:#4D7A3C; color:#fff; font-size:9px; padding:2px 6px; letter-spacing:0.1em; text-transform:uppercase; margin-right:8px; vertical-align:middle;">NEW</span>
-          <span style="color:#E2E2E2; font-size:14px;">${m.title}</span>
+          <span style="color:#E2E2E2; font-size:14px;">${escapeHtml(m.title)}</span>
         </div>
         <div style="flex-shrink:0; text-align:right;">
           <span style="color:#D4620A; font-weight:600; margin-right:16px;">${m.price ? `$${m.price.toFixed(2)}` : ''}</span>
-          <a href="${m.url}" target="_blank" rel="noopener noreferrer" style="color:#4D7A3C; text-decoration:none; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; border:1px solid rgba(77,122,60,0.3); padding:4px 12px;">View &rarr;</a>
+          <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" style="color:#4D7A3C; text-decoration:none; font-size:11px; text-transform:uppercase; letter-spacing:0.15em; border:1px solid rgba(77,122,60,0.3); padding:4px 12px;">View &rarr;</a>
         </div>
       </div>`).join('');
 
@@ -448,8 +477,8 @@ app.get('/notifications/:id', async (req, res) => {
 </head><body>
 <div class="wrap">
   <div class="label">Tactical Alert</div>
-  <h1>${matchItems.length} new item${matchItems.length > 1 ? 's' : ''}: <span class="keyword">${keyword}</span></h1>
-  <div class="meta">Found on ${sentAt} &middot; Monitoring ${notification.search.websiteUrl}</div>
+  <h1>${matchItems.length} new item${matchItems.length > 1 ? 's' : ''}: <span class="keyword">${escapeHtml(keyword)}</span></h1>
+  <div class="meta">Found on ${sentAt} &middot; Monitoring ${escapeHtml(notification.search.websiteUrl)}</div>
   ${matchRows}
   <div class="footer">
     <a href="${config.frontendUrl}/dashboard">Manage Alerts</a>
@@ -518,3 +547,13 @@ const shutdown = async () => {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
+// Catch unhandled errors to prevent silent crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Server] Unhandled rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[Server] Uncaught exception:', err);
+  // Give workers time to finish, then exit
+  setTimeout(() => process.exit(1), 5000);
+});

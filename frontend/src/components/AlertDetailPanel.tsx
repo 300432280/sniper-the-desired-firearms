@@ -31,6 +31,7 @@ const NOTIFY_LABELS: Record<string, string> = {
 
 export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onDelete, onToggleGroup, onDeleteGroup, onRefresh }: Props) {
   const isGroup = !!group;
+  if (!isGroup && !search) return null;
   const keyword = isGroup ? group.keyword : search!.keyword;
   const isActive = isGroup ? group.isActive : search!.isActive;
   const checkInterval = isGroup ? group.checkInterval : search!.checkInterval;

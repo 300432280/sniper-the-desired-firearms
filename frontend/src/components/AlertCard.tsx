@@ -370,7 +370,7 @@ function GroupedScanResults({
         </p>
         {scanMeta?.notificationId && (
           <a
-            href={`http://localhost:4000/notifications/${scanMeta.notificationId}`}
+            href={`/api/notifications/${scanMeta.notificationId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[10px] font-heading tracking-wider uppercase text-accent hover:underline border border-accent/20 px-2 py-0.5"
@@ -385,6 +385,7 @@ function GroupedScanResults({
 
 export default function AlertCard({ search, group, onToggle, onDelete, onToggleGroup, onDeleteGroup, onRefresh }: Props) {
   const isGroup = !!group;
+  if (!isGroup && !search) return null;
 
   // Derive common display values from either search or group
   const keyword = isGroup ? group.keyword : search!.keyword;

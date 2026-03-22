@@ -186,7 +186,8 @@ function parseStreamState(ss: SiteStreamState | string | null): SiteStreamState 
   return ss;
 }
 
-function streamTierBadge(tiers: Record<string, StreamTierState>, tierNum: 2 | 3 | 4): { label: string; color: string } {
+function streamTierBadge(tiers: Record<string, StreamTierState> | null | undefined, tierNum: 2 | 3 | 4): { label: string; color: string } {
+  if (!tiers) return { label: 'idle', color: 'text-foreground-dim' };
   // Aggregate status across ALL streams for this tier (priority: in_progress > cooldown > idle)
   const entries = Object.values(tiers).filter(t => t.tier === tierNum);
   if (entries.length === 0) return { label: 'idle', color: 'text-foreground-dim' };

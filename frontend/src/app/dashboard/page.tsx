@@ -122,7 +122,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 flex-shrink-0">
           {user?.isAdmin && (
             <a
-              href="http://localhost:4000/test-page"
+              href="/api/test-page"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[11px] font-heading uppercase tracking-wider px-4 py-2 border border-orange-500/30 text-orange-400 hover:bg-orange-500/10 transition-colors"
@@ -170,7 +170,7 @@ export default function DashboardPage() {
       {user?.isAdmin && (
         <div className="border border-orange-500/20 bg-orange-500/5 px-5 py-3 flex items-center gap-4 mb-6">
           <span className="text-[10px] font-heading tracking-widest uppercase text-orange-400">Admin Tools</span>
-          <a href="http://localhost:4000/test-page" target="_blank" rel="noopener noreferrer" className="text-xs text-orange-300 hover:underline">
+          <a href="/api/test-page" target="_blank" rel="noopener noreferrer" className="text-xs text-orange-300 hover:underline">
             Test Store
           </a>
           <Link href="/dashboard/admin/debug" className="text-xs text-orange-300 hover:underline">

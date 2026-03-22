@@ -137,6 +137,30 @@ router.post('/sites', async (req: Request, res: Response) => {
   }
 });
 
+// PATCH /api/admin/sites/batch — batch update (MUST be before :id to avoid route conflict)
+router.patch('/sites/batch', async (req: Request, res: Response) => {
+  try {
+    const { siteIds, isEnabled, isPaused } = req.body;
+    if (!Array.isArray(siteIds) || siteIds.length === 0) {
+      return res.status(400).json({ error: 'siteIds (array) is required' });
+    }
+    if (typeof isEnabled !== 'boolean' && typeof isPaused !== 'boolean') {
+      return res.status(400).json({ error: 'isEnabled (boolean) or isPaused (boolean) is required' });
+    }
+    const data: Record<string, boolean> = {};
+    if (typeof isEnabled === 'boolean') data.isEnabled = isEnabled;
+    if (typeof isPaused === 'boolean') data.isPaused = isPaused;
+    await prisma.monitoredSite.updateMany({
+      where: { id: { in: siteIds } },
+      data,
+    });
+    return res.json({ updated: siteIds.length, ...data });
+  } catch (err) {
+    console.error('[Admin] Batch update error:', err);
+    return res.status(500).json({ error: 'Failed to batch update sites' });
+  }
+});
+
 // PATCH /api/admin/sites/:id — update a monitored site
 router.patch('/sites/:id', async (req: Request, res: Response) => {
   try {
@@ -167,30 +191,6 @@ router.patch('/sites/:id', async (req: Request, res: Response) => {
     }
     console.error('[Admin] Update site error:', err);
     return res.status(500).json({ error: 'Failed to update site' });
-  }
-});
-
-// PATCH /api/admin/sites/batch — batch update isEnabled or isPaused for multiple sites
-router.patch('/sites/batch', async (req: Request, res: Response) => {
-  try {
-    const { siteIds, isEnabled, isPaused } = req.body;
-    if (!Array.isArray(siteIds) || siteIds.length === 0) {
-      return res.status(400).json({ error: 'siteIds (array) is required' });
-    }
-    if (typeof isEnabled !== 'boolean' && typeof isPaused !== 'boolean') {
-      return res.status(400).json({ error: 'isEnabled (boolean) or isPaused (boolean) is required' });
-    }
-    const data: Record<string, boolean> = {};
-    if (typeof isEnabled === 'boolean') data.isEnabled = isEnabled;
-    if (typeof isPaused === 'boolean') data.isPaused = isPaused;
-    await prisma.monitoredSite.updateMany({
-      where: { id: { in: siteIds } },
-      data,
-    });
-    return res.json({ updated: siteIds.length, ...data });
-  } catch (err) {
-    console.error('[Admin] Batch update error:', err);
-    return res.status(500).json({ error: 'Failed to batch update sites' });
   }
 });
 

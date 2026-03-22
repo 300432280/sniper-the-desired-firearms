@@ -485,9 +485,9 @@ export default function NewAlertPage() {
             {(notificationType === 'SMS' || notificationType === 'BOTH') && !user?.phone && (
               <p className="mt-2 text-xs text-secondary">
                 No phone number on file.{' '}
-                <Link href="/dashboard/settings" className="underline hover:text-foreground">
-                  Add one in settings
-                </Link>
+                <span className="text-foreground-dim">
+                  Contact support to add a phone number
+                </span>
                 .
               </p>
             )}

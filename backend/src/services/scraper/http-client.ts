@@ -347,6 +347,13 @@ async function fetchWithRedirects(
     const html = typeof response.data === 'string' ? response.data : '';
     const responseTimeMs = Date.now() - startTime;
 
+    // Handle 429 rate limiting — throw to trigger retry with backoff
+    if (response.status === 429) {
+      const retryAfter = response.headers['retry-after'];
+      console.log(`[HTTP] 429 rate limited for ${currentUrl}${retryAfter ? ` (retry-after: ${retryAfter})` : ''}`);
+      throw new Error(`Rate limited (429) for ${currentUrl}`);
+    }
+
     // Detect difficulty signals from response
     const signals = detectDifficultySignals(response.status, response.headers, html);
 

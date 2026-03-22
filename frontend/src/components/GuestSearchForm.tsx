@@ -172,9 +172,9 @@ export default function GuestSearchForm({ defaultKeyword = '' }: Props) {
 
       <p className="text-xs text-center text-foreground-dim">
         By using this service you agree to our{' '}
-        <a href="/terms" className="text-foreground-muted hover:text-foreground underline">
-          terms
-        </a>
+        <span className="text-foreground-muted">
+          terms of service
+        </span>
         . We are not affiliated with any retailer.
       </p>
     </form>

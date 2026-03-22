@@ -71,11 +71,17 @@ Each adapter handles search + catalog extraction for a site type:
 - `dashboard/alerts/` — user alert management
 - `dashboard/history/` — match history
 
-## Skills
+## Skills & Agents
 - Always follow the `using-superpowers` skill at conversation start.
-- Check `~/.claude/agents/agency-agents/` for available agent personas before tasks.
-- Agent categories: engineering, design, testing, product, support, specialized.
-- Most relevant agents for this project: backend-architect, database-optimizer, devops-automator, frontend-developer, code-reviewer, sre.
+- Check `~/.claude/agents/agency-agents/` for general-purpose agent personas.
+- Project-specific agents in `.claude/agents/`:
+  - `backend-engineer` — Node/Express/Prisma/BullMQ infrastructure
+  - `frontend-engineer` — Next.js 14 dashboard and admin UI
+  - `crawler-specialist` — adapter development, scraping, stream/tier logic
+  - `sre-reliability` — crawler uptime, job health, self-healing, diagnostics
+  - `devops-engineer` — deployment (Vercel/Railway), infra, reliability
+  - `code-reviewer` — correctness, security, regression prevention
+- Use project agents first; fall back to general agents for broader tasks.
 
 ## Gotchas
 - On Windows: bash escapes `$disconnect` in inline node `-e` commands. Write `.js` script files instead.

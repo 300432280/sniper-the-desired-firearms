@@ -78,55 +78,66 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
   const { siteId, domain, url, baseBudget, capacity, activeTiers } = job.data;
   const tuning = resolveTuning(job.data.crawlTuning);
 
-  // Try stream-based crawling first (Phase 2)
-  const streamState = parseStreamState(job.data.streamState);
-  if (streamState && streamState.streams.length > 0) {
-    await processStreamCatalogCrawl(job.data, streamState, tuning, activeTiers);
-    return;
-  }
-
-  // Legacy path: per-tier crawling (sites without streamState)
-  const tierState = parseTierState(job.data.tierState);
-
-  console.log(`[CatalogWorker] Legacy catalog crawl: ${domain} (tiers: ${Object.entries(activeTiers).filter(([, v]) => v).map(([k]) => k).join(',')})`);
-
-  const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers, tuning);
-  const updatedState: TierState = { ...tierState };
-
-  for (const tier of [2, 3, 4] as const) {
-    const tierKey = `tier${tier}` as keyof typeof activeTiers;
-    if (!activeTiers[tierKey] || allocation[tierKey] <= 0) continue;
-
-    let cycleState = updatedState[tierKey];
-    if (cycleState.status === 'idle' || cycleState.status === 'cooldown') {
-      cycleState = startTierCycle(tier);
-      updatedState[tierKey] = cycleState;
+  try {
+    // Try stream-based crawling first (Phase 2)
+    const streamState = parseStreamState(job.data.streamState);
+    if (streamState && streamState.streams.length > 0) {
+      await processStreamCatalogCrawl(job.data, streamState, tuning, activeTiers);
+      return;
     }
 
-    const result = await crawlCatalogTier({
-      siteId,
-      url,
-      domain,
-      tier,
-      tierState: cycleState,
-      tokensAllocated: allocation[tierKey],
-      baseBudget,
-      capacity,
-      hasWaf: job.data.hasWaf,
+    // Legacy path: per-tier crawling (sites without streamState)
+    const tierState = parseTierState(job.data.tierState);
+
+    console.log(`[CatalogWorker] Legacy catalog crawl: ${domain} (tiers: ${Object.entries(activeTiers).filter(([, v]) => v).map(([k]) => k).join(',')})`);
+
+    const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers, tuning);
+    const updatedState: TierState = { ...tierState };
+
+    for (const tier of [2, 3, 4] as const) {
+      const tierKey = `tier${tier}` as keyof typeof activeTiers;
+      if (!activeTiers[tierKey] || allocation[tierKey] <= 0) continue;
+
+      let cycleState = updatedState[tierKey];
+      if (cycleState.status === 'idle' || cycleState.status === 'cooldown') {
+        cycleState = startTierCycle(tier);
+        updatedState[tierKey] = cycleState;
+      }
+
+      const result = await crawlCatalogTier({
+        siteId,
+        url,
+        domain,
+        tier,
+        tierState: cycleState,
+        tokensAllocated: allocation[tierKey],
+        baseBudget,
+        capacity,
+        hasWaf: job.data.hasWaf,
+      });
+
+      const cooldownMap = { tier2: tuning.t2CooldownHrs, tier3: tuning.t3CooldownHrs, tier4: tuning.t4CooldownHrs };
+      updatedState[tierKey] = updateTierProgress(cycleState, result.pagesScanned, result.cycleComplete, tier, cooldownMap[tierKey]);
+
+      console.log(`[CatalogWorker] Tier ${tier} ${result.status}: ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens${result.cycleComplete ? ' (cycle complete)' : ''}`);
+    }
+
+    await prisma.monitoredSite.update({
+      where: { id: siteId },
+      data: { tierState: updatedState as any },
     });
 
-    const cooldownMap = { tier2: tuning.t2CooldownHrs, tier3: tuning.t3CooldownHrs, tier4: tuning.t4CooldownHrs };
-    updatedState[tierKey] = updateTierProgress(cycleState, result.pagesScanned, result.cycleComplete, tier, cooldownMap[tierKey]);
-
-    console.log(`[CatalogWorker] Tier ${tier} ${result.status}: ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens${result.cycleComplete ? ' (cycle complete)' : ''}`);
+    pushEvent({ type: 'info', message: `Catalog crawl complete: ${domain}` });
+  } catch (err) {
+    console.error(`[CatalogWorker] Fatal error for ${domain}:`, err);
+    pushEvent({ type: 'scrape_fail', websiteUrl: url, message: `Catalog crawl error: ${domain} — ${(err as Error).message}` });
+  } finally {
+    // Always release crawl lock so site isn't stuck for 5 minutes
+    await prisma.monitoredSite.update({
+      where: { id: siteId },
+      data: { crawlLock: null },
+    }).catch(e => console.error(`[CatalogWorker] Failed to release lock for ${domain}:`, e));
   }
-
-  await prisma.monitoredSite.update({
-    where: { id: siteId },
-    data: { tierState: updatedState as any },
-  });
-
-  pushEvent({ type: 'info', message: `Catalog crawl complete: ${domain}` });
 }
 
 /**
@@ -250,6 +261,9 @@ export function startWorker(): Worker {
   }, {
     connection: redisConnection,
     concurrency: 20,
+    lockDuration: 300000,     // 5 minutes — crawl jobs can run 30-120s+
+    lockRenewTime: 150000,    // Renew lock every 2.5 minutes
+    stalledInterval: 300000,  // Check for stalled jobs every 5 minutes
   });
 
   worker.on('completed', (job) => {
