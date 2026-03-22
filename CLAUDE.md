@@ -71,6 +71,12 @@ Each adapter handles search + catalog extraction for a site type:
 - `dashboard/alerts/` — user alert management
 - `dashboard/history/` — match history
 
+## Skills
+- Always follow the `using-superpowers` skill at conversation start.
+- Check `~/.claude/agents/agency-agents/` for available agent personas before tasks.
+- Agent categories: engineering, design, testing, product, support, specialized.
+- Most relevant agents for this project: backend-architect, database-optimizer, devops-automator, frontend-developer, code-reviewer, sre.
+
 ## Gotchas
 - On Windows: bash escapes `$disconnect` in inline node `-e` commands. Write `.js` script files instead.
 - After changing `schema.prisma`, must kill running node processes before `prisma generate` (DLL lock on Windows).

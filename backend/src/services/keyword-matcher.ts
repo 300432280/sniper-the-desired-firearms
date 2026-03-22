@@ -66,6 +66,13 @@ export function matchesKeyword(title: string, keyword: string): boolean {
     if (re.test(title)) return true;
   }
 
+  // Multi-word AND matching: "mauser 308" matches if BOTH "mauser" AND "308"
+  // appear independently in the title (words don't need to be adjacent).
+  const words = keyword.split(/\s+/).filter(w => w.length >= 2);
+  if (words.length >= 2) {
+    if (words.every(word => matchesKeyword(title, word))) return true;
+  }
+
   return false;
 }
 
@@ -332,7 +339,7 @@ export async function searchProductIndex(
   keyword: string,
   siteIds?: string[],
   options?: { inStockOnly?: boolean },
-): Promise<Array<{ url: string; title: string; price: number | null; regularPrice: number | null; thumbnail: string | null; siteId: string; firstSeenAt: Date; stockStatus: string | null }>> {
+): Promise<Array<{ url: string; title: string; price: number | null; regularPrice: number | null; thumbnail: string | null; siteId: string; firstSeenAt: Date; stockStatus: string | null; category: string | null }>> {
   // Parse keyword for category filter: "7.62x39 ammo" → search "7.62x39", filter to ammunition
   const { searchTerm, categoryFilter } = parseKeywordWithCategory(keyword);
   const aliases = await expandKeyword(searchTerm);
@@ -344,19 +351,55 @@ export async function searchProductIndex(
     const stripped = alias.replace(/[\s\-]+/g, '');
     return stripped !== alias ? [alias, stripped] : [alias];
   }))];
-  const products = await prisma.productIndex.findMany({
-    where: {
-      isActive: true,
-      ...(siteIds && siteIds.length > 0 ? { siteId: { in: siteIds } } : {}),
-      ...(options?.inStockOnly ? { stockStatus: { not: 'out_of_stock' } } : {}),
+
+  // For multi-word keywords like "mauser 308", split into individual words
+  // and require ALL words match (AND logic) instead of exact phrase substring.
+  // Each word must appear in title, tags, or URL independently.
+  const buildWordFilter = (word: string) => ({
+    OR: [
+      { title: { contains: word, mode: 'insensitive' as const } },
+      { tags: { contains: word, mode: 'insensitive' as const } },
+      { url: { contains: word, mode: 'insensitive' as const } },
+    ],
+  });
+
+  // Check if any alias has multiple words
+  const hasMultiWord = aliasVariants.some(a => a.includes(' '));
+  let searchFilter: any;
+
+  if (hasMultiWord) {
+    // Build OR across aliases; for multi-word aliases, AND each word
+    searchFilter = {
+      OR: aliasVariants.map(alias => {
+        const words = alias.split(/\s+/).filter((w: string) => w.length >= 2);
+        if (words.length >= 2) {
+          // AND logic: each word must appear somewhere in title/tags/url
+          return { AND: words.map(buildWordFilter) };
+        }
+        // Single word: normal contains
+        return buildWordFilter(alias);
+      }),
+    };
+  } else {
+    // All single-word aliases: simple OR across all
+    searchFilter = {
       OR: aliasVariants.flatMap(alias => [
         { title: { contains: alias, mode: 'insensitive' as const } },
         { tags: { contains: alias, mode: 'insensitive' as const } },
         { url: { contains: alias, mode: 'insensitive' as const } },
       ]),
+    };
+  }
+
+  const products = await prisma.productIndex.findMany({
+    where: {
+      isActive: true,
+      ...(siteIds && siteIds.length > 0 ? { siteId: { in: siteIds } } : {}),
+      ...(options?.inStockOnly ? { stockStatus: { not: 'out_of_stock' } } : {}),
+      ...searchFilter,
     },
     orderBy: { firstSeenAt: 'desc' },
-    take: 200,
+    take: 1000,
   });
 
   // Refine with word-boundary matching on title, tags, or URL slug
@@ -384,5 +427,6 @@ export async function searchProductIndex(
       siteId: p.siteId,
       firstSeenAt: p.firstSeenAt,
       stockStatus: p.stockStatus,
+      category: p.category,
     }));
 }

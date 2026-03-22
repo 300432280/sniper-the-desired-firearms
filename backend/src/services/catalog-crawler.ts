@@ -23,6 +23,62 @@ import type { CatalogProduct, Stream, StreamTierState, SiteStreamState } from '.
 import { classifyProduct } from './product-classifier';
 import * as cheerio from 'cheerio';
 
+/**
+ * Detect total pages from HTML pagination links on the first page.
+ * Looks for common patterns: numbered page links, "last" links, "of N" text.
+ */
+function detectTotalPagesFromHtml($: cheerio.CheerioAPI, currentUrl: string): number | undefined {
+  let maxPage = 0;
+
+  // Strategy 1: Find numbered page links in pagination containers
+  const paginationSelectors = [
+    '.pagination a', '.pager a', '.paging a', 'nav.pagination a',
+    '[class*="pagination"] a', '[class*="pager"] a',
+    'ul.page-numbers a', '.wp-pagenavi a',
+    '.paginator a', '.page-item a',
+  ];
+
+  for (const sel of paginationSelectors) {
+    $(sel).each((_, el) => {
+      const text = $(el).text().trim();
+      const num = parseInt(text, 10);
+      if (num > 0 && num < 100000) maxPage = Math.max(maxPage, num);
+
+      // Also check href for page= or /page/ patterns
+      const href = $(el).attr('href') || '';
+      const pageMatch = href.match(/[?&]page=(\d+)|\/page\/(\d+)|[?&]p=(\d+)/i);
+      if (pageMatch) {
+        const p = parseInt(pageMatch[1] || pageMatch[2] || pageMatch[3], 10);
+        if (p > 0 && p < 100000) maxPage = Math.max(maxPage, p);
+      }
+    });
+  }
+
+  // Strategy 2: Look for "Page X of Y" or "X / Y" patterns in pagination area
+  if (maxPage === 0) {
+    const pageText = $('[class*="pagination"], [class*="pager"], .paginator').text();
+    const ofMatch = pageText.match(/(?:page\s+\d+\s+of\s+|\/\s*)(\d+)/i);
+    if (ofMatch) {
+      const p = parseInt(ofMatch[1], 10);
+      if (p > 0 && p < 100000) maxPage = p;
+    }
+  }
+
+  // Strategy 3: "Last" page link
+  if (maxPage === 0) {
+    $('a[title*="last" i], a[aria-label*="last" i], a.last, .pagination .last a').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const pageMatch = href.match(/[?&]page=(\d+)|\/page\/(\d+)|[?&]p=(\d+)/i);
+      if (pageMatch) {
+        const p = parseInt(pageMatch[1] || pageMatch[2] || pageMatch[3], 10);
+        if (p > 0 && p < 100000) maxPage = Math.max(maxPage, p);
+      }
+    });
+  }
+
+  return maxPage > 1 ? maxPage : undefined;
+}
+
 // ── Tier Configuration ──────────────────────────────────────────────────────
 
 interface TierConfig {
@@ -429,6 +485,7 @@ export async function crawlStreamTier(params: {
   try {
     if (stream.type === 'api' && adapter.fetchCatalogPage) {
       // ── API stream: use date ranges (same as legacy, but scoped to one stream)
+      // API streams partition by date range, not page range — each tier paginates 1→end within its date window
       let page = tierState.currentPage || 1;
 
       while (tokensUsed < tokensAllocated) {
@@ -515,6 +572,12 @@ export async function crawlStreamTier(params: {
 
         const $ = cheerio.load(html);
         pagesScanned++;
+
+        // On the first page, try to detect total pages from pagination HTML
+        if (pagesScanned === 1 && !totalPagesDiscovered) {
+          const detected = detectTotalPagesFromHtml($, currentUrl);
+          if (detected) totalPagesDiscovered = detected;
+        }
 
         let products = adapter.extractCatalogProducts($, currentUrl);
 

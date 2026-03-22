@@ -114,6 +114,38 @@ export async function schedulerTick(): Promise<void> {
 
   if (dueSites.length === 0) return;
 
+  // 2b. Recover stale/expired stream tiers for ALL due sites (not limited by slots)
+  const STALE_PROGRESS_MS = 15 * 60 * 1000;
+  for (const site of dueSites) {
+    const ss = parseStreamState(site.streamState);
+    if (!ss) continue;
+    let needsPersist = false;
+    for (const [, ts] of Object.entries(ss.tiers)) {
+      if (ts.status === 'in_progress' && ts.cycleStartedAt) {
+        const age = now.getTime() - new Date(ts.cycleStartedAt).getTime();
+        if (age > STALE_PROGRESS_MS) {
+          ts.status = 'idle';
+          ts.currentPage = ts.pageRangeStart || 1;
+          ts.currentPageUrl = undefined;
+          ts.cycleStartedAt = undefined;
+          needsPersist = true;
+        }
+      }
+      if (ts.status === 'cooldown' && ts.cooldownEndsAt && new Date(ts.cooldownEndsAt) <= now) {
+        ts.status = 'idle';
+        ts.cooldownEndsAt = undefined;
+        needsPersist = true;
+      }
+    }
+    if (needsPersist) {
+      await prisma.monitoredSite.update({
+        where: { id: site.id },
+        data: { streamState: ss as any },
+      });
+      console.log(`[Scheduler] ${site.domain}: recovered stale/expired stream tiers`);
+    }
+  }
+
   // 3. Count currently locked (in-progress) crawls
   const activeLocks = await prisma.monitoredSite.count({
     where: { crawlLock: { not: null } },
@@ -159,19 +191,8 @@ export async function schedulerTick(): Promise<void> {
       data: { crawlLock: jobId, crawlLockExpiresAt: lockExpiry },
     });
 
-    // Queue legacy keyword crawl (runs alongside new system during transition)
-    await scrapeQueue.add('crawl-site', {
-      siteId: site.id,
-      domain: site.domain,
-      url: site.url,
-    }, {
-      jobId,
-      attempts: 1,
-      removeOnComplete: 50,
-      removeOnFail: 100,
-    });
-
-    // Queue Tier 1 watermark crawl (new catalog system)
+    // Queue Tier 1 watermark crawl
+    const tuningObj = (site.crawlTuning && typeof site.crawlTuning === 'object') ? site.crawlTuning as Record<string, any> : {};
     await scrapeQueue.add('crawl-watermark', {
       siteId: site.id,
       domain: site.domain,
@@ -179,6 +200,8 @@ export async function schedulerTick(): Promise<void> {
       baseBudget: effectiveBudgetCap,
       capacity: site.capacity,
       lastWatermarkUrl: site.lastWatermarkUrl,
+      lastWatermarkDate: tuningObj.lastWatermarkDate || null,
+      crawlTuning: site.crawlTuning,
       hasWaf: site.hasWaf,
     }, {
       jobId: `watermark:${site.id}:${Date.now()}`,
@@ -264,6 +287,8 @@ export async function onCrawlComplete(params: {
   usedPlaywright?: boolean;
   /** Updated watermark URL from Tier 1 crawl */
   newWatermarkUrl?: string | null;
+  /** Updated watermark date (modified/bumped date of newest listing) */
+  newWatermarkDate?: string;
   /** Updated tier state from catalog crawl */
   newTierState?: string;
 }): Promise<void> {
@@ -305,6 +330,12 @@ export async function onCrawlComplete(params: {
   // Update watermark if provided
   if (params.newWatermarkUrl !== undefined) {
     updateData.lastWatermarkUrl = params.newWatermarkUrl;
+  }
+
+  // Store watermark date in crawlTuning JSON (avoids schema change)
+  if (params.newWatermarkDate) {
+    const currentTuning = (site.crawlTuning && typeof site.crawlTuning === 'object') ? site.crawlTuning as Record<string, any> : {};
+    updateData.crawlTuning = { ...currentTuning, lastWatermarkDate: params.newWatermarkDate };
   }
 
   // Update tier state if provided

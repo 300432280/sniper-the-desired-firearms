@@ -61,6 +61,7 @@ export interface Match {
   postDate?: string | null;
   seller?: string | null;
   stockStatus?: string | null;
+  category?: string | null;
 }
 
 export interface LiveMatch {
@@ -73,6 +74,7 @@ export interface LiveMatch {
   isNew?: boolean;
   thumbnail?: string;
   seller?: string;
+  category?: string | null;
 }
 
 export interface ScanResult {
@@ -197,8 +199,8 @@ export const searchesApi = {
 
   toggle: (id: string) => request<{ search: Search }>('PATCH', `/searches/${id}/toggle`),
 
-  matches: (searchId: string, page = 1, limit = 50) =>
-    request<{ matches: Match[]; total: number; page: number; totalPages: number }>('GET', `/searches/matches/${searchId}?page=${page}&limit=${limit}`),
+  matches: (searchId: string, page = 1, limit = 50, inStockOnly = false) =>
+    request<{ matches: Match[]; total: number; page: number; totalPages: number }>('GET', `/searches/matches/${searchId}?page=${page}&limit=${limit}${inStockOnly ? '&inStockOnly=true' : ''}`),
 
   scanNow: (id: string, page = 1, limit = 50) =>
     request<ScanResult & { page: number; totalPages: number }>('POST', `/searches/${id}/scan?page=${page}&limit=${limit}`),

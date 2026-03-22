@@ -355,15 +355,16 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
     // Pure DB read — no crawl triggering from user endpoints.
     // The crawl scheduler handles all crawl timing independently.
 
-    // Enrich with ProductIndex thumbnails for matches that lack them
-    const matchUrlsNoThumb = matches.filter(m => !m.thumbnail).map(m => m.url);
-    const piThumbnails = matchUrlsNoThumb.length > 0
+    // Enrich with ProductIndex thumbnails + categories for matches
+    const allMatchUrls = matches.map(m => m.url);
+    const piEnrichment = allMatchUrls.length > 0
       ? await prisma.productIndex.findMany({
-          where: { url: { in: matchUrlsNoThumb }, thumbnail: { not: null } },
-          select: { url: true, thumbnail: true },
+          where: { url: { in: allMatchUrls } },
+          select: { url: true, thumbnail: true, category: true },
         })
       : [];
-    const groupThumbnailMap = new Map(piThumbnails.map(p => [p.url, p.thumbnail]));
+    const groupThumbnailMap = new Map(piEnrichment.filter(p => p.thumbnail).map(p => [p.url, p.thumbnail]));
+    const groupCategoryMap = new Map(piEnrichment.map(p => [p.url, p.category]));
 
     const annotatedMatches = matches.map((m) => ({
       title: m.title,
@@ -376,6 +377,7 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
       foundAt: m.foundAt,
       websiteUrl: m.search.websiteUrl,
       isNew: m.search.lastChecked ? m.foundAt > m.search.lastChecked : true,
+      category: groupCategoryMap.get(m.url) || null,
     }));
 
     // Update lastChecked for all searches in group
@@ -536,8 +538,42 @@ router.get('/matches/:searchId', requireAuth, async (req: Request, res: Response
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
-    const skip = (page - 1) * limit;
+    const inStockOnly = req.query.inStockOnly === 'true';
 
+    if (inStockOnly) {
+      // When filtering by stock, we need to join through ProductIndex
+      const inStockProducts = await prisma.productIndex.findMany({
+        where: {
+          stockStatus: 'in_stock',
+          url: { in: (await prisma.match.findMany({ where: { searchId: search.id }, select: { url: true } })).map(m => m.url) },
+        },
+        select: { url: true, stockStatus: true, price: true, regularPrice: true, category: true },
+      });
+      const inStockUrls = new Set(inStockProducts.map(p => p.url));
+      const productMap = new Map(inStockProducts.map(p => [p.url, p]));
+      const total = inStockUrls.size;
+
+      const matches = await prisma.match.findMany({
+        where: { searchId: search.id, url: { in: [...inStockUrls] } },
+        orderBy: { foundAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+
+      const enrichedMatches = matches.map(m => {
+        const pi = productMap.get(m.url);
+        return {
+          ...m,
+          stockStatus: 'in_stock' as const,
+          price: pi?.price ?? m.price,
+          regularPrice: pi?.regularPrice ?? m.regularPrice,
+          category: pi?.category || null,
+        };
+      });
+      return res.json({ matches: enrichedMatches, total, page, totalPages: Math.ceil(total / limit) });
+    }
+
+    const skip = (page - 1) * limit;
     const [matches, total] = await Promise.all([
       prisma.match.findMany({
         where: { searchId: search.id },
@@ -548,19 +584,26 @@ router.get('/matches/:searchId', requireAuth, async (req: Request, res: Response
       prisma.match.count({ where: { searchId: search.id } }),
     ]);
 
-    // Enrich matches with stockStatus from ProductIndex
+    // Enrich matches with current stockStatus + prices from ProductIndex
     const matchUrls = matches.map(m => m.url);
     const products = matchUrls.length > 0
       ? await prisma.productIndex.findMany({
           where: { url: { in: matchUrls } },
-          select: { url: true, stockStatus: true },
+          select: { url: true, stockStatus: true, price: true, regularPrice: true, category: true },
         })
       : [];
-    const stockMap = new Map(products.map(p => [p.url, p.stockStatus]));
-    const enrichedMatches = matches.map(m => ({
-      ...m,
-      stockStatus: stockMap.get(m.url) || null,
-    }));
+    const productMap = new Map(products.map(p => [p.url, p]));
+    const enrichedMatches = matches.map(m => {
+      const pi = productMap.get(m.url);
+      return {
+        ...m,
+        stockStatus: pi?.stockStatus || null,
+        // Use current ProductIndex prices (they stay up-to-date via crawls)
+        price: pi?.price ?? m.price,
+        regularPrice: pi?.regularPrice ?? m.regularPrice,
+        category: pi?.category || null,
+      };
+    });
 
     return res.json({ matches: enrichedMatches, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err) {
@@ -603,6 +646,7 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
     // Build URL → stockStatus/thumbnail lookups for response annotation
     const stockStatusMap = new Map(indexMatches.map(p => [p.url, p.stockStatus]));
     const thumbnailMap = new Map(indexMatches.filter(p => p.thumbnail).map(p => [p.url, p.thumbnail]));
+    const categoryMap = new Map(indexMatches.map(p => [p.url, p.category]));
 
     // Sync Match table with ProductIndex
     if (indexUrls.size > 0) {
@@ -630,14 +674,21 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
         });
       }
 
-      // Backfill thumbnails: update existing matches that have null thumbnail
+      // Backfill thumbnails: batch update existing matches that have null thumbnail
       // but ProductIndex now has one (e.g. catalog crawl discovered the image)
-      const thumbUpdates = indexMatches.filter(p => p.thumbnail && existingUrls.has(p.url));
-      for (const p of thumbUpdates) {
-        await prisma.match.updateMany({
-          where: { searchId: search.id, url: p.url, thumbnail: null },
-          data: { thumbnail: p.thumbnail },
-        });
+      const nullThumbMatches = await prisma.match.findMany({
+        where: { searchId: search.id, thumbnail: null },
+        select: { id: true, url: true },
+      });
+      if (nullThumbMatches.length > 0) {
+        const thumbBatch = nullThumbMatches
+          .map(m => ({ id: m.id, thumb: thumbnailMap.get(m.url) }))
+          .filter(m => m.thumb);
+        if (thumbBatch.length > 0) {
+          await Promise.all(thumbBatch.map(m =>
+            prisma.match.update({ where: { id: m.id }, data: { thumbnail: m.thumb } })
+          ));
+        }
       }
 
       // Remove Match records for products no longer in ProductIndex at all
@@ -673,6 +724,7 @@ router.post('/:id/scan', requireAuth, async (req: Request, res: Response) => {
       postDate: m.postDate,
       isNew: lastViewed ? m.foundAt > lastViewed : true,
       stockStatus: stockStatusMap.get(m.url) || null,
+      category: categoryMap.get(m.url) || null,
     }));
 
     const newCount = annotatedMatches.filter((m) => m.isNew).length;

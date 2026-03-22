@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { searchesApi, credentialsApi, type Search, type Match, type SiteCredential } from '@/lib/api';
+import { searchesApi, credentialsApi, sitesApi, type Search, type Match, type SiteCredential, type LiveMatch } from '@/lib/api';
 import { useAuth } from '@/lib/hooks';
 
 export default function NewAlertPage() {
@@ -18,6 +18,54 @@ export default function NewAlertPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<{ searches: Search[]; matches: Match[]; loginRequired?: boolean; searchAllGroupId?: string; siteCount?: number } | null>(null);
+
+  // Admin live search
+  const [liveResults, setLiveResults] = useState<{ siteId: string; siteDomain: string; adapter: string; matches: LiveMatch[]; errors?: string[]; status: 'pending' | 'done' | 'error' }[]>([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState('');
+
+  const handleLiveSearch = async () => {
+    if (!keyword.trim() || keyword.trim().length < 2) {
+      setLiveError('Enter a keyword (at least 2 characters)');
+      return;
+    }
+    setLiveError('');
+    setLiveLoading(true);
+    setLiveResults([]);
+
+    try {
+      const { sites } = await sitesApi.list();
+      const enabled = sites.filter((s) => s.isEnabled);
+      if (enabled.length === 0) {
+        setLiveError('No enabled sites found');
+        setLiveLoading(false);
+        return;
+      }
+
+      // Initialize all sites as pending
+      setLiveResults(enabled.map((s) => ({ siteId: s.id, siteDomain: s.domain, adapter: s.adapterType, matches: [], status: 'pending' as const })));
+
+      // Fire all searches concurrently, update results as each completes
+      await Promise.allSettled(
+        enabled.map(async (site) => {
+          try {
+            const res = await sitesApi.test(site.id, keyword.trim());
+            setLiveResults((prev) =>
+              prev.map((r) => r.siteId === site.id ? { ...r, matches: res.matches, errors: res.errors, adapter: res.adapterUsed, status: 'done' as const } : r)
+            );
+          } catch (err) {
+            setLiveResults((prev) =>
+              prev.map((r) => r.siteId === site.id ? { ...r, status: 'error' as const, errors: [err instanceof Error ? err.message : 'Failed'] } : r)
+            );
+          }
+        })
+      );
+    } catch (err) {
+      setLiveError(err instanceof Error ? err.message : 'Failed to fetch sites');
+    } finally {
+      setLiveLoading(false);
+    }
+  };
 
   // Site login (for forums requiring authentication)
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -611,11 +659,139 @@ export default function NewAlertPage() {
               searchAll ? 'Search All Sites' : 'Create Alert'
             )}
           </button>
+          {user?.isAdmin && (
+            <button
+              type="button"
+              disabled={liveLoading || !keyword.trim()}
+              onClick={handleLiveSearch}
+              className="btn-secondary flex items-center gap-2"
+              title="Search all enabled sites live (admin only)"
+            >
+              {liveLoading ? (
+                <span className="w-3 h-3 border border-foreground-muted/40 border-t-foreground-muted rounded-full animate-spin" />
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              )}
+              Live Search
+            </button>
+          )}
           <Link href="/dashboard" className="btn-secondary">
             Cancel
           </Link>
         </div>
       </form>
+
+      {/* Admin Live Search Results */}
+      {user?.isAdmin && liveResults.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-heading text-sm tracking-widest uppercase text-foreground-muted">
+              Live Search Results
+            </h2>
+            <div className="text-xs text-foreground-dim">
+              {liveResults.filter((r) => r.status === 'done').length}/{liveResults.length} sites scanned
+              {' '}&mdash; {liveResults.reduce((sum, r) => sum + r.matches.length, 0)} matches
+            </div>
+          </div>
+
+          {liveError && (
+            <div className="border border-secondary/30 bg-secondary-subtle text-secondary px-4 py-3 text-sm mb-4">
+              {liveError}
+            </div>
+          )}
+
+          {/* Sites with matches */}
+          {liveResults
+            .filter((r) => r.matches.length > 0)
+            .map((r) => (
+              <div key={r.siteId} className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-[10px] font-heading tracking-widest uppercase text-foreground-muted truncate">
+                    {r.siteDomain}
+                  </p>
+                  <span className="text-[9px] font-mono text-foreground-dim px-1.5 py-0.5 bg-surface-elevated border border-border">
+                    {r.adapter}
+                  </span>
+                  <span className="text-[10px] text-accent">{r.matches.length} match{r.matches.length !== 1 ? 'es' : ''}</span>
+                </div>
+                <div className="space-y-1.5">
+                  {r.matches.map((m, i) => (
+                    <a
+                      key={i}
+                      href={m.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="card flex items-center justify-between hover:border-accent/30 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1 flex items-center gap-3">
+                        {m.thumbnail && (
+                          <img
+                            src={m.thumbnail}
+                            alt=""
+                            className="w-12 h-12 object-cover border border-border/50 flex-shrink-0"
+                            loading="lazy"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{m.title}</p>
+                          <div className="flex items-center gap-2">
+                            {m.price != null && (
+                              <span className="text-xs text-accent font-mono">${m.price}</span>
+                            )}
+                            {m.inStock !== undefined && (
+                              <span className={`text-[10px] ${m.inStock ? 'text-green-400' : 'text-foreground-dim'}`}>
+                                {m.inStock ? 'In Stock' : 'Out of Stock'}
+                              </span>
+                            )}
+                            {m.seller && (
+                              <span className="text-[10px] text-foreground-dim">{m.seller}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <svg className="w-4 h-4 text-foreground-muted flex-shrink-0 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeWidth="1.5" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+                      </svg>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+          {/* Pending / no-match / error sites summary */}
+          {liveResults.some((r) => r.matches.length === 0) && (
+            <details className="mt-4">
+              <summary className="text-[10px] font-heading tracking-widest uppercase text-foreground-dim cursor-pointer hover:text-foreground-muted">
+                {liveResults.filter((r) => r.matches.length === 0 && r.status === 'done').length} sites with no matches
+                {liveResults.some((r) => r.status === 'pending') && (
+                  <> &middot; {liveResults.filter((r) => r.status === 'pending').length} pending</>
+                )}
+                {liveResults.some((r) => r.status === 'error') && (
+                  <> &middot; <span className="text-secondary">{liveResults.filter((r) => r.status === 'error').length} errors</span></>
+                )}
+              </summary>
+              <div className="mt-2 space-y-1">
+                {liveResults
+                  .filter((r) => r.matches.length === 0)
+                  .map((r) => (
+                    <div key={r.siteId} className="flex items-center gap-2 text-xs text-foreground-dim py-0.5">
+                      {r.status === 'pending' && <span className="w-2 h-2 rounded-full bg-foreground-dim/30 animate-pulse" />}
+                      {r.status === 'done' && <span className="w-2 h-2 rounded-full bg-foreground-dim/20" />}
+                      {r.status === 'error' && <span className="w-2 h-2 rounded-full bg-secondary/60" />}
+                      <span className="truncate">{r.siteDomain}</span>
+                      {r.status === 'error' && r.errors?.[0] && (
+                        <span className="text-secondary text-[10px] truncate">{r.errors[0]}</span>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
     </div>
   );
 }

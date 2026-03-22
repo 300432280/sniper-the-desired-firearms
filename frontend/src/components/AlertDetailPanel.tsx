@@ -60,8 +60,10 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
   const [historyPage, setHistoryPage] = useState(1);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
-  const [historySortBy, setHistorySortBy] = useState<'default' | 'price_asc' | 'price_desc'>('default');
+  const [historySortBy, setHistorySortBy] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
+  const [hideHistoryWanted, setHideHistoryWanted] = useState(true);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
+  const [inStockTotal, setInStockTotal] = useState<number | null>(null);
   const [crawling, setCrawling] = useState(false);
   const [crawlResult, setCrawlResult] = useState<string | null>(null);
 
@@ -145,8 +147,9 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
     } finally { setLoadingMoreScan(false); }
   };
 
-  const loadHistory = async () => {
-    if (historyMatches !== null) {
+  const loadHistory = async (stockFilter?: boolean) => {
+    const filterInStock = stockFilter ?? showInStockOnly;
+    if (historyMatches !== null && stockFilter === undefined) {
       setShowHistory(!showHistory);
       return;
     }
@@ -160,7 +163,7 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
         setHistoryTotal((data as any).totalMatches ?? data.matches.length);
         setHistoryTotalPages(data.totalPages ?? 1);
       } else {
-        const data = await searchesApi.matches(search!.id, 1, 50);
+        const data = await searchesApi.matches(search!.id, 1, 50, filterInStock);
         setHistoryMatches(data.matches);
         setHistoryTotal(data.total ?? data.matches.length);
         setHistoryTotalPages(data.totalPages ?? 1);
@@ -168,6 +171,14 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
     } catch {
       setHistoryMatches([]);
     } finally { setHistoryLoading(false); }
+  };
+
+  const handleToggleInStock = async () => {
+    const newVal = !showInStockOnly;
+    setShowInStockOnly(newVal);
+    // Re-fetch from backend with the stock filter
+    setHistoryMatches(null);
+    await loadHistory(newVal);
   };
 
   const handleLoadMoreHistory = async () => {
@@ -180,7 +191,7 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
         setHistoryPage(nextPage);
         setHistoryTotalPages(data.totalPages ?? 1);
       } else {
-        const data = await searchesApi.matches(search!.id, nextPage, 50);
+        const data = await searchesApi.matches(search!.id, nextPage, 50, showInStockOnly);
         setHistoryMatches(prev => [...(prev || []), ...data.matches]);
         setHistoryPage(nextPage);
         setHistoryTotalPages(data.totalPages ?? 1);
@@ -356,21 +367,31 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
         {/* Section: Match History */}
         <section>
           <div className="flex items-center gap-3 pb-1 border-b border-border/40">
-            <button onClick={loadHistory} className="flex items-center gap-3">
+            <button onClick={() => loadHistory()} className="flex items-center gap-3">
               <svg className={`w-3 h-3 text-foreground-dim transition-transform duration-200 ${showHistory ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
               <span className="text-[10px] font-heading tracking-[0.2em] uppercase text-foreground-muted">Match History</span>
               <span className="text-[10px] text-foreground-dim">
-                {showInStockOnly && historyMatches
-                  ? `${historyMatches.filter(m => m.stockStatus !== 'out_of_stock').length} of ${matchCount}`
+                {showInStockOnly
+                  ? `${historyTotal} in-stock of ${matchCount}`
                   : `${matchCount} total`}
               </span>
             </button>
             {showHistory && historyMatches && historyMatches.length > 1 && (
               <div className="ml-auto flex items-center gap-1.5">
+                {historyMatches.some(m => m.category === 'wanted') && (
+                  <button
+                    onClick={() => setHideHistoryWanted(prev => !prev)}
+                    className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+                      hideHistoryWanted ? 'text-yellow-400 border-yellow-400/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+                    }`}
+                  >
+                    {hideHistoryWanted ? 'Show Wanted' : 'Hide Wanted'}
+                  </button>
+                )}
                 <button
-                  onClick={() => setShowInStockOnly(prev => !prev)}
+                  onClick={handleToggleInStock}
                   className={`text-[9px] px-1.5 py-0.5 border transition-colors font-heading uppercase tracking-wider ${
                     showInStockOnly ? 'text-green-400 border-green-400/30 bg-green-400/5' : 'text-foreground-dim border-border/50 hover:text-foreground'
                   }`}
@@ -378,9 +399,17 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
                   {showInStockOnly ? 'In Stock' : 'All'}
                 </button>
                 <button
-                  onClick={() => setHistorySortBy(prev => prev === 'default' ? 'price_asc' : prev === 'price_asc' ? 'price_desc' : 'default')}
+                  onClick={() => setHistorySortBy('newest')}
                   className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
-                    historySortBy !== 'default' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+                    historySortBy === 'newest' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+                  }`}
+                >
+                  Newest
+                </button>
+                <button
+                  onClick={() => setHistorySortBy(prev => prev === 'price_asc' ? 'price_desc' : 'price_asc')}
+                  className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+                    historySortBy !== 'newest' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
                   }`}
                 >
                   {historySortBy === 'price_asc' ? 'Price ↑' : historySortBy === 'price_desc' ? 'Price ↓' : 'Price'}
@@ -401,11 +430,9 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
                 <>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
                     {(() => {
-                      let filtered = showInStockOnly
-                        ? historyMatches.filter(m => m.stockStatus !== 'out_of_stock')
-                        : historyMatches;
-                      const sorted = historySortBy === 'default'
-                        ? filtered
+                      const filtered = hideHistoryWanted ? historyMatches.filter(m => m.category !== 'wanted') : historyMatches;
+                      const sorted = historySortBy === 'newest'
+                        ? [...filtered].sort((a, b) => new Date(b.foundAt).getTime() - new Date(a.foundAt).getTime())
                         : [...filtered].sort((a, b) => {
                             const pa = a.price ?? (historySortBy === 'price_asc' ? Infinity : -Infinity);
                             const pb = b.price ?? (historySortBy === 'price_asc' ? Infinity : -Infinity);
@@ -417,10 +444,14 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
                         href={match.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 px-3 py-2.5 bg-surface-elevated/50 border border-border/50 rounded text-xs hover:border-accent/30 transition-colors cursor-pointer group"
+                        className={`flex items-center gap-3 px-3 py-2.5 border rounded text-xs hover:border-accent/30 transition-colors cursor-pointer group ${
+                          match.category === 'wanted'
+                            ? 'bg-yellow-950/20 border-yellow-700/30 opacity-70'
+                            : 'bg-surface-elevated/50 border-border/50'
+                        }`}
                       >
                         {match.thumbnail && (
-                          <img src={match.thumbnail} alt="" className="w-12 h-12 object-cover border border-border/50 rounded flex-shrink-0" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <img src={match.thumbnail} alt="" className="w-12 h-12 object-cover border border-border/50 rounded flex-shrink-0 bg-white" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-foreground truncate group-hover:text-accent transition-colors">{match.title}</p>
@@ -434,9 +465,16 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
                           </div>
                         </div>
                         {match.price != null && (
-                          <span className="text-accent font-heading flex-shrink-0">${match.price.toFixed(2)}</span>
+                          <span className="flex items-center gap-1.5 flex-shrink-0">
+                            {(match as any).regularPrice != null && (match as any).regularPrice > match.price && (
+                              <span className="text-foreground-dim line-through text-[10px]">${(match as any).regularPrice.toFixed(2)}</span>
+                            )}
+                            <span className="text-accent font-heading">${match.price.toFixed(2)}</span>
+                          </span>
                         )}
-                        {match.stockStatus && match.stockStatus !== 'unknown' && (
+                        {match.category === 'wanted' ? (
+                          <span className="text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border text-yellow-400 border-yellow-400/30">Wanted</span>
+                        ) : match.stockStatus && match.stockStatus !== 'unknown' && (
                           <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
                             match.stockStatus === 'out_of_stock' ? 'text-red-400 border-red-400/30' : 'text-green-400 border-green-400/30'
                           }`}>
@@ -451,15 +489,9 @@ export default function AlertDetailPanel({ search, group, isAdmin, onToggle, onD
                     })()}
                   </div>
                   <p className="text-[10px] text-foreground-dim pt-2">
-                    {(() => {
-                      const filteredCount = showInStockOnly
-                        ? historyMatches.filter(m => m.stockStatus !== 'out_of_stock').length
-                        : historyMatches.length;
-                      const label = showInStockOnly ? `${filteredCount} in-stock of ${historyTotal}` : `Showing ${historyMatches.length} of ${historyTotal}`;
-                      return label;
-                    })()}
+                    {showInStockOnly ? `${historyMatches.length} in-stock` : `Showing ${historyMatches.length} of ${historyTotal}`}
                     {' match'}{historyTotal !== 1 ? 'es' : ''}
-                    {historySortBy === 'default' ? ' (newest first)' : historySortBy === 'price_asc' ? ' (cheapest first)' : ' (most expensive first)'}
+                    {historySortBy === 'newest' ? ' (newest first)' : historySortBy === 'price_asc' ? ' (cheapest first)' : ' (most expensive first)'}
                   </p>
                   {historyPage < historyTotalPages && (
                     <button
@@ -526,12 +558,22 @@ function ScanResultsGrouped({
   groupScanMeta: { scannedSites: number; successCount: number; failCount: number; totalMatches: number } | null;
 }) {
   const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
+  const [hideWanted, setHideWanted] = useState(true);
+  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
+
+  const wantedCount = results.filter(r => r.category === 'wanted').length;
+  const filteredResults = hideWanted ? results.filter(r => r.category !== 'wanted') : results;
+  const sortedResults = sortBy === 'newest' ? filteredResults : [...filteredResults].sort((a, b) => {
+    const pa = a.price ?? (sortBy === 'price_asc' ? Infinity : -Infinity);
+    const pb = b.price ?? (sortBy === 'price_asc' ? Infinity : -Infinity);
+    return sortBy === 'price_asc' ? pa - pb : pb - pa;
+  });
 
   // Group by site
   const siteGroups = (() => {
     if (!isGroup) return null;
     const groups = new Map<string, { domain: string; items: LiveMatch[]; newCount: number }>();
-    for (const item of results) {
+    for (const item of sortedResults) {
       const url = (item as any).websiteUrl || '';
       let domain: string;
       try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch { domain = url || 'Unknown'; }
@@ -551,21 +593,50 @@ function ScanResultsGrouped({
     });
   };
 
-  const newCount = results.filter(r => r.isNew).length;
+  const newCount = sortedResults.filter(r => r.isNew).length;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <p className="text-[11px] text-foreground-muted">
-          {groupScanMeta ? `${groupScanMeta.totalMatches} results` : `${results.length} result${results.length !== 1 ? 's' : ''}`}
+          {groupScanMeta ? `${groupScanMeta.totalMatches} results` : `${filteredResults.length} result${filteredResults.length !== 1 ? 's' : ''}`}
+          {hideWanted && wantedCount > 0 && ` (${wantedCount} wanted hidden)`}
           {isGroup && siteGroups && ` across ${siteGroups.length} site${siteGroups.length !== 1 ? 's' : ''}`}
           {newCount > 0 && (
             <span className="ml-2 text-[9px] bg-green-600 text-white px-1.5 py-0.5 tracking-wider font-heading uppercase rounded-sm">{newCount} NEW</span>
           )}
         </p>
-        {scanMeta && (
-          <p className="text-[10px] text-foreground-dim">{scanMeta.totalDbMatches} in database</p>
-        )}
+        <div className="flex items-center gap-2">
+          {wantedCount > 0 && (
+            <button
+              onClick={() => setHideWanted(prev => !prev)}
+              className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+                hideWanted ? 'text-yellow-400 border-yellow-400/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+              }`}
+            >
+              {hideWanted ? 'Show Wanted' : 'Hide Wanted'}
+            </button>
+          )}
+          <button
+            onClick={() => setSortBy('newest')}
+            className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+              sortBy === 'newest' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+            }`}
+          >
+            Newest
+          </button>
+          <button
+            onClick={() => setSortBy(prev => prev === 'price_asc' ? 'price_desc' : 'price_asc')}
+            className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+              sortBy !== 'newest' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+            }`}
+          >
+            {sortBy === 'price_asc' ? 'Price ↑' : sortBy === 'price_desc' ? 'Price ↓' : 'Price'}
+          </button>
+          {scanMeta && (
+            <p className="text-[10px] text-foreground-dim">{scanMeta.totalDbMatches} in database</p>
+          )}
+        </div>
       </div>
 
       {isGroup && siteGroups ? (
@@ -595,17 +666,28 @@ function ScanResultsGrouped({
                       {sg.items.map((item, i) => (
                         <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
                           className={`flex items-center gap-3 px-4 py-2.5 text-xs hover:bg-surface-elevated/80 transition-colors cursor-pointer group ${
-                            item.isNew ? 'bg-green-950/30 border-l-2 border-l-green-500' : 'bg-surface-elevated/50'
+                            item.category === 'wanted'
+                              ? 'bg-yellow-950/20 border-yellow-700/30 opacity-70'
+                              : item.isNew ? 'bg-green-950/30 border-l-2 border-l-green-500' : 'bg-surface-elevated/50'
                           }`}
                         >
                           {item.isNew && <span className="text-[9px] font-heading tracking-widest uppercase bg-green-600 text-white px-1.5 py-0.5 flex-shrink-0 rounded-sm">NEW</span>}
-                          {item.thumbnail && <img src={item.thumbnail} alt="" className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                          {item.thumbnail && <img src={item.thumbnail} alt="" className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0 bg-white" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                           <div className="flex-1 min-w-0">
                             <p className="text-foreground truncate group-hover:text-accent transition-colors">{item.title}</p>
                             {item.seller && <span className="text-[9px] text-foreground-dim">{item.seller}</span>}
                           </div>
-                          {item.price != null && <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>}
-                          {(() => {
+                          {item.price != null && (
+                            <span className="flex items-center gap-1.5 flex-shrink-0">
+                              {item.regularPrice != null && item.regularPrice > item.price && (
+                                <span className="text-foreground-dim line-through text-[10px]">${typeof item.regularPrice === 'number' ? item.regularPrice.toFixed(2) : item.regularPrice}</span>
+                              )}
+                              <span className="text-accent font-heading">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>
+                            </span>
+                          )}
+                          {item.category === 'wanted' ? (
+                            <span className="text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border text-yellow-400 border-yellow-400/30">Wanted</span>
+                          ) : (() => {
                             const stock = item.stockStatus ?? (item.inStock !== undefined ? (item.inStock ? 'in_stock' : 'out_of_stock') : null);
                             if (!stock || stock === 'unknown') return null;
                             return (
@@ -630,20 +712,31 @@ function ScanResultsGrouped({
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
-          {results.map((item, i) => (
+          {sortedResults.map((item, i) => (
             <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
               className={`flex items-center gap-3 px-4 py-2.5 border rounded text-xs hover:border-accent/30 transition-colors cursor-pointer group ${
-                item.isNew ? 'bg-green-950/30 border-l-2 border-l-green-500 border-green-700/40' : 'bg-surface-elevated/50 border-border/50'
+                item.category === 'wanted'
+                  ? 'bg-yellow-950/20 border-yellow-700/30 opacity-70'
+                  : item.isNew ? 'bg-green-950/30 border-l-2 border-l-green-500 border-green-700/40' : 'bg-surface-elevated/50 border-border/50'
               }`}
             >
               {item.isNew && <span className="text-[9px] font-heading tracking-widest uppercase bg-green-600 text-white px-1.5 py-0.5 flex-shrink-0 rounded-sm">NEW</span>}
-              {item.thumbnail && <img src={item.thumbnail} alt="" className="w-12 h-12 object-cover border border-border/50 rounded flex-shrink-0" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+              {item.thumbnail && <img src={item.thumbnail} alt="" className="w-12 h-12 object-cover border border-border/50 rounded flex-shrink-0 bg-white" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
               <div className="flex-1 min-w-0">
                 <p className="text-foreground truncate group-hover:text-accent transition-colors">{item.title}</p>
                 {item.seller && <span className="text-[9px] text-foreground-dim">{item.seller}</span>}
               </div>
-              {item.price != null && <span className="text-accent font-heading flex-shrink-0">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>}
-              {(() => {
+              {item.price != null && (
+                <span className="flex items-center gap-1.5 flex-shrink-0">
+                  {item.regularPrice != null && item.regularPrice > item.price && (
+                    <span className="text-foreground-dim line-through text-[10px]">${typeof item.regularPrice === 'number' ? item.regularPrice.toFixed(2) : item.regularPrice}</span>
+                  )}
+                  <span className="text-accent font-heading">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>
+                </span>
+              )}
+              {item.category === 'wanted' ? (
+                <span className="text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border text-yellow-400 border-yellow-400/30">Wanted</span>
+              ) : (() => {
                 const stock = item.stockStatus ?? (item.inStock !== undefined ? (item.inStock ? 'in_stock' : 'out_of_stock') : null);
                 if (!stock || stock === 'unknown') return null;
                 return (

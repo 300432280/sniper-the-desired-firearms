@@ -85,7 +85,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
 
       const url = p.permalink || `${origin}/?p=${p.id}`;
       const thumbnail = p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined;
-      const inStock = p.is_purchasable !== false;
+      const inStock = p.is_in_stock !== false;
 
       matches.push({
         title: name.slice(0, 160),
@@ -289,6 +289,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
     const hasDateFilter = !!(options?.dateAfter || options?.dateBefore);
 
     const seen = new Map<string, CatalogProduct>(); // URL → product (Store API data preferred)
+    const wpIdToUrl = new Map<number, string>();     // WP product ID → URL (for Store API enrichment)
     let totalPages: number | undefined;
 
     // 1. WP REST API first — returns ALL published products (including out-of-stock)
@@ -300,7 +301,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
         per_page: perPage, page,
         orderby: hasDateFilter ? 'modified' : 'date',
         order,
-        _embed: 'wp:featuredmedia',
+        _embed: 'wp:featuredmedia,wp:term',
       };
       if (options?.dateAfter) params.modified_after = options.dateAfter;
       if (options?.dateBefore) params.modified_before = options.dateBefore;
@@ -322,59 +323,112 @@ export class WooCommerceAdapter extends AbstractAdapter {
             || embedded?.media_details?.sizes?.medium?.source_url
             || embedded?.source_url
             || undefined;
+
+          // Extract category names from embedded wp:term taxonomy groups
+          const wpTermCats = this.extractWpTermCategories(p._embedded?.['wp:term']);
+
           seen.set(url, {
             url,
             title: this.decodeHtml(p.title?.rendered || p.name || '').slice(0, 160),
             price: undefined,
             stockStatus: 'unknown' as const,
             thumbnail: thumb,
+            tags: wpTermCats,
+            sourceCategory: wpTermCats,
           });
+          if (p.id) wpIdToUrl.set(p.id, url);
         }
       }
     } catch { /* fall through */ }
 
-    // 2. Store API — enrich with prices, thumbnails, stock for in-stock products
-    //    Skip when date filtering is active: Store API doesn't support before/after,
-    //    so its pagination won't align with the WP REST date-filtered results.
-    if (!hasDateFilter) {
+    // 2. Store API — enrich with prices, thumbnails, stock, categories
+    //    Uses `include` param with WP REST product IDs + two stock_status passes
+    //    (default=in-stock, then outofstock) to cover all products.
+    //    When no date filter, also fetches the aligned page for totalPages header.
+    if (!hasDateFilter && !totalPages) {
+      // Quick probe for totalPages (needed for pagination upstream)
       try {
         const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
-          params: { per_page: perPage, page, orderby: 'date', order },
+          params: { per_page: 1, page: 1 },
           headers,
-          timeout: 15000,
+          timeout: 10000,
           validateStatus: (s) => s === 200,
         });
+        totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10) || totalPages;
+      } catch { /* ignore */ }
+    }
 
-        if (Array.isArray(resp.data)) {
-          if (!totalPages) {
-            totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10) || undefined;
-          }
-          for (const p of resp.data) {
-            const url = p.permalink || `${origin}/?p=${p.id}`;
-            if (this.isCategoryPageUrl(url)) continue;
-            // Store API has richer data — merge over WP REST entry
-            const existing = seen.get(url);
-            const storeThumb = p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined;
-            const storeCats = Array.isArray(p.categories)
-              ? p.categories.map((c: any) => c.name || c.slug).filter(Boolean).join(',')
-              : undefined;
-            seen.set(url, {
-              url,
-              title: this.decodeHtml(p.name || '').slice(0, 160),
-              price: p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined,
-              stockStatus: p.is_purchasable !== false ? 'in_stock' as const : 'out_of_stock' as const,
-              thumbnail: storeThumb || existing?.thumbnail,
-              sourceCategory: storeCats || existing?.sourceCategory,
+    if (wpIdToUrl.size > 0) {
+      // Enrich WP REST products via Store API `include` param.
+      // Two passes: in-stock (default) then out-of-stock, since Store API
+      // only returns in-stock products unless stock_status=outofstock is set.
+      const ids = [...wpIdToUrl.keys()];
+      for (let i = 0; i < ids.length; i += 100) {
+        const chunk = ids.slice(i, i + 100);
+        for (const stockFilter of [undefined, 'outofstock'] as const) {
+          try {
+            const params: Record<string, any> = { include: chunk.join(','), per_page: chunk.length };
+            if (stockFilter) params.stock_status = stockFilter;
+            const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
+              params,
+              headers,
+              timeout: 15000,
+              validateStatus: (s) => s === 200,
             });
-          }
+            if (Array.isArray(resp.data)) {
+              this.mergeStoreApiProducts(resp.data, seen, origin);
+            }
+          } catch { /* Store API enrichment failed — continue with WP REST data */ }
         }
-      } catch { /* Store API unavailable — WP REST results still usable */ }
+      }
     }
 
     return {
       products: [...seen.values()],
       totalPages,
     };
+  }
+
+  /** Extract product_cat names from WP REST API embedded wp:term groups */
+  private extractWpTermCategories(termGroups: any[] | undefined): string | undefined {
+    if (!Array.isArray(termGroups)) return undefined;
+    const names: string[] = [];
+    for (const group of termGroups) {
+      if (!Array.isArray(group)) continue;
+      for (const term of group) {
+        if (term.taxonomy === 'product_cat' && term.name) {
+          names.push(this.decodeHtml(term.name));
+        }
+      }
+    }
+    return names.length > 0 ? names.join(',') : undefined;
+  }
+
+  /** Merge Store API product data into the seen map (prices, stock, categories, thumbnails) */
+  private mergeStoreApiProducts(
+    products: any[],
+    seen: Map<string, CatalogProduct>,
+    origin: string,
+  ): void {
+    for (const p of products) {
+      const url = p.permalink || `${origin}/?p=${p.id}`;
+      if (this.isCategoryPageUrl(url)) continue;
+      const existing = seen.get(url);
+      const storeThumb = p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined;
+      const storeCats = Array.isArray(p.categories)
+        ? p.categories.map((c: any) => c.name || c.slug).filter(Boolean).join(',')
+        : undefined;
+      const rawP = p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined;
+      seen.set(url, {
+        url,
+        title: this.decodeHtml(p.name || '').slice(0, 160),
+        price: rawP && rawP > 0 ? rawP : undefined,
+        stockStatus: p.is_in_stock === true ? 'in_stock' as const : 'out_of_stock' as const,
+        thumbnail: storeThumb || existing?.thumbnail,
+        tags: storeCats || existing?.tags,
+        sourceCategory: storeCats || existing?.sourceCategory,
+      });
+    }
   }
 
   extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {

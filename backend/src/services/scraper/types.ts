@@ -57,11 +57,12 @@ export interface CatalogProduct {
   regularPrice?: number;     // Original price before discount (for strikethrough)
   stockStatus?: 'in_stock' | 'out_of_stock' | 'unknown';
   thumbnail?: string;
-  category?: 'new' | 'used' | 'auction_lot' | 'classified';
+  category?: 'new' | 'used' | 'auction_lot' | 'classified' | 'wanted';
   tags?: string;           // Comma-separated product tags from source
   productType?: string;    // "firearm" | "ammunition" | "optics" | "parts" | "gear" | "knives" | "other"
   sourceCategory?: string; // Raw category from API (Shopify product_type, WooCommerce category names)
   closingAt?: Date;
+  postDate?: string;       // Date string from listing (modified/bumped date on classifieds)
 }
 
 export interface CatalogPage {

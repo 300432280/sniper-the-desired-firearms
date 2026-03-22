@@ -31,6 +31,7 @@ interface WatermarkResult {
   pagesScanned: number;
   tokensUsed: number;
   newWatermarkUrl: string | null;
+  newWatermarkDate?: string;  // ISO date of newest listing seen (modified/bumped date)
   responseTimeMs?: number;
   statusCode?: number;
   signals?: { hasWaf: boolean; hasRateLimit: boolean; hasCaptcha: boolean };
@@ -49,9 +50,12 @@ export async function crawlWatermark(params: {
   baseBudget: number;
   capacity: number;
   lastWatermarkUrl: string | null;
+  lastWatermarkDate?: string | null;  // ISO date from previous crawl
   hasWaf?: boolean;
+  wmKnownThreshold?: number;         // Configurable via crawlTuning
+  wmOldDateThreshold?: number;        // Configurable via crawlTuning
 }): Promise<WatermarkResult> {
-  const { siteId, url, baseBudget, capacity, lastWatermarkUrl, hasWaf } = params;
+  const { siteId, url, baseBudget, capacity, lastWatermarkUrl, lastWatermarkDate, hasWaf } = params;
   const startTime = Date.now();
 
   const { adapter } = await getAdapterForUrl(url);
@@ -61,7 +65,13 @@ export async function crawlWatermark(params: {
   let tokensUsed = 0;
   const allNewProducts: CatalogProduct[] = [];
   let newWatermarkUrl: string | null = null;
+  let newestDateSeen: string | null = null;  // Track max date across all pages
   let hitWatermark = false;
+
+  // Configurable stop thresholds (from crawlTuning, defaults in crawl-tuning.ts)
+  const CONSECUTIVE_KNOWN_THRESHOLD = params.wmKnownThreshold ?? 40;
+  const CONSECUTIVE_OLD_DATE_THRESHOLD = params.wmOldDateThreshold ?? 25;
+  const lastWmDate = lastWatermarkDate ? new Date(lastWatermarkDate).getTime() : null;
 
   try {
     // Try API-based catalog first (structured data with prices, preferred)
@@ -91,11 +101,25 @@ export async function crawlWatermark(params: {
           }
         }
 
-        // Check each product against watermark
+        // Check each product: stop on watermark URL or consecutive already-seen threshold
+        const pageUrls = catalogPage.products.map(p => p.url);
+        const existingUrls = await checkExistingUrls(siteId, pageUrls);
+        let consecutiveKnown = 0;
+
         for (const product of catalogPage.products) {
           if (lastWatermarkUrl && product.url === lastWatermarkUrl) {
             hitWatermark = true;
             break;
+          }
+          if (existingUrls.has(product.url)) {
+            consecutiveKnown++;
+            if (consecutiveKnown >= CONSECUTIVE_KNOWN_THRESHOLD) {
+              console.log(`[WatermarkCrawler] ${params.domain}: hit ${CONSECUTIVE_KNOWN_THRESHOLD} consecutive known products, stopping`);
+              hitWatermark = true;
+              break;
+            }
+          } else {
+            consecutiveKnown = 0;
           }
           allNewProducts.push(product);
         }
@@ -232,21 +256,70 @@ export async function crawlWatermark(params: {
 
         foundProducts = true;
 
-        // Set watermark to the newest product on first page
-        // Validate it looks like a real product URL (not a nav/utility page)
-        if (!newWatermarkUrl && products.length > 0) {
-          const candidate = products[0].url;
-          if (!isNavOrUtilityUrl(candidate)) {
-            newWatermarkUrl = candidate;
-          } else if (products.length > 1 && !isNavOrUtilityUrl(products[1].url)) {
-            newWatermarkUrl = products[1].url;
+        // Track the newest date on first page (use MAX date, not products[0] which may be bumped)
+        for (const p of products) {
+          if (p.postDate) {
+            if (!newestDateSeen || p.postDate > newestDateSeen) {
+              newestDateSeen = p.postDate;
+            }
           }
         }
+
+        // Set watermark URL: prefer the product with the newest date, not position 0
+        // (position 0 may be a bumped old listing on classifieds sites)
+        if (!newWatermarkUrl && products.length > 0) {
+          if (newestDateSeen) {
+            // Find the product with the newest date
+            const newestProduct = products.find(p => p.postDate === newestDateSeen);
+            if (newestProduct && !isNavOrUtilityUrl(newestProduct.url)) {
+              newWatermarkUrl = newestProduct.url;
+            }
+          }
+          // Fallback: use position 0 if no dates available
+          if (!newWatermarkUrl) {
+            const candidate = products[0].url;
+            if (!isNavOrUtilityUrl(candidate)) {
+              newWatermarkUrl = candidate;
+            } else if (products.length > 1 && !isNavOrUtilityUrl(products[1].url)) {
+              newWatermarkUrl = products[1].url;
+            }
+          }
+        }
+
+        // Check each product: stop on watermark URL, consecutive already-seen, or date threshold
+        const pageUrls = products.map(p => p.url);
+        const existingUrls = await checkExistingUrls(siteId, pageUrls);
+        let consecutiveKnown = 0;
+        let consecutiveOldDate = 0;
 
         for (const product of products) {
           if (lastWatermarkUrl && product.url === lastWatermarkUrl) {
             hitWatermark = true;
             break;
+          }
+          // Date-based stop: if product date is older than last watermark date
+          if (lastWmDate && product.postDate) {
+            const productDate = new Date(product.postDate).getTime();
+            if (productDate <= lastWmDate) {
+              consecutiveOldDate++;
+              if (consecutiveOldDate >= CONSECUTIVE_OLD_DATE_THRESHOLD) {
+                console.log(`[WatermarkCrawler] ${params.domain}: hit ${CONSECUTIVE_OLD_DATE_THRESHOLD} consecutive listings older than watermark date, stopping`);
+                hitWatermark = true;
+                break;
+              }
+            } else {
+              consecutiveOldDate = 0;
+            }
+          }
+          if (existingUrls.has(product.url)) {
+            consecutiveKnown++;
+            if (consecutiveKnown >= CONSECUTIVE_KNOWN_THRESHOLD) {
+              console.log(`[WatermarkCrawler] ${params.domain}: hit ${CONSECUTIVE_KNOWN_THRESHOLD} consecutive known products, stopping`);
+              hitWatermark = true;
+              break;
+            }
+          } else {
+            consecutiveKnown = 0;
           }
           allNewProducts.push(product);
         }
@@ -283,6 +356,7 @@ export async function crawlWatermark(params: {
       pagesScanned,
       tokensUsed,
       newWatermarkUrl: newWatermarkUrl || lastWatermarkUrl,
+      newWatermarkDate: newestDateSeen || lastWatermarkDate || undefined,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -296,10 +370,22 @@ export async function crawlWatermark(params: {
       pagesScanned,
       tokensUsed,
       newWatermarkUrl: newWatermarkUrl || lastWatermarkUrl,
+      newWatermarkDate: newestDateSeen || lastWatermarkDate || undefined,
       errorMessage: msg,
       responseTimeMs: Date.now() - startTime,
     };
   }
+}
+
+// ── Check which URLs already exist in ProductIndex ─────────────────────────
+
+async function checkExistingUrls(siteId: string, urls: string[]): Promise<Set<string>> {
+  if (urls.length === 0) return new Set();
+  const existing = await prisma.productIndex.findMany({
+    where: { siteId, url: { in: urls } },
+    select: { url: true },
+  });
+  return new Set(existing.map(p => p.url));
 }
 
 // ── Save Products to ProductIndex ───────────────────────────────────────────

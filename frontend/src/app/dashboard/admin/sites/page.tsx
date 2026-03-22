@@ -18,6 +18,23 @@ interface TierState {
   tier4?: TierCycleState;
 }
 
+interface StreamTierState {
+  streamId: string;
+  tier: 2 | 3 | 4;
+  currentPage: number;
+  pageRangeStart: number;
+  pageRangeEnd?: number;
+  status: 'idle' | 'in_progress' | 'cooldown';
+  cooldownEndsAt?: string;
+  lastRefreshedAt?: string;
+}
+
+interface SiteStreamState {
+  streams: Array<{ id: string; url: string; type: string; category?: string; totalPages?: number }>;
+  tiers: Record<string, StreamTierState>;
+  detectedAt?: string;
+}
+
 interface SiteDashboard {
   id: string;
   domain: string;
@@ -48,6 +65,7 @@ interface SiteDashboard {
   // v2 catalog fields
   lastWatermarkUrl: string | null;
   tierState: TierState | string;
+  streamState: SiteStreamState | string | null;
   addedAt: string;
   coldStartOverride: boolean;
   productCount: number;
@@ -157,6 +175,34 @@ function tierStatusBadge(state?: TierCycleState): { label: string; color: string
   if (!state || state.status === 'idle') return { label: 'idle', color: 'text-foreground-dim' };
   if (state.status === 'in_progress') return { label: `running (${state.pagesScanned ?? 0}p)`, color: 'text-blue-400' };
   if (state.status === 'cooldown') return { label: 'cooldown', color: 'text-yellow-400' };
+  return { label: 'idle', color: 'text-foreground-dim' };
+}
+
+function parseStreamState(ss: SiteStreamState | string | null): SiteStreamState | null {
+  if (!ss) return null;
+  if (typeof ss === 'string') {
+    try { return JSON.parse(ss); } catch { return null; }
+  }
+  return ss;
+}
+
+function streamTierBadge(tiers: Record<string, StreamTierState>, tierNum: 2 | 3 | 4): { label: string; color: string } {
+  // Aggregate status across ALL streams for this tier (priority: in_progress > cooldown > idle)
+  const entries = Object.values(tiers).filter(t => t.tier === tierNum);
+  if (entries.length === 0) return { label: 'idle', color: 'text-foreground-dim' };
+
+  const inProgress = entries.find(e => e.status === 'in_progress');
+  if (inProgress) {
+    const range = inProgress.pageRangeEnd ? `${inProgress.pageRangeStart}-${inProgress.pageRangeEnd}` : `${inProgress.pageRangeStart}+`;
+    return { label: `p${inProgress.currentPage} [${range}]`, color: 'text-blue-400' };
+  }
+
+  const cooldown = entries.find(e => e.status === 'cooldown');
+  if (cooldown) {
+    const idle = entries.filter(e => e.status === 'idle').length;
+    return { label: idle > 0 ? `cooldown (${idle} idle)` : 'cooldown', color: 'text-yellow-400' };
+  }
+
   return { label: 'idle', color: 'text-foreground-dim' };
 }
 
@@ -1396,10 +1442,11 @@ export default function SiteMonitorPage() {
                           Catalog Tiers
                         </p>
                         {(() => {
-                          const ts = parseTierState(site.tierState);
-                          const t2 = tierStatusBadge(ts.tier2);
-                          const t3 = tierStatusBadge(ts.tier3);
-                          const t4 = tierStatusBadge(ts.tier4);
+                          const ss = parseStreamState(site.streamState);
+                          // Prefer streamState (active system) over legacy tierState
+                          const t2 = ss ? streamTierBadge(ss.tiers, 2) : tierStatusBadge(parseTierState(site.tierState).tier2);
+                          const t3 = ss ? streamTierBadge(ss.tiers, 3) : tierStatusBadge(parseTierState(site.tierState).tier3);
+                          const t4 = ss ? streamTierBadge(ss.tiers, 4) : tierStatusBadge(parseTierState(site.tierState).tier4);
                           return (
                             <table className="text-[10px] w-full">
                               <tbody>

@@ -214,6 +214,36 @@ export async function fetchPage(url: string, cookies?: string, options?: FetchOp
 }
 
 /**
+ * Native fetch fallback for servers with non-standard HTTP headers that Axios can't parse.
+ */
+async function nativeFetchFallback(
+  url: string,
+  headers: Record<string, string>,
+  cookies?: string,
+): Promise<FetchResult> {
+  const startTime = Date.now();
+  const fetchHeaders: Record<string, string> = { ...headers };
+  if (cookies) fetchHeaders['Cookie'] = cookies;
+
+  const resp = await fetch(url, {
+    headers: fetchHeaders,
+    redirect: 'follow',
+    signal: AbortSignal.timeout(15000),
+  });
+
+  const html = await resp.text();
+  const responseTimeMs = Date.now() - startTime;
+
+  return {
+    html,
+    responseTimeMs,
+    statusCode: resp.status,
+    signals: { hasWaf: false, hasRateLimit: false, hasCaptcha: false },
+    headers: Object.fromEntries(resp.headers.entries()),
+  };
+}
+
+/**
  * Fetch a page and return metadata (response time, signals, status code).
  * Used by the crawler to record CrawlEvents and update site metrics.
  */
@@ -252,6 +282,11 @@ export async function fetchPageWithMeta(url: string, cookies?: string, options?:
       if (msg.includes('ENOTFOUND')) break;               // DNS resolution failed
       if (msg.includes('ECONNREFUSED')) break;            // Connection refused
       if (msg.includes('ERR_TLS_CERT')) break;            // SSL certificate error
+      // Axios can't handle non-standard headers — fall back to native fetch
+      if (msg.includes('Parse Error')) {
+        console.log(`[HTTP] Axios parse error for ${url}, falling back to native fetch`);
+        return await nativeFetchFallback(url, baseHeaders, cookies);
+      }
     }
   }
 

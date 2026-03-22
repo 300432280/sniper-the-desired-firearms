@@ -16,6 +16,8 @@ export const TUNING_DEFAULTS = {
   t2SharePct: 35,                   // Tier 2 share of catalog tokens
   t3SharePct: 35,                   // Tier 3 share of catalog tokens
   t4SharePct: 30,                   // Tier 4 share of catalog tokens
+  wmKnownThreshold: 40,            // Consecutive already-seen products before Tier 1 stops
+  wmOldDateThreshold: 25,          // Consecutive listings older than watermark date before stopping
 };
 
 export type CrawlTuning = typeof TUNING_DEFAULTS;

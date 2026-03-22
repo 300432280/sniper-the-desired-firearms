@@ -1,11 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from './queue';
-import { scrapeWithAdapter, type ScrapeResult } from './scraper/index';
-import { sendAlertEmail } from './email';
-import { sendAlertSms } from './sms';
 import { pushEvent } from './debugLog';
 import { prisma } from '../lib/prisma';
-import { config } from '../config';
 import { runHealthChecks, pruneOldHealthChecks } from './health-monitor';
 import { schedulerTick, onCrawlComplete, initializeCrawlSchedule, pruneCrawlEvents } from './crawl-scheduler';
 import { sendDailyDigests } from './daily-digest';
@@ -13,18 +9,11 @@ import { crawlWatermark } from './watermark-crawler';
 import { crawlCatalogTier, parseTierState, startTierCycle, updateTierProgress, type TierState, crawlStreamTier, isStreamTierActive, startStreamTierCycle, completeStreamTierCycle } from './catalog-crawler';
 import { expireFreeAlerts } from './free-tier';
 import { allocateCatalogTokens } from './token-budget';
-import { classifyProduct } from './product-classifier';
 import { resolveTuning } from './crawl-tuning';
 import { parseStreamState, updateStreamPageRanges } from './stream-detector';
 import { pickStream } from './stream-priority';
 import { firearmsPriority } from './stream-priority-firearms';
 import type { SiteStreamState } from './scraper/types';
-
-interface CrawlSiteJobData {
-  siteId: string;
-  domain: string;
-  url: string;
-}
 
 interface WatermarkJobData {
   siteId: string;
@@ -33,6 +22,8 @@ interface WatermarkJobData {
   baseBudget: number;
   capacity: number;
   lastWatermarkUrl: string | null;
+  lastWatermarkDate?: string | null;
+  crawlTuning?: unknown;
   hasWaf?: boolean;
 }
 
@@ -49,258 +40,16 @@ interface CatalogJobData {
   streamState?: unknown;
 }
 
-// ─── Crawl-Site Job Processor (Unified Scheduler) ────────────────────────────
-
-/**
- * Process a scheduled crawl for a single site.
- * Finds all active searches targeting this site and runs the scraper once,
- * then distributes results to all matching searches.
- */
-async function processCrawlSite(job: Job<CrawlSiteJobData>): Promise<void> {
-  const { siteId, domain, url } = job.data;
-  const startTime = Date.now();
-
-  console.log(`[CrawlWorker] Crawling ${domain}`);
-  pushEvent({ type: 'scrape_start', websiteUrl: url, message: `Scheduled crawl: ${domain}` });
-
-  // Find all active searches targeting this site
-  const searches = await prisma.search.findMany({
-    where: {
-      websiteUrl: { contains: domain },
-      isActive: true,
-    },
-    include: { user: true },
-  });
-
-  if (searches.length === 0) {
-    console.log(`[CrawlWorker] No active searches for ${domain}, skipping`);
-    await onCrawlComplete({ siteId, status: 'success', matchesFound: 0 });
-    return;
-  }
-
-  // Get unique keywords to search for
-  const keywords = [...new Set(searches.map(s => s.keyword))];
-
-  let totalMatches = 0;
-  let lastResult: ScrapeResult | null = null;
-
-  try {
-    // Scrape for each unique keyword
-    const allScrapedProducts = new Map<string, { title: string; url: string; price?: number; thumbnail?: string; inStock?: boolean }>();
-
-    for (const keyword of keywords) {
-      const result = await scrapeWithAdapter(url, keyword, {
-        fast: true,
-        difficultyRating: 0,
-      });
-      lastResult = result;
-      totalMatches += result.matches.length;
-
-      // Collect all products for ProductIndex (deduped by URL)
-      for (const m of result.matches) {
-        if (!allScrapedProducts.has(m.url)) {
-          allScrapedProducts.set(m.url, { title: m.title, url: m.url, price: m.price, thumbnail: m.thumbnail, inStock: m.inStock });
-        }
-      }
-
-      // Distribute results to all searches with this keyword on this site
-      const matchingSearches = searches.filter(s => s.keyword === keyword);
-      for (const search of matchingSearches) {
-        await distributeMatchesToSearch(search, result);
-      }
-    }
-
-    // Save scraped products to ProductIndex (so keyword search also populates the index)
-    if (allScrapedProducts.size > 0) {
-      let indexed = 0;
-      for (const product of allScrapedProducts.values()) {
-        try {
-          const stockVal = product.inStock === false ? 'out_of_stock' : product.inStock ? 'in_stock' : null;
-          const hasRealStock = !!stockVal;
-          const productType = classifyProduct({
-            title: product.title,
-            url: product.url,
-          });
-          const update: Record<string, any> = {
-            title: product.title,
-            lastSeenAt: new Date(),
-            isActive: true,
-          };
-          if (hasRealStock) update.stockStatus = stockVal;
-          if (product.price != null) update.price = product.price;
-          if (product.thumbnail) update.thumbnail = product.thumbnail;
-          if (productType) update.productType = productType;
-
-          await prisma.productIndex.upsert({
-            where: { siteId_url: { siteId, url: product.url } },
-            update,
-            create: {
-              siteId,
-              url: product.url,
-              title: product.title,
-              price: product.price ?? null,
-              stockStatus: stockVal,
-              thumbnail: product.thumbnail ?? null,
-              productType: productType ?? null,
-            },
-          });
-          indexed++;
-        } catch (err) {
-          if (!(err instanceof Error && err.message.includes('Unique constraint'))) {
-            console.error(`[CrawlWorker] Failed to index product ${product.url}:`, err);
-          }
-        }
-      }
-      if (indexed > 0) {
-        console.log(`[CrawlWorker] Indexed ${indexed} products to ProductIndex for ${domain}`);
-      }
-    }
-
-    // Record successful crawl
-    await onCrawlComplete({
-      siteId,
-      status: 'success',
-      responseTimeMs: lastResult?.fetchMeta?.responseTimeMs ?? (Date.now() - startTime),
-      statusCode: lastResult?.fetchMeta?.statusCode,
-      matchesFound: totalMatches,
-      signals: lastResult?.fetchMeta?.signals,
-      headers: lastResult?.fetchMeta?.headers,
-      usedPlaywright: lastResult?.usedPlaywright,
-    });
-
-    pushEvent({
-      type: 'scrape_done',
-      websiteUrl: url,
-      message: `Crawl complete: ${domain} — ${totalMatches} matches across ${keywords.length} keyword(s)`,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    console.error(`[CrawlWorker] Crawl failed for ${domain}: ${msg}`);
-
-    const status = msg.includes('timeout') ? 'timeout'
-      : msg.includes('429') ? 'blocked'
-      : msg.includes('captcha') ? 'captcha'
-      : 'fail';
-
-    await onCrawlComplete({
-      siteId,
-      status,
-      responseTimeMs: Date.now() - startTime,
-      matchesFound: 0,
-      errorMessage: msg,
-      signals: lastResult?.fetchMeta?.signals,
-      headers: lastResult?.fetchMeta?.headers,
-    });
-
-    pushEvent({ type: 'scrape_fail', websiteUrl: url, message: `Crawl failed: ${domain} — ${msg}` });
-  }
-}
-
-/**
- * Distribute scrape results to a specific search — delta detect, persist, notify.
- */
-async function distributeMatchesToSearch(
-  search: { id: string; keyword: string; websiteUrl: string; user: any; notificationType: string; notifyEmail: string | null },
-  result: ScrapeResult
-): Promise<void> {
-  const searchId = search.id;
-
-  // Update lastChecked
-  await prisma.search.update({
-    where: { id: searchId },
-    data: { lastChecked: result.scrapedAt },
-  });
-
-  // Delta detection
-  const existingMatches = await prisma.match.findMany({
-    where: { searchId },
-    select: { url: true },
-  });
-  const existingUrls = new Set(existingMatches.map(m => m.url));
-
-  const newMatches = result.matches.filter(m => !existingUrls.has(m.url));
-  const updatedMatches = result.matches.filter(m => existingUrls.has(m.url));
-
-  // Update existing
-  for (const m of updatedMatches) {
-    await prisma.match.updateMany({
-      where: { searchId, url: m.url },
-      data: {
-        title: m.title,
-        price: m.price ?? null,
-        hash: result.contentHash,
-        thumbnail: m.thumbnail ?? undefined,
-        seller: m.seller ?? undefined,
-      },
-    });
-  }
-
-  // Insert new
-  if (newMatches.length > 0) {
-    await prisma.match.createMany({
-      data: newMatches.map(m => ({
-        searchId,
-        title: m.title,
-        price: m.price ?? null,
-        url: m.url,
-        hash: result.contentHash,
-        thumbnail: m.thumbnail ?? null,
-        postDate: m.postDate ? new Date(m.postDate) : null,
-        seller: m.seller ?? null,
-      })),
-      skipDuplicates: true,
-    });
-
-    // Update hash
-    await prisma.search.update({
-      where: { id: searchId },
-      data: { lastMatchHash: result.contentHash },
-    });
-
-    // Tier-aware notifications: PRO gets instant, FREE gets daily digest
-    if (newMatches.length > 0 && search.user && search.user.tier === 'PRO') {
-      const recipientEmail = search.user.email ?? search.notifyEmail;
-      if (recipientEmail && (search.notificationType === 'EMAIL' || search.notificationType === 'BOTH')) {
-        const insertedMatches = await prisma.match.findMany({
-          where: { searchId, url: { in: newMatches.map(m => m.url) } },
-          select: { id: true },
-        });
-
-        const notification = await prisma.notification.create({
-          data: { searchId, type: 'EMAIL', status: 'pending' },
-        });
-        if (insertedMatches.length > 0) {
-          await prisma.notificationMatch.createMany({
-            data: insertedMatches.map(m => ({ notificationId: notification.id, matchId: m.id })),
-          });
-        }
-
-        try {
-          await sendAlertEmail({
-            to: recipientEmail,
-            keyword: search.keyword,
-            matches: newMatches,
-            notificationId: notification.id,
-            backendUrl: config.backendUrl,
-          });
-          await prisma.notification.update({ where: { id: notification.id }, data: { status: 'sent' } });
-        } catch {
-          await prisma.notification.update({ where: { id: notification.id }, data: { status: 'failed' } });
-        }
-      }
-    }
-  }
-}
-
 // ─── Watermark Crawl Job Processor (Tier 1 — New Items) ─────────────────────
 
 async function processWatermarkCrawl(job: Job<WatermarkJobData>): Promise<void> {
-  const { siteId, domain, url, baseBudget, capacity, lastWatermarkUrl, hasWaf } = job.data;
+  const { siteId, domain, url, baseBudget, capacity, lastWatermarkUrl, lastWatermarkDate, crawlTuning, hasWaf } = job.data;
+  const tuning = resolveTuning(crawlTuning);
 
   console.log(`[WatermarkWorker] Tier 1 watermark crawl: ${domain}`);
   pushEvent({ type: 'scrape_start', websiteUrl: url, message: `Watermark crawl: ${domain}` });
 
-  const result = await crawlWatermark({ siteId, url, domain, baseBudget, capacity, lastWatermarkUrl, hasWaf });
+  const result = await crawlWatermark({ siteId, url, domain, baseBudget, capacity, lastWatermarkUrl, lastWatermarkDate, hasWaf, wmKnownThreshold: tuning.wmKnownThreshold, wmOldDateThreshold: tuning.wmOldDateThreshold });
 
   // Record crawl event and update watermark
   await onCrawlComplete({
@@ -313,6 +62,7 @@ async function processWatermarkCrawl(job: Job<WatermarkJobData>): Promise<void> 
     signals: result.signals,
     headers: result.headers,
     newWatermarkUrl: result.newWatermarkUrl,
+    newWatermarkDate: result.newWatermarkDate,
   });
 
   pushEvent({
@@ -393,6 +143,25 @@ async function processStreamCatalogCrawl(
   const now = new Date();
   const cooldownMap = { 2: tuning.t2CooldownHrs, 3: tuning.t3CooldownHrs, 4: tuning.t4CooldownHrs } as const;
 
+  // Auto-reset stale in_progress tiers (stuck from stalled jobs / worker restarts)
+  const STALE_PROGRESS_MS = 15 * 60 * 1000; // 15 minutes
+  let resetCount = 0;
+  for (const [, ts] of Object.entries(streamState.tiers)) {
+    if (ts.status === 'in_progress' && ts.cycleStartedAt) {
+      const age = now.getTime() - new Date(ts.cycleStartedAt).getTime();
+      if (age > STALE_PROGRESS_MS) {
+        ts.status = 'idle';
+        ts.currentPage = ts.pageRangeStart || 1;
+        ts.currentPageUrl = undefined;
+        ts.cycleStartedAt = undefined;
+        resetCount++;
+      }
+    }
+  }
+  if (resetCount > 0) {
+    console.log(`[CatalogWorker] ${domain}: auto-reset ${resetCount} stale in_progress tier(s)`);
+  }
+
   console.log(`[CatalogWorker] Stream catalog crawl: ${domain} (${streamState.streams.length} streams, tiers: ${Object.entries(activeTiers).filter(([, v]) => v).map(([k]) => k).join(',')})`);
 
   const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers, tuning);
@@ -420,6 +189,13 @@ async function processStreamCatalogCrawl(
     let tierState = streamState.tiers[stateKey];
     if (!tierState) continue;
 
+    // Apply page ranges from stored totalPages if not yet set (HTML streams only — API uses date ranges)
+    if (chosen.type === 'html' && chosen.totalPages && chosen.totalPages > 1 && !tierState.pageRangeEnd) {
+      updateStreamPageRanges(streamState, chosen.id, chosen.totalPages);
+      tierState = streamState.tiers[stateKey]; // re-read after range update
+      if (!tierState) continue;
+    }
+
     // Start new cycle if needed
     if (tierState.status === 'idle' || tierState.status === 'cooldown') {
       tierState = startStreamTierCycle(chosen, tier, tierState);
@@ -437,7 +213,7 @@ async function processStreamCatalogCrawl(
       hasWaf: data.hasWaf,
     });
 
-    // Update page ranges if we discovered total pages
+    // Update page ranges if we discovered total pages (HTML streams only)
     if (result.totalPagesDiscovered && chosen.type === 'html') {
       updateStreamPageRanges(streamState, chosen.id, result.totalPagesDiscovered);
     }
@@ -464,9 +240,7 @@ async function processStreamCatalogCrawl(
 
 export function startWorker(): Worker {
   const worker = new Worker('scrape', async (job) => {
-    if (job.name === 'crawl-site') {
-      await processCrawlSite(job as Job<CrawlSiteJobData>);
-    } else if (job.name === 'crawl-watermark') {
+    if (job.name === 'crawl-watermark') {
       await processWatermarkCrawl(job as Job<WatermarkJobData>);
     } else if (job.name === 'crawl-catalog') {
       await processCatalogCrawl(job as Job<CatalogJobData>);

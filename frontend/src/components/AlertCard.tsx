@@ -38,13 +38,15 @@ function MatchRow({ match, showSite }: { match: Match & { websiteUrl?: string };
       href={match.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-3 px-3 py-2 bg-surface-elevated/50 border border-border/50 rounded text-xs hover:border-accent/30 hover:bg-surface-elevated transition-colors cursor-pointer"
+      className={`flex items-center gap-3 px-3 py-2 border rounded text-xs hover:border-accent/30 hover:bg-surface-elevated transition-colors cursor-pointer ${
+        match.category === 'wanted' ? 'bg-yellow-950/20 border-yellow-700/30 opacity-70' : 'bg-surface-elevated/50 border-border/50'
+      }`}
     >
       {match.thumbnail && (
         <img
           src={match.thumbnail}
           alt=""
-          className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0"
+          className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0 bg-white"
           loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
@@ -80,7 +82,9 @@ function MatchRow({ match, showSite }: { match: Match & { websiteUrl?: string };
           <span className="text-accent font-heading">${match.price.toFixed(2)}</span>
         </span>
       )}
-      {match.stockStatus && match.stockStatus !== 'unknown' && (
+      {match.category === 'wanted' ? (
+        <span className="text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border text-yellow-400 border-yellow-400/30">Wanted</span>
+      ) : match.stockStatus && match.stockStatus !== 'unknown' && (
         <span className={`text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border ${
           match.stockStatus === 'out_of_stock' ? 'text-red-400 border-red-400/30' : 'text-green-400 border-green-400/30'
         }`}>
@@ -96,15 +100,18 @@ function MatchRow({ match, showSite }: { match: Match & { websiteUrl?: string };
 
 // Scan result item row (used in grouped and ungrouped views)
 function ScanResultRow({ item, showSite }: { item: LiveMatch; showSite?: boolean }) {
+  const isWanted = item.category === 'wanted';
   return (
     <a
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
       className={`flex items-center gap-3 px-3 py-2 border text-xs hover:border-accent/30 transition-colors cursor-pointer ${
-        item.isNew
-          ? 'bg-green-950/30 border-l-2 border-l-green-500 border-green-700/40'
-          : 'bg-surface-elevated/50 border-border/50'
+        isWanted
+          ? 'bg-yellow-950/20 border-yellow-700/30 opacity-70'
+          : item.isNew
+            ? 'bg-green-950/30 border-l-2 border-l-green-500 border-green-700/40'
+            : 'bg-surface-elevated/50 border-border/50'
       }`}
     >
       {item.isNew && (
@@ -116,7 +123,7 @@ function ScanResultRow({ item, showSite }: { item: LiveMatch; showSite?: boolean
         <img
           src={item.thumbnail}
           alt=""
-          className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0"
+          className="w-10 h-10 object-cover border border-border/50 rounded flex-shrink-0 bg-white"
           loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
@@ -142,7 +149,11 @@ function ScanResultRow({ item, showSite }: { item: LiveMatch; showSite?: boolean
           <span className="text-accent font-heading">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</span>
         </span>
       )}
-      {(() => {
+      {isWanted ? (
+        <span className="text-[9px] font-heading tracking-widest uppercase flex-shrink-0 px-1.5 py-0.5 border text-yellow-400 border-yellow-400/30">
+          Wanted
+        </span>
+      ) : (() => {
         const stock = item.stockStatus ?? (item.inStock !== undefined ? (item.inStock ? 'in_stock' : 'out_of_stock') : null);
         if (!stock || stock === 'unknown') return null;
         const isOut = stock === 'out_of_stock';
@@ -174,17 +185,22 @@ function GroupedScanResults({
   groupScanMeta: { scannedSites: number; successCount: number; failCount: number; totalMatches: number } | null;
 }) {
   const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc'>('default');
+  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
+  const [hideWanted, setHideWanted] = useState(true);
 
-  // Sort results
+  // Filter + sort results
+  const filteredResults = useMemo(() => {
+    return hideWanted ? results.filter(r => r.category !== 'wanted') : results;
+  }, [results, hideWanted]);
+
   const sortedResults = useMemo(() => {
-    if (sortBy === 'default') return results;
-    return [...results].sort((a, b) => {
+    if (sortBy === 'newest') return filteredResults;
+    return [...filteredResults].sort((a, b) => {
       const pa = a.price ?? (sortBy === 'price_asc' ? Infinity : -Infinity);
       const pb = b.price ?? (sortBy === 'price_asc' ? Infinity : -Infinity);
       return sortBy === 'price_asc' ? pa - pb : pb - pa;
     });
-  }, [results, sortBy]);
+  }, [filteredResults, sortBy]);
 
   // Group results by site domain
   const siteGroups = useMemo(() => {
@@ -224,7 +240,8 @@ function GroupedScanResults({
   };
   const collapseAll = () => setExpandedSites(new Set());
 
-  const newCount = results.filter(r => r.isNew).length;
+  const newCount = filteredResults.filter(r => r.isNew).length;
+  const wantedCount = results.filter(r => r.category === 'wanted').length;
   const siteCount = siteGroups?.length ?? 1;
 
   return (
@@ -232,7 +249,8 @@ function GroupedScanResults({
       {/* Summary bar */}
       <div className="flex items-center justify-between mb-2">
         <p className="text-[10px] text-foreground-muted">
-          {results.length} result{results.length !== 1 ? 's' : ''}
+          {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
+          {hideWanted && wantedCount > 0 && ` (${wantedCount} wanted hidden)`}
           {isGroup && ` across ${siteCount} site${siteCount !== 1 ? 's' : ''}`}
           {newCount > 0 && (
             <span className="ml-1.5 text-[9px] bg-green-600 text-white px-1.5 py-0.5 tracking-wider font-heading uppercase">
@@ -246,11 +264,30 @@ function GroupedScanResults({
           )}
         </p>
         <div className="flex items-center gap-2">
-          {/* Sort button */}
+          {/* Hide Wanted toggle */}
+          {wantedCount > 0 && (
+            <button
+              onClick={() => setHideWanted(prev => !prev)}
+              className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+                hideWanted ? 'text-yellow-400 border-yellow-400/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+              }`}
+            >
+              {hideWanted ? 'Show Wanted' : 'Hide Wanted'}
+            </button>
+          )}
+          {/* Sort buttons */}
           <button
-            onClick={() => setSortBy(prev => prev === 'default' ? 'price_asc' : prev === 'price_asc' ? 'price_desc' : 'default')}
+            onClick={() => setSortBy('newest')}
             className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
-              sortBy !== 'default' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+              sortBy === 'newest' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
+            }`}
+          >
+            Newest
+          </button>
+          <button
+            onClick={() => setSortBy(prev => prev === 'price_asc' ? 'price_desc' : 'price_asc')}
+            className={`text-[9px] px-1.5 py-0.5 border transition-colors ${
+              sortBy !== 'newest' ? 'text-accent border-accent/30' : 'text-foreground-dim border-border/50 hover:text-foreground'
             }`}
           >
             {sortBy === 'price_asc' ? 'Price ↑' : sortBy === 'price_desc' ? 'Price ↓' : 'Price'}

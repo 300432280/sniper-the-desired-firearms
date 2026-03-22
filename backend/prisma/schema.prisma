@@ -23,16 +23,16 @@ model User {
 }
 
 model SiteCredential {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   domain            String
   username          String
   encryptedPassword String
   sessionCookies    String?
   lastLogin         DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   searches          Search[]
 
   @@unique([userId, domain])
@@ -71,7 +71,7 @@ model Match {
   search        Search              @relation(fields: [searchId], references: [id], onDelete: Cascade)
   title         String
   price         Float?
-  regularPrice  Float?              // Original price before discount (for strikethrough display)
+  regularPrice  Float? // Original price before discount (for strikethrough display)
   url           String
   hash          String
   thumbnail     String?
@@ -112,16 +112,16 @@ enum Tier {
 }
 
 model SiteMap {
-  id            String   @id @default(cuid())
-  domain        String   @unique
-  siteType      String
-  listingUrls   String   @default("[]")
-  searchUrl     String?
-  discoveredAt  DateTime @default(now())
-  expiresAt     DateTime
-  hitCount      Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  domain       String   @unique
+  siteType     String
+  listingUrls  String   @default("[]")
+  searchUrl    String?
+  discoveredAt DateTime @default(now())
+  expiresAt    DateTime
+  hitCount     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("site_maps")
 }
@@ -133,59 +133,59 @@ enum NotificationType {
 }
 
 model MonitoredSite {
-  id               String            @id @default(cuid())
-  domain           String            @unique
+  id               String  @id @default(cuid())
+  domain           String  @unique
   name             String
   url              String
-  siteType         String            @default("generic")
-  adapterType      String            @default("generic")
-  isEnabled        Boolean           @default(true)
-  isPaused         Boolean           @default(false)
-  requiresSucuri   Boolean           @default(false)
-  requiresAuth     Boolean           @default(false)
+  siteType         String  @default("generic")
+  adapterType      String  @default("generic")
+  isEnabled        Boolean @default(true)
+  isPaused         Boolean @default(false)
+  requiresSucuri   Boolean @default(false)
+  requiresAuth     Boolean @default(false)
   searchUrlPattern String?
   notes            String?
 
   // Site classification (determines crawl strategy + base rates)
-  siteCategory       String          @default("retailer") // retailer, forum, classified, auction
+  siteCategory String @default("retailer") // retailer, forum, classified, auction
 
   // Crawl scheduling state
   lastCrawlAt        DateTime?
   nextCrawlAt        DateTime?
-  crawlIntervalMin   Int             @default(120)
+  crawlIntervalMin   Int       @default(120)
   crawlLock          String?
   crawlLockExpiresAt DateTime?
 
   // Pressure/capacity model (replaces old multiplier stack)
-  pressure           Float           @default(0)    // 0-1, rolling average from last 20 crawls
-  capacity           Float           @default(1)    // e^(-3 × pressure), 0.05-1.0
-  baseBudget         Int             @default(60)   // Tokens per hour (admin-configurable)
+  pressure   Float @default(0) // 0-1, rolling average from last 20 crawls
+  capacity   Float @default(1) // e^(-3 × pressure), 0.05-1.0
+  baseBudget Int   @default(60) // Tokens per hour (admin-configurable)
 
   // Difficulty signals (auto-measured from crawl responses)
   avgResponseTimeMs   Int?
-  consecutiveFailures Int            @default(0)
-  hasWaf              Boolean        @default(false)
-  hasRateLimit        Boolean        @default(false)
-  hasCaptcha          Boolean        @default(false)
+  consecutiveFailures Int     @default(0)
+  hasWaf              Boolean @default(false)
+  hasRateLimit        Boolean @default(false)
+  hasCaptcha          Boolean @default(false)
 
   // Per-site crawl tuning (JSON overrides, null fields → use global defaults)
-  crawlTuning        Json?
+  crawlTuning Json?
 
   // Watermark tracking (Tier 1 — new items crawl)
-  lastWatermarkUrl   String?
+  lastWatermarkUrl String?
 
   // Tier state (JSONB tracking cycle progress for Tiers 2-4)
-  tierState          Json            @default("{}")
+  tierState Json @default("{}")
 
   // Stream state (per-stream tier structure — Phase 2)
-  streamState        Json?
+  streamState Json?
 
   // Cold start tracking
-  addedAt            DateTime        @default(now())
-  coldStartOverride  Boolean         @default(false)
+  addedAt           DateTime @default(now())
+  coldStartOverride Boolean  @default(false)
 
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   healthChecks    SiteHealthCheck[]
   crawlEvents     CrawlEvent[]
   products        ProductIndex[]
@@ -195,22 +195,22 @@ model MonitoredSite {
 }
 
 model ProductIndex {
-  id          String        @id @default(cuid())
-  siteId      String
-  site        MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  url         String
+  id           String        @id @default(cuid())
+  siteId       String
+  site         MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  url          String
   title        String
   price        Float?
-  regularPrice Float?              // Original price before discount (for strikethrough display)
-  stockStatus  String?       // "in_stock" | "out_of_stock" | "unknown"
-  thumbnail   String?
-  category    String?       // "new" | "used" | "auction_lot" | "classified"
-  tags        String?       // Comma-separated product tags from source (e.g. Shopify)
-  productType String?       // "firearm" | "ammunition" | "optics" | "parts" | "gear" | "knives" | "other"
-  closingAt   DateTime?     // For auction lots — enables live countdown timer
-  firstSeenAt DateTime      @default(now())
-  lastSeenAt  DateTime      @default(now())
-  isActive    Boolean       @default(true)
+  regularPrice Float? // Original price before discount (for strikethrough display)
+  stockStatus  String? // "in_stock" | "out_of_stock" | "unknown"
+  thumbnail    String?
+  category     String? // "new" | "used" | "auction_lot" | "classified"
+  tags         String? // Comma-separated product tags from source (e.g. Shopify)
+  productType  String? // "firearm" | "ammunition" | "optics" | "parts" | "gear" | "knives" | "other"
+  closingAt    DateTime? // For auction lots — enables live countdown timer
+  firstSeenAt  DateTime      @default(now())
+  lastSeenAt   DateTime      @default(now())
+  isActive     Boolean       @default(true)
 
   @@unique([siteId, url])
   @@index([siteId, lastSeenAt])
@@ -241,7 +241,7 @@ model CrawlEvent {
   id             String        @id @default(cuid())
   siteId         String
   site           MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  status         String        // success, fail, timeout, blocked, captcha
+  status         String // success, fail, timeout, blocked, captcha
   responseTimeMs Int?
   statusCode     Int?
   matchesFound   Int           @default(0)
@@ -270,9 +270,9 @@ model DismissedIssue {
   id                String        @id @default(cuid())
   siteId            String
   site              MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  issueType         String        // e.g. "waf_blocked", "no_products", "consecutive_failures"
+  issueType         String // e.g. "waf_blocked", "no_products", "consecutive_failures"
   dismissedAt       DateTime      @default(now())
-  conditionSnapshot String?       // snapshot when dismissed; if condition changes, issue re-surfaces
+  conditionSnapshot String? // snapshot when dismissed; if condition changes, issue re-surfaces
 
   @@unique([siteId, issueType])
   @@index([siteId])

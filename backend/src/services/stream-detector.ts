@@ -160,7 +160,7 @@ export function updateStreamPageRanges(
   const stream = state.streams.find(s => s.id === streamId);
   if (stream) stream.totalPages = totalPages;
 
-  // Update tier boundaries (only if idle — don't disrupt in-progress cycles)
+  // Update tier boundaries for all tiers (idle or in-progress)
   for (const [tier, [start, end]] of [
     [2, ranges.t2],
     [3, ranges.t3],
@@ -168,9 +168,13 @@ export function updateStreamPageRanges(
   ] as const) {
     const key = `${streamId}:${tier}`;
     const ts = state.tiers[key];
-    if (ts && ts.status === 'idle') {
-      ts.pageRangeStart = start;
-      ts.pageRangeEnd = end;
+    if (!ts) continue;
+    ts.pageRangeStart = start;
+    ts.pageRangeEnd = end;
+    // If tier is in-progress but currentPage is outside its new range, reset to range start
+    if (ts.status === 'in_progress' && (ts.currentPage < start || (end != null && ts.currentPage > end))) {
+      ts.currentPage = start;
+      ts.currentPageUrl = undefined;
     }
   }
 }
