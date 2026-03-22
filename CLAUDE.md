@@ -82,6 +82,47 @@ Each adapter handles search + catalog extraction for a site type:
   - `devops-engineer` — deployment (Vercel/Railway), infra, reliability
   - `code-reviewer` — correctness, security, regression prevention
 - Use project agents first; fall back to general agents for broader tasks.
+- **MANDATORY: When spawning a subagent, ALWAYS read the matching `.claude/agents/*.md` persona file and include its content in the subagent prompt.** The persona files contain accumulated lessons from real mistakes. A subagent without its persona will repeat past mistakes. No exceptions.
+
+## User Configuration Registry
+<!-- This section tracks all user-decided configurations: installed skills, agents, custom rules, and settings.
+     Managed by the user. Claude reads this section the same as any other, but the user can use it to
+     audit, reset, rollback, or update their configuration choices. -->
+
+### Installed Skills
+| Skill | Location | Purpose | Installed |
+|-------|----------|---------|-----------|
+| `using-superpowers` | `~/.claude/skills/using-superpowers/` | Auto-check for relevant skills/agents before every response | 2026-03-22 |
+| `find-skills` | `~/.claude/skills/find-skills/` | Search and install skills from the open ecosystem | pre-existing |
+| `ui-ux-pro-max` | `~/.claude/skills/ui-ux-pro-max/` | UI/UX design intelligence: styles, palettes, fonts, a11y | pre-existing |
+
+### Installed Agent Personas (project-specific)
+| Agent | File | Purpose | Created |
+|-------|------|---------|---------|
+| `backend-engineer` | `.claude/agents/backend-engineer.md` | Express/Prisma/BullMQ infrastructure | 2026-03-22 |
+| `frontend-engineer` | `.claude/agents/frontend-engineer.md` | Next.js 14 dashboard UI | 2026-03-22 |
+| `crawler-specialist` | `.claude/agents/crawler-specialist.md` | Adapter dev, scraping, stream/tier logic | 2026-03-22 |
+| `sre-reliability` | `.claude/agents/sre-reliability.md` | Crawler uptime, job health, self-healing | 2026-03-22 |
+| `devops-engineer` | `.claude/agents/devops-engineer.md` | Deployment, infra, reliability | 2026-03-22 |
+| `code-reviewer` | `.claude/agents/code-reviewer.md` | Correctness, security, regression prevention | 2026-03-22 |
+
+### Global Agent Collection
+| Collection | Location | Count | Source |
+|------------|----------|-------|--------|
+| `agency-agents` | `~/.claude/agents/agency-agents/` | 100+ | [github.com/obra/superpowers](https://github.com/obra/superpowers) |
+
+### Global Settings
+| Setting | Value | File |
+|---------|-------|------|
+| Agent teams enabled | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` | `~/.claude/settings.json` |
+| Teammate mode | `in-process` | `~/.claude/settings.json` |
+
+### Custom Rules (user-decided)
+| Rule | Reason | Added |
+|------|--------|-------|
+| Always load persona files into subagents | Subagents without personas repeat past mistakes | 2026-03-22 |
+| Never deactivate products based on lastSeenAt alone | Crawlers may not have visited the page yet; 4,956 products wrongly deactivated | 2026-03-22 |
+| Follow using-superpowers at conversation start | Ensures skills/agents are checked before every response | 2026-03-22 |
 
 ## Gotchas
 - On Windows: bash escapes `$disconnect` in inline node `-e` commands. Write `.js` script files instead.
