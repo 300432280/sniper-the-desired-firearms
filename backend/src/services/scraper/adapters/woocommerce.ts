@@ -18,6 +18,7 @@ import { pickUserAgent } from '../http-client';
 export class WooCommerceAdapter extends AbstractAdapter {
   name = 'WooCommerce';
   siteType = 'retailer' as const;
+  supportsDateFilter = true; // WP REST API supports modified_after/modified_before
 
   getSearchUrl(origin: string, keyword: string): string {
     return `${origin}/?s=${encodeURIComponent(keyword)}&post_type=product`;

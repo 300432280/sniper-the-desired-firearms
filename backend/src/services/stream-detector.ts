@@ -44,13 +44,16 @@ export async function detectStreams(siteUrl: string): Promise<Stream[]> {
   const origin = new URL(siteUrl).origin;
   const streams: Stream[] = [];
 
-  // Step 1: Try API stream (preferred — single stream with date filtering)
+  // Step 1: Try API stream
   if (adapter.fetchCatalogPage) {
+    // API streams that support date filtering use 'api' type (tiers partition by date range)
+    // API streams without date filtering use 'html' type (tiers partition by page range)
+    const streamType = adapter.supportsDateFilter !== false ? 'api' : 'html';
     streams.push({
       id: 'api',
       url: origin,
-      type: 'api',
-      category: undefined, // API stream covers all categories
+      type: streamType,
+      category: undefined,
     });
     return streams;
   }

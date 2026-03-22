@@ -483,20 +483,29 @@ export async function crawlStreamTier(params: {
   const allProducts: CatalogProduct[] = [];
 
   try {
-    if (stream.type === 'api' && adapter.fetchCatalogPage) {
-      // ── API stream: use date ranges (same as legacy, but scoped to one stream)
-      // API streams partition by date range, not page range — each tier paginates 1→end within its date window
-      let page = tierState.currentPage || 1;
+    if (adapter.fetchCatalogPage) {
+      // ── API-based fetch: structured JSON with prices/stock
+      // 'api' type streams use date ranges for tier partitioning (WooCommerce)
+      // 'html' type API streams use page ranges for tier partitioning (Shopify — no date filter support)
+      const useDateRanges = stream.type === 'api';
+      let page = tierState.currentPage || tierState.pageRangeStart || 1;
+      const pageRangeEnd = tierState.pageRangeEnd;
 
       while (tokensUsed < tokensAllocated) {
+        // Stop if we've exceeded this tier's page range (page-partitioned APIs only)
+        if (!useDateRanges && pageRangeEnd != null && page > pageRangeEnd) {
+          cycleComplete = true;
+          break;
+        }
+
         consumeToken(siteId, tier);
         tokensUsed++;
 
         const catalogPage = await adapter.fetchCatalogPage(origin, page, {
           sortBy: 'newest',
           perPage: 50,
-          dateAfter: tierState.dateRangeStart || undefined,
-          dateBefore: tierState.dateRangeEnd || undefined,
+          dateAfter: useDateRanges ? (tierState.dateRangeStart || undefined) : undefined,
+          dateBefore: useDateRanges ? (tierState.dateRangeEnd || undefined) : undefined,
         });
         pagesScanned++;
 

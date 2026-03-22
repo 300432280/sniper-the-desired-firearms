@@ -188,7 +188,6 @@ function parseStreamState(ss: SiteStreamState | string | null): SiteStreamState 
 
 function streamTierBadge(tiers: Record<string, StreamTierState> | null | undefined, tierNum: 2 | 3 | 4): { label: string; color: string } {
   if (!tiers) return { label: 'idle', color: 'text-foreground-dim' };
-  // Aggregate status across ALL streams for this tier (priority: in_progress > cooldown > idle)
   const entries = Object.values(tiers).filter(t => t.tier === tierNum);
   if (entries.length === 0) return { label: 'idle', color: 'text-foreground-dim' };
 
@@ -205,6 +204,47 @@ function streamTierBadge(tiers: Record<string, StreamTierState> | null | undefin
   }
 
   return { label: 'idle', color: 'text-foreground-dim' };
+}
+
+/** Build tier progress visualization data from streamState */
+function buildTierProgress(ss: SiteStreamState | null) {
+  if (!ss || !ss.tiers) return null;
+
+  const isApi = ss.streams.some(s => s.type === 'api');
+  // Find the "active" stream for each tier (priority: in_progress > cooldown > idle)
+  const tierData: Array<{ tier: number; status: string; currentPage: number; rangeStart: number; rangeEnd: number | null; streamId: string; lastRefreshed?: string }> = [];
+
+  for (const tierNum of [2, 3, 4]) {
+    const entries = Object.values(ss.tiers).filter(t => t.tier === tierNum);
+    const best = entries.find(e => e.status === 'in_progress') || entries.find(e => e.status === 'cooldown') || entries[0];
+    if (best) {
+      tierData.push({
+        tier: tierNum,
+        status: best.status,
+        currentPage: best.currentPage || best.pageRangeStart || 1,
+        rangeStart: best.pageRangeStart || 1,
+        rangeEnd: best.pageRangeEnd ?? null,
+        streamId: best.streamId,
+        lastRefreshed: best.lastRefreshedAt,
+      });
+    }
+  }
+
+  // For HTML sites, find max pages across all streams
+  let maxPage = 1;
+  if (!isApi) {
+    for (const s of ss.streams) {
+      if (s.totalPages && s.totalPages > maxPage) maxPage = s.totalPages;
+    }
+    // Also check tier range ends and current pages
+    for (const td of tierData) {
+      if (td.rangeEnd && td.rangeEnd > maxPage) maxPage = td.rangeEnd;
+      if (td.currentPage > maxPage) maxPage = td.currentPage;
+    }
+    if (maxPage <= 1) maxPage = Math.max(...tierData.map(td => td.currentPage), 1);
+  }
+
+  return { isApi, tierData, maxPage, streamCount: ss.streams.length };
 }
 
 // ── Crawl Tuning Constants (client-side mirror of backend defaults) ──────────
@@ -1449,41 +1489,117 @@ export default function SiteMonitorPage() {
                         </p>
                         {(() => {
                           const ss = parseStreamState(site.streamState);
-                          // Prefer streamState (active system) over legacy tierState
-                          const t2 = ss ? streamTierBadge(ss.tiers, 2) : tierStatusBadge(parseTierState(site.tierState).tier2);
-                          const t3 = ss ? streamTierBadge(ss.tiers, 3) : tierStatusBadge(parseTierState(site.tierState).tier3);
-                          const t4 = ss ? streamTierBadge(ss.tiers, 4) : tierStatusBadge(parseTierState(site.tierState).tier4);
+                          const progress = buildTierProgress(ss);
+
+                          // T1 status
+                          const t1Active = !!site.lastWatermarkUrl;
+
+                          if (!progress) {
+                            // Legacy fallback
+                            const ts = parseTierState(site.tierState);
+                            const t2 = tierStatusBadge(ts.tier2);
+                            const t3 = tierStatusBadge(ts.tier3);
+                            const t4 = tierStatusBadge(ts.tier4);
+                            return (
+                              <table className="text-[10px] w-full">
+                                <tbody>
+                                  <tr className="border-b border-border/30">
+                                    <td className="py-1 text-foreground-muted">Tier 1 (New Items)</td>
+                                    <td className="py-1 text-right">
+                                      {t1Active ? <span className="text-green-400 font-heading">Active</span> : <span className="text-foreground-dim">No watermark</span>}
+                                    </td>
+                                  </tr>
+                                  <tr className="border-b border-border/30"><td className="py-1 text-foreground-muted">Tier 2</td><td className={`py-1 text-right font-heading ${t2.color}`}>{t2.label}</td></tr>
+                                  <tr className="border-b border-border/30"><td className="py-1 text-foreground-muted">Tier 3</td><td className={`py-1 text-right font-heading ${t3.color}`}>{t3.label}</td></tr>
+                                  <tr className="border-b border-border/30"><td className="py-1 text-foreground-muted">Tier 4</td><td className={`py-1 text-right font-heading ${t4.color}`}>{t4.label}</td></tr>
+                                </tbody>
+                              </table>
+                            );
+                          }
+
+                          const tierColors: Record<number, { fill: string; text: string; label: string }> = {
+                            2: { fill: 'bg-blue-500', text: 'text-blue-400', label: 'T2' },
+                            3: { fill: 'bg-purple-500', text: 'text-purple-400', label: 'T3' },
+                            4: { fill: 'bg-orange-500', text: 'text-orange-400', label: 'T4' },
+                          };
+
+                          const statusIcon = (s: string) => s === 'in_progress' ? '\u25B6' : s === 'cooldown' ? '\u23F8' : '\u25CB';
+
                           return (
-                            <table className="text-[10px] w-full">
-                              <tbody>
-                                <tr className="border-b border-border/30">
-                                  <td className="py-1 text-foreground-muted">Tier 1 (New Items)</td>
-                                  <td className="py-1 text-right">
-                                    {site.lastWatermarkUrl ? (
-                                      <span className="text-green-400 font-heading">Active</span>
-                                    ) : (
-                                      <span className="text-foreground-dim">No watermark</span>
-                                    )}
-                                  </td>
-                                </tr>
-                                <tr className="border-b border-border/30">
-                                  <td className="py-1 text-foreground-muted">Tier 2 (0-7d)</td>
-                                  <td className={`py-1 text-right font-heading ${t2.color}`}>{t2.label}</td>
-                                </tr>
-                                <tr className="border-b border-border/30">
-                                  <td className="py-1 text-foreground-muted">Tier 3 (8-21d)</td>
-                                  <td className={`py-1 text-right font-heading ${t3.color}`}>{t3.label}</td>
-                                </tr>
-                                <tr className="border-b border-border/30">
-                                  <td className="py-1 text-foreground-muted">Tier 4 (22+d)</td>
-                                  <td className={`py-1 text-right font-heading ${t4.color}`}>{t4.label}</td>
-                                </tr>
-                                <tr className="border-b border-border/30">
-                                  <td className="py-1 text-foreground-muted">Products Indexed</td>
-                                  <td className="py-1 text-right font-heading text-foreground">{(site.productCount ?? 0).toLocaleString()}</td>
-                                </tr>
-                              </tbody>
-                            </table>
+                            <div className="space-y-2">
+                              {/* T1 */}
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-foreground-muted">T1 New Items</span>
+                                {t1Active ? <span className="text-green-400 font-heading">Active</span> : <span className="text-foreground-dim">No watermark</span>}
+                              </div>
+
+                              {/* Combined progress bar — same format for API and HTML */}
+                              <div className="space-y-1.5">
+                                <div className="relative h-5 bg-surface-elevated rounded-sm overflow-hidden flex">
+                                  {progress.tierData.map(td => {
+                                    const c = tierColors[td.tier];
+                                    // Each tier gets 1/3 of the bar width
+                                    const segmentWidth = 100 / 3;
+                                    // Progress within this tier's segment
+                                    let tierProgress = 0;
+                                    if (td.status === 'cooldown') {
+                                      tierProgress = 100; // completed cycle
+                                    } else if (td.status === 'in_progress') {
+                                      const rangeSize = td.rangeEnd ? (td.rangeEnd - td.rangeStart + 1) : Math.max(td.currentPage, 10);
+                                      tierProgress = Math.min(((td.currentPage - td.rangeStart + 1) / rangeSize) * 100, 100);
+                                    }
+                                    // idle = 0%
+
+                                    const fillWidth = (tierProgress / 100) * segmentWidth;
+
+                                    return (
+                                      <div
+                                        key={td.tier}
+                                        className="relative h-full"
+                                        style={{ width: `${segmentWidth}%` }}
+                                        title={`${c.label}: ${td.status} \u2014 page ${td.currentPage}${td.rangeEnd ? ` of ${td.rangeEnd}` : ''}`}
+                                      >
+                                        {/* Tier segment border */}
+                                        <div className="absolute inset-0 border-r border-border/20" />
+                                        {/* Filled progress */}
+                                        <div
+                                          className={`h-full ${c.fill} transition-all duration-500 ${td.status === 'idle' ? 'opacity-10' : td.status === 'cooldown' ? 'opacity-30' : 'opacity-60'}`}
+                                          style={{ width: `${fillWidth / segmentWidth * 100}%` }}
+                                        />
+                                        {/* Tier label centered */}
+                                        <span className={`absolute inset-0 flex items-center justify-center text-[8px] font-heading font-bold ${td.status === 'idle' ? 'text-foreground-dim/40' : c.text}`}>
+                                          {c.label} {statusIcon(td.status)} {Math.round(tierProgress)}%
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {/* Per-tier details */}
+                                <div className="flex gap-2 text-[9px]">
+                                  {progress.tierData.map(td => {
+                                    const c = tierColors[td.tier];
+                                    const statusColor = td.status === 'in_progress' ? c.text : td.status === 'cooldown' ? 'text-yellow-400' : 'text-foreground-dim';
+                                    const pageInfo = progress.isApi
+                                      ? `p${td.currentPage}`
+                                      : td.rangeEnd ? `p${td.currentPage}/${td.rangeEnd}` : `p${td.currentPage}`;
+                                    return (
+                                      <span key={td.tier} className={`${statusColor} flex-1`}>
+                                        <span className="font-heading font-bold">{c.label}</span> {pageInfo}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                                <div className="text-[9px] text-foreground-dim">
+                                  {progress.streamCount} stream{progress.streamCount > 1 ? 's' : ''} {'\u00B7'} {progress.isApi ? 'date-partitioned' : `${progress.maxPage}p page-partitioned`}
+                                </div>
+                              </div>
+
+                              {/* Products indexed */}
+                              <div className="flex items-center justify-between text-[10px] pt-1 border-t border-border/30">
+                                <span className="text-foreground-muted">Products Indexed</span>
+                                <span className="font-heading text-foreground">{(site.productCount ?? 0).toLocaleString()}</span>
+                              </div>
+                            </div>
                           );
                         })()}
                         {site.lastWatermarkUrl && (

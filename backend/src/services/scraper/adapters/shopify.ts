@@ -15,6 +15,7 @@ import axios from 'axios';
 export class ShopifyAdapter extends AbstractAdapter {
   name = 'Shopify';
   siteType = 'retailer' as const;
+  supportsDateFilter = false; // Public /products.json ignores updated_at_min/max (only Admin API supports it)
 
   getSearchUrl(origin: string, keyword: string): string {
     return `${origin}/search?q=${encodeURIComponent(keyword)}&type=product`;
@@ -202,9 +203,11 @@ export class ShopifyAdapter extends AbstractAdapter {
       catalogProducts.reverse();
     }
 
+    const isLastPage = products.length < perPage;
     return {
       products: catalogProducts,
-      nextPageUrl: products.length >= perPage ? `${origin}/products.json?limit=${perPage}&page=${page + 1}` : undefined,
+      nextPageUrl: isLastPage ? undefined : `${origin}/products.json?limit=${perPage}&page=${page + 1}`,
+      totalPages: isLastPage ? page : undefined, // Report totalPages when we reach the end
     };
   }
 
