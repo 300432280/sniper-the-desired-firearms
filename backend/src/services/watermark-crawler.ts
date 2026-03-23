@@ -17,6 +17,7 @@ import { consumeToken, getTier1Remaining } from './token-budget';
 import { matchNewProducts } from './keyword-matcher';
 import type { CatalogProduct } from './scraper/types';
 import { classifyProduct } from './product-classifier';
+import { saveProducts, checkExistingProducts } from './product-upsert';
 import * as cheerio from 'cheerio';
 
 /** Reject nav/utility URLs that should never be stored as watermarks */
@@ -102,8 +103,7 @@ export async function crawlWatermark(params: {
         }
 
         // Check each product: stop on watermark URL or consecutive already-seen threshold
-        const pageUrls = catalogPage.products.map(p => p.url);
-        const existingUrls = await checkExistingUrls(siteId, pageUrls);
+        const existingUrls = await checkExistingProducts(siteId, catalogPage.products);
         let consecutiveKnown = 0;
 
         for (const product of catalogPage.products) {
@@ -287,8 +287,7 @@ export async function crawlWatermark(params: {
         }
 
         // Check each product: stop on watermark URL, consecutive already-seen, or date threshold
-        const pageUrls = products.map(p => p.url);
-        const existingUrls = await checkExistingUrls(siteId, pageUrls);
+        const existingUrls = await checkExistingProducts(siteId, products);
         let consecutiveKnown = 0;
         let consecutiveOldDate = 0;
 
@@ -379,82 +378,4 @@ export async function crawlWatermark(params: {
 
 // ── Check which URLs already exist in ProductIndex ─────────────────────────
 
-async function checkExistingUrls(siteId: string, urls: string[]): Promise<Set<string>> {
-  if (urls.length === 0) return new Set();
-  const existing = await prisma.productIndex.findMany({
-    where: { siteId, url: { in: urls } },
-    select: { url: true },
-  });
-  return new Set(existing.map(p => p.url));
-}
-
-// ── Save Products to ProductIndex ───────────────────────────────────────────
-
-async function saveProducts(
-  siteId: string,
-  products: CatalogProduct[],
-): Promise<Array<{ id: string; siteId: string; url: string; title: string; price?: number | null; thumbnail?: string | null }>> {
-  if (products.length === 0) return [];
-
-  const saved: Array<{ id: string; siteId: string; url: string; title: string; price?: number | null; thumbnail?: string | null }> = [];
-
-  for (const product of products) {
-    try {
-      // Only overwrite stock/price/thumbnail if new data is meaningful —
-      // prevents WP REST API data (unknown stock, no price) from clobbering
-      // good data already set by Store API or backfill.
-      // Classify product type if not already set
-      const productType = product.productType || classifyProduct({
-        title: product.title,
-        url: product.url,
-        tags: product.tags,
-        sourceCategory: product.sourceCategory,
-      });
-
-      const hasRealStock = product.stockStatus && product.stockStatus !== 'unknown';
-      const update: Record<string, any> = {
-        title: product.title,
-        category: product.category ?? null,
-        tags: product.tags ?? null,
-        closingAt: product.closingAt ?? null,
-        lastSeenAt: new Date(),
-        isActive: true,
-      };
-      if (hasRealStock) update.stockStatus = product.stockStatus;
-      if (product.price != null) update.price = product.price;
-      if (product.regularPrice != null) update.regularPrice = product.regularPrice;
-      if (product.thumbnail) update.thumbnail = product.thumbnail;
-      if (productType) update.productType = productType;
-
-      const result = await prisma.productIndex.upsert({
-        where: { siteId_url: { siteId, url: product.url } },
-        update,
-        create: {
-          siteId,
-          url: product.url,
-          title: product.title,
-          price: product.price ?? null,
-          regularPrice: product.regularPrice ?? null,
-          stockStatus: product.stockStatus ?? null,
-          thumbnail: product.thumbnail ?? null,
-          category: product.category ?? null,
-          tags: product.tags ?? null,
-          productType: productType ?? null,
-          closingAt: product.closingAt ?? null,
-        },
-      });
-
-      // Only include in "new" list if it was just created (firstSeenAt === lastSeenAt)
-      if (result.firstSeenAt.getTime() === result.lastSeenAt.getTime()) {
-        saved.push(result);
-      }
-    } catch (err) {
-      // Skip duplicates silently
-      if (!(err instanceof Error && err.message.includes('Unique constraint'))) {
-        console.error(`[WatermarkCrawler] Failed to save product ${product.url}:`, err);
-      }
-    }
-  }
-
-  return saved;
-}
+// saveProducts and checkExistingProducts are now imported from './product-upsert'

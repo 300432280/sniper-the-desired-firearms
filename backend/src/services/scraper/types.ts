@@ -7,6 +7,7 @@ export interface ScrapedMatch {
   price?: number;
   regularPrice?: number;     // Original price before discount (for strikethrough)
   url: string;
+  sourceId?: string;         // Platform-stable product ID (Shopify ID, WP post ID, Drupal node ID, etc.)
   inStock?: boolean;
   thumbnail?: string;
   postDate?: string;
@@ -52,6 +53,7 @@ export type SiteType = 'retailer' | 'classifieds' | 'forum' | 'auction' | 'gener
 
 export interface CatalogProduct {
   url: string;
+  sourceId?: string;       // Platform-stable product ID (Shopify ID, WP post ID, Drupal node ID, etc.)
   title: string;
   price?: number;
   regularPrice?: number;     // Original price before discount (for strikethrough)

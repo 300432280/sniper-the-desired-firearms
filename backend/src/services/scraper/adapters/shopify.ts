@@ -67,6 +67,7 @@ export class ShopifyAdapter extends AbstractAdapter {
           title: title.slice(0, 160),
           price: price && price > 0 ? price : undefined,
           url: productUrl,
+          sourceId: product.id != null ? String(product.id) : undefined,
           thumbnail,
           inStock: product.available !== false,
           seller: undefined,
@@ -124,8 +125,10 @@ export class ShopifyAdapter extends AbstractAdapter {
         if (options.inStockOnly && !inStock) return;
         if (options.maxPrice && price && price > options.maxPrice) return;
 
+        const sourceId = element.attr('data-product-id') || element.closest('[data-product-id]').attr('data-product-id') || undefined;
+
         seen.add(titleKey);
-        matches.push({ title: rawTitle, price, url: productUrl, inStock, thumbnail });
+        matches.push({ title: rawTitle, price, url: productUrl, inStock, thumbnail, sourceId });
       });
     }
 
@@ -187,6 +190,7 @@ export class ShopifyAdapter extends AbstractAdapter {
 
       return {
         url: (() => { try { return decodeURIComponent(`${origin}/products/${p.handle}`); } catch { return `${origin}/products/${p.handle}`; } })(),
+        sourceId: String(p.id),
         title: (p.title || '').trim().slice(0, 160),
         price: p.variants?.[0]?.price ? parseFloat(p.variants[0].price) : undefined,
         stockStatus: p.variants?.some((v: any) => v.available)
@@ -242,8 +246,11 @@ export class ShopifyAdapter extends AbstractAdapter {
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
+        const sourceId = element.attr('data-product-id') || element.closest('[data-product-id]').attr('data-product-id') || undefined;
+
         products.push({
           url,
+          sourceId,
           title,
           price,
           stockStatus: inStock ? 'in_stock' : 'out_of_stock',

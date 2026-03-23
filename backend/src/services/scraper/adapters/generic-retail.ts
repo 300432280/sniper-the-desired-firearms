@@ -82,12 +82,15 @@ export class GenericRetailAdapter extends AbstractAdapter {
         const { price, regularPrice } = this.extractPricesFromElement(element);
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
+        const sourceId = element.attr('data-product-id')
+          || element.closest('[data-product-id]').attr('data-product-id')
+          || undefined;
 
         if (options.inStockOnly && !inStock) return;
         if (options.maxPrice && price && price > options.maxPrice) return;
 
         seen.add(titleKey);
-        matches.push({ title: rawTitle, price, regularPrice, url: productUrl, inStock, thumbnail });
+        matches.push({ title: rawTitle, price, regularPrice, url: productUrl, inStock, thumbnail, sourceId });
       });
     }
 
@@ -446,6 +449,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
           if (!r.name || !r.url) continue;
           allProducts.push({
             url: r.url,
+            sourceId: r.id || undefined,
             title: (r.name || '').trim().slice(0, 160),
             price: r.salePrice ? parseFloat(r.salePrice) : (r.price ? parseFloat(r.price) : undefined),
             regularPrice: r.salePrice && r.price && parseFloat(r.price) > parseFloat(r.salePrice)
@@ -535,9 +539,13 @@ export class GenericRetailAdapter extends AbstractAdapter {
         const { price, regularPrice } = this.extractPricesFromElement(element);
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
+        const sourceId = element.attr('data-product-id')
+          || element.closest('[data-product-id]').attr('data-product-id')
+          || undefined;
 
         products.push({
           url,
+          sourceId,
           title,
           price,
           regularPrice,

@@ -69,21 +69,24 @@ model Search {
 }
 
 model Match {
-  id            String              @id @default(cuid())
-  searchId      String
-  search        Search              @relation(fields: [searchId], references: [id], onDelete: Cascade)
-  title         String
-  price         Float?
-  regularPrice  Float? // Original price before discount (for strikethrough display)
-  url           String
-  hash          String
-  thumbnail     String?
-  postDate      DateTime?
-  seller        String?
-  foundAt       DateTime            @default(now())
-  notifications NotificationMatch[]
+  id              String              @id @default(cuid())
+  searchId        String
+  search          Search              @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  productIndexId  String?             // FK to ProductIndex — used for live data enrichment
+  productIndex    ProductIndex?       @relation(fields: [productIndexId], references: [id], onDelete: SetNull)
+  title           String
+  price           Float?
+  regularPrice    Float? // Original price before discount (for strikethrough display)
+  url             String
+  hash            String
+  thumbnail       String?
+  postDate        DateTime?
+  seller          String?
+  foundAt         DateTime            @default(now())
+  notifications   NotificationMatch[]
 
   @@unique([searchId, url])
+  @@index([productIndexId])
   @@map("matches")
 }
 
@@ -203,6 +206,7 @@ model ProductIndex {
   siteId       String
   site         MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
   url          String
+  sourceId     String?       // Platform-stable product ID (Shopify product ID, WP post ID, Drupal node ID, etc.)
   title        String
   price        Float?
   regularPrice Float? // Original price before discount (for strikethrough display)
@@ -215,8 +219,10 @@ model ProductIndex {
   firstSeenAt  DateTime      @default(now())
   lastSeenAt   DateTime      @default(now())
   isActive     Boolean       @default(true)
+  matches      Match[]       // Matches that reference this product
 
   @@unique([siteId, url])
+  @@index([siteId, sourceId])
   @@index([siteId, lastSeenAt])
   @@index([title])
   @@map("product_index")

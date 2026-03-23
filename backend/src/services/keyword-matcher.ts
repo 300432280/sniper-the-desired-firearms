@@ -199,10 +199,11 @@ export async function matchNewProducts(
     const newProducts = matchingProducts.filter(p => !existingUrls.has(p.url));
     if (newProducts.length === 0) continue;
 
-    // Create Match records
+    // Create Match records with FK to ProductIndex for live data enrichment
     await prisma.match.createMany({
       data: newProducts.map(p => ({
         searchId: search.id,
+        productIndexId: p.id, // FK to ProductIndex — enables live title/price enrichment
         title: p.title,
         price: p.price ?? null,
         url: p.url,

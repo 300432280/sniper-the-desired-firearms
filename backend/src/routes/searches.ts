@@ -355,30 +355,41 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
     // Pure DB read — no crawl triggering from user endpoints.
     // The crawl scheduler handles all crawl timing independently.
 
-    // Enrich with ProductIndex thumbnails + categories for matches
-    const allMatchUrls = matches.map(m => m.url);
-    const piEnrichment = allMatchUrls.length > 0
-      ? await prisma.productIndex.findMany({
-          where: { url: { in: allMatchUrls } },
-          select: { url: true, thumbnail: true, category: true },
-        })
-      : [];
-    const groupThumbnailMap = new Map(piEnrichment.filter(p => p.thumbnail).map(p => [p.url, p.thumbnail]));
-    const groupCategoryMap = new Map(piEnrichment.map(p => [p.url, p.category]));
+    // Enrich matches with current ProductIndex data (title, price, URL may have changed)
+    // Strategy: use productIndexId FK when available, fall back to URL-based lookup
+    const matchPiIds = matches.filter(m => m.productIndexId).map(m => m.productIndexId!);
+    const matchUrls = matches.filter(m => !m.productIndexId).map(m => m.url);
 
-    const annotatedMatches = matches.map((m) => ({
-      title: m.title,
-      price: m.price,
-      regularPrice: m.regularPrice,
-      url: m.url,
-      thumbnail: m.thumbnail || groupThumbnailMap.get(m.url) || null,
-      seller: m.seller,
-      postDate: m.postDate,
-      foundAt: m.foundAt,
-      websiteUrl: m.search.websiteUrl,
-      isNew: m.search.lastChecked ? m.foundAt > m.search.lastChecked : true,
-      category: groupCategoryMap.get(m.url) || null,
-    }));
+    const [piByFk, piByUrl] = await Promise.all([
+      matchPiIds.length > 0 ? prisma.productIndex.findMany({
+        where: { id: { in: matchPiIds } },
+        select: { id: true, url: true, title: true, price: true, regularPrice: true, thumbnail: true, category: true, stockStatus: true },
+      }) : [],
+      matchUrls.length > 0 ? prisma.productIndex.findMany({
+        where: { url: { in: matchUrls } },
+        select: { id: true, url: true, title: true, price: true, regularPrice: true, thumbnail: true, category: true, stockStatus: true },
+      }) : [],
+    ]);
+    const piById = new Map(piByFk.map(p => [p.id, p]));
+    const piByUrlMap = new Map(piByUrl.map(p => [p.url, p]));
+
+    const annotatedMatches = matches.map((m) => {
+      const pi = (m.productIndexId ? piById.get(m.productIndexId) : null) || piByUrlMap.get(m.url);
+      return {
+        title: pi?.title ?? m.title,
+        price: pi?.price ?? m.price,
+        regularPrice: pi?.regularPrice ?? m.regularPrice,
+        url: pi?.url ?? m.url,
+        thumbnail: pi?.thumbnail ?? m.thumbnail ?? null,
+        seller: m.seller,
+        postDate: m.postDate,
+        foundAt: m.foundAt,
+        websiteUrl: m.search.websiteUrl,
+        isNew: m.search.lastChecked ? m.foundAt > m.search.lastChecked : true,
+        category: pi?.category ?? null,
+        stockStatus: pi?.stockStatus ?? null,
+      };
+    });
 
     // Update lastChecked for all searches in group
     await prisma.search.updateMany({
@@ -584,23 +595,31 @@ router.get('/matches/:searchId', requireAuth, async (req: Request, res: Response
       prisma.match.count({ where: { searchId: search.id } }),
     ]);
 
-    // Enrich matches with current stockStatus + prices from ProductIndex
-    const matchUrls = matches.map(m => m.url);
-    const products = matchUrls.length > 0
-      ? await prisma.productIndex.findMany({
-          where: { url: { in: matchUrls } },
-          select: { url: true, stockStatus: true, price: true, regularPrice: true, category: true },
-        })
-      : [];
-    const productMap = new Map(products.map(p => [p.url, p]));
+    // Enrich matches with current data from ProductIndex (title, price, URL may have changed)
+    const matchPiIds = matches.filter(m => m.productIndexId).map(m => m.productIndexId!);
+    const matchUrlsForLookup = matches.filter(m => !m.productIndexId).map(m => m.url);
+    const [piByFk2, piByUrl2] = await Promise.all([
+      matchPiIds.length > 0 ? prisma.productIndex.findMany({
+        where: { id: { in: matchPiIds } },
+        select: { id: true, url: true, title: true, price: true, regularPrice: true, thumbnail: true, stockStatus: true, category: true },
+      }) : [],
+      matchUrlsForLookup.length > 0 ? prisma.productIndex.findMany({
+        where: { url: { in: matchUrlsForLookup } },
+        select: { id: true, url: true, title: true, price: true, regularPrice: true, thumbnail: true, stockStatus: true, category: true },
+      }) : [],
+    ]);
+    const piByIdMap2 = new Map(piByFk2.map(p => [p.id, p]));
+    const piByUrlMap2 = new Map(piByUrl2.map(p => [p.url, p]));
     const enrichedMatches = matches.map(m => {
-      const pi = productMap.get(m.url);
+      const pi = (m.productIndexId ? piByIdMap2.get(m.productIndexId) : null) || piByUrlMap2.get(m.url);
       return {
         ...m,
-        stockStatus: pi?.stockStatus || null,
-        // Use current ProductIndex prices (they stay up-to-date via crawls)
+        title: pi?.title ?? m.title,
         price: pi?.price ?? m.price,
         regularPrice: pi?.regularPrice ?? m.regularPrice,
+        url: pi?.url ?? m.url,
+        thumbnail: pi?.thumbnail ?? m.thumbnail,
+        stockStatus: pi?.stockStatus || null,
         category: pi?.category || null,
       };
     });

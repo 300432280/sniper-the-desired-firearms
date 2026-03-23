@@ -62,8 +62,11 @@ export class HiBidAdapter extends AbstractAdapter {
 
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
+        const lotMatch = lotUrl.match(/\/lot\/[^/]*?(\d+)/i) || lotUrl.match(/lotId=(\d+)/i);
+        const sourceId = lotMatch ? lotMatch[1] : undefined;
+
         seen.add(titleKey);
-        matches.push({ title: cleanTitle || rawTitle, price, url: lotUrl, thumbnail });
+        matches.push({ title: cleanTitle || rawTitle, price, url: lotUrl, sourceId, thumbnail });
       });
     }
 
@@ -153,8 +156,12 @@ export class HiBidAdapter extends AbstractAdapter {
         const price = bidEl.length ? extractBidPrice(bidEl.text()) : extractBidPrice(element.text());
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
+        const lotMatch = url.match(/\/lot\/[^/]*?(\d+)/i) || url.match(/lotId=(\d+)/i);
+        const sourceId = lotMatch ? lotMatch[1] : undefined;
+
         products.push({
           url,
+          sourceId,
           title: cleanTitle || rawTitle,
           price,
           stockStatus: 'in_stock',

@@ -115,6 +115,12 @@ export class GunpostAdapter extends AbstractAdapter {
         const productUrl = this.extractLink(element, baseUrl);
         if (this.isNavUrl(productUrl)) return;
 
+        const nodeId = element.attr('data-history-node-id')
+          || element.closest('[data-history-node-id]').attr('data-history-node-id')
+          || element.attr('class')?.match(/node--id-(\d+)/)?.[1]
+          || element.closest('[class*="node--id-"]').attr('class')?.match(/node--id-(\d+)/)?.[1]
+          || undefined;
+
         const priceEl = element.find('[class*="price"], [class*="cost"], [class*="amount"], [class*="field-price"]').first();
         let price = this.extractPrice(priceEl.text() || '');
         if (!price) price = this.extractPriceFromTitle(rawTitle);
@@ -130,6 +136,7 @@ export class GunpostAdapter extends AbstractAdapter {
           title: rawTitle,
           price: wanted ? undefined : this.sanitizeClassifiedPrice(price),
           url: productUrl,
+          sourceId: nodeId || undefined,
           thumbnail,
           postDate,
           inStock: wanted ? undefined : true,
@@ -186,6 +193,12 @@ export class GunpostAdapter extends AbstractAdapter {
         if (!url || seen.has(url)) return;
         seen.add(url);
 
+        const nodeId = element.attr('data-history-node-id')
+          || element.closest('[data-history-node-id]').attr('data-history-node-id')
+          || element.attr('class')?.match(/node--id-(\d+)/)?.[1]
+          || element.closest('[class*="node--id-"]').attr('class')?.match(/node--id-(\d+)/)?.[1]
+          || undefined;
+
         const priceEl = element.find('[class*="price"], [class*="cost"], [class*="amount"], [class*="field-price"]').first();
         let price = this.extractPrice(priceEl.text() || '');
         if (!price) price = this.extractPriceFromTitle(title);
@@ -198,6 +211,7 @@ export class GunpostAdapter extends AbstractAdapter {
 
         products.push({
           url,
+          sourceId: nodeId || undefined,
           title,
           price: wanted ? undefined : this.sanitizeClassifiedPrice(price),
           stockStatus: wanted ? undefined : 'in_stock',

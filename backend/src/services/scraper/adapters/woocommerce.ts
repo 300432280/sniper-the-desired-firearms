@@ -94,6 +94,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
         url,
         thumbnail,
         inStock,
+        sourceId: p.id ? String(p.id) : undefined,
       });
     }
 
@@ -127,6 +128,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
         url,
         thumbnail,
         inStock: undefined, // WP REST API doesn't provide stock status
+        sourceId: p.id ? String(p.id) : undefined,
       });
     }
 
@@ -206,8 +208,16 @@ export class WooCommerceAdapter extends AbstractAdapter {
         if (options.inStockOnly && !inStock) return;
         if (options.maxPrice && price && price > options.maxPrice) return;
 
+        // Extract WooCommerce product ID from HTML attributes or CSS classes
+        const sourceId = element.attr('data-product_id')
+          || element.attr('data-product-id')
+          || element.closest('[data-product_id]').attr('data-product_id')
+          || element.closest('[data-product-id]').attr('data-product-id')
+          || element.attr('class')?.match(/post-(\d+)/)?.[1]
+          || undefined;
+
         seen.add(titleKey);
-        matches.push({ title: rawTitle, price, url: productUrl, inStock, thumbnail });
+        matches.push({ title: rawTitle, price, url: productUrl, inStock, thumbnail, sourceId });
       });
     }
 
@@ -330,6 +340,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
 
           seen.set(url, {
             url,
+            sourceId: p.id ? String(p.id) : undefined,
             title: this.decodeHtml(p.title?.rendered || p.name || '').slice(0, 160),
             price: undefined,
             stockStatus: 'unknown' as const,
@@ -422,6 +433,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
       const rawP = p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined;
       seen.set(url, {
         url,
+        sourceId: existing?.sourceId || (p.id ? String(p.id) : undefined),
         title: this.decodeHtml(p.name || '').slice(0, 160),
         price: rawP && rawP > 0 ? rawP : undefined,
         stockStatus: p.is_in_stock === true ? 'in_stock' as const : 'out_of_stock' as const,
@@ -472,8 +484,17 @@ export class WooCommerceAdapter extends AbstractAdapter {
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
+        // Extract WooCommerce product ID from HTML attributes or CSS classes
+        const sourceId = element.attr('data-product_id')
+          || element.attr('data-product-id')
+          || element.closest('[data-product_id]').attr('data-product_id')
+          || element.closest('[data-product-id]').attr('data-product-id')
+          || element.attr('class')?.match(/post-(\d+)/)?.[1]
+          || undefined;
+
         products.push({
           url,
+          sourceId,
           title,
           price,
           stockStatus: inStock ? 'in_stock' : 'out_of_stock',

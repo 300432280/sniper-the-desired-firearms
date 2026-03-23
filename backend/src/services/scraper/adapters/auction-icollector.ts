@@ -94,6 +94,7 @@ export class ICollectorAdapter extends AbstractAdapter {
         title: title.slice(0, 160),
         price,
         url,
+        sourceId: String(item.ItemID),
         seller,
         thumbnail,
       });
@@ -166,8 +167,11 @@ export class ICollectorAdapter extends AbstractAdapter {
 
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
+        const idMatch = lotUrl.match(/_i(\d+)/);
+        const sourceId = idMatch ? idMatch[1] : undefined;
+
         seen.add(titleKey);
-        matches.push({ title: cleanTitle || rawTitle, price, url: lotUrl, thumbnail });
+        matches.push({ title: cleanTitle || rawTitle, price, url: lotUrl, thumbnail, sourceId });
       });
     }
 
@@ -221,6 +225,7 @@ export class ICollectorAdapter extends AbstractAdapter {
 
     const products: CatalogProduct[] = items.map(item => ({
       url: icollectorFriendlyUrl(item.ItemTitle || '', item.ItemID),
+      sourceId: String(item.ItemID),
       title: (item.ItemTitle || '').trim().slice(0, 160),
       price: item.ItemCurrentBidAmount > 0 ? item.ItemCurrentBidAmount : undefined,
       stockStatus: 'in_stock' as const,

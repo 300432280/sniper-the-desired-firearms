@@ -47,8 +47,11 @@ export class XenForoAdapter extends AbstractAdapter {
       const postDate = this.extractPostDate(element);
       const thumbnail = this.extractThumbnail($, element, baseUrl);
 
+      const threadMatch = threadUrl.match(/\.(\d+)\/?$/);
+      const sourceId = threadMatch ? threadMatch[1] : undefined;
+
       seen.add(titleKey);
-      matches.push({ title: rawTitle, price, url: threadUrl, postDate, thumbnail });
+      matches.push({ title: rawTitle, price, url: threadUrl, sourceId, postDate, thumbnail });
     });
 
     return matches;
@@ -110,8 +113,12 @@ export class XenForoAdapter extends AbstractAdapter {
       const price = this.extractPriceFromTitle(title);
       const thumbnail = this.extractThumbnail($, element, baseUrl);
 
+      const threadMatch = url.match(/\.(\d+)\/?$/);
+      const sourceId = threadMatch ? threadMatch[1] : undefined;
+
       products.push({
         url,
+        sourceId,
         title,
         price,
         stockStatus: 'in_stock',
