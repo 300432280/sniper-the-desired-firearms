@@ -20,7 +20,7 @@ import { consumeToken, getCatalogRemaining, allocateCatalogTokens } from './toke
 import { matchNewProducts } from './keyword-matcher';
 import { pushEvent } from './debugLog';
 import type { CatalogProduct, Stream, StreamTierState, SiteStreamState } from './scraper/types';
-import { classifyProduct } from './product-classifier';
+// classifyProduct is now handled inside shared product-upsert module
 import { saveProducts } from './product-upsert';
 import * as cheerio from 'cheerio';
 

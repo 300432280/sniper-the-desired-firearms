@@ -16,7 +16,7 @@ import { pushEvent } from './debugLog';
 import { consumeToken, getTier1Remaining } from './token-budget';
 import { matchNewProducts } from './keyword-matcher';
 import type { CatalogProduct } from './scraper/types';
-import { classifyProduct } from './product-classifier';
+// classifyProduct is now handled inside shared product-upsert module
 import { saveProducts, checkExistingProducts } from './product-upsert';
 import * as cheerio from 'cheerio';
 

@@ -67,6 +67,7 @@ export async function saveProducts(
       if (product.sourceId) update.sourceId = product.sourceId;
 
       let result;
+      let isNew = false;
 
       if (product.sourceId) {
         // ── sourceId path: find by stable ID first ──
@@ -75,7 +76,21 @@ export async function saveProducts(
         });
 
         if (existing) {
-          // Update existing row — URL, title, price may have changed
+          // URL may have changed — check for collision with another row
+          if (existing.url !== product.url) {
+            const urlConflict = await prisma.productIndex.findUnique({
+              where: { siteId_url: { siteId, url: product.url } },
+            });
+            if (urlConflict && urlConflict.id !== existing.id) {
+              // Merge: move any Match FKs from the conflicting row, then delete it
+              await prisma.match.updateMany({
+                where: { productIndexId: urlConflict.id },
+                data: { productIndexId: existing.id },
+              });
+              await prisma.productIndex.delete({ where: { id: urlConflict.id } });
+            }
+          }
+          // Update existing row with current URL, title, price
           result = await prisma.productIndex.update({
             where: { id: existing.id },
             data: update,
@@ -110,6 +125,7 @@ export async function saveProducts(
                 closingAt: product.closingAt ?? null,
               },
             });
+            isNew = true;
           }
         }
       } else {
@@ -134,11 +150,13 @@ export async function saveProducts(
       }
 
       // Only include in "new" list if it was just created
-      if (result.firstSeenAt.getTime() === result.lastSeenAt.getTime()) {
+      if (isNew || result.firstSeenAt.getTime() === result.lastSeenAt.getTime()) {
         saved.push(result);
       }
     } catch (err) {
-      if (!(err instanceof Error && err.message.includes('Unique constraint'))) {
+      if (err instanceof Error && err.message.includes('Unique constraint')) {
+        console.log(`[ProductUpsert] Unique constraint conflict for ${product.url} (sourceId: ${product.sourceId})`);
+      } else {
         console.error(`[ProductUpsert] Failed to save product ${product.url}:`, err);
       }
     }
