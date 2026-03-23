@@ -2,7 +2,7 @@
 
 Canadian firearm market monitoring web app. Monitors 60+ retailer websites, classifieds, forums, and auction platforms for user-defined keywords and sends email/SMS alerts when **new** matches are found.
 
-**v2.1 Architecture:** Catalog-based indexing with per-stream tier engine — each category/endpoint is an independent stream with its own tier structure. API sites use modification-date filtering; HTML sites use page-range division across tiers. 82,000+ products indexed across 55+ sites. Uses a pressure/capacity model with per-site token budgets, admin-tunable crawl parameters, and a pluggable domain priority system (firearms 3x, ammunition 2x weighting).
+**v2.2 Architecture:** Catalog-based indexing with per-stream tier engine and sourceId product tracking. Each category/endpoint is an independent stream with its own tier structure. API sites with date-filter support (WooCommerce) use modification-date partitioning; all other sites (Shopify, HTML, classifieds, auctions) use page-range division across tiers. 125,000+ products indexed across 60+ sites. Products are tracked by platform-stable IDs (Shopify product ID, WP post ID, Drupal node ID, auction lot ID) to prevent duplicates when URLs change. Uses a pressure/capacity model with per-site token budgets, admin-tunable crawl parameters, and a pluggable domain priority system (firearms 3x, ammunition 2x weighting).
 
 Uses an adapter-based scraping framework with platform-specific adapters for Shopify, WooCommerce, BigCommerce, Magento, and more. Supports "Search All Sites" to scan across the entire monitored network in one click. Includes authenticated forum scanning with encrypted credential storage and a built-in test store for end-to-end testing.
 
@@ -42,12 +42,34 @@ Crawl Scheduler (every 2 min tick)
         |       -> Run keyword matcher against all active Searches
         |       -> Notify PRO users instantly, queue FREE for daily digest
         |
-        +---> Tiers 2-4: Catalog Refresh (date-based)
-                Tier 2 (0-7d, 5hr cooldown) | Tier 3 (8-21d, 9hr cooldown) | Tier 4 (22+d, 17hr cooldown)
-                -> Update prices, stock status, detect removed products
-                -> Run keyword matcher on updated products
+        +---> Tiers 2-4: Catalog Refresh
+        |       WooCommerce: date-partitioned (T2: 0-7d, T3: 8-21d, T4: 22+d)
+        |       All others: page-partitioned (T2: pages 1-30%, T3: 30-65%, T4: 65%+)
+        |       -> Upsert via sourceId (stable platform ID) or URL fallback
+        |       -> Update prices, stock, thumbnails, detect removed products
+        |       -> Run keyword matcher on updated products
+        |
+        +---> Bootstrap: On first detection, probe streams to discover totalPages
+                -> Tiers start with proper page ranges immediately (no warm-up needed)
 
 Token Budget: 60 req/hr per site (scaled by capacity), Tier 1 reserves 70%
+
+### sourceId Product Tracking (v2.2)
+
+Products are tracked by platform-stable IDs instead of URLs:
+
+| Platform | sourceId Source | Stable across edits? |
+|----------|---------------|---------------------|
+| Shopify | `product.id` from API | Yes |
+| WooCommerce | `post_id` from WP REST API | Yes |
+| BigCommerce | `data-product-id` HTML attr | Yes |
+| Drupal (Gunpost) | `data-history-node-id` attr | Yes |
+| iCollector | `ItemID` from API | Yes |
+| HiBid | Lot ID from URL | Yes |
+| XenForo | Thread ID from URL | Yes |
+| ColdFusion (Bullseye) | Numeric ID from URL slug | Yes |
+
+When a seller edits a listing title (changing the URL slug), the sourceId match updates the existing row instead of creating a duplicate. Match records link to ProductIndex via `productIndexId` FK for live data enrichment — users always see current titles and prices.
 ```
 
 ### Keyword Matching (Zero HTTP)
@@ -283,14 +305,19 @@ Example: capacity=0.22 → effective=13 tokens/hr, min_gap=277s
 - Tiers 2-4 (catalog): Share remaining 30% + unused Tier 1 tokens
 - When multiple catalog tiers are active: split 35% / 35% / 30% (Tier 2/3/4)
 
-### Date-Based Catalog Tiers
+### Catalog Tier Partitioning
 
-| Tier | Date Range | Cooldown | Purpose |
-|------|-----------|----------|---------|
-| Tier 1 | Newest items | Every interval | Watermark crawl — paginate from newest until hitting last-known product |
-| Tier 2 (Recent) | 0-7 days back | 5 hours | Re-verify recent products (price changes, stock) |
-| Tier 3 (Aging) | 8-21 days back | 9 hours | Catch slower-moving inventory |
-| Tier 4 (Archive) | 22+ days back | 17 hours | Full catalog refresh at low priority |
+Tiers partition work differently based on adapter capability:
+
+- **Date-partitioned** (WooCommerce — `supportsDateFilter: true`): tiers filter by `modified_after`/`modified_before`, each covering a date window
+- **Page-partitioned** (Shopify, HTML, classifieds, auctions — `supportsDateFilter: false`): tiers divide the catalog by page ranges (T2: 30%, T3: 35%, T4: rest). `totalPages` is discovered at bootstrap time via `probeStreamTotalPages()`.
+
+| Tier | Date Range (WooCommerce) | Page Range (others) | Cooldown | Purpose |
+|------|--------------------------|---------------------|----------|---------|
+| Tier 1 | Newest items | Newest items | Every interval | Watermark crawl — paginate from newest until hitting last-known product |
+| Tier 2 | 0-7 days back | Pages 1 → 30% | 5 hours | Re-verify recent products (price changes, stock) |
+| Tier 3 | 8-21 days back | Pages 30% → 65% | 9 hours | Catch slower-moving inventory |
+| Tier 4 | 22+ days back | Pages 65% → end | 17 hours | Full catalog refresh at low priority |
 
 Each tier operates in cycles with absolute date snapshots. If a cycle can't finish in one hour, it continues the next hour. Cooldown timer starts after cycle completion.
 
@@ -428,17 +455,30 @@ model MonitoredSite {
   -> healthChecks[], crawlEvents[], products[]
 }
 
-// v2: Catalog-based product index (stores all discovered products from all sites)
+// v2.2: Catalog-based product index with sourceId tracking
 model ProductIndex {
-  id, siteId, url, title, price?, regularPrice?, stockStatus?, thumbnail?,
+  id, siteId, url,
+  sourceId?,            // Platform-stable product ID (Shopify ID, WP post ID, Drupal node ID, etc.)
+  title, price?, regularPrice?, stockStatus?, thumbnail?,
   category? ("new"|"used"|"auction_lot"|"classified"),
   productType? ("firearm"|"ammunition"|"optics"|"parts"|"gear"|"knives"|"other"),
   tags?,                // Comma-separated product tags from source
   closingAt?,           // For auction lots
   firstSeenAt, lastSeenAt, isActive
+  matches Match[]       // Matches referencing this product
   @@unique([siteId, url])
+  @@unique([siteId, sourceId]) WHERE sourceId IS NOT NULL  // Partial unique index (raw SQL)
+  @@index([siteId, sourceId])
   @@index([siteId, lastSeenAt])
   @@index([title])
+}
+
+// v2.2: Match records link to ProductIndex for live data enrichment
+model Match {
+  id, searchId, productIndexId?,  // FK to ProductIndex (nullable for legacy matches)
+  title, price?, regularPrice?, url, hash, thumbnail?, postDate?, seller?, foundAt
+  @@unique([searchId, url])
+  // When displaying matches, title/price/url are enriched from ProductIndex via productIndexId FK
 }
 
 // v2: Keyword alias system (maps variations to canonical form)
@@ -467,6 +507,46 @@ model SiteMap {
   id, domain (unique), siteType, listingUrls, searchUrl?, hitCount
 }
 ```
+
+---
+
+## Site Verification & Testing
+
+### investigate-site.js (primary test script)
+
+Comprehensive per-site investigation with 14 probes and 30 keyword patterns:
+
+```bash
+node scripts/investigate-site.js <domain>           # full test (DB + live HTTP)
+node scripts/investigate-site.js <domain> --db-only  # fast (DB checks only)
+node scripts/investigate-site.js <domain> --json     # JSON output
+```
+
+**Probes:**
+
+| Category | Probe | What it checks |
+|----------|-------|---------------|
+| DB State | A1: Stream State | Tier partitioning, stuck tiers, expired cooldowns |
+| DB State | A2: Crawl Events | Success rate, phantom successes, response time trends, gaps |
+| DB State | A3: Product Index | Freshness, price/stock/thumbnail coverage, stale products |
+| DB State | A4: Watermark | Watermark validity and age |
+| DB State | A5: sourceId Coverage | % of products with platform-stable IDs |
+| Live | B1: Platform Detection | Detect if adapter type is wrong |
+| Live | B4: Pagination | Discover totalPages from HTML |
+| Simulation | C1: Multi-Keyword Search | 30 keywords tested against DB (short, caliber, brand+model, long-tail, edge cases) |
+| Simulation | C2: Product Spot-Check | Random products: URL resolves, title matches page |
+| Simulation | C3: Data Accuracy | Title, price, thumbnail, sourceId, URL, Match staleness — 15 products sampled |
+| Simulation | C4: Duplicate Detection | Products sharing same sourceId (should be 0) |
+
+### verify-site.js (data quality)
+
+```bash
+node scripts/verify-site.js <domain>               # full (52 keywords)
+node scripts/verify-site.js <domain> --quick        # quick (12 keywords)
+node scripts/verify-site.js --all                   # all enabled sites
+```
+
+9 test suites: schema validation, data quality scoring, keyword search comparison (DB vs live API), stock accuracy, thumbnail validation, API health check, catalog freshness, sourceId coverage, match freshness.
 
 ---
 
