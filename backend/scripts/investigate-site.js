@@ -32,12 +32,40 @@ function info(msg) { return `${C.cyan}INFO${C.reset} ${msg}`; }
 
 // ── Test Keywords for Probe C1 ─────────────────────────────────────────────
 const TEST_KEYWORDS = [
+  // Short / basic
   { keyword: 'SKS', type: 'short' },
   { keyword: '9mm', type: 'caliber-short' },
   { keyword: '.308', type: 'caliber-dot' },
+  { keyword: '.22 LR', type: 'caliber-space' },
+  { keyword: '7.62x39', type: 'caliber-x' },
+  // Brand + model
   { keyword: 'Ruger 10/22', type: 'brand-model-slash' },
+  { keyword: 'AR-15', type: 'brand-hyphen' },
+  { keyword: 'tikka t3x', type: 'brand-model-lower' },
+  { keyword: 'GSG-16', type: 'model-hyphen-number' },
+  // Category / type
   { keyword: 'magazine', type: 'ambiguous' },
   { keyword: 'shotgun', type: 'category' },
+  { keyword: 'surplus', type: 'condition' },
+  { keyword: 'scope', type: 'accessory' },
+  { keyword: 'Federal', type: 'ammo-brand' },
+  { keyword: 'FMJ', type: 'ammo-type' },
+  { keyword: 'primer', type: 'reloading' },
+  { keyword: 'holster', type: 'accessory-2' },
+  { keyword: 'Glock 19', type: 'handgun' },
+  { keyword: '12 gauge', type: 'gauge' },
+  { keyword: 'used rifle', type: 'condition-category' },
+  // Long / complex
+  { keyword: 'Savage 110 Ultralite .308', type: 'brand-model-caliber' },
+  { keyword: 'Winchester SXP 12ga pump', type: 'brand-model-gauge-type' },
+  { keyword: 'Vortex Crossfire II 4-12x44', type: 'optics-magnification' },
+  { keyword: 'CCI Blazer 9mm 115gr FMJ', type: 'full-ammo-spec' },
+  { keyword: 'Remington 870 Express 12 gauge pump shotgun', type: 'long-descriptive' },
+  { keyword: 'norinco type 97', type: 'foreign-brand' },
+  { keyword: 'stripped lower receiver', type: 'parts-description' },
+  { keyword: '10 round magazine .223', type: 'capacity-type-caliber' },
+  { keyword: '$500 rifle', type: 'price-in-keyword' },
+  { keyword: 'mauser 270 win bolt action', type: 'multi-attribute' },
 ];
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -822,109 +850,284 @@ async function probeC2_ProductSpotCheck(site) {
   return { probe: 'C2-spot-check', verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', issues, details: results };
 }
 
-// ── Probe C3: Data Accuracy — title, price, completeness vs live site ────
-async function probeC3_DataAccuracy(site) {
+// ── Probe C3: Data Accuracy — title, price, thumbnail, sourceId, URL, Match↔PI consistency ────
+async function probeC3_DataAccuracy(site, opts) {
+  var dbOnly = opts && opts.dbOnly;
   var results = [];
   var issues = [];
 
-  // Get 8 random active products WITH prices (so we can compare)
+  // Determine site classification for context-sensitive checks
+  var siteRecord = await prisma.monitoredSite.findUnique({
+    where: { id: site.id },
+    select: { siteCategory: true, adapterType: true },
+  });
+  var siteCategory = siteRecord ? siteRecord.siteCategory : 'retailer';
+  var adapterType = siteRecord ? siteRecord.adapterType : 'generic';
+  var isClassified = siteCategory === 'classified' || siteCategory === 'forum' || siteCategory === 'auction';
+
+  // Adapters known to produce sourceId (Shopify, WooCommerce, Gunpost, etc.)
+  var sourceIdAdapters = ['shopify', 'woocommerce', 'woo-api', 'gunpost', 'classifieds-gunpost', 'auction-icollector', 'auction-hibid', 'forum-xenforo'];
+  var expectsSourceId = sourceIdAdapters.indexOf(adapterType) !== -1;
+
+  // Get 200 random active products (no price filter — we want to catch missing prices too)
   var products = await prisma.productIndex.findMany({
-    where: { siteId: site.id, isActive: true, price: { not: null } },
-    select: { url: true, title: true, price: true, stockStatus: true },
+    where: { siteId: site.id, isActive: true },
+    select: { id: true, url: true, title: true, price: true, thumbnail: true, sourceId: true, stockStatus: true },
     take: 200,
   });
 
   if (products.length < 3) {
-    results.push(info('Not enough priced products to spot-check data accuracy'));
+    results.push(info('Not enough active products to spot-check data accuracy'));
     return { probe: 'C3-data-accuracy', verdict: 'SKIP', issues, details: results };
   }
 
   var shuffled = products.sort(function() { return 0.5 - Math.random(); });
-  var sample = shuffled.slice(0, 8);
+  var sample = shuffled.slice(0, 15);
 
   var titleMismatches = 0;
   var priceMismatches = 0;
   var checked = 0;
 
+  // Counters for new checks
+  var thumbMissing = 0;
+  var thumbBroken = 0;
+  var priceMissing = 0;
+  var sourceIdMissing = 0;
+  var urlDead = 0;
+  var titleEmpty = 0;
+  var matchStale = 0;
+
   for (var product of sample) {
-    await delay(600);
-    var resp = await safeFetch(product.url, 10000);
+    var productLabel = '"' + (product.title || '(no title)').substring(0, 45) + '"';
 
-    if (resp.status !== 200 || resp.data.length < 500) {
-      results.push(info(`"${product.title.substring(0, 40)}..." — HTTP ${resp.status}, skipped`));
-      continue;
+    // ── Title check: not empty and not a URL ──
+    var titleIsEmpty = !product.title || product.title.trim() === '';
+    var titleIsUrl = product.title && /^https?:\/\//i.test(product.title.trim());
+    if (titleIsEmpty || titleIsUrl) {
+      titleEmpty++;
+      var titleReason = titleIsUrl ? 'Title is a URL: ' + product.title.substring(0, 60) : 'Product has empty title';
+      issues.push(makeIssue('TITLE_EMPTY', titleReason, { id: product.id, url: product.url, title: product.title }, 'high'));
+      results.push(fail('TITLE_EMPTY: ' + (titleIsUrl ? product.title.substring(0, 60) : product.url.substring(0, 60))));
     }
 
-    checked++;
-    var html = resp.data;
-    var htmlLower = html.toLowerCase();
+    // ── Price check: not null for retailer sites ──
+    if (product.price == null && !isClassified) {
+      priceMissing++;
+      issues.push(makeIssue('PRICE_MISSING',
+        'Retailer product has no price: ' + productLabel,
+        { id: product.id, url: product.url },
+        'high'));
+      results.push(fail('PRICE_MISSING: ' + productLabel));
+    }
 
-    // ── Title check: extract h1 from live page and compare against our DB title
-    var pageTitleMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-    var pageTitle = pageTitleMatch ? pageTitleMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : null;
-
-    if (pageTitle) {
-      var dbNorm = product.title.replace(/\s+/g, ' ').trim().toLowerCase();
-      var pageNorm = pageTitle.toLowerCase();
-      // Exact match after normalization, or DB title is a substring of page title (truncation is OK)
-      var titleMatch = dbNorm === pageNorm || pageNorm.startsWith(dbNorm) || dbNorm.startsWith(pageNorm);
-
-      if (!titleMatch) {
-        titleMismatches++;
-        issues.push(makeIssue('TITLE_MISMATCH',
-          'DB: "' + product.title.substring(0, 60) + '" vs Page: "' + pageTitle.substring(0, 60) + '"',
-          { dbTitle: product.title, pageTitle: pageTitle, url: product.url },
+    // ── Thumbnail: not null ──
+    if (!product.thumbnail) {
+      thumbMissing++;
+      issues.push(makeIssue('THUMBNAIL_MISSING',
+        'Product has no thumbnail: ' + productLabel,
+        { id: product.id, url: product.url },
+        'medium'));
+      results.push(warn('THUMBNAIL_MISSING: ' + productLabel));
+    } else if (!dbOnly) {
+      // ── Thumbnail: resolves with image content-type (HTTP check) ──
+      await delay(500);
+      var thumbOk = await safeHeadImage(product.thumbnail);
+      if (!thumbOk.ok) {
+        thumbBroken++;
+        issues.push(makeIssue('THUMBNAIL_BROKEN',
+          'Thumbnail URL non-200 or non-image: ' + productLabel + ' (' + thumbOk.reason + ')',
+          { id: product.id, thumbnail: product.thumbnail, reason: thumbOk.reason },
           'medium'));
-        results.push(warn('Title mismatch: DB="' + product.title.substring(0, 45) + '" vs Page="' + pageTitle.substring(0, 45) + '"'));
+        results.push(warn('THUMBNAIL_BROKEN: ' + productLabel + ' — ' + thumbOk.reason));
       }
     }
 
-    // ── Price check: does our price appear on the page?
-    if (product.price) {
-      var priceStr = product.price.toFixed(2);
-      var priceInt = Math.round(product.price).toString();
-      var priceOnPage = html.includes(priceStr) || html.includes(priceInt + '.') || html.includes('$' + priceStr) || html.includes('$' + priceInt);
+    // ── SourceId: not null for adapters that should produce it ──
+    if (expectsSourceId && !product.sourceId) {
+      sourceIdMissing++;
+      issues.push(makeIssue('SOURCEID_MISSING',
+        'Product on ' + adapterType + ' adapter has no sourceId: ' + productLabel,
+        { id: product.id, url: product.url, adapter: adapterType },
+        'medium'));
+      // Only log first few to avoid spam
+      if (sourceIdMissing <= 3) results.push(info('SOURCEID_MISSING: ' + productLabel));
+    }
 
-      if (!priceOnPage) {
-        priceMismatches++;
-        var priceMatches = html.match(/\$[\d,]+\.\d{2}/g) || [];
-        var uniquePrices = Array.from(new Set(priceMatches)).slice(0, 5);
-        issues.push(makeIssue('PRICE_MISMATCH',
-          'DB price $' + priceStr + ' not found on page. Page prices: ' + (uniquePrices.join(', ') || 'none found'),
-          { dbPrice: product.price, pagePrices: uniquePrices, url: product.url },
+    // ── URL resolves (not 404) — only flag confirmed 404s, not other errors ──
+    var urlCheck = { ok: true }; // default for db-only mode
+    if (!dbOnly) {
+      await delay(500);
+      urlCheck = await safeHeadUrl(product.url);
+      if (!urlCheck.ok && urlCheck.reason === 'HTTP 404') {
+        urlDead++;
+        issues.push(makeIssue('URL_DEAD',
+          'Product URL returns 404: ' + productLabel,
+          { id: product.id, url: product.url, reason: urlCheck.reason },
           'high'));
-        results.push(fail('Price mismatch: DB=$' + priceStr + ' not on page. Found: ' + (uniquePrices.join(', ') || 'none') + ' — ' + product.url.substring(0, 60)));
+        results.push(fail('URL_DEAD: ' + productLabel + ' — ' + urlCheck.reason));
+      }
+    }
+
+    // ── Match↔ProductIndex consistency: if Matches reference this product, verify data matches ──
+    var linkedMatches = await prisma.match.findMany({
+      where: { productIndexId: product.id },
+      select: { id: true, title: true, price: true },
+      take: 3,
+    });
+    for (var m of linkedMatches) {
+      var staleFields = [];
+      if (m.title !== product.title) staleFields.push('title');
+      if (m.price !== product.price) staleFields.push('price');
+      if (staleFields.length > 0) {
+        matchStale++;
+        issues.push(makeIssue('MATCH_STALE',
+          'Match ' + m.id.substring(0, 8) + ' differs from PI on: ' + staleFields.join(', ') +
+          (staleFields.indexOf('title') !== -1 ? ' (Match="' + m.title.substring(0, 30) + '" vs PI="' + product.title.substring(0, 30) + '")' : '') +
+          (staleFields.indexOf('price') !== -1 ? ' (Match=$' + m.price + ' vs PI=$' + product.price + ')' : ''),
+          { matchId: m.id, productId: product.id, staleFields: staleFields },
+          'high'));
+        if (matchStale <= 3) results.push(fail('MATCH_STALE: Match→PI mismatch on ' + staleFields.join(', ') + ' for ' + productLabel));
+      }
+    }
+
+    // ── Live page comparison (original C3 logic): fetch page, compare title & price ──
+    if (!dbOnly && urlCheck.ok) {
+      await delay(500);
+      var resp = await safeFetch(product.url, 10000);
+
+      if (resp.status === 200 && resp.data.length >= 500) {
+        checked++;
+        var html = resp.data;
+
+        // Title check vs live h1
+        var pageTitleMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+        var pageTitle = pageTitleMatch ? pageTitleMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : null;
+
+        if (pageTitle) {
+          var dbNorm = product.title.replace(/\s+/g, ' ').trim().toLowerCase();
+          var pageNorm = pageTitle.toLowerCase();
+          var titleMatchOk = dbNorm === pageNorm || pageNorm.startsWith(dbNorm) || dbNorm.startsWith(pageNorm);
+
+          if (!titleMatchOk) {
+            titleMismatches++;
+            issues.push(makeIssue('TITLE_MISMATCH',
+              'DB: "' + product.title.substring(0, 60) + '" vs Page: "' + pageTitle.substring(0, 60) + '"',
+              { dbTitle: product.title, pageTitle: pageTitle, url: product.url },
+              'medium'));
+            results.push(warn('Title mismatch: DB="' + product.title.substring(0, 45) + '" vs Page="' + pageTitle.substring(0, 45) + '"'));
+          }
+        }
+
+        // Price check vs live page
+        if (product.price) {
+          var priceStr = product.price.toFixed(2);
+          var priceInt = Math.round(product.price).toString();
+          var priceOnPage = html.includes(priceStr) || html.includes(priceInt + '.') || html.includes('$' + priceStr) || html.includes('$' + priceInt);
+
+          if (!priceOnPage) {
+            priceMismatches++;
+            var priceMatches = html.match(/\$[\d,]+\.\d{2}/g) || [];
+            var uniquePrices = Array.from(new Set(priceMatches)).slice(0, 5);
+            issues.push(makeIssue('PRICE_MISMATCH',
+              'DB price $' + priceStr + ' not found on page. Page prices: ' + (uniquePrices.join(', ') || 'none found'),
+              { dbPrice: product.price, pagePrices: uniquePrices, url: product.url },
+              'high'));
+            results.push(fail('Price mismatch: DB=$' + priceStr + ' not on page. Found: ' + (uniquePrices.join(', ') || 'none') + ' — ' + product.url.substring(0, 60)));
+          }
+        }
       }
     }
   }
 
-  if (checked === 0) {
-    results.push(info('Could not fetch any product pages (WAF or timeout)'));
-    return { probe: 'C3-data-accuracy', verdict: 'SKIP', issues, details: results };
+  // ── Summary ──
+  results.push(info('Checked ' + sample.length + ' products (' + checked + ' live-compared): ' +
+    titleMismatches + ' title mismatches, ' + priceMismatches + ' price mismatches'));
+  results.push(info('Completeness: ' + thumbMissing + ' thumb_missing, ' + thumbBroken + ' thumb_broken, ' +
+    priceMissing + ' price_missing, ' + sourceIdMissing + ' sourceId_missing, ' +
+    urlDead + ' url_dead, ' + titleEmpty + ' title_empty, ' + matchStale + ' match_stale'));
+
+  if (titleMismatches === 0 && priceMismatches === 0 && thumbMissing === 0 && thumbBroken === 0 &&
+      priceMissing === 0 && urlDead === 0 && titleEmpty === 0 && matchStale === 0 && sourceIdMissing === 0) {
+    results.push(pass('All sampled products pass completeness and accuracy checks'));
   }
 
-  results.push(info('Checked ' + checked + ' products: ' + titleMismatches + ' title mismatches, ' + priceMismatches + ' price mismatches'));
-
-  if (titleMismatches === 0 && priceMismatches === 0) {
-    results.push(pass('All sampled products match live site data'));
-  }
-
-  if (priceMismatches >= 3) {
-    issues.push(makeIssue('SYSTEMATIC_PRICE_ERRORS',
-      priceMismatches + '/' + checked + ' products have wrong prices — adapter price extraction may be broken',
-      { priceMismatches: priceMismatches, checked: checked },
-      'high'));
-  }
-  if (titleMismatches >= 3) {
-    issues.push(makeIssue('SYSTEMATIC_TITLE_ERRORS',
-      titleMismatches + '/' + checked + ' products have wrong titles — adapter title extraction may be broken',
-      { titleMismatches: titleMismatches, checked: checked },
-      'high'));
+  // ── SYSTEMATIC detection: 3+ of same issue type = adapter-level bug ──
+  var systematicChecks = [
+    { count: priceMismatches, code: 'SYSTEMATIC_PRICE_ERRORS', label: 'wrong prices — adapter price extraction may be broken', field: 'priceMismatches' },
+    { count: titleMismatches, code: 'SYSTEMATIC_TITLE_ERRORS', label: 'wrong titles — adapter title extraction may be broken', field: 'titleMismatches' },
+    { count: thumbMissing, code: 'SYSTEMATIC_THUMBNAIL_MISSING', label: 'missing thumbnails — adapter thumbnail extraction may be broken', field: 'thumbMissing' },
+    { count: thumbBroken, code: 'SYSTEMATIC_THUMBNAIL_BROKEN', label: 'broken thumbnail URLs — image hosting or extraction issue', field: 'thumbBroken' },
+    { count: priceMissing, code: 'SYSTEMATIC_PRICE_MISSING', label: 'missing prices — adapter not extracting prices', field: 'priceMissing' },
+    { count: sourceIdMissing, code: 'SYSTEMATIC_SOURCEID_MISSING', label: 'missing sourceIds — adapter not extracting sourceId', field: 'sourceIdMissing' },
+    { count: urlDead, code: 'SYSTEMATIC_URL_DEAD', label: 'dead URLs (404) — stale products not being deactivated', field: 'urlDead' },
+    { count: titleEmpty, code: 'SYSTEMATIC_TITLE_EMPTY', label: 'empty/URL titles — adapter title extraction broken', field: 'titleEmpty' },
+    { count: matchStale, code: 'SYSTEMATIC_MATCH_STALE', label: 'stale Match records — enrichment not propagating updates', field: 'matchStale' },
+  ];
+  for (var sc of systematicChecks) {
+    if (sc.count >= 3) {
+      var evidence = {};
+      evidence[sc.field] = sc.count;
+      evidence.sampleSize = sample.length;
+      issues.push(makeIssue(sc.code,
+        sc.count + '/' + sample.length + ' products have ' + sc.label,
+        evidence,
+        'high'));
+      results.push(fail('SYSTEMATIC: ' + sc.count + '/' + sample.length + ' ' + sc.label));
+    }
   }
 
   var hasFail = issues.some(function(i) { return i.severity === 'high'; });
   var hasWarn = issues.some(function(i) { return i.severity === 'medium'; });
   return { probe: 'C3-data-accuracy', verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', issues: issues, details: results };
+}
+
+// ── C3 Helpers: HTTP HEAD checks ──────────────────────────────────────────
+async function safeHeadImage(url) {
+  if (!url) return { ok: false, reason: 'null' };
+  try {
+    var resp = await axios.head(url, {
+      headers: { 'User-Agent': UA },
+      timeout: 10000,
+      maxRedirects: 5,
+      validateStatus: function() { return true; },
+    });
+    var ct = (resp.headers['content-type'] || '').toLowerCase();
+    var isImage = ct.startsWith('image/');
+    if (resp.status === 200 && isImage) return { ok: true };
+    if (resp.status !== 200) return { ok: false, reason: 'HTTP ' + resp.status };
+    return { ok: false, reason: 'content-type: ' + ct };
+  } catch (err) {
+    return { ok: false, reason: err.message.substring(0, 80) };
+  }
+}
+
+async function safeHeadUrl(url) {
+  if (!url) return { ok: false, reason: 'null' };
+  try {
+    var resp = await axios.head(url, {
+      headers: { 'User-Agent': UA },
+      timeout: 10000,
+      maxRedirects: 5,
+      validateStatus: function() { return true; },
+    });
+    if (resp.status >= 200 && resp.status < 400) return { ok: true, status: resp.status };
+    if (resp.status === 403) return { ok: true, status: resp.status }; // WAF
+    if (resp.status === 405) {
+      // Some servers reject HEAD, try GET
+      var getResp = await axios.get(url, {
+        headers: { 'User-Agent': UA },
+        timeout: 10000,
+        maxRedirects: 5,
+        validateStatus: function() { return true; },
+      });
+      if (getResp.status >= 200 && getResp.status < 400) return { ok: true, status: getResp.status };
+      return { ok: false, reason: 'HTTP ' + getResp.status };
+    }
+    if (resp.status === 404) return { ok: false, reason: 'HTTP 404' };
+    return { ok: false, reason: 'HTTP ' + resp.status };
+  } catch (err) {
+    return { ok: false, reason: err.message.substring(0, 80) };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -975,6 +1178,7 @@ async function investigateSite(domain, options) {
     { name: 'A4', fn: function() { return probeA4_Watermark(site); } },
     { name: 'A5', fn: function() { return probeA5_SourceIdCoverage(site); } },
     { name: 'C4', fn: function() { return probeC4_DuplicateDetection(site); } },
+    { name: 'C3', fn: function() { return probeC3_DataAccuracy(site, { dbOnly: options.dbOnly }); } },
   ];
 
   if (!options.dbOnly) {
@@ -982,8 +1186,7 @@ async function investigateSite(domain, options) {
       { name: 'B1', fn: function() { return probeB1_PlatformDetect(site); } },
       { name: 'B4', fn: function() { return probeB4_Pagination(site); } },
       { name: 'C1', fn: function() { return probeC1_MultiKeywordSearch(site); } },
-      { name: 'C2', fn: function() { return probeC2_ProductSpotCheck(site); } },
-      { name: 'C3', fn: function() { return probeC3_DataAccuracy(site); } }
+      { name: 'C2', fn: function() { return probeC2_ProductSpotCheck(site); } }
     );
   }
 
