@@ -1,10 +1,10 @@
 /**
  * Site Investigation Script — Deep Behavioral Analysis
  *
- * 12 probes across 3 categories:
- *   Category A (DB State):  A1-StreamState, A2-CrawlEvents, A3-ProductIndex, A4-Watermark
+ * 14 probes across 3 categories:
+ *   Category A (DB State):  A1-StreamState, A2-CrawlEvents, A3-ProductIndex, A4-Watermark, A5-SourceIdCoverage
  *   Category B (Live):      B1-PlatformDetect, B2-WAFDetect, B3-SelectorValidation, B4-Pagination
- *   Category C (Simulate):  C1-MultiKeywordSearch, C2-ProductSpotCheck, C3-WatermarkSim, C4-CategoryCoverage
+ *   Category C (Simulate):  C1-MultiKeywordSearch, C2-ProductSpotCheck, C3-WatermarkSim, C4-DuplicateDetection
  *
  * Usage:
  *   node scripts/investigate-site.js <domain>           # full investigation
@@ -426,6 +426,102 @@ async function probeA4_Watermark(site) {
   var hasFail = issues.some(i => i.severity === 'high');
   var hasWarn = issues.some(i => i.severity === 'medium');
   return { probe: 'A4-watermark', verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', issues, details: results };
+}
+
+// ── Probe A5: sourceId Coverage ──────────────────────────────────────────
+async function probeA5_SourceIdCoverage(site) {
+  var results = [];
+  var issues = [];
+
+  var total = await prisma.productIndex.count({ where: { siteId: site.id, isActive: true } });
+  var withSourceId = await prisma.productIndex.count({ where: { siteId: site.id, isActive: true, sourceId: { not: null } } });
+  var withoutSourceId = total - withSourceId;
+  var coverage = total === 0 ? 0 : Math.round(withSourceId / total * 100);
+
+  // Determine if adapter type should have sourceId
+  var sourceIdAdapters = ['shopify', 'woocommerce', 'classifieds-gunpost', 'auction-icollector', 'auction-hibid', 'forum-xenforo'];
+  var shouldHaveSourceId = sourceIdAdapters.includes(site.adapterType);
+  var isGenericRetail = site.adapterType === 'generic-retail';
+
+  results.push(info(`sourceId coverage: ${withSourceId}/${total} active products (${coverage}%)`));
+
+  if (total === 0) {
+    return { probe: 'A5-sourceid-coverage', verdict: 'SKIP', issues, details: [info('No active products to check')] };
+  }
+
+  if (shouldHaveSourceId) {
+    if (coverage < 50) {
+      issues.push(makeIssue('LOW_SOURCEID_COVERAGE',
+        `Only ${coverage}% of active products have sourceId — ${site.adapterType} adapter should populate sourceId`,
+        { coverage, withSourceId, total, adapterType: site.adapterType },
+        'high', false, 'Check adapter scraping logic for sourceId extraction'));
+      results.push(fail(`${coverage}% sourceId coverage — ${site.adapterType} should have near 100%`));
+    } else if (coverage < 90) {
+      issues.push(makeIssue('PARTIAL_SOURCEID_COVERAGE',
+        `${coverage}% sourceId coverage — ${site.adapterType} adapter should be higher`,
+        { coverage, withSourceId, total, adapterType: site.adapterType },
+        'medium'));
+      results.push(warn(`${coverage}% sourceId coverage — expected >90% for ${site.adapterType}`));
+    } else {
+      results.push(pass(`${coverage}% sourceId coverage (${site.adapterType} adapter)`));
+    }
+  } else if (isGenericRetail) {
+    // generic-retail may or may not have sourceId (BigCommerce has data-product-id, others may not)
+    if (coverage > 0) {
+      results.push(pass(`${coverage}% sourceId coverage (generic-retail — some sources support it)`));
+    } else {
+      results.push(info('No sourceId coverage (generic-retail — may not support it)'));
+    }
+  } else {
+    // generic adapter — no sourceId expected
+    if (coverage > 0) {
+      results.push(info(`${coverage}% sourceId coverage (unexpected for ${site.adapterType} — bonus)`));
+    } else {
+      results.push(pass(`No sourceId expected for ${site.adapterType} adapter`));
+    }
+  }
+
+  var hasFail = issues.some(function(i) { return i.severity === 'high'; });
+  var hasWarn = issues.some(function(i) { return i.severity === 'medium'; });
+  return { probe: 'A5-sourceid-coverage', verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', issues, details: results };
+}
+
+// ── Probe C4: Duplicate Detection ────────────────────────────────────────
+async function probeC4_DuplicateDetection(site) {
+  var results = [];
+  var issues = [];
+
+  var dupes = await prisma.$queryRaw`
+    SELECT "sourceId", COUNT(*) as cnt
+    FROM product_index
+    WHERE "siteId" = ${site.id} AND "sourceId" IS NOT NULL AND "isActive" = true
+    GROUP BY "sourceId"
+    HAVING COUNT(*) > 1
+    ORDER BY COUNT(*) DESC
+    LIMIT 20
+  `;
+
+  if (dupes.length === 0) {
+    results.push(pass('No duplicate sourceIds found among active products'));
+    return { probe: 'C4-duplicate-detection', verdict: 'PASS', issues, details: results };
+  }
+
+  var totalDupes = dupes.reduce(function(sum, d) { return sum + Number(d.cnt); }, 0);
+  results.push(fail(`${dupes.length} sourceId(s) with duplicate active products (${totalDupes} total rows)`));
+
+  for (var i = 0; i < Math.min(dupes.length, 5); i++) {
+    results.push(info(`  sourceId="${dupes[i].sourceId}" → ${dupes[i].cnt} active products`));
+  }
+  if (dupes.length > 5) {
+    results.push(info(`  ...and ${dupes.length - 5} more`));
+  }
+
+  issues.push(makeIssue('DUPLICATE_SOURCEIDS',
+    `${dupes.length} sourceIds have multiple active products — dedup may not be working`,
+    { duplicateCount: dupes.length, totalExtraRows: totalDupes, top5: dupes.slice(0, 5) },
+    'high', true, 'Run dedup to merge products with same sourceId on same site'));
+
+  return { probe: 'C4-duplicate-detection', verdict: 'FAIL', issues, details: results };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -877,6 +973,8 @@ async function investigateSite(domain, options) {
     { name: 'A2', fn: function() { return probeA2_CrawlEvents(site); } },
     { name: 'A3', fn: function() { return probeA3_ProductIndex(site); } },
     { name: 'A4', fn: function() { return probeA4_Watermark(site); } },
+    { name: 'A5', fn: function() { return probeA5_SourceIdCoverage(site); } },
+    { name: 'C4', fn: function() { return probeC4_DuplicateDetection(site); } },
   ];
 
   if (!options.dbOnly) {

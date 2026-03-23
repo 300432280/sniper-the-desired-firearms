@@ -1,7 +1,7 @@
 /**
  * Site Verification Script v2
  *
- * 7 test suites for comprehensive per-site data quality verification:
+ * 9 test suites for comprehensive per-site data quality verification:
  *   1. Data Schema Validation
  *   2. Data Quality Scoring
  *   3. Keyword Search Comparison (DB vs live site API)
@@ -9,11 +9,13 @@
  *   5. Thumbnail Validation
  *   6. API Health Check
  *   7. Catalog Freshness
+ *   8. sourceId Coverage
+ *   9. Match Freshness
  *
  * Usage:
- *   node scripts/verify-site.js <domain>              # full verification (all 7 tests, all 52 keywords)
+ *   node scripts/verify-site.js <domain>              # full verification (all 9 tests, all 52 keywords)
  *   node scripts/verify-site.js --all                  # full verification, all enabled sites
- *   node scripts/verify-site.js <domain> --quick       # quick verification (all 7 tests, 12 representative keywords)
+ *   node scripts/verify-site.js <domain> --quick       # quick verification (all 9 tests, 12 representative keywords)
  *   node scripts/verify-site.js --all --quick          # quick verification, all enabled sites
  *   node scripts/verify-site.js <domain> --test 3      # specific test only
  *   node scripts/verify-site.js <domain> --json        # JSON output
@@ -860,6 +862,108 @@ async function testCatalogFreshness(site) {
   return { verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', details: results };
 }
 
+// ── Test 8: sourceId Coverage ────────────────────────────────────────────
+
+async function testSourceIdCoverage(site) {
+  var results = [];
+
+  var total = await prisma.productIndex.count({ where: { siteId: site.id, isActive: true } });
+  var withSourceId = await prisma.productIndex.count({ where: { siteId: site.id, isActive: true, sourceId: { not: null } } });
+  var coverage = total === 0 ? 0 : Math.round(withSourceId / total * 100);
+
+  if (total === 0) return { verdict: 'PASS', details: ['No active products to check'] };
+
+  var sourceIdAdapters = ['shopify', 'woocommerce', 'classifieds-gunpost', 'auction-icollector', 'auction-hibid', 'forum-xenforo'];
+  var shouldHaveSourceId = sourceIdAdapters.includes(site.adapterType);
+  var isGenericRetail = site.adapterType === 'generic-retail';
+
+  results.push('sourceId: ' + withSourceId + '/' + total + ' active products (' + coverage + '%)');
+
+  if (shouldHaveSourceId) {
+    if (coverage < 50) results.push(fail(coverage + '% coverage — ' + site.adapterType + ' should have near 100%'));
+    else if (coverage < 90) results.push(warn(coverage + '% coverage — expected >90% for ' + site.adapterType));
+    else results.push(pass(coverage + '% coverage (' + site.adapterType + ')'));
+  } else if (isGenericRetail) {
+    if (coverage > 0) results.push(pass(coverage + '% coverage (generic-retail — some sources support it)'));
+    else results.push(pass('No sourceId expected for generic-retail (may not support it)'));
+  } else {
+    results.push(pass('No sourceId expected for ' + site.adapterType + ' adapter'));
+  }
+
+  var hasFail = results.some(function(r) { return r.includes('FAIL'); });
+  var hasWarn = results.some(function(r) { return r.includes('WARN'); });
+  return { verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', details: results };
+}
+
+// ── Test 9: Match Freshness ─────────────────────────────────────────────
+
+async function testMatchFreshness(site) {
+  var results = [];
+
+  // Sample up to 20 matches for this site (Search has websiteUrl, not siteId)
+  var matches = await prisma.match.findMany({
+    where: {
+      search: { websiteUrl: { contains: site.domain } },
+    },
+    select: { id: true, title: true, price: true, url: true },
+    orderBy: { foundAt: 'desc' },
+    take: 20,
+  });
+
+  if (matches.length === 0) return { verdict: 'PASS', details: ['No matches to check'] };
+
+  var staleCount = 0;
+  var checkedCount = 0;
+  var staleExamples = [];
+
+  for (var i = 0; i < matches.length; i++) {
+    var m = matches[i];
+    var product = await prisma.productIndex.findFirst({
+      where: { siteId: site.id, url: m.url },
+      select: { title: true, price: true },
+    });
+
+    if (!product) continue; // Product not in index (might be removed)
+    checkedCount++;
+
+    var titleDiffers = product.title && m.title && product.title !== m.title;
+    var priceDiffers = product.price !== null && m.price !== null && product.price !== m.price;
+
+    if (titleDiffers || priceDiffers) {
+      staleCount++;
+      if (staleExamples.length < 3) {
+        var diff = [];
+        if (titleDiffers) diff.push('title: "' + m.title.slice(0, 40) + '" vs "' + product.title.slice(0, 40) + '"');
+        if (priceDiffers) diff.push('price: $' + m.price + ' vs $' + product.price);
+        staleExamples.push(diff.join(', '));
+      }
+    }
+  }
+
+  if (checkedCount === 0) return { verdict: 'PASS', details: ['No matches found in ProductIndex for comparison'] };
+
+  var stalePct = Math.round(staleCount / checkedCount * 100);
+  results.push('Checked ' + checkedCount + ' matches against ProductIndex: ' + staleCount + ' stale (' + stalePct + '%)');
+
+  if (stalePct > 50) {
+    results.push(fail(stalePct + '% of matches have stale data vs ProductIndex'));
+  } else if (stalePct > 30) {
+    results.push(warn(stalePct + '% of matches have stale data vs ProductIndex'));
+  } else if (staleCount > 0) {
+    results.push(pass(stalePct + '% stale — within acceptable range'));
+  } else {
+    results.push(pass('All match data matches ProductIndex'));
+  }
+
+  for (var j = 0; j < staleExamples.length; j++) {
+    results.push('  Stale: ' + staleExamples[j]);
+  }
+
+  var hasFail = results.some(function(r) { return r.includes('FAIL'); });
+  var hasWarn = results.some(function(r) { return r.includes('WARN'); });
+  return { verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', details: results };
+}
+
 // ── Test Runner ─────────────────────────────────────────────────────────────
 
 var ALL_TESTS = [
@@ -870,6 +974,8 @@ var ALL_TESTS = [
   { name: 'Thumbnail Validation', fn: testThumbnails },
   { name: 'API Health Check', fn: testApiHealth },
   { name: 'Catalog Freshness', fn: testCatalogFreshness },
+  { name: 'sourceId Coverage', fn: testSourceIdCoverage },
+  { name: 'Match Freshness', fn: testMatchFreshness },
 ];
 
 async function runSite(site, testsToRun, opts) {
@@ -951,7 +1057,7 @@ async function main() {
     process.exit(1);
   }
 
-  // Select tests — quick mode still runs all 7 tests but with fewer keywords
+  // Select tests — quick mode still runs all 9 tests but with fewer keywords
   var testsToRun = ALL_TESTS;
   if (testNum) testsToRun = ALL_TESTS[testNum - 1] ? [ALL_TESTS[testNum - 1]] : ALL_TESTS;
 
