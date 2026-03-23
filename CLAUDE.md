@@ -92,6 +92,14 @@ Each adapter handles search + catalog extraction for a site type:
 - **Rollback:** If the user says "remove the X lesson" or "that rule is wrong," delete it from the persona file immediately. Don't just add a contradicting lesson — remove the wrong one.
 - **No time-based expiry.** A lesson is valid until the code it references changes or the user overrides it. Age alone is not a reason to remove.
 
+### Memory Hygiene (MANDATORY at session start)
+- **Read `project_next_session.md` at the start of every session** (if it exists). Check each task listed:
+  - If the task is already done (code exists, feature merged), **delete it from the file**.
+  - If the task is partially done, **update it with current state**.
+  - If the file is empty after cleanup, **delete the file and remove it from MEMORY.md**.
+- **Never leave completed tasks in memory.** A stale "merge scripts in next session" entry will cause every future session to attempt a merge that was already done. This wastes time and causes confusion.
+- **After completing work in a session,** update or remove any memory entries that are no longer accurate. Don't defer this — do it before the session ends.
+
 ## User Configuration Registry
 <!-- This section tracks all user-decided configurations: installed skills, agents, custom rules, and settings.
      Managed by the user. Claude reads this section the same as any other, but the user can use it to
