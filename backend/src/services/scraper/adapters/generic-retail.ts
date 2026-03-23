@@ -82,9 +82,13 @@ export class GenericRetailAdapter extends AbstractAdapter {
         const { price, regularPrice } = this.extractPricesFromElement(element);
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
-        const sourceId = element.attr('data-product-id')
+        let sourceId = element.attr('data-product-id')
           || element.closest('[data-product-id]').attr('data-product-id')
           || undefined;
+        if (!sourceId && productUrl) {
+          const urlIdMatch = productUrl.match(/-(\d{4,})(?:[?#]|$)/);
+          if (urlIdMatch) sourceId = urlIdMatch[1];
+        }
 
         if (options.inStockOnly && !inStock) return;
         if (options.maxPrice && price && price > options.maxPrice) return;
@@ -539,9 +543,14 @@ export class GenericRetailAdapter extends AbstractAdapter {
         const { price, regularPrice } = this.extractPricesFromElement(element);
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
-        const sourceId = element.attr('data-product-id')
+        let sourceId = element.attr('data-product-id')
           || element.closest('[data-product-id]').attr('data-product-id')
           || undefined;
+        // Fallback: extract numeric product ID from URL (e.g. bullseyenorth /shop/slug-28443)
+        if (!sourceId && url) {
+          const urlIdMatch = url.match(/-(\d{4,})(?:[?#]|$)/);
+          if (urlIdMatch) sourceId = urlIdMatch[1];
+        }
 
         products.push({
           url,
