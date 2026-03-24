@@ -551,7 +551,10 @@ export class GenericRetailAdapter extends AbstractAdapter {
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
         let sourceId = element.attr('data-product-id')
+          || element.attr('data-product_id')  // WooCommerce uses underscore
           || element.closest('[data-product-id]').attr('data-product-id')
+          || element.closest('[data-product_id]').attr('data-product_id')
+          || element.attr('class')?.match(/\bpost-(\d+)\b/)?.[1]  // WooCommerce post ID in class
           || undefined;
         // Fallback: extract numeric product ID from URL (e.g. bullseyenorth /shop/slug-28443)
         if (!sourceId && url) {
