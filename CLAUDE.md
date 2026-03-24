@@ -141,6 +141,9 @@ Each adapter handles search + catalog extraction for a site type:
 | Follow using-superpowers at conversation start | Ensures skills/agents are checked before every response | 2026-03-22 |
 | All agent personas use Opus (not Sonnet) | Agents need full reasoning capability for complex site-specific investigations | 2026-03-22 |
 | Verify persona lessons against current code before applying | Code changes can make lessons obsolete; age alone is not a reason to remove | 2026-03-22 |
+| Run `/simplify` after every implementation session before committing | Dead scripts, unused imports, duplicated logic accumulate fast; simplify skill catches them | 2026-03-24 |
+| Use professional agents for complex work | Software Architect for design, Code Reviewer for audit — don't do everything directly | 2026-03-24 |
+| Stale detection only via cross-tier cycle completion | Never use time-based thresholds alone; all tiers must have completed a sweep before flagging products | 2026-03-24 |
 
 ## Gotchas
 - On Windows: bash escapes `$disconnect` in inline node `-e` commands. Write `.js` script files instead.
