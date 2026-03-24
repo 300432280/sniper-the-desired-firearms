@@ -45,18 +45,26 @@ export async function detectStreams(siteUrl: string): Promise<Stream[]> {
   const origin = new URL(siteUrl).origin;
   const streams: Stream[] = [];
 
-  // Step 1: Try API stream
+  // Step 1: Try API stream — but verify it actually returns products for this site.
+  // Some adapters (generic-retail) have fetchCatalogPage but only support it for
+  // specific domains (e.g. Klevu API for alflahertys). For other domains it returns empty.
   if (adapter.fetchCatalogPage) {
-    // API streams that support date filtering use 'api' type (tiers partition by date range)
-    // API streams without date filtering use 'html' type (tiers partition by page range)
-    const streamType = adapter.supportsDateFilter !== false ? 'api' : 'html';
-    streams.push({
-      id: 'api',
-      url: origin,
-      type: streamType,
-      category: undefined,
-    });
-    return streams;
+    try {
+      const probe = await adapter.fetchCatalogPage(origin, 1, { perPage: 10 });
+      if (probe.products.length > 0) {
+        const streamType = adapter.supportsDateFilter !== false ? 'api' : 'html';
+        streams.push({
+          id: 'api',
+          url: origin,
+          type: streamType,
+          category: undefined,
+        });
+        return streams;
+      }
+      // API returned empty for this site — fall through to HTML streams
+    } catch {
+      // API probe failed — fall through to HTML streams
+    }
   }
 
   // Step 2: Use adapter's catalog URLs as HTML streams

@@ -297,6 +297,20 @@ export class GenericRetailAdapter extends AbstractAdapter {
       // Ecwid on WordPress — homepage has .grid-product cards
       urls.push(`${origin}/`);
     }
+    if (origin.includes('gotenda.com')) {
+      // WooCommerce behind Sucuri WAF — API blocked, uses Playwright HTML scraping
+      // Category URLs provide tags via _deriveCategoryTag()
+      urls.push(
+        `${origin}/product-category/firearms/`,
+        `${origin}/product-category/ammunition/`,
+        `${origin}/product-category/accessories/`,
+        `${origin}/product-category/reloading/`,
+        `${origin}/product-category/optic/`,
+        `${origin}/product-category/knives/`,
+        `${origin}/product-category/hunting-outdoor/`,
+        `${origin}/shop/`,
+      );
+    }
     if (origin.includes('bullseyenorth.com')) {
       // Custom retail CMS — products at /shop/slug, category pages at root level
       // Breadcrumbs show "Home / Firearms / ...", "Home / Magazines / ..."
