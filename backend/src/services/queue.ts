@@ -240,3 +240,51 @@ export async function scheduleHealthChecks(): Promise<void> {
     console.error('[Queue] Failed to schedule health checks:', err instanceof Error ? err.message : err);
   }
 }
+
+// ─── Stale Product Check Queue ────────────────────────────────────────────────
+
+export const staleCheckQueue = new Queue('stale-check', {
+  connection: redisConnection,
+  defaultJobOptions: {
+    removeOnComplete: 20,
+    removeOnFail: 20,
+    attempts: 1,
+  },
+});
+
+/**
+ * Schedule daily stale product check (runs at 4:00 AM UTC = 11:00 PM EST).
+ * Checks all enabled sites for products that disappeared from listing pages
+ * (sold, deleted, expired). Uses cross-tier cycle completion to avoid false positives.
+ */
+export async function scheduleDailyStaleCheck(): Promise<void> {
+  try {
+    const jobId = 'daily-stale-check';
+
+    try {
+      const repeatableJobs = await staleCheckQueue.getRepeatableJobs();
+      for (const job of repeatableJobs) {
+        if (job.id === jobId) {
+          await staleCheckQueue.removeRepeatableByKey(job.key);
+        }
+      }
+    } catch {
+      // Ignore if doesn't exist
+    }
+
+    await staleCheckQueue.add(
+      'check-stale-products',
+      {},
+      {
+        jobId,
+        repeat: {
+          pattern: '0 4 * * *', // Daily at 4:00 AM UTC (11:00 PM EST)
+        },
+      }
+    );
+
+    console.log('[Queue] Daily stale check scheduled at 4:00 AM UTC (11:00 PM EST)');
+  } catch (err) {
+    console.error('[Queue] Failed to schedule stale check:', err instanceof Error ? err.message : err);
+  }
+}

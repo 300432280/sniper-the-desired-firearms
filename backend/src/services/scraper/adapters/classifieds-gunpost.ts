@@ -30,9 +30,23 @@ export class GunpostAdapter extends AbstractAdapter {
     return price;
   }
 
-  /** Detect wanted/WTB/WTT/ISO ads by title — these are buy requests, not for-sale listings */
-  private isWantedAd(title: string): boolean {
-    return /^(wanted|wtb|wtt|iso)\b/i.test(title.trim());
+  /** Detect wanted/WTB/WTT/ISO ads by title or CSS class — buy requests, not for-sale listings */
+  private isWantedAd(title: string, element?: cheerio.Cheerio<any>): boolean {
+    // Check title prefix (e.g. "Wanted: ...", "WTB ...", "ISO ...")
+    if (/^(wanted|wtb|wtt|iso)\b/i.test(title.trim())) return true;
+    // Check if title or element contains "Wanted:" text (gunpost h1 pattern)
+    if (/\bwanted\s*:/i.test(title)) return true;
+    // Check for CSS class on the article/node element (gunpost uses class="wanted" or class="node__title wanted")
+    if (element) {
+      const cls = element.attr('class') || '';
+      if (/\bwanted\b/.test(cls)) return true;
+      // Check child elements for wanted class (title, price)
+      if (element.find('.wanted').length > 0) return true;
+      // Check parent article/node
+      const parentCls = element.closest('article').attr('class') || '';
+      if (/\bwanted\b/.test(parentCls)) return true;
+    }
+    return false;
   }
 
   /**
@@ -131,7 +145,7 @@ export class GunpostAdapter extends AbstractAdapter {
         const postDate = this.extractPostDate(element);
 
         seen.add(titleKey);
-        const wanted = this.isWantedAd(rawTitle);
+        const wanted = this.isWantedAd(rawTitle, element);
         matches.push({
           title: rawTitle,
           price: wanted ? undefined : this.sanitizeClassifiedPrice(price),
@@ -206,7 +220,7 @@ export class GunpostAdapter extends AbstractAdapter {
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
         const tags = this.extractCategoryFromUrl(url);
-        const wanted = this.isWantedAd(title);
+        const wanted = this.isWantedAd(title, element);
         const postDate = this.extractPostDate(element);
 
         products.push({

@@ -154,24 +154,8 @@ async function processStreamCatalogCrawl(
   const now = new Date();
   const cooldownMap = { 2: tuning.t2CooldownHrs, 3: tuning.t3CooldownHrs, 4: tuning.t4CooldownHrs } as const;
 
-  // Auto-reset stale in_progress tiers (stuck from stalled jobs / worker restarts)
-  const STALE_PROGRESS_MS = 15 * 60 * 1000; // 15 minutes
-  let resetCount = 0;
-  for (const [, ts] of Object.entries(streamState.tiers)) {
-    if (ts.status === 'in_progress' && ts.cycleStartedAt) {
-      const age = now.getTime() - new Date(ts.cycleStartedAt).getTime();
-      if (age > STALE_PROGRESS_MS) {
-        ts.status = 'idle';
-        ts.currentPage = ts.pageRangeStart || 1;
-        ts.currentPageUrl = undefined;
-        ts.cycleStartedAt = undefined;
-        resetCount++;
-      }
-    }
-  }
-  if (resetCount > 0) {
-    console.log(`[CatalogWorker] ${domain}: auto-reset ${resetCount} stale in_progress tier(s)`);
-  }
+  // Stale tier recovery is handled by the scheduler (crawl-scheduler.ts)
+  // which runs every 2 minutes on ALL enabled sites, including cooldown expiry.
 
   console.log(`[CatalogWorker] Stream catalog crawl: ${domain} (${streamState.streams.length} streams, tiers: ${Object.entries(activeTiers).filter(([, v]) => v).map(([k]) => k).join(',')})`);
 
@@ -386,5 +370,59 @@ export function startDigestWorker(): Worker {
   });
 
   console.log('[DigestWorker] Digest worker started');
+  return worker;
+}
+
+// ─── Stale Product Check Worker (Daily — sold/deleted detection) ─────────────
+
+export function startStaleCheckWorker(): Worker {
+  const worker = new Worker('stale-check', async () => {
+    console.log('[StaleWorker] Running daily stale product check...');
+
+    const sites = await prisma.monitoredSite.findMany({
+      where: { isEnabled: true, isPaused: false },
+      select: { id: true, domain: true, streamState: true },
+    });
+
+    const { checkStaleProducts } = await import('./stale-detector');
+    const { parseStreamState } = await import('./stream-detector');
+
+    let totalSold = 0;
+    let totalInactive = 0;
+    let totalFP = 0;
+
+    for (const site of sites) {
+      const ss = parseStreamState(site.streamState);
+      if (!ss || ss.streams.length === 0) continue;
+
+      try {
+        const result = await checkStaleProducts(site.id, ss.streams[0].id, ss);
+        totalSold += result.markedSold;
+        totalInactive += result.markedInactive;
+        totalFP += result.falsePositives;
+
+        if (result.candidatesFound > 0) {
+          console.log(
+            `[StaleWorker] ${site.domain}: ${result.candidatesFound} candidates, ` +
+            `${result.markedSold} sold, ${result.markedInactive} inactive, ` +
+            `${result.falsePositives} false positives`
+          );
+        }
+      } catch (err) {
+        console.error(`[StaleWorker] ${site.domain}: error —`, err instanceof Error ? err.message : err);
+      }
+    }
+
+    console.log(`[StaleWorker] Daily stale check complete: ${totalSold} sold, ${totalInactive} deactivated, ${totalFP} false positives across ${sites.length} sites`);
+  }, {
+    connection: redisConnection,
+    concurrency: 1,
+  });
+
+  worker.on('error', (err) => {
+    console.error(`[StaleWorker] Worker error: ${err.message}`);
+  });
+
+  console.log('[StaleWorker] Stale check worker started');
   return worker;
 }

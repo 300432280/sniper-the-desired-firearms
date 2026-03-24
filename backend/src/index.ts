@@ -8,8 +8,8 @@ import { generalLimiter, authLimiter } from './middleware/rateLimit';
 import authRouter from './routes/auth';
 import searchesRouter from './routes/searches';
 import adminRouter from './routes/admin';
-import { startWorker, startHealthWorker, startSchedulerWorker, startDigestWorker } from './services/worker';
-import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs, scheduleDailyDigest, redisConnection } from './services/queue';
+import { startWorker, startHealthWorker, startSchedulerWorker, startDigestWorker, startStaleCheckWorker } from './services/worker';
+import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs, scheduleDailyDigest, scheduleDailyStaleCheck, redisConnection } from './services/queue';
 import { prisma } from './lib/prisma';
 
 /** Escape HTML special characters to prevent XSS */
@@ -516,6 +516,7 @@ const worker = startWorker();
 const healthWorker = startHealthWorker();
 const schedulerWorker = startSchedulerWorker();
 const digestWorker = startDigestWorker();
+const staleCheckWorker = startStaleCheckWorker();
 
 // Schedule cron jobs + crawl scheduler
 cleanupLegacyJobs().catch((err) => {
@@ -529,6 +530,9 @@ startCrawlScheduler().catch((err) => {
 });
 scheduleDailyDigest().catch((err) => {
   console.error('[Server] Failed to schedule daily digest:', err.message);
+});
+scheduleDailyStaleCheck().catch((err) => {
+  console.error('[Server] Failed to schedule daily stale check:', err.message);
 });
 
 const server = app.listen(config.port, () => {

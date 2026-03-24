@@ -14,6 +14,7 @@
  * - CRAWL_LOCK_TIMEOUT_MS = 5 minutes (auto-expire)
  */
 
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { scrapeQueue } from './queue';
 import { recalculateSitePriority } from './priority-engine';
@@ -113,11 +114,15 @@ export async function schedulerTick(): Promise<void> {
     orderBy: { nextCrawlAt: 'asc' }, // Most overdue first
   });
 
-  if (dueSites.length === 0) return;
-
-  // 2b. Recover stale/expired stream tiers for ALL due sites (not limited by slots)
+  // 2b. Recover stale/expired stream tiers for ALL enabled sites
+  // This runs regardless of whether sites are "due" — stuck tiers can prevent
+  // sites from becoming due in the first place, creating a deadlock.
   const STALE_PROGRESS_MS = 15 * 60 * 1000;
-  for (const site of dueSites) {
+  const allEnabledSites = dueSites.length > 0 ? dueSites : await prisma.monitoredSite.findMany({
+    where: { isEnabled: true, isPaused: false, NOT: { streamState: { equals: Prisma.DbNull } } },
+    select: { id: true, domain: true, streamState: true },
+  });
+  for (const site of allEnabledSites) {
     const ss = parseStreamState(site.streamState);
     if (!ss) continue;
     let needsPersist = false;
@@ -146,6 +151,8 @@ export async function schedulerTick(): Promise<void> {
       console.log(`[Scheduler] ${site.domain}: recovered stale/expired stream tiers`);
     }
   }
+
+  if (dueSites.length === 0) return;
 
   // 3. Count currently locked (in-progress) crawls
   const activeLocks = await prisma.monitoredSite.count({

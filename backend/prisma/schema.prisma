@@ -216,14 +216,17 @@ model ProductIndex {
   tags         String? // Comma-separated product tags from source (e.g. Shopify)
   productType  String? // "firearm" | "ammunition" | "optics" | "parts" | "gear" | "knives" | "other"
   closingAt    DateTime? // For auction lots — enables live countdown timer
-  firstSeenAt  DateTime      @default(now())
-  lastSeenAt   DateTime      @default(now())
-  isActive     Boolean       @default(true)
-  matches      Match[]       // Matches that reference this product
+  firstSeenAt     DateTime      @default(now())
+  lastSeenAt      DateTime      @default(now())
+  isActive        Boolean       @default(true)
+  staleSince      DateTime?     // When first flagged as missing from all tier sweeps
+  staleVerifiedAt DateTime?     // Last detail-page verification attempt
+  matches         Match[]       // Matches that reference this product
 
   @@unique([siteId, url])
   @@index([siteId, sourceId])
   @@index([siteId, lastSeenAt])
+  @@index([siteId, isActive, stockStatus]) // For stale detector queries
   @@index([title])
   @@map("product_index")
 }

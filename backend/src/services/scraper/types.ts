@@ -108,6 +108,10 @@ export interface StreamTierState {
   lastRefreshedAt?: string;
   cycleStartedAt?: string;
   cooldownEndsAt?: string;
+  /** Cross-tier stale detection: when the most recent completed cycle started */
+  lastCycleStartedAt?: string;
+  /** Cross-tier stale detection: when the most recent cycle completed */
+  lastCycleCompletedAt?: string;
   /** Absolute date range for API streams (ISO strings) */
   dateRangeStart?: string;
   dateRangeEnd?: string;

@@ -16,11 +16,9 @@
 import { prisma } from '../lib/prisma';
 import { getAdapterForUrl } from './scraper/adapter-registry';
 import { fetchPageWithMeta, randomDelay } from './scraper/http-client';
-import { consumeToken, getCatalogRemaining, allocateCatalogTokens } from './token-budget';
+import { consumeToken } from './token-budget';
 import { matchNewProducts } from './keyword-matcher';
-import { pushEvent } from './debugLog';
-import type { CatalogProduct, Stream, StreamTierState, SiteStreamState } from './scraper/types';
-// classifyProduct is now handled inside shared product-upsert module
+import type { CatalogProduct, Stream, StreamTierState } from './scraper/types';
 import { saveProducts } from './product-upsert';
 import * as cheerio from 'cheerio';
 
@@ -448,7 +446,7 @@ export function updateTierProgress(
 interface StreamCrawlResult {
   streamId: string;
   tier: 2 | 3 | 4;
-  status: 'success' | 'fail' | 'partial';
+  status: 'success' | 'fail' | 'partial' | 'skip';
   productsFound: number;
   pagesScanned: number;
   tokensUsed: number;
@@ -635,6 +633,22 @@ export async function crawlStreamTier(params: {
       cycleComplete = true;
     }
 
+    // If we broke out of the loop without scanning ANY pages (fetch error on first attempt),
+    // skip ahead by 1 page so we don't get stuck retrying the same blocked page forever.
+    // This is the root cause of the "stuck tier" problem — Cloudflare/WAF blocks one page,
+    // the tier persists in_progress at the same page number, and repeats every job.
+    if (pagesScanned === 0 && !cycleComplete) {
+      const nextPage = (tierState.currentPage || 1) + 1;
+      const pageEnd = tierState.pageRangeEnd;
+      if (pageEnd != null && nextPage > pageEnd) {
+        cycleComplete = true;
+      } else {
+        tierState.currentPage = nextPage;
+        tierState.currentPageUrl = undefined;
+        console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: fetch failed on page ${nextPage - 1}, skipping to page ${nextPage}`);
+      }
+    }
+
     // Save products to ProductIndex
     const savedProducts = await saveProducts(siteId, allProducts);
     if (savedProducts.length > 0) {
@@ -644,7 +658,7 @@ export async function crawlStreamTier(params: {
     return {
       streamId: stream.id,
       tier,
-      status: cycleComplete ? 'success' : 'partial',
+      status: cycleComplete ? 'success' : (pagesScanned === 0 ? 'skip' : 'partial'),
       productsFound,
       pagesScanned,
       tokensUsed,
@@ -726,18 +740,26 @@ export function completeStreamTierCycle(
   cooldownHours: number,
 ): StreamTierState {
   const cycleStart = state.cycleStartedAt ? new Date(state.cycleStartedAt) : new Date();
+  const now = new Date();
   const cooldownEnd = new Date(cycleStart.getTime() + cooldownHours * 60 * 60 * 1000);
 
-  if (cooldownEnd <= new Date()) {
-    return { ...state, status: 'idle', currentPage: state.pageRangeStart || 1, lastRefreshedAt: new Date().toISOString() };
+  const base = {
+    ...state,
+    currentPage: state.pageRangeStart || 1,
+    lastRefreshedAt: now.toISOString(),
+    // Record cycle timestamps for cross-tier stale detection
+    lastCycleStartedAt: state.cycleStartedAt,
+    lastCycleCompletedAt: now.toISOString(),
+  };
+
+  if (cooldownEnd <= now) {
+    return { ...base, status: 'idle' as const };
   }
 
   return {
-    ...state,
-    status: 'cooldown',
-    currentPage: state.pageRangeStart || 1,
+    ...base,
+    status: 'cooldown' as const,
     cooldownEndsAt: cooldownEnd.toISOString(),
-    lastRefreshedAt: new Date().toISOString(),
   };
 }
 

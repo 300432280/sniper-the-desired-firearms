@@ -418,6 +418,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
     const offset = (page - 1) * perPage;
     const allProducts: CatalogProduct[] = [];
     let hasMore = false;
+    let maxTotalPages = 0;
 
     // Iterate all known categories and fetch products
     // On page 1 we sweep all categories; subsequent pages continue the sweep
@@ -448,6 +449,11 @@ export class GenericRetailAdapter extends AbstractAdapter {
 
         const total = qr.meta?.totalResultsFound || 0;
         if (offset + perPage < total) hasMore = true;
+        // Calculate totalPages using the adapter's native perPage (36), not the caller's,
+        // so the page count is accurate for actual crawl operations
+        const nativePerPage = GenericRetailAdapter.KLEVU_CONFIG.perPage;
+        const categoryPages = Math.ceil(total / nativePerPage);
+        if (categoryPages > maxTotalPages) maxTotalPages = categoryPages;
 
         for (const r of qr.records) {
           if (!r.name || !r.url) continue;
@@ -479,6 +485,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
 
     return {
       products: deduped,
+      totalPages: maxTotalPages > 0 ? maxTotalPages : undefined,
       nextPageUrl: hasMore ? `klevu://page/${page + 1}` : undefined,
     };
   }

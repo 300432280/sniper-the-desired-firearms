@@ -151,7 +151,7 @@ export abstract class AbstractAdapter implements SiteAdapter {
     });
     // Also check elements with "regular" or "was" in class name
     if (!regularPrice) {
-      const regEl = element.find('[class*="regular"], [class*="was-price"], [class*="old-price"], [class*="original"]').first();
+      const regEl = element.find('[class*="regular"], [class*="was-price"], [class*="old-price"], [class*="original"], .listPrice').first();
       if (regEl.length) {
         const p = extractPrice(regEl.text());
         if (p) regularPrice = p;
@@ -171,6 +171,7 @@ export abstract class AbstractAdapter implements SiteAdapter {
       '.special-price .price',     // Magento sale price
       '.price-sale',               // Generic sale price
       '.sale-price',               // Generic
+      '.salePrice',                // CamelCase (bullseyenorth ColdFusion)
       '.current-price .price',     // BigCommerce sale price
       'ins .woocommerce-Price-amount', // WooCommerce sale (inside <ins>)
       '[class*="sale"] [class*="price"]', // Generic sale container
@@ -199,8 +200,10 @@ export abstract class AbstractAdapter implements SiteAdapter {
     }
 
     // 3. Try all price-like elements, but skip struck-through / "was" / "regular" prices
+    // Note: class matching is case-sensitive in Cheerio, so we need both cases
+    // (e.g. bullseyenorth uses "listPrice" / "salePrice" with capital P)
     const priceEls = element.find(
-      '[class*="price"], [class*="cost"], [class*="amount"], [class*="field-price"]'
+      '[class*="price"], [class*="Price"], [class*="cost"], [class*="amount"], [class*="field-price"], .pricing'
     );
     const prices: number[] = [];
     priceEls.each((_, el) => {
@@ -208,7 +211,7 @@ export abstract class AbstractAdapter implements SiteAdapter {
       const text = priceEl.text().trim();
       // Skip struck-through prices (original/regular price)
       if (priceEl.is('del, s, strike') || priceEl.closest('del, s, strike').length) return;
-      if (priceEl.hasClass('price-regular') || /\bregular\b|\bwas\b|\bmsrp\b|\boriginal\b/i.test(priceEl.attr('class') || '')) return;
+      if (priceEl.hasClass('price-regular') || priceEl.hasClass('listPrice') || /\bregular\b|\bwas\b|\bmsrp\b|\boriginal\b/i.test(priceEl.attr('class') || '')) return;
       const price = extractPrice(text);
       if (price) prices.push(price);
     });
