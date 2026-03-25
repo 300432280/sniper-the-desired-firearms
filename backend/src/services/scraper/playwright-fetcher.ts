@@ -10,11 +10,13 @@
 
 import type { Browser, Page } from 'playwright-core';
 
+export const PLAYWRIGHT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
 let browser: Browser | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // Close browser after 5 min idle
 
-async function getBrowser(): Promise<Browser> {
+export async function getBrowser(): Promise<Browser> {
   if (browser?.isConnected()) {
     resetIdleTimer();
     return browser;
@@ -100,7 +102,7 @@ export async function fetchWithPlaywright(
   const b = await getBrowser();
   const context = await b.newContext({
     // Use a recent, realistic Chrome user agent
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    userAgent: PLAYWRIGHT_UA,
     locale: 'en-CA',
     viewport: { width: 1366, height: 768 },
     // Stealth: set common browser properties
@@ -268,7 +270,7 @@ export async function fetchWithPlaywrightPaginated(
 
   const b = await getBrowser();
   const context = await b.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    userAgent: PLAYWRIGHT_UA,
     locale: 'en-CA',
     viewport: { width: 1366, height: 768 },
     extraHTTPHeaders: {

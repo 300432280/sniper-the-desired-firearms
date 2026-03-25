@@ -163,7 +163,7 @@ export interface SiteAdapter {
    */
   getCatalogUrls?(origin: string): string[];
   /** Fetch a catalog page via API (preferred — structured data with prices) */
-  fetchCatalogPage?(origin: string, page: number, options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string }): Promise<CatalogPage>;
+  fetchCatalogPage?(origin: string, page: number, options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string; hasWaf?: boolean }): Promise<CatalogPage>;
   /** Whether fetchCatalogPage supports dateAfter/dateBefore filtering. If false, tiers use page ranges instead. */
   supportsDateFilter?: boolean;
   /** Extract catalog products from an HTML page (fallback when no API available) */

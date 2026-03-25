@@ -227,10 +227,10 @@ export async function schedulerTick(): Promise<void> {
       let streamState = parseStreamState(site.streamState);
       if (!streamState) {
         try {
-          const streams = await detectStreams(site.url);
+          const streams = await detectStreams(site.url, { hasWaf: site.hasWaf });
           if (streams.length > 0) {
             // Probe totalPages upfront so tiers start with proper page ranges
-            await probeStreamTotalPages(streams, site.url);
+            await probeStreamTotalPages(streams, site.url, { hasWaf: site.hasWaf });
             streamState = initStreamState(streams);
             const pagesInfo = streams.filter(s => s.totalPages).map(s => `${s.id}:${s.totalPages}p`).join(', ');
             await prisma.monitoredSite.update({

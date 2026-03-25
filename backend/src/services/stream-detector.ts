@@ -40,7 +40,7 @@ function deriveCategoryFromUrl(url: string): string | undefined {
  * API sites → single "api" stream (date filtering handles tier division)
  * HTML sites → one stream per catalog URL (page-range tier division)
  */
-export async function detectStreams(siteUrl: string): Promise<Stream[]> {
+export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolean }): Promise<Stream[]> {
   const { adapter } = await getAdapterForUrl(siteUrl);
   const origin = new URL(siteUrl).origin;
   const streams: Stream[] = [];
@@ -50,7 +50,7 @@ export async function detectStreams(siteUrl: string): Promise<Stream[]> {
   // specific domains (e.g. Klevu API for alflahertys). For other domains it returns empty.
   if (adapter.fetchCatalogPage) {
     try {
-      const probe = await adapter.fetchCatalogPage(origin, 1, { perPage: 10 });
+      const probe = await adapter.fetchCatalogPage(origin, 1, { perPage: 10, hasWaf: options?.hasWaf });
       if (probe.products.length > 0) {
         const streamType = adapter.supportsDateFilter !== false ? 'api' : 'html';
         streams.push({
@@ -112,7 +112,7 @@ export async function detectStreams(siteUrl: string): Promise<Stream[]> {
  * For page-partitioned API streams (Shopify): fetch page 1 to count products.
  * This avoids the "all tiers start at page 1" bootstrap problem.
  */
-export async function probeStreamTotalPages(streams: Stream[], siteUrl: string): Promise<void> {
+export async function probeStreamTotalPages(streams: Stream[], siteUrl: string, options?: { hasWaf?: boolean }): Promise<void> {
   const { adapter } = await getAdapterForUrl(siteUrl);
 
   for (const stream of streams) {
@@ -121,7 +121,7 @@ export async function probeStreamTotalPages(streams: Stream[], siteUrl: string):
     try {
       if (adapter.fetchCatalogPage) {
         // Page-partitioned API (e.g. Shopify) — fetch page 1 to discover total
-        const result = await adapter.fetchCatalogPage(new URL(siteUrl).origin, 1, { perPage: 250 });
+        const result = await adapter.fetchCatalogPage(new URL(siteUrl).origin, 1, { perPage: 250, hasWaf: options?.hasWaf });
         if (result.totalPages) {
           stream.totalPages = result.totalPages;
         } else if (result.products.length > 0 && result.products.length < 250) {

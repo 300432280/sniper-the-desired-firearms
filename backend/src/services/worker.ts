@@ -416,14 +416,22 @@ export function startStaleCheckWorker(): Worker {
     console.log(`[StaleWorker] Daily stale check complete: ${totalSold} sold, ${totalInactive} deactivated, ${totalFP} false positives across ${sites.length} sites`);
 
     // ── Auto-adjust budgets based on catalog size ──
-    // <100 products: 20/hr, 100-500: 40, 500-2000: 60, 2000-5000: 90, 5000-10000: 120, 10000+: 180
+    // <100: 20/hr, 100-500: 40, 500-2000: 60, 2000-5000: 90, 5000-10000: 120, 10000+: 180
     const allSites = await prisma.monitoredSite.findMany({
       where: { isEnabled: true, isPaused: false },
       select: { id: true, domain: true, baseBudget: true },
     });
+    // Single query instead of N+1 count queries
+    const counts = await prisma.productIndex.groupBy({
+      by: ['siteId'],
+      where: { isActive: true },
+      _count: true,
+    });
+    const countMap = new Map(counts.map(c => [c.siteId, c._count]));
+
     let budgetChanges = 0;
     for (const site of allSites) {
-      const count = await prisma.productIndex.count({ where: { siteId: site.id, isActive: true } });
+      const count = countMap.get(site.id) || 0;
       const target = count < 100 ? 20 : count < 500 ? 40 : count < 2000 ? 60 : count < 5000 ? 90 : count < 10000 ? 120 : 180;
       if (site.baseBudget !== target) {
         await prisma.monitoredSite.update({ where: { id: site.id }, data: { baseBudget: target } });

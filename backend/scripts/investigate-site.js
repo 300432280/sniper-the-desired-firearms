@@ -59,6 +59,16 @@ function fail(msg) { return `${C.red}FAIL${C.reset} ${msg}`; }
 function info(msg) { return `${C.cyan}INFO${C.reset} ${msg}`; }
 
 function pct(n, total) { return total === 0 ? '0%' : Math.round(n / total * 100) + '%'; }
+/** Decode common HTML entities so DB text matches page text */
+function decodeEntities(s) {
+  return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&#x27;/g, "'")
+    .replace(/&#8211;/g, '–').replace(/&#8212;/g, '—').replace(/&#8217;/g, '\u2019')
+    .replace(/&#8220;/g, '\u201C').replace(/&#8221;/g, '\u201D')
+    .replace(/&#038;/g, '&').replace(/&#8243;/g, '\u2033').replace(/&#8242;/g, '\u2032')
+    .replace(/&#(\d+);/g, function(_, n) { return String.fromCharCode(parseInt(n, 10)); })
+    .replace(/&#x([0-9a-fA-F]+);/g, function(_, h) { return String.fromCharCode(parseInt(h, 16)); });
+}
 function pctNum(n, total) { return total === 0 ? 0 : Math.round(n / total * 100); }
 function ago(date) {
   if (!date) return 'never';
@@ -1336,8 +1346,9 @@ async function probeC3_DataAccuracy(site, opts) {
         var pageTitleMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
         var pageTitle = pageTitleMatch ? pageTitleMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : null;
         if (pageTitle) {
-          var dbNorm = product.title.replace(/\s+/g, ' ').trim().toLowerCase();
-          var pageNorm = pageTitle.toLowerCase();
+          // Decode HTML entities before comparison (DB stores decoded text, page has entities)
+          var dbNorm = decodeEntities(product.title).replace(/\s+/g, ' ').trim().toLowerCase();
+          var pageNorm = decodeEntities(pageTitle).toLowerCase();
           if (dbNorm !== pageNorm && !pageNorm.startsWith(dbNorm) && !dbNorm.startsWith(pageNorm)) {
             titleMismatches++;
             results.push(warn('Title mismatch: DB="' + product.title.substring(0, 40) + '" vs Page="' + pageTitle.substring(0, 40) + '"'));

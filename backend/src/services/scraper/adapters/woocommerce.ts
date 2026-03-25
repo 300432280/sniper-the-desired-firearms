@@ -3,6 +3,7 @@ import type { ScrapedMatch, ExtractionOptions, ScrapeOptions, CatalogProduct, Ca
 import { AbstractAdapter } from './base';
 import axios from 'axios';
 import { pickUserAgent } from '../http-client';
+import { ensureCookies, reportFailure, solveCookies } from '../waf-cookie-manager';
 
 /**
  * WooCommerce adapter — covers ~40% of retail sites.
@@ -291,13 +292,26 @@ export class WooCommerceAdapter extends AbstractAdapter {
   async fetchCatalogPage(
     origin: string,
     page: number,
-    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string },
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string; hasWaf?: boolean },
   ): Promise<CatalogPage> {
     const perPage = Math.min(options?.perPage ?? 100, 100);
-    const ua = pickUserAgent(new URL(origin).hostname);
-    const headers = { 'User-Agent': ua, Accept: 'application/json' };
     const order = options?.sortBy === 'oldest' ? 'asc' : 'desc';
     const hasDateFilter = !!(options?.dateAfter || options?.dateBefore);
+
+    // For Sucuri WAF sites: use Playwright-obtained cookies for fast API access
+    let ua = pickUserAgent(new URL(origin).hostname);
+    let headers: Record<string, string> = { 'User-Agent': ua, Accept: 'application/json' };
+    if (options?.hasWaf) {
+      try {
+        const domain = new URL(origin).hostname;
+        const { cookies, userAgent } = await ensureCookies(domain, origin);
+        ua = userAgent; // Must match the UA used during Playwright solve
+        headers = { 'User-Agent': ua, Accept: 'application/json', Cookie: cookies };
+      } catch (err) {
+        // Cookie acquisition failed — throw to trigger HTML fallback in catalog-crawler
+        throw new Error(`WAF_COOKIE_FAILED: ${err instanceof Error ? err.message : err}`);
+      }
+    }
 
     const seen = new Map<string, CatalogProduct>(); // URL → product (Store API data preferred)
     const wpIdToUrl = new Map<number, string>();     // WP product ID → URL (for Store API enrichment)
@@ -317,12 +331,28 @@ export class WooCommerceAdapter extends AbstractAdapter {
       if (options?.dateAfter) params.modified_after = options.dateAfter;
       if (options?.dateBefore) params.modified_before = options.dateBefore;
 
-      const resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
+      let resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
         params,
         headers,
         timeout: 15000,
-        validateStatus: (s) => s === 200,
+        validateStatus: (s) => s === 200 || s === 307 || s === 403,
       });
+
+      // Sucuri WAF blocked — cookie expired or invalid
+      if (resp.status === 307 || resp.status === 403) {
+        if (options?.hasWaf) {
+          const domain = new URL(origin).hostname;
+          await reportFailure(domain);
+          // Retry once with fresh cookies
+          const fresh = await solveCookies(domain, origin);
+          headers = { 'User-Agent': fresh.userAgent, Accept: 'application/json', Cookie: fresh.cookies };
+          resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
+            params, headers, timeout: 15000, validateStatus: (s) => s === 200,
+          });
+        } else {
+          throw new Error(`WP REST API returned ${resp.status}`);
+        }
+      }
 
       if (Array.isArray(resp.data)) {
         totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10) || undefined;
