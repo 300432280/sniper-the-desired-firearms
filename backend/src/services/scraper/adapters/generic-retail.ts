@@ -45,7 +45,8 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.products-grid .item',        // Magento
       'li.product-item',             // Magento
       '.product-items > .product-item', // Magento
-      '.productborder',              // LightSpeed (gagnonsports, etc.)
+      '.productborder',              // LightSpeed Classic theme (gagnonsports, etc.)
+      '.product-grid[class*="col-"]', // LightSpeed Nova theme (solelyoutdoors, etc.)
       '[class*="product-thumb"]',    // OpenCart (including product-thumb_ variants)
       '[class*="product-layout"]',   // OpenCart grid/list (including product-layout_ variants)
       'div.product',                 // Generic product div
@@ -530,7 +531,8 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.products-grid .item',        // Magento
       'li.product-item',             // Magento
       '.product-items > .product-item', // Magento
-      '.productborder',              // LightSpeed
+      '.productborder',              // LightSpeed Classic theme
+      '.product-grid[class*="col-"]', // LightSpeed Nova theme (solelyoutdoors)
       '.product-thumb',              // OpenCart
       '.product-layout',             // OpenCart
       'div.product',
