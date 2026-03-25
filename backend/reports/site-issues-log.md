@@ -111,3 +111,82 @@ Tracks issues found by `investigate-site.js` across runs. Used to identify repea
 | WAF cookie manager for gotenda | Coverage jumped 4% → 73% in 24h |
 | Alflahertys Klevu API stream | Proper tier partitioning (was 6 broken HTML streams) |
 | gunpost sourceId | 7% → 11% (improving) |
+
+---
+
+## Run: 2026-03-25 07:00 UTC (10 sites, FULL mode, WAF-aware script)
+
+Script now uses `scrapeWithAdapter()` for C1, Playwright for WAF HTML, cookies for WooCommerce APIs.
+
+### aagcanada.ca — P:17 W:1 F:1 | C1: 30/54 keywords, 237 DB / 126 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| 10 dead + 1 sold products | HIGH | RECURRING | D2: Same 11 stale products. Daily stale checker not yet run (first 4AM). |
+
+### alflahertys.com — P:14 W:2 F:2 | C1: 31/54 keywords, 1916 DB / 0 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| ALL live search = 0 | HIGH | RECURRING | C1: scrapeWithAdapter still returns 0. Klevu search needs investigation — adapter may not implement searchViaApi. |
+| 9 price mismatches | HIGH | RECURRING | C3: Multi-variant pages show multiple prices. |
+| Watermark finds 0 | HIGH | RECURRING | A2: 50 events, 0 products. |
+
+### alsimmonsgunshop.com — P:16 W:3 F:0 | C1: 31/54 keywords, 1413 DB / 153 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| "gun case" missing | MEDIUM | RECURRING | 1 live result, 0 in DB. |
+| Coverage 35% | MEDIUM | RECURRING | Budget auto-adjuster pending. |
+
+### budgetshootersupply.ca — P:15 W:3 F:1 | C1: 28/54 keywords, 2063 DB / 681 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| 4 dead products | HIGH | RECURRING | Same 4 products. Daily stale checker pending. |
+| 2 stock mismatches | MEDIUM | NEW | WILSON WSM + Eagle Copper. |
+
+### bullseyenorth.com — P:12 W:3 F:3 | C1: 41/54 keywords, 833 DB / 0 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| ALL live search = 0 | HIGH | RECURRING | C1 ran with OLD script (before scrapeWithAdapter fix). NEEDS RE-TEST. |
+| 3 price mismatches | HIGH | NEW | PRE-ORDER items showing wrong price. |
+| Watermark finds 0 | HIGH | RECURRING | 50 events, 0 products. WAF site. |
+
+### canadafirstammo.ca — P:15 W:1 F:3 | C1: 43/54 keywords, 1188 DB / 53 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| 42% price coverage | HIGH | EXPECTED | 830/962 OOS items have no price. |
+| Watermark finds 0 | HIGH | EXPECTED | No new products since Dec 2025. |
+
+### gunpost.ca — P:13 W:1 F:4 | C1: 52/54 keywords, 6047 DB / 0 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| 48% DB coverage (19k vs 40k live) | HIGH | NEW | D1: Missing ~21K listings. Crawler needs more cycles. |
+| 3 dead + 17 sold | HIGH | RECURRING | D2: 85% of stale sample is sold/deleted. |
+| sourceId 11% | HIGH | RECURRING | Slowly improving. |
+| 0 live search | HIGH | EXPECTED | Classifieds search not in scrapeWithAdapter. |
+
+### gotenda.com — P:12 W:4 F:3 | C1: 46/54 keywords, 4386 DB / 2749 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| Type 81 (0db/8live), Ruger PC Carbine (0db/8live), Ruger 10/22 (5db/98live) | HIGH | NEW | Real product gaps — crawler hasn't indexed these yet. |
+| Stock known 59%, Price 58% | HIGH | NEW | Old generic-retail data missing fields. Filling as WooCommerce API runs. |
+| 6 stock mismatches | HIGH | IMPROVED | Was 200 (script limitation) → now 6 real mismatches. |
+
+### g4cgunstore.com — P:11 W:2 F:4 | C1: 29/54 keywords, 1386 DB / 0 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| Cloudflare blocks Playwright too | HIGH | NEW | Even scrapeWithAdapter can't search. Different WAF than Sucuri. |
+| Tiers not partitioned | HIGH | RECURRING | All streams [1+]. |
+| 0% tags | HIGH | RECURRING | generic-retail doesn't extract WooCommerce tags from HTML. |
+
+### solelyoutdoors.com — P:14 W:0 F:2 | C1: 6/54 keywords, 8 DB / 296 live
+| Issue | Severity | Status | Details |
+|-------|----------|--------|---------|
+| 35 keywords MISSING (site has products, DB has 0) | HIGH | NEW | scrapeWithAdapter found 296 live products. Crawler has only 12 in DB. No stream state. |
+| No stream state | HIGH | RECURRING | Scheduler hasn't detected streams. |
+
+### Pattern Changes
+| Pattern | Previous Status | Current Status | Change |
+|---------|----------------|----------------|--------|
+| WAF sites 0 live results | ACCEPTED (script limitation) | PARTIALLY RESOLVED | gotenda now works (2749 live). bullseyenorth needs re-test. g4c still blocked (Cloudflare). |
+| gotenda stock mismatches | 200 (script blocked) | 6 (real mismatches) | IMPROVED — cookies working |
+| solelyoutdoors coverage | 0 products (just onboarded) | 12 DB vs 296 live — scraper finds products but crawler not indexing | DEGRADED — needs stream detection |
+| gunpost coverage | Not measured | 48% (19k vs 40k) | NEW baseline — need more crawl cycles |
