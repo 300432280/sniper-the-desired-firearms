@@ -1168,9 +1168,11 @@ async function probeC1_KeywordSearch(site, opts) {
   var keywords = isQuick ? QUICK_KEYWORDS : FULL_KEYWORDS;
   results.push(info(`Mode: ${isQuick ? 'QUICK (12)' : 'FULL (' + keywords.length + ')'} keywords`));
 
-  var useApi = (site.adapterType === 'woocommerce' || site.adapterType === 'shopify');
-  results.push(info(`Search: ${useApi ? 'API' : 'HTML'} (${site.adapterType})`));
+  // Use the app's own scrapeWithAdapter — handles API, HTML, Playwright, Klevu, WAF
+  var { scrapeWithAdapter } = require('../src/services/scraper/index');
+  results.push(info(`Search: scrapeWithAdapter (${site.adapterType})`));
 
+  var blockedSearches = 0;
   for (var i = 0; i < keywords.length; i++) {
     var kw = keywords[i];
     totalKeywords++;
@@ -1179,29 +1181,9 @@ async function probeC1_KeywordSearch(site, opts) {
     var liveResults = [];
 
     try {
-      if (site.adapterType === 'woocommerce') {
-        var resp = await wafApiGet(origin + '/wp-json/wc/store/v1/products', { search: kw.keyword, per_page: 100 }, site);
-        if (resp.status === 200 && Array.isArray(resp.data)) {
-          liveResults = resp.data.map(function(p) { return { title: p.name, url: p.permalink }; });
-        }
-      } else if (site.adapterType === 'shopify') {
-        var resp2 = await apiGet(origin + '/search/suggest.json', { q: kw.keyword, 'resources[type]': 'product', 'resources[limit]': 100 });
-        if (resp2.status === 200) {
-          var prods = (resp2.data && resp2.data.resources && resp2.data.resources.results && resp2.data.resources.results.products) || [];
-          liveResults = prods.map(function(p) { return { title: p.title, url: p.url ? (p.url.startsWith('http') ? p.url : origin + p.url) : '' }; });
-        }
-      } else {
-        var searchUrl = buildSearchUrl(origin, kw.keyword, site);
-        var resp3 = await axios.get(searchUrl, {
-          headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
-          timeout: 15000, maxRedirects: 5,
-          validateStatus: function(s) { return s < 500; },
-        });
-        if (resp3.status === 200 && typeof resp3.data === 'string') {
-          liveResults = extractProductUrls(resp3.data, origin).map(function(u) { return { title: '', url: u }; });
-        }
-      }
-    } catch { /* search unavailable */ }
+      var scrapeResult = await scrapeWithAdapter(site.url, kw.keyword, { fast: true });
+      liveResults = (scrapeResult.matches || []).map(function(m) { return { title: m.title, url: m.url }; });
+    } catch { blockedSearches++; }
 
     totalDbResults += dbResults.length;
     totalLiveResults += liveResults.length;
@@ -1222,6 +1204,13 @@ async function probeC1_KeywordSearch(site, opts) {
   }
 
   var summary = `${matchedKeywords}/${totalKeywords} keywords matched, ${totalDbResults} DB / ${totalLiveResults} live`;
+
+  // If search consistently returns 0 live across all keywords, something is wrong
+  if (totalLiveResults === 0 && totalDbResults > 0 && blockedSearches > totalKeywords * 0.5) {
+    results.unshift(warn(summary + ' (UNVERIFIED — ' + blockedSearches + '/' + totalKeywords + ' searches returned 0)'));
+    issues.push(makeIssue('SEARCH_UNVERIFIED', 'Live search returned 0 for all keywords — scraper may be broken for this site', { blockedSearches, totalKeywords }, 'high'));
+    return { probe: 'C1-keyword-search', verdict: 'WARN', issues, details: results };
+  }
 
   if (missingOnSite > totalKeywords * 0.1) {
     results.unshift(fail(summary));
