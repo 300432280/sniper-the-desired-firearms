@@ -41,6 +41,7 @@
  */
 
 require('dotenv').config();
+require('ts-node').register({ transpileOnly: true, project: require('path').join(__dirname, '..', 'tsconfig.json') });
 const { PrismaClient } = require('@prisma/client');
 const axios = require('axios');
 
@@ -150,6 +151,68 @@ async function safeHeadUrl(url) {
 }
 
 async function delay(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+// ── WAF-aware infrastructure (uses app's Playwright fetcher + cookie manager) ──
+var _playwrightFetcher = null;
+var _wafCookieManager = null;
+
+function getPlaywrightFetcher() {
+  if (!_playwrightFetcher) _playwrightFetcher = require('../src/services/scraper/playwright-fetcher');
+  return _playwrightFetcher;
+}
+function getWafCookieManager() {
+  if (!_wafCookieManager) _wafCookieManager = require('../src/services/scraper/waf-cookie-manager');
+  return _wafCookieManager;
+}
+
+/** WAF-aware page fetch. Uses Playwright for WAF sites, plain HTTP otherwise. */
+async function wafFetch(url, site, timeout) {
+  if (site && site.hasWaf) {
+    try {
+      var pw = getPlaywrightFetcher();
+      var result = await pw.fetchWithPlaywright(url, { timeout: timeout || 30000 });
+      return { status: 200, data: result.html, headers: {}, wafBypassed: true };
+    } catch (err) {
+      return { status: 0, data: '', error: 'Playwright: ' + err.message };
+    }
+  }
+  return safeFetch(url, timeout);
+}
+
+/** WAF-aware API GET. Uses WAF cookies for WooCommerce sites behind Sucuri. */
+async function wafApiGet(url, params, site, timeout) {
+  if (site && site.hasWaf && site.adapterType === 'woocommerce') {
+    try {
+      var origin = site.url.replace(/\/$/, '');
+      var domain = new URL(origin).hostname;
+      var wcm = getWafCookieManager();
+      var creds = await wcm.ensureCookies(domain, origin);
+      return await axios.get(url, {
+        params: params || {},
+        headers: { 'User-Agent': creds.userAgent, Cookie: creds.cookies, Accept: 'application/json' },
+        timeout: timeout || 15000,
+        validateStatus: function(s) { return s < 500; },
+      });
+    } catch (err) { return apiGet(url, params, timeout); }
+  }
+  return apiGet(url, params, timeout);
+}
+
+/** WAF-aware URL liveness check. Uses Playwright for WAF sites. */
+async function wafHeadUrl(url, site) {
+  if (site && site.hasWaf) {
+    try {
+      var pw = getPlaywrightFetcher();
+      var result = await pw.fetchWithPlaywright(url, { timeout: 20000 });
+      var h1Match = result.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+      var h1Text = h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim().toLowerCase() : '';
+      if (h1Text.includes('not found') || h1Text === '404') return { ok: false, reason: 'HTTP 404' };
+      if (result.html.length < 1000) return { ok: false, reason: 'Empty page' };
+      return { ok: true, status: 200 };
+    } catch (err) { return { ok: false, reason: 'Playwright: ' + err.message.substring(0, 60) }; }
+  }
+  return safeHeadUrl(url);
+}
 
 // ── Test Keywords ───────────────────────────────────────────────────────────
 // Quick: 12 representative keywords. Full: 52 keywords across every category.
@@ -974,14 +1037,14 @@ async function probeB2_ApiHealth(site) {
   if (site.adapterType === 'woocommerce') {
     try {
       var t0 = Date.now();
-      var r1 = await apiGet(origin + '/wp-json/wp/v2/product', { per_page: 1 });
-      if (r1.status === 200) results.push(pass('WP REST API: ' + (Date.now() - t0) + 'ms'));
+      var r1 = await wafApiGet(origin + '/wp-json/wp/v2/product', { per_page: 1 }, site);
+      if (r1.status === 200) results.push(pass('WP REST API: ' + (Date.now() - t0) + 'ms' + (site.hasWaf ? ' (cookies)' : '')));
       else results.push(fail('WP REST API: HTTP ' + r1.status));
     } catch (e) { results.push(fail('WP REST API: ' + e.message)); }
     try {
       var t1 = Date.now();
-      var r2 = await apiGet(origin + '/wp-json/wc/store/v1/products', { per_page: 1 });
-      if (r2.status === 200) results.push(pass('Store API: ' + (Date.now() - t1) + 'ms'));
+      var r2 = await wafApiGet(origin + '/wp-json/wc/store/v1/products', { per_page: 1 }, site);
+      if (r2.status === 200) results.push(pass('Store API: ' + (Date.now() - t1) + 'ms' + (site.hasWaf ? ' (cookies)' : '')));
       else results.push(fail('Store API: HTTP ' + r2.status));
     } catch (e) { results.push(fail('Store API: ' + e.message)); }
   } else if (site.adapterType === 'shopify') {
@@ -994,8 +1057,8 @@ async function probeB2_ApiHealth(site) {
   } else {
     try {
       var t3 = Date.now();
-      var r4 = await axios.get(origin, { headers: { 'User-Agent': UA }, timeout: 15000, validateStatus: function(s) { return s < 500; } });
-      if (r4.status === 200) results.push(pass('Homepage: ' + (Date.now() - t3) + 'ms'));
+      var r4 = await wafFetch(origin, site, 15000);
+      if (r4.status === 200 && r4.data.length > 1000) results.push(pass('Homepage: ' + (Date.now() - t3) + 'ms' + (r4.wafBypassed ? ' (Playwright)' : '')));
       else results.push(warn('Homepage: HTTP ' + r4.status));
     } catch (e) { results.push(fail('Homepage: ' + e.message)); }
   }
@@ -1058,7 +1121,7 @@ async function probeB3_Pagination(site) {
   var toCheck = htmlStreams.slice(0, 3);
   for (var stream of toCheck) {
     await delay(500);
-    var resp = await safeFetch(stream.url, 10000);
+    var resp = await wafFetch(stream.url, site, 10000);
     if (resp.status !== 200 || resp.data.length < 500) {
       results.push(warn(`${stream.id}: HTTP ${resp.status}, ${resp.data.length} bytes`));
       continue;
@@ -1117,7 +1180,7 @@ async function probeC1_KeywordSearch(site, opts) {
 
     try {
       if (site.adapterType === 'woocommerce') {
-        var resp = await apiGet(origin + '/wp-json/wc/store/v1/products', { search: kw.keyword, per_page: 100 });
+        var resp = await wafApiGet(origin + '/wp-json/wc/store/v1/products', { search: kw.keyword, per_page: 100 }, site);
         if (resp.status === 200 && Array.isArray(resp.data)) {
           liveResults = resp.data.map(function(p) { return { title: p.name, url: p.permalink }; });
         }
@@ -1199,7 +1262,7 @@ async function probeC2_StockAccuracy(site) {
     var page = 1;
     while (page <= 50) {
       try {
-        var resp = await apiGet(origin + '/wp-json/wc/store/v1/products', { per_page: 100, page: page });
+        var resp = await wafApiGet(origin + '/wp-json/wc/store/v1/products', { per_page: 100, page: page }, site);
         if (resp.status !== 200 || !Array.isArray(resp.data) || resp.data.length === 0) break;
         resp.data.forEach(function(p) { if (p.is_in_stock) actuallyInStock.add(p.permalink); });
         page++;
@@ -1313,7 +1376,7 @@ async function probeC3_DataAccuracy(site, opts) {
     var urlCheck = { ok: true };
     if (!dbOnly) {
       await delay(500);
-      urlCheck = await safeHeadUrl(product.url);
+      urlCheck = await wafHeadUrl(product.url, site);
       if (!urlCheck.ok && urlCheck.reason === 'HTTP 404') {
         urlDead++;
         if (urlDead <= 3) results.push(fail('URL_DEAD: ' + label));
@@ -1339,7 +1402,7 @@ async function probeC3_DataAccuracy(site, opts) {
     // Live page comparison
     if (!dbOnly && urlCheck.ok) {
       await delay(500);
-      var resp = await safeFetch(product.url, 10000);
+      var resp = await wafFetch(product.url, site, 10000);
       if (resp.status === 200 && resp.data.length >= 500) {
         checked++;
         var html = resp.data;
@@ -1408,7 +1471,7 @@ async function probeC4_ProductSpotCheck(site) {
 
   for (var product of sample) {
     await delay(500);
-    var resp = await safeFetch(product.url, 8000);
+    var resp = await wafFetch(product.url, site, 8000);
     if (resp.status === 200 && resp.data.length > 1000) {
       alive++;
       var titleWords = product.title.split(/\s+/).slice(0, 3).join(' ');
@@ -1528,7 +1591,7 @@ async function probeD1_DbVsLiveCount(site) {
       // WooCommerce: WP REST API returns ALL products (inc. out-of-stock)
       // Store API only returns in-stock — wrong for total count comparison
       method = 'WooCommerce WP REST API';
-      var resp3 = await apiGet(origin + '/wp-json/wp/v2/product', { per_page: 1 });
+      var resp3 = await wafApiGet(origin + '/wp-json/wp/v2/product', { per_page: 1 }, site);
       if (resp3.status === 200 && resp3.headers) {
         var totalHeader2 = resp3.headers['x-wp-total'];
         if (totalHeader2) liveCount = parseInt(totalHeader2, 10);
@@ -1536,7 +1599,7 @@ async function probeD1_DbVsLiveCount(site) {
       // Fallback: Store API (in-stock only — will be flagged as estimate)
       if (liveCount === null) {
         method = 'WooCommerce Store API (in-stock only)';
-        var resp2 = await apiGet(origin + '/wp-json/wc/store/v1/products', { per_page: 1 });
+        var resp2 = await wafApiGet(origin + '/wp-json/wc/store/v1/products', { per_page: 1 }, site);
         if (resp2.status === 200 && resp2.headers) {
           var totalHeader = resp2.headers['x-wp-total'];
           if (totalHeader) liveCount = parseInt(totalHeader, 10);
@@ -1552,7 +1615,7 @@ async function probeD1_DbVsLiveCount(site) {
           if (stream.totalPages && stream.totalPages > 0) {
             // Fetch first page to count products per page
             await delay(500);
-            var pageResp = await safeFetch(stream.url, 10000);
+            var pageResp = await wafFetch(stream.url, site, 10000);
             if (pageResp.status === 200) {
               var productLinks = extractProductUrls(pageResp.data, origin);
               var perPage = productLinks.length || 24; // default assumption
@@ -1642,7 +1705,7 @@ async function probeD2_Stale404Check(site, opts) {
     checked++;
     await delay(500);
     // First try HEAD for 404
-    var resp = await safeHeadUrl(product.url);
+    var resp = await wafHeadUrl(product.url, site);
 
     if (!resp.ok && resp.reason === 'HTTP 404') {
       confirmed404.push(product);
@@ -1652,7 +1715,7 @@ async function probeD2_Stale404Check(site, opts) {
     } else if (resp.ok) {
       // Fetch the full page to check for soft-404 AND sold status
       await delay(300);
-      var getResp = await safeFetch(product.url, 8000);
+      var getResp = await wafFetch(product.url, site, 8000);
       if (getResp.status === 200 && getResp.data.length > 0) {
         var pageHtml = getResp.data;
         var h1Match = pageHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
@@ -1921,6 +1984,8 @@ async function main() {
   }
 
   await prisma.$disconnect();
+  // Close shared Playwright browser if it was started
+  try { if (_playwrightFetcher) await _playwrightFetcher.closeBrowser(); } catch (e) { /* ignore */ }
 }
 
 main().catch(function(err) { console.error(err); process.exit(1); });
