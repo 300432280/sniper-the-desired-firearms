@@ -32,15 +32,50 @@ export type SavedProduct = {
  *
  * Returns only NEW products (firstSeenAt === lastSeenAt) for notification matching.
  */
+/**
+ * Generic filter: reject URLs that are category/collection pages, not individual products.
+ * These patterns are platform-agnostic and apply to all adapters.
+ */
+function isCategoryUrl(url: string): boolean {
+  try {
+    const path = new URL(url).pathname.toLowerCase();
+    // WooCommerce category pages
+    if (path.includes('/product-category/')) return true;
+    // Generic /category/ path (townpost, etc.)
+    if (/^\/category\//.test(path)) return true;
+    // Shopify collections root (but NOT /collections/all/products/slug which is a real product)
+    if (path.includes('/collections/') && !path.includes('/products/')) return true;
+    // WP admin pages (should never be products)
+    if (path.includes('/wp-admin/')) return true;
+    // Tag/archive pages
+    if (path.includes('/product-tag/')) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export async function saveProducts(
   siteId: string,
   products: CatalogProduct[],
 ): Promise<SavedProduct[]> {
   if (products.length === 0) return [];
 
+  // Filter out category/collection pages before saving
+  const filtered = products.filter(p => {
+    if (isCategoryUrl(p.url)) return false;
+    // Reject products with very short titles that look like category names
+    if (p.title && p.title.length < 4 && !p.price) return false;
+    return true;
+  });
+  if (filtered.length < products.length) {
+    const dropped = products.length - filtered.length;
+    if (dropped > 0) console.log(`[ProductUpsert] Filtered ${dropped} category/non-product URLs`);
+  }
+
   const saved: SavedProduct[] = [];
 
-  for (const product of products) {
+  for (const product of filtered) {
     try {
       const productType = product.productType || classifyProduct({
         title: product.title,

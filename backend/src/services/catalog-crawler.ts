@@ -651,6 +651,15 @@ export async function crawlStreamTier(params: {
       }
     }
 
+    // Tag products with stream category if they don't already have tags.
+    // This ensures products from category-specific streams (e.g. /firearms, /ammunition)
+    // get tagged even if the adapter couldn't derive a tag from the HTML.
+    if (stream.category) {
+      for (const p of allProducts) {
+        if (!p.tags) p.tags = stream.category;
+      }
+    }
+
     // Save products to ProductIndex
     const savedProducts = await saveProducts(siteId, allProducts);
     if (savedProducts.length > 0) {
