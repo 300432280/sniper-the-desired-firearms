@@ -14,6 +14,14 @@ export class GenericRetailAdapter extends AbstractAdapter {
   supportsDateFilter = false; // Klevu API (alflahertys) and HTML scraping have no date filtering
 
   getSearchUrl(origin: string, keyword: string): string {
+    // Bullseyenorth uses Celerant e-commerce — search URL is /all-products/browse/keyword/{query}
+    if (origin.includes('bullseyenorth.com')) {
+      return `${origin}/all-products/browse/keyword/${encodeURIComponent(keyword)}`;
+    }
+    // BigCommerce (alflahertys) uses /search.php?search_query=
+    if (origin.includes('alflahertys.com')) {
+      return `${origin}/search.php?search_query=${encodeURIComponent(keyword)}`;
+    }
     return `${origin}/search?q=${encodeURIComponent(keyword)}`;
   }
 
