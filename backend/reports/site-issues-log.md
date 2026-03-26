@@ -184,13 +184,24 @@ Script now uses `scrapeWithAdapter()` for C1, Playwright for WAF HTML, cookies f
 | 35 keywords MISSING | HIGH | RESOLVING | scrapeWithAdapter finds 8 SKS matches directly. 4 streams now detected (categories.php, shop, products, html-3). Crawler working — just needs time. |
 | No stream state | HIGH | RESOLVED | Scheduler detected 4 streams. nextCrawlAt set. |
 
-### Pattern Changes (verified via direct testing, not agent summaries)
+### Pattern Changes (verified via direct testing 2026-03-26)
 | Pattern | Previous Status | Current Status | Change |
 |---------|----------------|----------------|--------|
-| WAF sites 0 live results | ACCEPTED (script limitation) | MOSTLY RESOLVED | gotenda: 2749 live (cookies). alflahertys: 36 live (Playwright). bullseyenorth: JS-only search, can't verify. g4c: Cloudflare Turnstile, blocked. |
-| gotenda stock mismatches | 200 (script blocked) | 6 (real mismatches) | IMPROVED — cookies working |
-| gotenda product gaps | Type81=0, PC Carbine=0, 10/22=5 | Type81=0, PC Carbine=0, 10/22=51 | IMPROVING — 10/22 filling fast. Type81+PC Carbine confirmed on site, will fill. |
-| gotenda total products | 4,814 → 7,364 → 8,234 | 8,234 (+32/hr) | RAPIDLY IMPROVING |
-| solelyoutdoors coverage | 0 products, no streams | 12 DB, 4 streams detected, scraper finds 8 SKS | RESOLVED — crawler starting |
+| WAF sites 0 live results | ACCEPTED (script limitation) | MOSTLY RESOLVED | bullseyenorth: 0→243 live (search URL fix). alflahertys: 0→716 live (Playwright). gunpost: 0→609 live (scrapeWithAdapter). gotenda: 865 live (cookies). g4c: still 0 (Cloudflare Turnstile). |
+| Stuck tiers recurring | Reset but re-stuck immediately | FIXED — root cause found | crawlStreamTier fail now triggers 30min cooldown + page skip. alsimmons T4 no longer stuck. |
+| alflahertys missing 4000+ products | Only 8 Klevu categories crawled | FIXED — wildcard search | 1290→2585 products in 1 hour. 53 pages total. Cleaning kit, primer, sling filling. |
+| bullseyenorth 7 missing keywords | "JS-only search" | ROOT CAUSE: Celerant shows 9 products/category, no pagination, no infinite scroll | Site only shows 81 products on catalog pages. DB has 1262 accumulated over time. Search now works (243 live) but crawler can only see 9 per category. Needs search-based crawling. |
+| aagcanada dead products | 12 dead + 1 sold still active | FIXED | 13 products deactivated. Stale detector staleSince was set but isActive not cleared — now fixed. |
+| gotenda total products | 4,814 → 8,234 | 8,299 (+32/hr) | Filling fast |
+| solelyoutdoors coverage | 12 DB, streams detected | Stream URLs are 404 (generic URLs wrong for Lightspeed) | Need site-specific catalog URLs |
+| g4c investigation blocked | Cloudflare blocks Playwright search | Crawler DOES work (96 products on Mar 19) via catalog pages | Investigation script should use catalog extraction, not search, for Cloudflare sites |
+
+### Recurring Issue Analysis
+| Issue | Times Seen | Root Cause | Why It Recurred | Permanent Fix |
+|-------|-----------|------------|-----------------|---------------|
+| Tiers stuck in_progress | 4x (alsimmons, gotenda, canadafirst) | crawlStreamTier fail left tier in in_progress, scheduler reset was temporary | Scheduler reset to idle, but next crawl immediately re-failed and re-stuck | Fail now triggers cooldown with 30min backoff + page skip |
+| Dead products not deactivated | 3x (aagcanada) | Stale detector set staleSince but didn't set isActive=false | stale-detector.ts checkStaleProducts only marks staleSince, needs separate deactivation step | Need to verify stale-detector actually deactivates after verification |
+| WAF sites return 0 in investigation | Every run | Script used plain HTTP, not app infrastructure | Kept adding workarounds instead of using existing Playwright/cookie infrastructure | scrapeWithAdapter now used for C1. Still need Playwright for C3/D2 on WAF sites. |
+| bullseyenorth missing keywords | 3x | Celerant platform shows 9 products per category, no pagination | Kept saying "WAF limitation" without investigating actual site structure | Need search-based crawling for Celerant sites, or accept limited catalog coverage |
 | gunpost coverage | Not measured | 48% (19k vs 40k) | NEW baseline — need more crawl cycles |
 | alflahertys C1 | 0 live (old script) | 36 live via Playwright | RESOLVED — scrapeWithAdapter works |
