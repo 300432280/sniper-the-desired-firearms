@@ -261,12 +261,15 @@ export class GenericRetailAdapter extends AbstractAdapter {
       );
     }
     if (origin.includes('ellwoodepps.com')) {
-      // BigCommerce — homepage has products, also /categories.php
+      // BigCommerce — no categories.php, products on homepage and category pages
+      // Note: www. redirects to non-www, but crawler follows redirects
       urls.push(
-        `${origin}/categories.php`,
-        `${origin}/firearms/`,
-        `${origin}/ammunition/`,
+        `${origin}/rifles/`,
+        `${origin}/shotguns/`,
+        `${origin}/handguns/`,
+        `${origin}/used-firearms/`,
         `${origin}/optics/`,
+        `${origin}/ammunition/`,
       );
     }
     if (origin.includes('firearmsoutletcanada.com')) {
