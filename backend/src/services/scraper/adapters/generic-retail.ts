@@ -202,6 +202,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
     }
     if (origin.includes('gagnonsports.com')) {
       // LightSpeed — .productborder only on leaf category pages
+      // Must include ALL categories: firearms, ammunition, optics, accessories, reloading
       urls.push(
         `${origin}/firearms/new-firearms/centerfire-rifles/`,
         `${origin}/firearms/new-firearms/rimfire-rifles/`,
@@ -210,6 +211,14 @@ export class GenericRetailAdapter extends AbstractAdapter {
         `${origin}/firearms/new-firearms/air-guns/`,
         `${origin}/firearms/used-firearms/used-rifles/`,
         `${origin}/firearms/used-firearms/used-shotguns/`,
+        `${origin}/ammunition/centerfire-ammunition/`,
+        `${origin}/ammunition/rimfire-ammunition/`,
+        `${origin}/ammunition/shotgun-ammunition/`,
+        `${origin}/optics/riflescopes/`,
+        `${origin}/optics/red-dot-sights/`,
+        `${origin}/optics/binoculars/`,
+        `${origin}/accessories/`,
+        `${origin}/reloading/`,
       );
     }
     if (origin.includes('reliablegun.com')) {
