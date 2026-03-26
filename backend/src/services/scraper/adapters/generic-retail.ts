@@ -222,6 +222,16 @@ export class GenericRetailAdapter extends AbstractAdapter {
         `${origin}/`,
       );
     }
+    if (origin.includes('solelyoutdoors.com')) {
+      // LightSpeed Nova theme — catalog pages use .html extension
+      urls.push(
+        `${origin}/firearms.html`,
+        `${origin}/ammunition.html`,
+        `${origin}/optics.html`,
+        `${origin}/accessories.html`,
+        `${origin}/reloading.html`,
+      );
+    }
     if (origin.includes('nordicmarksman.com')) {
       // BigCommerce — /categories.php lists products with .card selector
       urls.push(
