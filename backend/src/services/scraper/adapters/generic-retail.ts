@@ -242,12 +242,12 @@ export class GenericRetailAdapter extends AbstractAdapter {
       );
     }
     if (origin.includes('fulcrum-outdoors')) {
-      // LightSpeed eCom — catalog pages use .html extension
+      // LightSpeed eCom — catalog pages use /{category}/ (NOT .html)
       urls.push(
-        `${origin}/firearms.html`,
-        `${origin}/ammunition.html`,
-        `${origin}/optics.html`,
-        `${origin}/accessories.html`,
+        `${origin}/firearms/`,
+        `${origin}/ammunition/`,
+        `${origin}/optics/`,
+        `${origin}/accessories/`,
       );
     }
     if (origin.includes('frontierfirearms.ca')) {
