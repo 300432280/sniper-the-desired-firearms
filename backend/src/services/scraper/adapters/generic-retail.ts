@@ -432,46 +432,43 @@ export class GenericRetailAdapter extends AbstractAdapter {
     const perPage = options?.perPage || GenericRetailAdapter.KLEVU_CONFIG.perPage;
     const offset = (page - 1) * perPage;
     const allProducts: CatalogProduct[] = [];
-    let hasMore = false;
     let maxTotalPages = 0;
 
-    // Iterate all known categories and fetch products
-    // On page 1 we sweep all categories; subsequent pages continue the sweep
-    for (const { path, slug } of GenericRetailAdapter.KLEVU_CONFIG.categoryPaths) {
-      try {
-        const response = await axios.post(GenericRetailAdapter.KLEVU_CONFIG.endpoint, {
-          context: { apiKeys: [GenericRetailAdapter.KLEVU_CONFIG.apiKey] },
-          recordQueries: [{
-            id: 'cat',
-            typeOfRequest: 'CATNAV',
-            settings: {
-              query: { categoryPath: path },
-              limit: perPage,
-              offset,
-              // Klevu CATNAV only supports RELEVANCE, PRICE_ASC/DESC, NAME_ASC/DESC
-              // (NEW_ARRIVAL returns 500). RELEVANCE is the best default.
-              sort: 'RELEVANCE',
-              fields: ['name', 'url', 'price', 'salePrice', 'image', 'sku', 'inStock', 'id'],
-            },
-          }],
-        }, {
-          timeout: 15000,
-          headers: { 'Content-Type': 'application/json' },
-        });
+    // Fetch ALL products via wildcard SEARCH (not per-category CATNAV).
+    // This ensures we index products from every category (optics, accessories,
+    // reloading, knives, etc.) — not just the 8 hardcoded firearm/ammo categories.
+    // Klevu returns ~5,266 total products at perPage=36 → ~147 pages.
+    try {
+      const response = await axios.post(GenericRetailAdapter.KLEVU_CONFIG.endpoint, {
+        context: { apiKeys: [GenericRetailAdapter.KLEVU_CONFIG.apiKey] },
+        recordQueries: [{
+          id: 'catalog',
+          typeOfRequest: 'SEARCH',
+          settings: {
+            query: { term: '*' },
+            limit: perPage,
+            offset,
+            sort: 'RELEVANCE',
+            fields: ['name', 'url', 'price', 'salePrice', 'image', 'sku', 'inStock', 'id', 'category'],
+            typeOfRecords: ['KLEVU_PRODUCT'],
+          },
+        }],
+      }, {
+        timeout: 15000,
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-        const qr = response.data?.queryResults?.[0];
-        if (!qr?.records?.length) continue;
-
+      const qr = response.data?.queryResults?.[0];
+      if (qr?.records?.length) {
         const total = qr.meta?.totalResultsFound || 0;
-        if (offset + perPage < total) hasMore = true;
-        // Calculate totalPages using the adapter's native perPage (36), not the caller's,
-        // so the page count is accurate for actual crawl operations
-        const nativePerPage = GenericRetailAdapter.KLEVU_CONFIG.perPage;
-        const categoryPages = Math.ceil(total / nativePerPage);
-        if (categoryPages > maxTotalPages) maxTotalPages = categoryPages;
+        maxTotalPages = Math.ceil(total / perPage);
 
         for (const r of qr.records) {
           if (!r.name || !r.url) continue;
+          // Derive tags from Klevu category field (e.g. "Optics;Scopes" → "scopes")
+          const categoryParts = (r.category || '').split(';');
+          const tag = categoryParts.length > 0 ? categoryParts[categoryParts.length - 1].trim().toLowerCase() : undefined;
+
           allProducts.push({
             url: r.url,
             sourceId: r.id || undefined,
@@ -481,13 +478,13 @@ export class GenericRetailAdapter extends AbstractAdapter {
               ? parseFloat(r.price) : undefined,
             stockStatus: r.inStock === 'yes' ? 'in_stock' : 'out_of_stock',
             thumbnail: r.image || undefined,
-            tags: slug,
-            sourceCategory: path.split(';').pop() || undefined,
+            tags: tag || undefined,
+            sourceCategory: categoryParts.length > 1 ? categoryParts.slice(0, 2).join(' > ') : undefined,
           });
         }
-      } catch (err) {
-        console.log(`[GenericRetail] Klevu API error for ${slug}: ${err instanceof Error ? err.message : err}`);
       }
+    } catch (err) {
+      console.log(`[GenericRetail] Klevu API error: ${err instanceof Error ? err.message : err}`);
     }
 
     // Deduplicate by URL (products may appear in multiple categories)
@@ -501,7 +498,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
     return {
       products: deduped,
       totalPages: maxTotalPages > 0 ? maxTotalPages : undefined,
-      nextPageUrl: hasMore ? `klevu://page/${page + 1}` : undefined,
+      nextPageUrl: deduped.length >= perPage ? `klevu://page/${page + 1}` : undefined,
     };
   }
 

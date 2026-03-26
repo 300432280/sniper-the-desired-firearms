@@ -669,6 +669,13 @@ export async function crawlStreamTier(params: {
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
+    // If we scanned some pages before failing, advance currentPage so we don't
+    // re-crawl the same pages on retry. If we failed on the first page, skip ahead
+    // by 1 so we don't get stuck retrying the same blocked page forever.
+    if (pagesScanned === 0 && !cycleComplete) {
+      tierState.currentPage = (tierState.currentPage || 1) + 1;
+      console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: API error on page ${tierState.currentPage - 1}, will skip to page ${tierState.currentPage} on retry: ${msg.substring(0, 80)}`);
+    }
     return {
       streamId: stream.id,
       tier,

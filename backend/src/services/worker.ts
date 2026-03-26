@@ -216,6 +216,16 @@ async function processStreamCatalogCrawl(
     // Complete or update progress
     if (result.cycleComplete) {
       streamState.tiers[stateKey] = completeStreamTierCycle(tierState, cooldownMap[tier]);
+    } else if (result.status === 'fail') {
+      // API error (expired cookies, network timeout, etc.) — reset to idle with a short
+      // cooldown so we don't hammer the site. Keep currentPage so we resume from where
+      // we stopped instead of restarting from page 1.
+      const retryCooldown = new Date(Date.now() + 30 * 60 * 1000); // 30 min backoff
+      tierState.status = 'cooldown';
+      tierState.cooldownEndsAt = retryCooldown.toISOString();
+      tierState.cycleStartedAt = undefined;
+      streamState.tiers[stateKey] = tierState;
+      console.log(`[CatalogWorker] Stream "${chosen.id}" T${tier}: failed, backing off 30min (resume at page ${tierState.currentPage})`);
     }
     // tierState was mutated in-place by crawlStreamTier for resume position
 
