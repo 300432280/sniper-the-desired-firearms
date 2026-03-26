@@ -232,6 +232,40 @@ export class GenericRetailAdapter extends AbstractAdapter {
         `${origin}/reloading.html`,
       );
     }
+    if (origin.includes('fulcrum-outdoors')) {
+      // LightSpeed eCom — catalog pages use .html extension
+      urls.push(
+        `${origin}/firearms.html`,
+        `${origin}/ammunition.html`,
+        `${origin}/optics.html`,
+        `${origin}/accessories.html`,
+      );
+    }
+    if (origin.includes('frontierfirearms.ca')) {
+      // BigCommerce — /categories.php lists all products; also has category pages
+      urls.push(
+        `${origin}/categories.php`,
+        `${origin}/firearms/`,
+        `${origin}/ammunition/`,
+        `${origin}/optics/`,
+        `${origin}/accessories/`,
+      );
+    }
+    if (origin.includes('ellwoodepps.com')) {
+      // BigCommerce — homepage has products, also /categories.php
+      urls.push(
+        `${origin}/categories.php`,
+        `${origin}/firearms/`,
+        `${origin}/ammunition/`,
+        `${origin}/optics/`,
+      );
+    }
+    if (origin.includes('firearmsoutletcanada.com')) {
+      // BigCommerce — /categories.php has 6 pages of products
+      urls.push(
+        `${origin}/categories.php`,
+      );
+    }
     if (origin.includes('nordicmarksman.com')) {
       // BigCommerce — /categories.php lists products with .card selector
       urls.push(
