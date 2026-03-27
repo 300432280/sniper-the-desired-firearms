@@ -99,17 +99,26 @@ function apiGet(url, params, timeout) {
 }
 
 async function safeFetch(url, timeout) {
-  try {
-    var resp = await axios.get(url, {
-      headers: { 'User-Agent': UA },
-      timeout: timeout || 10000,
-      maxRedirects: 5,
-      validateStatus: function() { return true; },
-    });
-    return { status: resp.status, data: typeof resp.data === 'string' ? resp.data : '', headers: resp.headers };
-  } catch (err) {
-    return { status: 0, data: '', error: err.message };
+  // Retry on Cloudflare 520/502/503 (hides real 404s behind transient errors)
+  for (var attempt = 1; attempt <= 2; attempt++) {
+    try {
+      var resp = await axios.get(url, {
+        headers: { 'User-Agent': UA },
+        timeout: timeout || 10000,
+        maxRedirects: 5,
+        validateStatus: function() { return true; },
+      });
+      if ((resp.status === 520 || resp.status === 502 || resp.status === 503) && attempt < 2) {
+        await new Promise(function(r) { setTimeout(r, 2000); });
+        continue;
+      }
+      return { status: resp.status, data: typeof resp.data === 'string' ? resp.data : '', headers: resp.headers };
+    } catch (err) {
+      if (attempt < 2) { await new Promise(function(r) { setTimeout(r, 2000); }); continue; }
+      return { status: 0, data: '', error: err.message };
+    }
   }
+  return { status: 0, data: '', error: 'retry exhausted' };
 }
 
 async function safeHeadImage(url) {
@@ -129,25 +138,39 @@ async function safeHeadImage(url) {
 
 async function safeHeadUrl(url) {
   if (!url) return { ok: false, reason: 'null' };
-  try {
-    var resp = await axios.head(url, {
-      headers: { 'User-Agent': UA },
-      timeout: 10000, maxRedirects: 5,
-      validateStatus: function() { return true; },
-    });
-    if (resp.status >= 200 && resp.status < 400) return { ok: true, status: resp.status };
-    if (resp.status === 403) return { ok: true, status: resp.status }; // WAF
-    if (resp.status === 405) {
-      var getResp = await axios.get(url, {
-        headers: { 'User-Agent': UA }, timeout: 10000, maxRedirects: 5,
+  // Retry up to 2x on Cloudflare transient errors (520/502/503).
+  // Without retry, dead pages behind Cloudflare appear as "error/skip"
+  // instead of confirmed 404 — hiding real dead products.
+  for (var attempt = 1; attempt <= 2; attempt++) {
+    try {
+      var resp = await axios.head(url, {
+        headers: { 'User-Agent': UA },
+        timeout: 10000, maxRedirects: 5,
         validateStatus: function() { return true; },
       });
-      if (getResp.status >= 200 && getResp.status < 400) return { ok: true, status: getResp.status };
-      return { ok: false, reason: 'HTTP ' + getResp.status };
+      if (resp.status >= 200 && resp.status < 400) return { ok: true, status: resp.status };
+      if (resp.status === 403) return { ok: true, status: resp.status }; // WAF
+      if (resp.status === 405) {
+        var getResp = await axios.get(url, {
+          headers: { 'User-Agent': UA }, timeout: 10000, maxRedirects: 5,
+          validateStatus: function() { return true; },
+        });
+        if (getResp.status >= 200 && getResp.status < 400) return { ok: true, status: getResp.status };
+        return { ok: false, reason: 'HTTP ' + getResp.status };
+      }
+      if (resp.status === 404 || resp.status === 410) return { ok: false, reason: 'HTTP 404' };
+      // Cloudflare transient — retry
+      if ((resp.status === 520 || resp.status === 502 || resp.status === 503) && attempt < 2) {
+        await delay(2000);
+        continue;
+      }
+      return { ok: false, reason: 'HTTP ' + resp.status };
+    } catch (err) {
+      if (attempt < 2) { await delay(2000); continue; }
+      return { ok: false, reason: err.message.substring(0, 80) };
     }
-    if (resp.status === 404) return { ok: false, reason: 'HTTP 404' };
-    return { ok: false, reason: 'HTTP ' + resp.status };
-  } catch (err) { return { ok: false, reason: err.message.substring(0, 80) }; }
+  }
+  return { ok: false, reason: 'retry exhausted' };
 }
 
 async function delay(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
