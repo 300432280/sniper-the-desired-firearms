@@ -22,12 +22,15 @@ export class GenericRetailAdapter extends AbstractAdapter {
     if (origin.includes('sail.ca')) {
       return `${origin}/en/shop?q=${encodeURIComponent(keyword)}`;
     }
-    // BigCommerce uses /search.php?search_query= (alflahertys, truenortharms, ellwoodepps,
-    // frontierfirearms, firearmsoutletcanada, nordicmarksman, rdsc, wolverinesupplies)
+    // Magento sites use /catalogsearch/result/?q=
+    if (origin.includes('ellwoodepps.com')) {
+      return `${origin}/catalogsearch/result/?q=${encodeURIComponent(keyword)}`;
+    }
+    // BigCommerce uses /search.php?search_query=
     if (origin.includes('alflahertys.com') || origin.includes('truenortharms.com') ||
-        origin.includes('ellwoodepps.com') || origin.includes('frontierfirearms.ca') ||
-        origin.includes('firearmsoutletcanada.com') || origin.includes('nordicmarksman.com') ||
-        origin.includes('rdsc.ca') || origin.includes('wolverinesupplies.com')) {
+        origin.includes('frontierfirearms.ca') || origin.includes('firearmsoutletcanada.com') ||
+        origin.includes('nordicmarksman.com') || origin.includes('rdsc.ca') ||
+        origin.includes('wolverinesupplies.com')) {
       return `${origin}/search.php?search_query=${encodeURIComponent(keyword)}`;
     }
     // Lightspeed eCom uses /search/{keyword}/
@@ -283,13 +286,10 @@ export class GenericRetailAdapter extends AbstractAdapter {
     }
     if (origin.includes('ellwoodepps.com')) {
       // Magento (custom) behind Cloudflare. Category pages render products via JS (not in HTML).
-      // Homepage has product links in plain HTML. Magento catalog search also works.
-      // Use Magento-specific catalog URL with newest sort + homepage.
+      // Homepage and catalogsearch have 40 product links in plain HTML.
+      // Category .html pages do NOT have products in HTML — don't use them.
       urls.push(
         `${origin}/catalogsearch/result/?q=&product_list_order=newest`,
-        `${origin}/hunting/firearms.html`,
-        `${origin}/hunting/ammunition.html`,
-        `${origin}/hunting/accessories.html`,
       );
     }
     if (origin.includes('firearmsoutletcanada.com')) {
