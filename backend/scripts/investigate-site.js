@@ -826,6 +826,47 @@ async function probeA6_SchemaValidation(site) {
   var badDates = products.filter(p => p.lastSeenAt < p.firstSeenAt).length;
   if (badDates > 0) results.push(fail(badDates + ' with lastSeen < firstSeen'));
 
+  // Ghost products: isActive=true but lastSeenAt > 14 days (stale checker should have caught them)
+  var ghostCutoff = new Date(Date.now() - 14 * 24 * 3600000);
+  var ghosts = products.filter(function(p) { return p.isActive && new Date(p.lastSeenAt) < ghostCutoff; });
+  if (ghosts.length > total * 0.1) {
+    results.push(fail(ghosts.length + ' ghost products (active but unseen >14d — stale checker not working)'));
+    issues.push(makeIssue('GHOST_PRODUCTS', ghosts.length + ' active products unseen >14d', { count: ghosts.length }, 'high'));
+  } else if (ghosts.length > 0) {
+    results.push(warn(ghosts.length + ' ghost products (active but unseen >14d)'));
+  } else {
+    results.push(pass('No ghost products'));
+  }
+
+  // Duplicate titles: same title, same site, different URLs (dedup failure)
+  var titleMap = {};
+  var titleDupes = 0;
+  for (var k = 0; k < products.length; k++) {
+    if (!products[k].isActive) continue;
+    var titleKey = products[k].title.toLowerCase().trim();
+    if (titleMap[titleKey]) titleDupes++;
+    else titleMap[titleKey] = true;
+  }
+  if (titleDupes > total * 0.05) {
+    results.push(fail(titleDupes + ' duplicate titles (different URLs, same product name)'));
+    issues.push(makeIssue('DUPLICATE_TITLES', titleDupes + ' title duplicates', { count: titleDupes }, 'high'));
+  } else if (titleDupes > 0) {
+    results.push(warn(titleDupes + ' duplicate titles'));
+  } else {
+    results.push(pass('No duplicate titles'));
+  }
+
+  // In-stock products with null price (price extraction failure)
+  var instockNoPrice = products.filter(function(p) { return p.isActive && p.stockStatus === 'in_stock' && p.price === null; });
+  if (instockNoPrice.length > 10) {
+    results.push(fail(instockNoPrice.length + ' in-stock products with no price'));
+    issues.push(makeIssue('INSTOCK_NO_PRICE', instockNoPrice.length + ' in-stock without price', { count: instockNoPrice.length }, 'high'));
+  } else if (instockNoPrice.length > 0) {
+    results.push(warn(instockNoPrice.length + ' in-stock products with no price'));
+  } else {
+    results.push(pass('All in-stock products have prices'));
+  }
+
   var hasFail = issues.some(i => i.severity === 'high');
   var hasWarn = issues.some(i => i.severity === 'medium');
   return { probe: 'A6-schema', verdict: hasFail ? 'FAIL' : hasWarn ? 'WARN' : 'PASS', issues, details: results };

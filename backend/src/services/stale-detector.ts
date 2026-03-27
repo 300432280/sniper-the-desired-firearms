@@ -123,16 +123,23 @@ export async function checkStaleProducts(
 
   // 1. Compute safe window — returns null if not all tiers have completed
   const safeWindow = computeSafeWindow(streamId, streamState);
-  if (!safeWindow) return result;
+
+  // Fallback: if safe window isn't available (tiers haven't completed),
+  // still check products unseen for >14 days as a safety net.
+  // This prevents dead products from staying active forever on sites
+  // where tiers take a long time to complete full cycles.
+  const FALLBACK_STALE_DAYS = 14;
+  const fallbackWindow = new Date(Date.now() - FALLBACK_STALE_DAYS * 24 * 60 * 60 * 1000);
+  const cutoffDate = safeWindow ?? fallbackWindow;
 
   const reverifyBefore = new Date(Date.now() - REVERIFY_COOLDOWN_HOURS * 60 * 60 * 1000);
 
-  // 2. Query products not seen by ANY tier since the safe window
+  // 2. Query products not seen since the cutoff (either safe window or 14-day fallback)
   const candidates = await prisma.productIndex.findMany({
     where: {
       siteId,
       isActive: true,
-      lastSeenAt: { lt: safeWindow },
+      lastSeenAt: { lt: cutoffDate },
       OR: [
         { staleVerifiedAt: null },
         { staleVerifiedAt: { lt: reverifyBefore } },
