@@ -282,15 +282,14 @@ export class GenericRetailAdapter extends AbstractAdapter {
       );
     }
     if (origin.includes('ellwoodepps.com')) {
-      // BigCommerce — no categories.php, products on homepage and category pages
-      // Note: www. redirects to non-www, but crawler follows redirects
+      // Magento (custom) behind Cloudflare. Category pages render products via JS (not in HTML).
+      // Homepage has product links in plain HTML. Magento catalog search also works.
+      // Use Magento-specific catalog URL with newest sort + homepage.
       urls.push(
-        `${origin}/rifles/`,
-        `${origin}/shotguns/`,
-        `${origin}/handguns/`,
-        `${origin}/used-firearms/`,
-        `${origin}/optics/`,
-        `${origin}/ammunition/`,
+        `${origin}/catalogsearch/result/?q=&product_list_order=newest`,
+        `${origin}/hunting/firearms.html`,
+        `${origin}/hunting/ammunition.html`,
+        `${origin}/hunting/accessories.html`,
       );
     }
     if (origin.includes('firearmsoutletcanada.com')) {
