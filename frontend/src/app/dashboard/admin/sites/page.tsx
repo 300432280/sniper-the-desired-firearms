@@ -247,10 +247,21 @@ function buildTierProgress(ss: SiteStreamState | null) {
   return { isApi, tierData, maxPage, streamCount: ss.streams.length };
 }
 
+// ── Budget Tier System (based on product count) ─────────────────────────────
+
+function recommendedBudget(productCount: number): number {
+  if (productCount >= 10000) return 180;
+  if (productCount >= 5000) return 120;
+  if (productCount >= 2000) return 90;
+  if (productCount >= 500) return 60;
+  if (productCount >= 100) return 40;
+  return 20;
+}
+
 // ── Crawl Tuning Constants (client-side mirror of backend defaults) ──────────
 
 const TUNING_DEFAULTS: Record<string, number | null> = {
-  baseBudget: 60,
+  baseBudget: 60, // Overridden by recommendedBudget() when product count is known
   tier1IntervalMin: null,
   tier1ReservePct: 70,
   t2CooldownHrs: 5,
@@ -316,7 +327,8 @@ function CrawlTuningPanel({
     setMessage(null);
   };
 
-  const isOverridden = (key: string) => draft[key] !== TUNING_DEFAULTS[key];
+  const siteDefaults: Record<string, number | null> = useMemo(() => ({ ...TUNING_DEFAULTS, baseBudget: recommendedBudget(site.productCount ?? 0) }), [site.productCount]);
+  const isOverridden = (key: string) => draft[key] !== siteDefaults[key];
   const hasChanges = Object.keys(TUNING_DEFAULTS).some(k => draft[k] !== resolved[k]);
 
   // ── Live formula preview ──────────────────────────────────────────────────
@@ -422,8 +434,9 @@ function CrawlTuningPanel({
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      setDraft({ ...TUNING_DEFAULTS });
-      setMessage({ text: 'Reset to defaults', type: 'ok' });
+      const smartDefaults = { ...TUNING_DEFAULTS, baseBudget: recommendedBudget(site.productCount ?? 0) };
+      setDraft(smartDefaults);
+      setMessage({ text: `Reset to defaults (budget: ${smartDefaults.baseBudget}/hr for ${(site.productCount ?? 0).toLocaleString()} products)`, type: 'ok' });
       onSaved();
     } catch (err) {
       setMessage({ text: err instanceof Error ? err.message : 'Reset failed', type: 'err' });
@@ -443,7 +456,7 @@ function CrawlTuningPanel({
         type="number"
         value={draft[field] ?? ''}
         onChange={e => setField(field, e.target.value)}
-        placeholder={placeholder ?? String(TUNING_DEFAULTS[field] ?? 'auto')}
+        placeholder={placeholder ?? String(siteDefaults[field] ?? TUNING_DEFAULTS[field] ?? 'auto')}
         className="w-16 bg-surface border border-border px-1.5 py-0.5 text-[10px] text-foreground font-heading text-right focus:border-accent/50 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <span className="text-[9px] text-foreground-dim w-10">{unit}</span>
