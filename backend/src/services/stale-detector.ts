@@ -82,28 +82,47 @@ function computeSafeWindow(
  * Uses the shared http-client for UA rotation, rate limiting, and SSRF protection.
  */
 async function verifyDetailPage(url: string): Promise<'alive' | 'sold' | 'deleted'> {
-  try {
-    const { fetchPageWithMeta } = await import('./scraper/http-client');
-    const { html, statusCode } = await fetchPageWithMeta(url, undefined, { difficultyRating: 0 });
+  // Retry up to 2 times on transient errors (Cloudflare 520/502/503).
+  // These status codes hide real 404s — a single attempt is not reliable.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { fetchPageWithMeta } = await import('./scraper/http-client');
+      const { html, statusCode } = await fetchPageWithMeta(url, undefined, { difficultyRating: 0 });
 
-    if (statusCode === 404) return 'deleted';
+      if (statusCode === 404 || statusCode === 410) return 'deleted';
 
-    // Sold indicators (gunpost: class="sold Yes", class="field-sold Yes")
-    if (/class="[^"]*\bsold\b[^"]*"/i.test(html) || /class="field-sold\s+Yes"/i.test(html)) {
-      return 'sold';
+      // Cloudflare transient errors — retry
+      if (statusCode === 520 || statusCode === 502 || statusCode === 503) {
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+        // Still failing after retry — can't determine
+        throw new Error(`Transient ${statusCode} after retry`);
+      }
+
+      // Sold indicators (gunpost: class="sold Yes", class="field-sold Yes")
+      if (/class="[^"]*\bsold\b[^"]*"/i.test(html) || /class="field-sold\s+Yes"/i.test(html)) {
+        return 'sold';
+      }
+
+      // Soft-404 (page returns 200 but content says "not found")
+      if (/<h1[^>]*>[^<]*(?:not found|page introuvable)/i.test(html)
+        || /The page you requested does not exist/i.test(html)
+        || /has been removed/i.test(html)
+        || /no longer available/i.test(html)) {
+        return 'deleted';
+      }
+
+      // Very small response (< 5KB) on a 200 may be a Cloudflare challenge, not a real page
+      if (html.length < 5000 && !html.includes('add-to-cart') && !html.includes('Add to Cart')) {
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      }
+
+      return 'alive';
+    } catch (err) {
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      throw new Error(`Failed to verify ${url}: ${err instanceof Error ? err.message : 'unknown'}`);
     }
-
-    // Soft-404 (page returns 200 but content says "not found")
-    if (/<h1[^>]*>[^<]*(?:not found|page introuvable)/i.test(html)
-      || /The page you requested does not exist/i.test(html)) {
-      return 'deleted';
-    }
-
-    return 'alive';
-  } catch {
-    // Network error / timeout — can't determine, don't act
-    throw new Error(`Failed to verify ${url}`);
   }
+  throw new Error(`Failed to verify ${url} after retries`);
 }
 
 /**
