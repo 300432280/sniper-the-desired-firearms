@@ -250,6 +250,13 @@ export class GenericRetailAdapter extends AbstractAdapter {
         `${origin}/accessories/`,
       );
     }
+    if (origin.includes('truenortharms.com')) {
+      // BigCommerce — /categories.php has full product listing
+      urls.push(
+        `${origin}/categories.php`,
+        `${origin}/firearms/`,
+      );
+    }
     if (origin.includes('frontierfirearms.ca')) {
       // BigCommerce — /categories.php lists all products; also has category pages
       urls.push(
