@@ -14,14 +14,28 @@ export class GenericRetailAdapter extends AbstractAdapter {
   supportsDateFilter = false; // Klevu API (alflahertys) and HTML scraping have no date filtering
 
   getSearchUrl(origin: string, keyword: string): string {
-    // Bullseyenorth uses Celerant e-commerce — search URL is /all-products/browse/keyword/{query}
+    // Celerant e-commerce (bullseyenorth)
     if (origin.includes('bullseyenorth.com')) {
       return `${origin}/all-products/browse/keyword/${encodeURIComponent(keyword)}`;
     }
-    // BigCommerce (alflahertys) uses /search.php?search_query=
-    if (origin.includes('alflahertys.com')) {
+    // Sail.ca (Magento) — search submits to /en/shop?q= (not catalogsearch)
+    if (origin.includes('sail.ca')) {
+      return `${origin}/en/shop?q=${encodeURIComponent(keyword)}`;
+    }
+    // BigCommerce uses /search.php?search_query= (alflahertys, truenortharms, ellwoodepps,
+    // frontierfirearms, firearmsoutletcanada, nordicmarksman, rdsc, wolverinesupplies)
+    if (origin.includes('alflahertys.com') || origin.includes('truenortharms.com') ||
+        origin.includes('ellwoodepps.com') || origin.includes('frontierfirearms.ca') ||
+        origin.includes('firearmsoutletcanada.com') || origin.includes('nordicmarksman.com') ||
+        origin.includes('rdsc.ca') || origin.includes('wolverinesupplies.com')) {
       return `${origin}/search.php?search_query=${encodeURIComponent(keyword)}`;
     }
+    // Lightspeed eCom uses /search/{keyword}/
+    if (origin.includes('shoplightspeed.com') || origin.includes('gagnonsports.com') ||
+        origin.includes('solelyoutdoors.com')) {
+      return `${origin}/search/${encodeURIComponent(keyword)}/`;
+    }
+    // Default: /search?q= (works for Shopify, WooCommerce, most generic sites)
     return `${origin}/search?q=${encodeURIComponent(keyword)}`;
   }
 

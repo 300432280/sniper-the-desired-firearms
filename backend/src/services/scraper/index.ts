@@ -17,6 +17,7 @@ import { isBareDomain, resolveUrl } from './utils/url';
 import { detectSiteType, isLoginPage } from './utils/html';
 import { extractPrice, extractPriceFromTitle } from './utils/price';
 import { getAdapterForUrl } from './adapter-registry';
+import { prisma } from '../../lib/prisma';
 
 export type { ScrapedMatch, ScrapeResult, ScrapeOptions } from './types';
 export { fetchPage, fetchPageWithMeta } from './http-client';
@@ -39,6 +40,18 @@ export async function scrapeWithAdapter(
   let usedPlaywright = false;
   let usedApiSearch = false;
   const errors: string[] = [];
+
+  // Auto-detect hasWaf from the site record if not explicitly set
+  if (options.hasWaf === undefined) {
+    try {
+      const domain = new URL(websiteUrl).hostname.replace(/^www\./, '');
+      const site = await prisma.monitoredSite.findFirst({
+        where: { OR: [{ domain }, { domain: `www.${domain}` }] },
+        select: { hasWaf: true },
+      });
+      if (site?.hasWaf) options.hasWaf = true;
+    } catch { /* ignore — non-critical */ }
+  }
 
   // Step 1: Try API-based search if adapter supports it
   if (adapter.searchViaApi) {

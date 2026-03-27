@@ -26,10 +26,21 @@ export class WooCommerceAdapter extends AbstractAdapter {
   }
 
   async searchViaApi(origin: string, keyword: string, options: ScrapeOptions): Promise<ScrapedMatch[]> {
-    const ua = pickUserAgent(new URL(origin).hostname);
-    const headers = { 'User-Agent': ua, Accept: 'application/json' };
+    let ua = pickUserAgent(new URL(origin).hostname);
+    let headers: Record<string, string> = { 'User-Agent': ua, Accept: 'application/json' };
     const limit = options.fast ? 10 : 100;
-    const apiTimeout = options.fast ? 5000 : 10000;
+    const apiTimeout = options.fast ? 8000 : 15000;
+
+    // For WAF-protected sites, get cookies first so API calls aren't blocked
+    if (options.hasWaf) {
+      try {
+        const { ensureCookies } = await import('../waf-cookie-manager');
+        const domain = new URL(origin).hostname;
+        const creds = await ensureCookies(domain, origin);
+        headers = { 'User-Agent': creds.userAgent, Accept: 'application/json', Cookie: creds.cookies };
+        ua = creds.userAgent;
+      } catch { /* fall through without cookies */ }
+    }
 
     const seen = new Map<string, ScrapedMatch>(); // URL → match (Store API data preferred)
 

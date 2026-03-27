@@ -41,6 +41,8 @@ export interface ScrapeOptions {
   maxPages?: number;
   /** Site difficulty rating (0-100) — affects request delays and pagination behavior */
   difficultyRating?: number;
+  /** Site has WAF (Sucuri/Incapsula/Cloudflare) — use WAF cookies for API calls */
+  hasWaf?: boolean;
 }
 
 export type ExtractionOptions = Pick<ScrapeOptions, 'inStockOnly' | 'maxPrice'>;
