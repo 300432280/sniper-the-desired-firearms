@@ -34,6 +34,8 @@ export class GunpostAdapter extends AbstractAdapter {
   private isWantedAd(title: string, element?: cheerio.Cheerio<any>): boolean {
     // Check title prefix (e.g. "Wanted: ...", "WTB ...", "ISO ...")
     if (/^(wanted|wtb|wtt|iso)\b/i.test(title.trim())) return true;
+    // Check title suffix (e.g. "Sks wanted", "Norinco parts Wanted")
+    if (/\b(wanted|wtb|wtt|iso)\s*$/i.test(title.trim())) return true;
     // Check if title or element contains "Wanted:" text (gunpost h1 pattern)
     if (/\bwanted\s*:/i.test(title)) return true;
     // Check for CSS class on the article/node element (gunpost uses class="wanted" or class="node__title wanted")
@@ -146,6 +148,15 @@ export class GunpostAdapter extends AbstractAdapter {
 
         seen.add(titleKey);
         const wanted = this.isWantedAd(rawTitle, element);
+
+        // Detect sold listings: gunpost uses class="sold", "ad-sold", or "SOLD" badge
+        const elClass = element.attr('class') || '';
+        const parentClass = element.closest('article').attr('class') || '';
+        const isSold = /\bsold\b/i.test(elClass)
+          || /\bsold\b/i.test(parentClass)
+          || element.find('.sold, .ad-sold, [class*="sold"]').length > 0
+          || /\bSOLD\b/.test(element.find('[class*="price"], [class*="status"]').text());
+
         matches.push({
           title: rawTitle,
           price: wanted ? undefined : this.sanitizeClassifiedPrice(price),
@@ -153,7 +164,7 @@ export class GunpostAdapter extends AbstractAdapter {
           sourceId: nodeId || undefined,
           thumbnail,
           postDate,
-          inStock: wanted ? undefined : true,
+          inStock: wanted ? undefined : !isSold,
         });
       });
     }
@@ -223,12 +234,20 @@ export class GunpostAdapter extends AbstractAdapter {
         const wanted = this.isWantedAd(title, element);
         const postDate = this.extractPostDate(element);
 
+        // Detect sold listings: gunpost uses class="sold", "ad-sold", or "SOLD" badge
+        const elClass = element.attr('class') || '';
+        const parentClass = element.closest('article').attr('class') || '';
+        const isSold = /\bsold\b/i.test(elClass)
+          || /\bsold\b/i.test(parentClass)
+          || element.find('.sold, .ad-sold, [class*="sold"]').length > 0
+          || /\bSOLD\b/.test(element.find('[class*="price"], [class*="status"]').text());
+
         products.push({
           url,
           sourceId: nodeId || undefined,
           title,
           price: wanted ? undefined : this.sanitizeClassifiedPrice(price),
-          stockStatus: wanted ? undefined : 'in_stock',
+          stockStatus: wanted ? undefined : (isSold ? 'out_of_stock' : 'in_stock'),
           thumbnail,
           category: wanted ? 'wanted' : 'classified',
           tags: tags ?? undefined,
