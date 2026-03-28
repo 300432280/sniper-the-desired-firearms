@@ -29,10 +29,10 @@ export type SiteCategory = 'retailer' | 'forum' | 'classified' | 'auction';
 
 // Base rate = Tier 1 new-items crawls per hour by site category
 const BASE_RATES: Record<SiteCategory, number> = {
-  forum: 6,           // every 10 min
-  classified: 6,      // every 10 min
-  retailer: 6,        // every 10 min — token budget is the real rate limiter, not interval
-  auction: 1,         // every 60 min
+  forum: 6,           // every 10 min (high turnover — new threads frequently)
+  classified: 6,      // every 10 min (new listings posted frequently)
+  retailer: 3,        // every 20 min (moderate turnover — T2-T4 self-queue handles catalog)
+  auction: 0,         // DISABLED — will review later
 };
 
 // Business hours in UTC (14-01 UTC = 9am-8pm EST)
