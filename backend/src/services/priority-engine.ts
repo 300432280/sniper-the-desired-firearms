@@ -29,10 +29,10 @@ export type SiteCategory = 'retailer' | 'forum' | 'classified' | 'auction';
 
 // Base rate = Tier 1 new-items crawls per hour by site category
 const BASE_RATES: Record<SiteCategory, number> = {
-  forum: 4,           // every 15 min
-  classified: 4,      // every 15 min
-  retailer: 2,        // every 30 min
-  auction: 0.17,      // every ~6 hours
+  forum: 6,           // every 10 min
+  classified: 6,      // every 10 min
+  retailer: 6,        // every 10 min — token budget is the real rate limiter, not interval
+  auction: 1,         // every 60 min
 };
 
 // Business hours in UTC (14-01 UTC = 9am-8pm EST)
@@ -177,8 +177,8 @@ export function computeCrawlPriority(params: {
     interval *= 1.2;
   }
 
-  // Clamp to [15 min, 1440 min (24 hours)]
-  interval = Math.max(15, Math.min(1440, Math.round(interval)));
+  // Clamp to [5 min, 1440 min (24 hours)] — token budget is the real rate limiter
+  interval = Math.max(5, Math.min(1440, Math.round(interval)));
 
   return { intervalMinutes: interval, effectiveBudget, minGapSeconds };
 }

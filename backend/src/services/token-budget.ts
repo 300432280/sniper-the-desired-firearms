@@ -140,12 +140,13 @@ export function allocateCatalogTokens(
   const tier1Budget = Math.floor(budget.effectiveBudget * reservePct);
   const tier1Remaining = Math.max(0, tier1Budget - budget.tier1Used);
 
-  // Catalog tiers get: base catalog allocation + unused Tier 1 overflow
-  const catalogBase = budget.effectiveBudget - tier1Budget;
-  const catalogTotal = Math.max(0, catalogBase + (tier1Budget - budget.tier1Used) - (budget.tokensUsed - budget.tier1Used));
-  // Simplify: total remaining after Tier 1 usage
+  // Catalog gets ALL remaining tokens after what T1 has ACTUALLY used (not reserved).
+  // If T1 used 5 tokens out of 84 reserved, catalog gets 120-5=115, not 120-84=36.
+  // T1 reserve only applies when T1 hasn't run yet this hour (tier1Used=0).
   const remaining = Math.max(0, budget.effectiveBudget - budget.tokensUsed);
-  const catalogRemaining = Math.max(0, remaining - tier1Remaining);
+  const catalogRemaining = budget.tier1Used > 0
+    ? remaining  // T1 already ran — catalog gets everything left
+    : Math.max(0, remaining - tier1Remaining); // T1 hasn't run — reserve its budget
 
   const allocation: TierAllocation = { tier1: tier1Remaining, tier2: 0, tier3: 0, tier4: 0 };
 
