@@ -2,7 +2,7 @@
 
 Canadian firearm market monitoring web app. Monitors 60+ retailer websites, classifieds, forums, and auction platforms for user-defined keywords and sends email/SMS alerts when **new** matches are found.
 
-**v2.2 Architecture:** Catalog-based indexing with per-stream tier engine and sourceId product tracking. Each category/endpoint is an independent stream with its own tier structure. API sites with date-filter support (WooCommerce) use modification-date partitioning; all other sites (Shopify, HTML, classifieds, auctions) use page-range division across tiers. 125,000+ products indexed across 60+ sites. Products are tracked by platform-stable IDs (Shopify product ID, WP post ID, Drupal node ID, auction lot ID) to prevent duplicates when URLs change. Uses a pressure/capacity model with per-site token budgets, admin-tunable crawl parameters, and a pluggable domain priority system (firearms 3x, ammunition 2x weighting).
+**v3.0 Architecture:** Two-phase crawler system (Bootstrap → Maintain) with sourceId product tracking. **Bootstrap phase** indexes all products via listing pages using per-stream tier engine (page-range or date-range partitioning). **Maintain phase** verifies products from DB by visiting each product's detail page — detecting sold/deleted/wanted status, updating prices/titles/thumbnails with authoritative detail-page data. T1 catches new listings with platform-specific sort-by-date URLs. 125,000+ products indexed across 60+ sites. Products tracked by platform-stable IDs (Shopify product ID, WP post ID, Drupal node ID, auction lot ID). Uses pressure/capacity model with per-site token budgets and admin-tunable parameters.
 
 Uses an adapter-based scraping framework with platform-specific adapters for Shopify, WooCommerce, BigCommerce, Magento, and more. Supports "Search All Sites" to scan across the entire monitored network in one click. Includes authenticated forum scanning with encrypted credential storage and a built-in test store for end-to-end testing.
 
@@ -28,31 +28,34 @@ Uses an adapter-based scraping framework with platform-specific adapters for Sho
 
 ## Architecture Overview
 
-### v2 Catalog-Based Indexing Flow
+### v3 Two-Phase Crawler System
 
 ```
-Crawl Scheduler (every 2 min tick)
-        |
-        v
-  Find due sites (nextCrawlAt <= now, not locked)
-        |
-        +---> Tier 1: Watermark Crawl (new items)
-        |       Paginate from newest until hitting lastWatermarkUrl
-        |       -> Insert new products into ProductIndex
-        |       -> Run keyword matcher against all active Searches
-        |       -> Notify PRO users instantly, queue FREE for daily digest
-        |
-        +---> Tiers 2-4: Catalog Refresh
-        |       WooCommerce: date-partitioned (T2: 0-7d, T3: 8-21d, T4: 22+d)
-        |       All others: page-partitioned (T2: pages 1-30%, T3: 30-65%, T4: 65%+)
-        |       -> Upsert via sourceId (stable platform ID) or URL fallback
-        |       -> Update prices, stock, thumbnails, detect removed products
-        |       -> Run keyword matcher on updated products
-        |
-        +---> Bootstrap: On first detection, probe streams to discover totalPages
-                -> Tiers start with proper page ranges immediately (no warm-up needed)
+Phase 1: BOOTSTRAP (new sites — index everything via listing pages)
+  Crawl Scheduler (every 2 min tick)
+    +---> T1: Watermark Crawl (sort by newest, catch new listings)
+    +---> T2-T4: Listing Page Crawl (stream-based, page/date partitioned)
+          - WooCommerce: date-partitioned via REST API
+          - HTML sites: page-range partitioned (T2: 1-30%, T3: 30-65%, T4: 65%+)
+          - No cooldowns — crawl fast to get everything indexed
+    +---> Auto-transition: when all tiers complete → enter Maintain phase
 
-Token Budget: 60 req/hr per site (scaled by capacity), Tier 1 reserves 70%
+Phase 2: MAINTAIN (after bootstrap — verify products from DB)
+  Crawl Scheduler (every 2 min tick)
+    +---> T1: Watermark Crawl (same — catches NEW listings)
+    +---> T2-T4: DB Verification (visit each product's detail page)
+          - T2: products verified 1-7 days ago (42.5% budget, 3h cooldown)
+          - T3: products verified 8-20 days ago (32.5% budget, 5h cooldown)
+          - T4: products verified 21+ days ago (25% budget, 9h cooldown)
+          - Extracts: title, price, stock, thumbnail from JSON-LD/OG/HTML
+          - Detects: sold → out_of_stock, deleted → isActive=false, wanted
+          - Self-queues next batch immediately (no scheduler tick delay)
+          - 5 consecutive verify errors → auto-delete (garbage collection)
+          - All product data preserved on deletion (for reporting/analytics)
+
+T1 Priority: T1 consumes budget first. T2-T4 share ALL remaining tokens.
+Token Budget: per-site (auto-adjusted by product count), T1 reserves 70%
+```
 
 ### sourceId Product Tracking (v2.2)
 
