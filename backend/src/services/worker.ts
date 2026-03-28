@@ -361,6 +361,76 @@ async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
   console.log(
     `[VerifyWorker] ${domain} T${tier}: verified=${verified} updated=${updated} sold=${sold} deleted=${deleted} errors=${errors}`
   );
+
+  // Self-queue: immediately check for more work instead of waiting for scheduler tick
+  await selfQueueNextBatch(siteId, domain, tier, hasWaf);
+}
+
+/**
+ * After finishing a verify batch, immediately queue the next batch if budget allows.
+ * This eliminates the 2-minute scheduler tick delay between batches.
+ * T2-T4 run continuously until budget is exhausted.
+ */
+async function selfQueueNextBatch(
+  siteId: string,
+  domain: string,
+  tier: 2 | 3 | 4,
+  hasWaf?: boolean,
+): Promise<void> {
+  try {
+    const site = await prisma.monitoredSite.findUnique({
+      where: { id: siteId },
+      select: { baseBudget: true, capacity: true, crawlTuning: true, crawlPhase: true, hasWaf: true },
+    });
+    if (!site || (site as any).crawlPhase !== 'maintain') return;
+
+    const { allocateMaintainTokens } = await import('./token-budget');
+    const tuning = resolveTuning(site.crawlTuning);
+    const allocation = allocateMaintainTokens(siteId, site.baseBudget, site.capacity, tuning);
+
+    const tierTokens = tier === 2 ? allocation.tier2 : tier === 3 ? allocation.tier3 : allocation.tier4;
+    if (tierTokens <= 0) return; // No budget left
+
+    const tierConfig = {
+      2: { minDays: tuning.maintainT2MinDays, maxDays: tuning.maintainT2MaxDays },
+      3: { minDays: tuning.maintainT3MinDays, maxDays: tuning.maintainT3MaxDays },
+      4: { minDays: tuning.maintainT4MinDays, maxDays: tuning.maintainT4MaxDays ?? 365 },
+    }[tier];
+
+    const now = new Date();
+    const minDate = new Date(now.getTime() - tierConfig.maxDays * 86400000);
+    const maxDate = new Date(now.getTime() - tierConfig.minDays * 86400000);
+
+    const products = await prisma.productIndex.findMany({
+      where: {
+        siteId,
+        isActive: true,
+        lastSeenAt: { gte: minDate, lte: maxDate },
+      },
+      orderBy: { lastSeenAt: 'asc' },
+      take: tierTokens,
+      select: { id: true },
+    });
+
+    if (products.length === 0) return; // No products in this tier's window
+
+    const { scrapeQueue } = await import('./queue');
+    await scrapeQueue.add('crawl-verify', {
+      siteId,
+      domain,
+      tier,
+      productIds: products.map(p => p.id),
+      hasWaf: hasWaf ?? site.hasWaf,
+    }, {
+      jobId: `verify:${siteId}:t${tier}:${Date.now()}`,
+      attempts: 1,
+      removeOnComplete: 50,
+      removeOnFail: 100,
+    });
+  } catch (err) {
+    // Self-queue failure is non-fatal — scheduler tick will pick it up
+    console.error(`[VerifyWorker] Self-queue failed for ${domain} T${tier}:`, err instanceof Error ? err.message : err);
+  }
 }
 
 // ─── Worker Startup ──────────────────────────────────────────────────────────
