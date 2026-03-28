@@ -405,9 +405,12 @@ async function selfQueueNextBatch(
       where: {
         siteId,
         isActive: true,
-        lastSeenAt: { gte: minDate, lte: maxDate },
+        OR: [
+          { staleVerifiedAt: { gte: minDate, lte: maxDate } },
+          ...(tier === 4 ? [{ staleVerifiedAt: null }] : []),
+        ],
       },
-      orderBy: { lastSeenAt: 'asc' },
+      orderBy: { staleVerifiedAt: 'asc' },
       take: tierTokens,
       select: { id: true },
     });

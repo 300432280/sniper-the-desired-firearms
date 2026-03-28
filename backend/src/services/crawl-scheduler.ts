@@ -490,13 +490,20 @@ async function queueMaintainVerification(
     const minDate = new Date(now.getTime() - t.maxDays * 86400000);
     const maxDate = new Date(now.getTime() - t.minDays * 86400000);
 
+    // Use staleVerifiedAt (last detail-page check) not lastSeenAt (last listing-page crawl).
+    // Products with null staleVerifiedAt have NEVER been verified — T4 picks them up.
     const products = await prisma.productIndex.findMany({
       where: {
         siteId: site.id,
         isActive: true,
-        lastSeenAt: { gte: minDate, lte: maxDate },
+        OR: [
+          // Products verified within the tier's date window
+          { staleVerifiedAt: { gte: minDate, lte: maxDate } },
+          // Products NEVER verified — T4 (21+ days) picks up all unverified products
+          ...(t.tier === 4 ? [{ staleVerifiedAt: null }] : []),
+        ],
       },
-      orderBy: { lastSeenAt: 'asc' },
+      orderBy: { staleVerifiedAt: 'asc' },
       take: t.tokens,
       select: { id: true },
     });
