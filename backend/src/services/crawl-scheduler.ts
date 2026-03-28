@@ -271,8 +271,8 @@ export async function schedulerTick(): Promise<void> {
           });
         }
 
-        // Check if bootstrap is complete → transition to maintain
-        await checkBootstrapComplete(site);
+        // Auto-transition DISABLED — use verify-maintain-ready.js --transition for each site
+        // await checkBootstrapComplete(site);
       }
     }
 
