@@ -25,6 +25,12 @@ export const TUNING_DEFAULTS = {
   maintainT4MinDays: 21,            // T4 checks products last verified 21+ days ago
   maintainT4MaxDays: null as number | null, // No upper limit
 
+  // Maintain-phase cooldowns (hours between full verification cycles per tier)
+  // Prevents hammering small sites. If cycle not complete before cooldown ends, continue where left off.
+  maintainT2CooldownHrs: 3,
+  maintainT3CooldownHrs: 5,
+  maintainT4CooldownHrs: 9,
+
   // Watermark (T1) tuning
   wmKnownThreshold: 40,            // Consecutive already-seen products before Tier 1 stops
   wmOldDateThreshold: 25,          // Consecutive listings older than watermark date before stopping

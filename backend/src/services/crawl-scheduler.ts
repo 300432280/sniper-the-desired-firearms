@@ -224,6 +224,7 @@ export async function schedulerTick(): Promise<void> {
     if (coldStart.catalogAllowed) {
       if ((site as any).crawlPhase === 'maintain') {
         // ── MAINTAIN PHASE: verify products from DB ──
+        console.log(`[Scheduler] ${site.domain}: maintain phase, queuing verification`);
         await queueMaintainVerification(site, effectiveBudgetCap, tuning);
       } else {
         // ── BOOTSTRAP PHASE: crawl listing pages (current approach) ──
@@ -516,7 +517,7 @@ async function queueMaintainVerification(
         productIds: products.map(p => p.id),
         hasWaf: site.hasWaf,
       }, {
-        jobId: `verify:${site.id}:t${t.tier}:${Date.now()}`,
+        jobId: `verify-${site.id}-t${t.tier}-${Date.now()}`,
         attempts: 1,
         removeOnComplete: 50,
         removeOnFail: 100,

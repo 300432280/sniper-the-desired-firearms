@@ -425,7 +425,7 @@ async function selfQueueNextBatch(
       productIds: products.map(p => p.id),
       hasWaf: hasWaf ?? site.hasWaf,
     }, {
-      jobId: `verify:${siteId}:t${tier}:${Date.now()}`,
+      jobId: `verify-${siteId}-t${tier}-${Date.now()}`,
       attempts: 1,
       removeOnComplete: 50,
       removeOnFail: 100,
