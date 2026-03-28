@@ -366,10 +366,27 @@ async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
   await selfQueueNextBatch(siteId, domain, tier, hasWaf);
 }
 
+// Track when each tier completed its cycle (no more products to verify).
+// Key: "siteId:tier" → cooldown end time. Scheduler tick also checks this.
+const maintainCooldowns = new Map<string, number>();
+
+/** Check if a maintain tier is in cooldown */
+export function isMaintainTierInCooldown(siteId: string, tier: 2 | 3 | 4): boolean {
+  const key = `${siteId}:${tier}`;
+  const cooldownEnd = maintainCooldowns.get(key);
+  if (!cooldownEnd) return false;
+  if (Date.now() >= cooldownEnd) {
+    maintainCooldowns.delete(key);
+    return false;
+  }
+  return true;
+}
+
 /**
  * After finishing a verify batch, immediately queue the next batch if budget allows.
  * This eliminates the 2-minute scheduler tick delay between batches.
- * T2-T4 run continuously until budget is exhausted.
+ * When a tier has 0 remaining products, it enters cooldown (T2=3h, T3=5h, T4=9h).
+ * If a tier's cycle was not complete before cooldown ends, it continues where it left off.
  */
 async function selfQueueNextBatch(
   siteId: string,
@@ -378,6 +395,9 @@ async function selfQueueNextBatch(
   hasWaf?: boolean,
 ): Promise<void> {
   try {
+    // Check cooldown first — don't query DB if tier is cooling down
+    if (isMaintainTierInCooldown(siteId, tier)) return;
+
     const site = await prisma.monitoredSite.findUnique({
       where: { id: siteId },
       select: { baseBudget: true, capacity: true, crawlTuning: true, crawlPhase: true, hasWaf: true },
@@ -415,7 +435,14 @@ async function selfQueueNextBatch(
       select: { id: true },
     });
 
-    if (products.length === 0) return; // No products in this tier's window
+    if (products.length === 0) {
+      // Tier completed its cycle — enter cooldown
+      const cooldownHrs = { 2: tuning.maintainT2CooldownHrs, 3: tuning.maintainT3CooldownHrs, 4: tuning.maintainT4CooldownHrs }[tier];
+      const cooldownEnd = Date.now() + cooldownHrs * 3600000;
+      maintainCooldowns.set(`${siteId}:${tier}`, cooldownEnd);
+      console.log(`[VerifyWorker] ${domain} T${tier}: cycle complete, cooldown ${cooldownHrs}h`);
+      return;
+    }
 
     const { scrapeQueue } = await import('./queue');
     await scrapeQueue.add('crawl-verify', {

@@ -485,8 +485,12 @@ async function queueMaintainVerification(
     { tier: 4 as const, minDays: tuning.maintainT4MinDays, maxDays: tuning.maintainT4MaxDays ?? 365, tokens: allocation.tier4 },
   ];
 
+  // Import cooldown check from worker
+  const { isMaintainTierInCooldown } = await import('./worker');
+
   for (const t of tiers) {
     if (t.tokens <= 0) continue;
+    if (isMaintainTierInCooldown(site.id, t.tier)) continue; // Tier in cooldown
 
     const minDate = new Date(now.getTime() - t.maxDays * 86400000);
     const maxDate = new Date(now.getTime() - t.minDays * 86400000);
