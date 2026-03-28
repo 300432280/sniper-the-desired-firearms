@@ -23,6 +23,7 @@ import { getColdStartStatus } from './cold-start';
 import { getBudget } from './token-budget';
 import { parseTierState, getActiveTiers } from './catalog-crawler';
 import { detectStreams, initStreamState, parseStreamState, probeStreamTotalPages } from './stream-detector';
+import { resolveTuning } from './crawl-tuning';
 
 // ── Safety Ceilings ──────────────────────────────────────────────────────────
 
@@ -200,6 +201,7 @@ export async function schedulerTick(): Promise<void> {
     });
 
     // Queue Tier 1 watermark crawl
+    const tuning = resolveTuning(site.crawlTuning);
     const tuningObj = (site.crawlTuning && typeof site.crawlTuning === 'object') ? site.crawlTuning as Record<string, any> : {};
     await scrapeQueue.add('crawl-watermark', {
       siteId: site.id,
@@ -218,51 +220,58 @@ export async function schedulerTick(): Promise<void> {
       removeOnFail: 100,
     });
 
-    // Queue catalog tier crawls (Tiers 2-4) if cold start allows
+    // Queue T2-T4 work based on crawl phase
     if (coldStart.catalogAllowed) {
-      const tierState = parseTierState(site.tierState);
-      const activeTiers = getActiveTiers(tierState);
+      if ((site as any).crawlPhase === 'maintain') {
+        // ── MAINTAIN PHASE: verify products from DB ──
+        await queueMaintainVerification(site, effectiveBudgetCap, tuning);
+      } else {
+        // ── BOOTSTRAP PHASE: crawl listing pages (current approach) ──
+        const tierState = parseTierState(site.tierState);
+        const activeTiers = getActiveTiers(tierState);
 
-      // Detect streams if not yet initialized (Phase 2)
-      let streamState = parseStreamState(site.streamState);
-      if (!streamState) {
-        try {
-          const streams = await detectStreams(site.url, { hasWaf: site.hasWaf });
-          if (streams.length > 0) {
-            // Probe totalPages upfront so tiers start with proper page ranges
-            await probeStreamTotalPages(streams, site.url, { hasWaf: site.hasWaf });
-            streamState = initStreamState(streams);
-            const pagesInfo = streams.filter(s => s.totalPages).map(s => `${s.id}:${s.totalPages}p`).join(', ');
-            await prisma.monitoredSite.update({
-              where: { id: site.id },
-              data: { streamState: streamState as any },
-            });
-            console.log(`[Scheduler] Detected ${streams.length} stream(s) for ${site.domain}: ${streams.map(s => s.id).join(', ')}${pagesInfo ? ` (pages: ${pagesInfo})` : ''}`);
+        // Detect streams if not yet initialized
+        let streamState = parseStreamState(site.streamState);
+        if (!streamState) {
+          try {
+            const streams = await detectStreams(site.url, { hasWaf: site.hasWaf });
+            if (streams.length > 0) {
+              await probeStreamTotalPages(streams, site.url, { hasWaf: site.hasWaf });
+              streamState = initStreamState(streams);
+              const pagesInfo = streams.filter(s => s.totalPages).map(s => `${s.id}:${s.totalPages}p`).join(', ');
+              await prisma.monitoredSite.update({
+                where: { id: site.id },
+                data: { streamState: streamState as any },
+              });
+              console.log(`[Scheduler] Detected ${streams.length} stream(s) for ${site.domain}: ${streams.map(s => s.id).join(', ')}${pagesInfo ? ` (pages: ${pagesInfo})` : ''}`);
+            }
+          } catch (err) {
+            console.error(`[Scheduler] Stream detection failed for ${site.domain}:`, err instanceof Error ? err.message : err);
           }
-        } catch (err) {
-          console.error(`[Scheduler] Stream detection failed for ${site.domain}:`, err instanceof Error ? err.message : err);
-          // Continue with legacy path
         }
-      }
 
-      if (activeTiers.tier2 || activeTiers.tier3 || activeTiers.tier4) {
-        await scrapeQueue.add('crawl-catalog', {
-          siteId: site.id,
-          domain: site.domain,
-          url: site.url,
-          baseBudget: effectiveBudgetCap,
-          capacity: site.capacity,
-          tierState: JSON.stringify(tierState),
-          activeTiers,
-          hasWaf: site.hasWaf,
-          crawlTuning: site.crawlTuning,
-          streamState: streamState ?? undefined,
-        }, {
-          jobId: `catalog:${site.id}:${Date.now()}`,
-          attempts: 1,
-          removeOnComplete: 50,
-          removeOnFail: 100,
-        });
+        if (activeTiers.tier2 || activeTiers.tier3 || activeTiers.tier4) {
+          await scrapeQueue.add('crawl-catalog', {
+            siteId: site.id,
+            domain: site.domain,
+            url: site.url,
+            baseBudget: effectiveBudgetCap,
+            capacity: site.capacity,
+            tierState: JSON.stringify(tierState),
+            activeTiers,
+            hasWaf: site.hasWaf,
+            crawlTuning: site.crawlTuning,
+            streamState: streamState ?? undefined,
+          }, {
+            jobId: `catalog:${site.id}:${Date.now()}`,
+            attempts: 1,
+            removeOnComplete: 50,
+            removeOnFail: 100,
+          });
+        }
+
+        // Check if bootstrap is complete → transition to maintain
+        await checkBootstrapComplete(site);
       }
     }
 
@@ -451,6 +460,96 @@ export async function initializeCrawlSchedule(): Promise<void> {
   }
 
   console.log(`[Scheduler] Staggered ${sites.length} sites over ${Math.round(sites.length * 2)} minutes`);
+}
+
+// ── Maintain Phase: DB-Based Verification ────────────────────────────────────
+
+/**
+ * Queue verification jobs for maintain-phase sites.
+ * Queries products from DB sorted by lastSeenAt ASC within each tier's date window.
+ * T1 gets priority on budget, T2-T4 share ALL remaining tokens.
+ */
+async function queueMaintainVerification(
+  site: any,
+  effectiveBudgetCap: number,
+  tuning: ReturnType<typeof resolveTuning>,
+): Promise<void> {
+  const now = new Date();
+  const { allocateMaintainTokens } = await import('./token-budget');
+  const allocation = allocateMaintainTokens(site.id, effectiveBudgetCap, site.capacity, tuning);
+
+  const tiers = [
+    { tier: 2 as const, minDays: tuning.maintainT2MinDays, maxDays: tuning.maintainT2MaxDays, tokens: allocation.tier2 },
+    { tier: 3 as const, minDays: tuning.maintainT3MinDays, maxDays: tuning.maintainT3MaxDays, tokens: allocation.tier3 },
+    { tier: 4 as const, minDays: tuning.maintainT4MinDays, maxDays: tuning.maintainT4MaxDays ?? 365, tokens: allocation.tier4 },
+  ];
+
+  for (const t of tiers) {
+    if (t.tokens <= 0) continue;
+
+    const minDate = new Date(now.getTime() - t.maxDays * 86400000);
+    const maxDate = new Date(now.getTime() - t.minDays * 86400000);
+
+    const products = await prisma.productIndex.findMany({
+      where: {
+        siteId: site.id,
+        isActive: true,
+        lastSeenAt: { gte: minDate, lte: maxDate },
+      },
+      orderBy: { lastSeenAt: 'asc' },
+      take: t.tokens,
+      select: { id: true },
+    });
+
+    if (products.length > 0) {
+      await scrapeQueue.add('crawl-verify', {
+        siteId: site.id,
+        domain: site.domain,
+        tier: t.tier,
+        productIds: products.map(p => p.id),
+        hasWaf: site.hasWaf,
+      }, {
+        jobId: `verify:${site.id}:t${t.tier}:${Date.now()}`,
+        attempts: 1,
+        removeOnComplete: 50,
+        removeOnFail: 100,
+      });
+    }
+  }
+}
+
+/**
+ * Check if a site's bootstrap is complete.
+ * All streams must have completed at least one cycle across all tiers.
+ * Also compares DB count vs live count — if significantly lower, don't transition.
+ */
+async function checkBootstrapComplete(site: any): Promise<void> {
+  if ((site as any).crawlPhase !== 'bootstrap') return;
+
+  const streamState = parseStreamState(site.streamState);
+  if (!streamState) return;
+
+  // All tiers on all streams must have completed at least one cycle
+  for (const stream of streamState.streams) {
+    for (const tier of [2, 3, 4]) {
+      const key = `${stream.id}:${tier}`;
+      const ts = streamState.tiers[key];
+      if (!ts?.lastCycleCompletedAt) return; // Not complete yet
+    }
+  }
+
+  // All tiers completed — transition to maintain phase
+  await prisma.monitoredSite.update({
+    where: { id: site.id },
+    data: {
+      crawlPhase: 'maintain',
+      bootstrapCompletedAt: new Date(),
+      // Clear streamState — not needed in maintain phase
+      // (but keep it in DB for reference, just don't use it)
+    },
+  });
+
+  console.log(`[Scheduler] ${site.domain}: bootstrap complete → maintain phase`);
 }
 
 // ── Crawl Event Cleanup ──────────────────────────────────────────────────────

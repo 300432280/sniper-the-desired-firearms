@@ -415,26 +415,92 @@ export class GenericRetailAdapter extends AbstractAdapter {
     return urls;
   }
 
+  // ── Platform detection for sort parameter selection ────────────────────────
+  // BigCommerce sites: categories.php, search.php, or known BigCommerce domains
+  private static readonly BIGCOMMERCE_DOMAINS = [
+    'truenortharms.com', 'frontierfirearms.ca', 'firearmsoutletcanada.com',
+    'nordicmarksman.com', 'rdsc.ca', 'alflahertys.com', 'wolverinesupplies.com',
+    'store.theshootingcentre.com', 'store.prophetriver.com',
+  ];
+  // Magento sites: .html category pages, /catalogsearch/ paths
+  private static readonly MAGENTO_DOMAINS = [
+    'ellwoodepps.com', 'sail.ca', 'londerosports.com',
+  ];
+  // Lightspeed eCom sites: shoplightspeed.com subdomains or known Lightspeed stores
+  private static readonly LIGHTSPEED_DOMAINS = [
+    'solelyoutdoors.com', 'gagnonsports.com', 'fulcrum-outdoors',
+    'outfitters.goldnloan.com',
+  ];
+  // ColdFusion (Celerant) sites
+  private static readonly COLDFUSION_DOMAINS = [
+    'bullseyenorth.com',
+  ];
+
+  /**
+   * Detect the e-commerce platform for a given origin.
+   * Used to select the correct "sort by newest" query parameter.
+   */
+  private _detectPlatform(origin: string): 'bigcommerce' | 'magento' | 'lightspeed' | 'coldfusion' | 'unknown' {
+    if (GenericRetailAdapter.BIGCOMMERCE_DOMAINS.some(d => origin.includes(d))) return 'bigcommerce';
+    if (GenericRetailAdapter.MAGENTO_DOMAINS.some(d => origin.includes(d))) return 'magento';
+    if (GenericRetailAdapter.LIGHTSPEED_DOMAINS.some(d => origin.includes(d))) return 'lightspeed';
+    if (GenericRetailAdapter.COLDFUSION_DOMAINS.some(d => origin.includes(d))) return 'coldfusion';
+    return 'unknown';
+  }
+
+  /**
+   * Append the correct "sort by newest" query parameter to a URL based on platform.
+   * Preserves existing query strings (uses & if ? already present, otherwise ?).
+   * Skips URLs that already contain a sort/order parameter to avoid duplicates.
+   */
+  private _appendSortNewest(url: string, platform: string): string {
+    // Skip if URL already has a sort or order parameter
+    if (/[?&](sort|orderby|product_list_order)=/.test(url)) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    switch (platform) {
+      case 'bigcommerce':
+        return `${url}${separator}sort=newest`;
+      case 'magento':
+        return `${url}${separator}product_list_order=created_at&product_list_dir=desc`;
+      case 'lightspeed':
+        return `${url}${separator}sort=newest`;
+      case 'coldfusion':
+        return `${url}${separator}sort=new-arrivals`;
+      default:
+        return url; // Unknown platform — return URL as-is
+    }
+  }
+
   /**
    * URLs for Tier 1 watermark crawl (new product discovery).
-   * Site-specific URLs + generic "new arrivals" fallback patterns.
+   * Site-specific URLs with platform-correct "sort by newest" parameters
+   * so T1 reliably catches ALL new listings on every platform.
    */
   getNewArrivalsUrls(origin: string): string[] {
-    const urls = this._getSiteSpecificUrls(origin);
+    const siteUrls = this._getSiteSpecificUrls(origin);
+    const platform = this._detectPlatform(origin);
 
-    // Generic "new arrivals" URL patterns (tried after site-specific URLs)
+    // Apply sort-by-newest to each site-specific URL
+    const sortedUrls = siteUrls.map(url => this._appendSortNewest(url, platform));
+
+    // Also keep the original unsorted URLs as fallback (some pages may not support sort params)
+    const urls = [...sortedUrls, ...siteUrls];
+
+    // Generic "new arrivals" fallback patterns with platform-specific sort params
     urls.push(
-      `${origin}/new-arrivals`,           // Common across many platforms
-      `${origin}/new`,                     // Shorthand variant
-      `${origin}/whats-new`,              // BigCommerce pattern
-      `${origin}/categories.php`,         // BigCommerce all-categories page
-      `${origin}/search?sort=newest`,     // BigCommerce search sorted newest
-      `${origin}/catalogsearch/result/?q=&product_list_order=newest`, // Magento
-      `${origin}/shop/?orderby=date`,     // WooCommerce-like
-      `${origin}/`,                       // Homepage (last resort)
+      `${origin}/new-arrivals`,                                                    // Common pattern
+      `${origin}/new`,                                                             // Shorthand variant
+      `${origin}/whats-new`,                                                       // BigCommerce pattern
+      `${origin}/categories.php?sort=newest`,                                      // BigCommerce all-categories sorted
+      `${origin}/categories.php`,                                                  // BigCommerce all-categories unsorted
+      `${origin}/?sort=newest`,                                                    // BigCommerce + Lightspeed root sorted
+      `${origin}/catalogsearch/result/?q=&product_list_order=created_at&product_list_dir=desc`, // Magento sorted
+      `${origin}/?product_list_order=created_at&product_list_dir=desc`,            // Magento root sorted
+      `${origin}/shop/?orderby=date`,                                              // WooCommerce-like
+      `${origin}/`,                                                                // Homepage (last resort)
     );
 
-    return urls;
+    return [...new Set(urls)]; // Deduplicate (sorted + unsorted variants may overlap)
   }
 
   getNewArrivalsUrl(origin: string): string {

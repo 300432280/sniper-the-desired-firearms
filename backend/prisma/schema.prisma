@@ -184,8 +184,13 @@ model MonitoredSite {
   // Tier state (JSONB tracking cycle progress for Tiers 2-4)
   tierState Json @default("{}")
 
-  // Stream state (per-stream tier structure — Phase 2)
+  // Stream state (per-stream tier structure — Bootstrap phase)
   streamState Json?
+
+  // Crawl phase: bootstrap (index via listing pages) or maintain (verify from DB)
+  crawlPhase         String    @default("bootstrap") // "bootstrap" | "maintain"
+  bootstrapStartedAt DateTime? // When bootstrap began (watermark anchor date)
+  bootstrapCompletedAt DateTime? // When bootstrap finished → transitioned to maintain
 
   // Cold start tracking
   addedAt           DateTime @default(now())
@@ -221,11 +226,13 @@ model ProductIndex {
   isActive        Boolean       @default(true)
   staleSince      DateTime?     // When first flagged as missing from all tier sweeps
   staleVerifiedAt DateTime?     // Last detail-page verification attempt
+  verifyErrors    Int           @default(0) // Consecutive verification errors. After 5 → mark deleted.
   matches         Match[]       // Matches that reference this product
 
   @@unique([siteId, url])
   @@index([siteId, sourceId])
   @@index([siteId, lastSeenAt])
+  @@index([siteId, isActive, lastSeenAt]) // For T2-T4 maintain-phase queries sorted by lastSeenAt ASC
   @@index([siteId, isActive, stockStatus]) // For stale detector queries
   @@index([title])
   @@map("product_index")

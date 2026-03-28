@@ -116,8 +116,8 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
         hasWaf: job.data.hasWaf,
       });
 
-      const cooldownMap = { tier2: tuning.t2CooldownHrs, tier3: tuning.t3CooldownHrs, tier4: tuning.t4CooldownHrs };
-      updatedState[tierKey] = updateTierProgress(cycleState, result.pagesScanned, result.cycleComplete, tier, cooldownMap[tierKey]);
+      // No cooldowns — T2-T4 run continuously, limited only by budget
+      updatedState[tierKey] = updateTierProgress(cycleState, result.pagesScanned, result.cycleComplete, tier, 0);
 
       console.log(`[CatalogWorker] Tier ${tier} ${result.status}: ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens${result.cycleComplete ? ' (cycle complete)' : ''}`);
     }
@@ -152,7 +152,8 @@ async function processStreamCatalogCrawl(
 ): Promise<void> {
   const { siteId, domain, url, baseBudget, capacity } = data;
   const now = new Date();
-  const cooldownMap = { 2: tuning.t2CooldownHrs, 3: tuning.t3CooldownHrs, 4: tuning.t4CooldownHrs } as const;
+  // No cooldowns — T2-T4 run continuously, limited only by budget
+  const cooldownMap = { 2: 0, 3: 0, 4: 0 } as const;
 
   // Stale tier recovery is handled by the scheduler (crawl-scheduler.ts)
   // which runs every 2 minutes on ALL enabled sites, including cooldown expiry.
@@ -241,6 +242,127 @@ async function processStreamCatalogCrawl(
   pushEvent({ type: 'info', message: `Stream catalog crawl complete: ${domain}` });
 }
 
+// ─── Maintain Phase: Product Verification Job ────────────────────────────────
+
+interface VerifyJobData {
+  siteId: string;
+  domain: string;
+  tier: 2 | 3 | 4;
+  productIds: string[];
+  hasWaf?: boolean;
+}
+
+async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
+  const { siteId, domain, tier, productIds, hasWaf } = job.data;
+  const { verifyProduct } = await import('./product-verifier');
+  const { randomDelay } = await import('./scraper/http-client');
+
+  console.log(`[VerifyWorker] T${tier} verifying ${productIds.length} products for ${domain}`);
+
+  const products = await prisma.productIndex.findMany({
+    where: { id: { in: productIds } },
+  });
+
+  let verified = 0, updated = 0, sold = 0, deleted = 0, errors = 0;
+
+  for (const product of products) {
+    try {
+      const result = await verifyProduct({ url: product.url, domain, hasWaf });
+      const now = new Date();
+
+      if (result.status === 'deleted') {
+        // Preserve all last known data — just mark inactive
+        await prisma.productIndex.update({
+          where: { id: product.id },
+          data: {
+            isActive: false,
+            staleSince: product.staleSince ?? now,
+            staleVerifiedAt: now,
+            verifyErrors: 0,
+          },
+        });
+        deleted++;
+      } else if (result.status === 'sold') {
+        await prisma.productIndex.update({
+          where: { id: product.id },
+          data: {
+            stockStatus: 'out_of_stock',
+            staleSince: product.staleSince ?? now,
+            staleVerifiedAt: now,
+            lastSeenAt: now, // Page exists, just sold
+            verifyErrors: 0,
+          },
+        });
+        sold++;
+      } else if (result.status === 'wanted') {
+        await prisma.productIndex.update({
+          where: { id: product.id },
+          data: {
+            category: 'wanted',
+            lastSeenAt: now,
+            staleVerifiedAt: now,
+            verifyErrors: 0,
+          },
+        });
+        updated++;
+      } else if (result.status === 'alive') {
+        const update: Record<string, any> = {
+          lastSeenAt: now,
+          staleSince: null,
+          staleVerifiedAt: now,
+          verifyErrors: 0,
+          isActive: true,
+        };
+        if (result.title) update.title = result.title;
+        if (result.price != null) update.price = result.price;
+        if (result.regularPrice != null) update.regularPrice = result.regularPrice;
+        if (result.stockStatus) update.stockStatus = result.stockStatus;
+        if (result.thumbnail) update.thumbnail = result.thumbnail;
+
+        await prisma.productIndex.update({
+          where: { id: product.id },
+          data: update,
+        });
+        updated++;
+      } else {
+        // status === 'error' — increment error counter
+        const newErrors = (product.verifyErrors || 0) + 1;
+        const tuning = resolveTuning(null);
+        if (newErrors >= tuning.maxVerifyErrors) {
+          // Too many consecutive errors — mark as deleted (garbage collection)
+          await prisma.productIndex.update({
+            where: { id: product.id },
+            data: {
+              isActive: false,
+              staleSince: product.staleSince ?? now,
+              staleVerifiedAt: now,
+              verifyErrors: newErrors,
+            },
+          });
+          deleted++;
+          console.log(`[VerifyWorker] ${domain}: ${product.title.substring(0, 40)} — ${newErrors} consecutive errors, marking deleted`);
+        } else {
+          await prisma.productIndex.update({
+            where: { id: product.id },
+            data: { verifyErrors: newErrors, staleVerifiedAt: now },
+          });
+          errors++;
+        }
+      }
+
+      verified++;
+      await randomDelay(300, 800);
+    } catch (err) {
+      console.error(`[VerifyWorker] ${domain}: error verifying ${product.url}:`, err instanceof Error ? err.message : err);
+      errors++;
+    }
+  }
+
+  console.log(
+    `[VerifyWorker] ${domain} T${tier}: verified=${verified} updated=${updated} sold=${sold} deleted=${deleted} errors=${errors}`
+  );
+}
+
 // ─── Worker Startup ──────────────────────────────────────────────────────────
 
 export function startWorker(): Worker {
@@ -249,6 +371,8 @@ export function startWorker(): Worker {
       await processWatermarkCrawl(job as Job<WatermarkJobData>);
     } else if (job.name === 'crawl-catalog') {
       await processCatalogCrawl(job as Job<CatalogJobData>);
+    } else if (job.name === 'crawl-verify') {
+      await processVerifyCrawl(job as Job<VerifyJobData>);
     } else {
       console.log(`[Worker] Skipping legacy job ${job.name} (${job.id})`);
     }

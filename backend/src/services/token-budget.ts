@@ -170,6 +170,37 @@ export function allocateCatalogTokens(
 }
 
 /**
+ * Allocate tokens for maintain-phase verification.
+ * T1 gets priority (consumes first). T2-T4 share ALL remaining tokens.
+ * No cooldowns — always working, limited only by budget.
+ * Remainder tokens (can't divide evenly) go to T2.
+ */
+export function allocateMaintainTokens(
+  siteId: string,
+  baseBudget: number,
+  capacity: number,
+  tuning?: CrawlTuning,
+): { tier2: number; tier3: number; tier4: number } {
+  const t = tuning ?? TUNING_DEFAULTS;
+  const budget = getBudget(siteId, baseBudget, capacity);
+
+  // T2-T4 get ALL remaining tokens after T1 usage
+  const remaining = Math.max(0, budget.effectiveBudget - budget.tokensUsed);
+  if (remaining <= 0) return { tier2: 0, tier3: 0, tier4: 0 };
+
+  const t2Share = t.t2SharePct / 100;
+  const t3Share = t.t3SharePct / 100;
+  const t4Share = t.t4SharePct / 100;
+
+  const tier3 = Math.floor(remaining * t3Share);
+  const tier4 = Math.floor(remaining * t4Share);
+  // T2 gets its share + any remainder from rounding
+  const tier2 = remaining - tier3 - tier4;
+
+  return { tier2, tier3, tier4 };
+}
+
+/**
  * Get seconds until next request is allowed.
  */
 export function secondsUntilNextRequest(siteId: string, baseBudget: number, capacity: number): number {
