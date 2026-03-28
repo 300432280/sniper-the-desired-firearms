@@ -214,7 +214,7 @@ export async function schedulerTick(): Promise<void> {
       crawlTuning: site.crawlTuning,
       hasWaf: site.hasWaf,
     }, {
-      jobId: `watermark:${site.id}:${Date.now()}`,
+      jobId: `watermark-${site.id}-${Date.now()}`,
       attempts: 1,
       removeOnComplete: 50,
       removeOnFail: 100,
@@ -264,7 +264,7 @@ export async function schedulerTick(): Promise<void> {
             crawlTuning: site.crawlTuning,
             streamState: streamState ?? undefined,
           }, {
-            jobId: `catalog:${site.id}:${Date.now()}`,
+            jobId: `catalog-${site.id}-${Date.now()}`,
             attempts: 1,
             removeOnComplete: 50,
             removeOnFail: 100,

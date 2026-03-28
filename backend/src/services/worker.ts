@@ -6,7 +6,7 @@ import { runHealthChecks, pruneOldHealthChecks } from './health-monitor';
 import { schedulerTick, onCrawlComplete, initializeCrawlSchedule, pruneCrawlEvents } from './crawl-scheduler';
 import { sendDailyDigests } from './daily-digest';
 import { crawlWatermark } from './watermark-crawler';
-import { crawlCatalogTier, parseTierState, startTierCycle, updateTierProgress, type TierState, crawlStreamTier, isStreamTierActive, startStreamTierCycle, completeStreamTierCycle } from './catalog-crawler';
+import { crawlCatalogTier, parseTierState, getActiveTiers, startTierCycle, updateTierProgress, type TierState, crawlStreamTier, isStreamTierActive, startStreamTierCycle, completeStreamTierCycle } from './catalog-crawler';
 import { expireFreeAlerts } from './free-tier';
 import { allocateCatalogTokens } from './token-budget';
 import { resolveTuning } from './crawl-tuning';
@@ -240,6 +240,41 @@ async function processStreamCatalogCrawl(
   });
 
   pushEvent({ type: 'info', message: `Stream catalog crawl complete: ${domain}` });
+
+  // Self-queue: immediately queue next catalog job if budget remains (bootstrap continuous crawl)
+  try {
+    const { getCatalogRemaining } = await import('./token-budget');
+    const remaining = getCatalogRemaining(siteId, data.baseBudget, data.capacity);
+    if (remaining > 0) {
+      const site = await prisma.monitoredSite.findUnique({
+        where: { id: siteId },
+        select: { tierState: true, streamState: true, crawlTuning: true, hasWaf: true, crawlPhase: true },
+      });
+      if (site && (site as any).crawlPhase === 'bootstrap') {
+        const freshStreamState = parseStreamState(site.streamState);
+        const freshTierState = parseTierState(site.tierState);
+        const freshActiveTiers = getActiveTiers(freshTierState);
+        if (freshActiveTiers.tier2 || freshActiveTiers.tier3 || freshActiveTiers.tier4) {
+          const { scrapeQueue: sq } = await import('./queue');
+          await sq.add('crawl-catalog', {
+            siteId, domain, url: data.url,
+            baseBudget: data.baseBudget, capacity: data.capacity,
+            tierState: JSON.stringify(freshTierState),
+            activeTiers: freshActiveTiers,
+            hasWaf: data.hasWaf,
+            crawlTuning: site.crawlTuning,
+            streamState: freshStreamState ?? undefined,
+          }, {
+            jobId: `catalog-${siteId}-${Date.now()}`,
+            attempts: 1, removeOnComplete: 50, removeOnFail: 100,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    // Self-queue failure is non-fatal — scheduler tick will pick it up
+    console.error(`[CatalogWorker] Self-queue failed for ${domain}:`, err instanceof Error ? err.message : err);
+  }
 }
 
 // ─── Maintain Phase: Product Verification Job ────────────────────────────────
