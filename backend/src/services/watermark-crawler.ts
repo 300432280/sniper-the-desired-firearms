@@ -84,8 +84,9 @@ export async function crawlWatermark(params: {
 
         let catalogPage;
         try {
-          catalogPage = await adapter.fetchCatalogPage(origin, page, { sortBy: 'newest', perPage: 50 });
-        } catch {
+          catalogPage = await adapter.fetchCatalogPage(origin, page, { sortBy: 'newest', perPage: 50, hasWaf });
+        } catch (err) {
+          console.log(`[WatermarkCrawler] ${params.domain}: API page ${page} failed — ${err instanceof Error ? err.message : err}`);
           break; // API failed, fall through to HTML
         }
         pagesScanned++;
