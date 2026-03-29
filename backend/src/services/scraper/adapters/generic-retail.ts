@@ -194,317 +194,41 @@ export class GenericRetailAdapter extends AbstractAdapter {
       return profile.catalogUrls.map((u: string) => u.startsWith('http') ? u : `${origin}${u}`);
     }
 
-    // Legacy fallback for sites without profiles yet
-    const urls: string[] = [];
-
-    if (origin.includes('lockharttactical.com')) {
-      // HikaShop (Joomla) — products live on /product and /category, NOT homepage
-      urls.push(`${origin}/category`, `${origin}/product`);
-    }
-    if (origin.includes('canadasgunstore.ca')) {
-      // Activant/Epicor iNet — products on department pages
-      urls.push(
-        `${origin}/departments/firearms-%7C30%7CFA.html`,
-        `${origin}/departments/rifles-non-restricted-%7C30%7CFA%7CRIFLNR.html`,
-        `${origin}/departments/pistols-%7C30%7CFA%7CPISTOL.html`,
-        `${origin}/departments/shotguns-%7C30%7CFA%7CSHOTGUN.html`,
-        `${origin}/departments/promotions-5.html`,
-      );
-    }
-    if (origin.includes('precisionoptics.net')) {
-      // 3dcart/Shift4Shop — category pages use _s/ID.htm pattern
-      urls.push(
-        `${origin}/Riflescopes_s/64.htm`,
-        `${origin}/Firearms_s/325.htm`,
-        `${origin}/Ammunition_s/550.htm`,
-        `${origin}/Binoculars_s/65.htm`,
-        `${origin}/category_s/860.htm`,  // Clearance/Used
-      );
-    }
-    if (origin.includes('gagnonsports.com')) {
-      // LightSpeed — .productborder only on leaf category pages
-      // Must include ALL categories: firearms, ammunition, optics, accessories, reloading
-      urls.push(
-        `${origin}/firearms/new-firearms/centerfire-rifles/`,
-        `${origin}/firearms/new-firearms/rimfire-rifles/`,
-        `${origin}/firearms/new-firearms/shotguns/`,
-        `${origin}/firearms/new-firearms/restricted-firearms/`,
-        `${origin}/firearms/new-firearms/air-guns/`,
-        `${origin}/firearms/used-firearms/used-rifles/`,
-        `${origin}/firearms/used-firearms/used-shotguns/`,
-        `${origin}/ammunition/centerfire-ammunition/`,
-        `${origin}/ammunition/rimfire-ammunition/`,
-        `${origin}/ammunition/shotgun-ammunition/`,
-        `${origin}/optics/riflescopes/`,
-        `${origin}/optics/red-dot-sights/`,
-        `${origin}/optics/binoculars/`,
-        `${origin}/accessories/`,
-        `${origin}/reloading/`,
-      );
-    }
-    if (origin.includes('reliablegun.com')) {
-      // nopCommerce — homepage has 9 featured products, category pages have more
-      urls.push(
-        `${origin}/firearms`,
-        `${origin}/firearms/rifles`,
-        `${origin}/firearms/shotguns`,
-        `${origin}/firearms/handguns`,
-        `${origin}/`,
-      );
-    }
-    if (origin.includes('solelyoutdoors.com')) {
-      // LightSpeed Nova theme — catalog pages use .html extension
-      urls.push(
-        `${origin}/firearms.html`,
-        `${origin}/ammunition.html`,
-        `${origin}/optics.html`,
-        `${origin}/accessories.html`,
-        `${origin}/reloading.html`,
-      );
-    }
-    if (origin.includes('fulcrum-outdoors')) {
-      // LightSpeed eCom — catalog pages use /{category}/ (NOT .html)
-      urls.push(
-        `${origin}/firearms/`,
-        `${origin}/ammunition/`,
-        `${origin}/optics/`,
-        `${origin}/accessories/`,
-      );
-    }
-    if (origin.includes('truenortharms.com')) {
-      // BigCommerce — /categories.php has full product listing
-      urls.push(
-        `${origin}/categories.php`,
-        `${origin}/firearms/`,
-      );
-    }
-    if (origin.includes('frontierfirearms.ca')) {
-      // BigCommerce — /categories.php lists all products; also has category pages
-      urls.push(
-        `${origin}/categories.php`,
-        `${origin}/firearms/`,
-        `${origin}/ammunition/`,
-        `${origin}/optics/`,
-        `${origin}/accessories/`,
-      );
-    }
-    if (origin.includes('ellwoodepps.com')) {
-      // Magento (custom) behind Cloudflare. Category pages render products via JS (not in HTML).
-      // Homepage and catalogsearch have 40 product links in plain HTML.
-      // Category .html pages do NOT have products in HTML — don't use them.
-      urls.push(
-        `${origin}/catalogsearch/result/?q=&product_list_order=newest`,
-      );
-    }
-    if (origin.includes('firearmsoutletcanada.com')) {
-      // BigCommerce — /categories.php has 6 pages of products
-      urls.push(
-        `${origin}/categories.php`,
-      );
-    }
-    if (origin.includes('nordicmarksman.com')) {
-      // BigCommerce — /categories.php lists products with .card selector
-      urls.push(
-        `${origin}/categories.php`,
-        `${origin}/firearms-and-stocks/`,
-        `${origin}/shotguns/`,
-      );
-    }
-    if (origin.includes('rdsc.ca')) {
-      // BigCommerce — /categories.php has 1054 products
-      urls.push(`${origin}/categories.php`);
-    }
-    if (origin.includes('alflahertys.com')) {
-      // BigCommerce + Klevu JS overlay — products only render on LEAF category pages.
-      // Navigation pages (/categories.php, /firearms-and-ammunition/) list subcategory
-      // links but do NOT render Klevu product cards.
-      // Updated 2026-03-22: handguns & riflescopes pages removed by site;
-      // added long-range-precision, used-firearms, airguns.
-      urls.push(
-        `${origin}/shooting-supplies-firearms-ammunition/firearms/rifles/`,
-        `${origin}/shooting-supplies-firearms-and-ammunition/firearms/shotguns/`,
-        `${origin}/shooting-supplies-firearms-and-ammunition/firearms/long-range-precision/`,
-        `${origin}/shooting-supplies-firearms-and-ammunition/firearms/used-firearms/`,
-        `${origin}/shooting-supplies-and-firearms/firearms/airguns-500fps-or-more-pal-required/`,
-        `${origin}/shooting-supplies-firearms-ammunition/ammunition/centerfire-ammunition/`,
-        `${origin}/shooting-supplies-firearms-ammunition/ammunition/rimfire-ammunition/`,
-        `${origin}/shooting-supplies-firearms-ammunition/ammunition/shotgun-ammunition/`,
-        `${origin}/als-bargains/`,
-      );
-    }
-    if (origin.includes('durhamoutdoors.ca')) {
-      // Custom PHP store — homepage has .product-item cards
-      urls.push(`${origin}/`);
-    }
-    if (origin.includes('firearmsoutletcanada.com')) {
-      // BigCommerce — /categories.php has 104+ products
-      urls.push(`${origin}/categories.php`);
-    }
-    if (origin.includes('store.theshootingcentre.com')) {
-      // BigCommerce — /categories.php has 40+ products
-      urls.push(`${origin}/categories.php`);
-    }
-    if (origin.includes('store.prophetriver.com')) {
-      // BigCommerce — /categories.php has 20+ products
-      urls.push(`${origin}/categories.php`);
-    }
-    if (origin.includes('irunguns.ca')) {
-      // Custom PHP store — subcategory.php/category.php URLs
-      urls.push(
-        `${origin}/subcategory.php?parent=Firearms`,
-        `${origin}/category.php?parent=Magazines`,
-        `${origin}/category.php?parent=Import_/_Export`,
-      );
-    }
-    if (origin.includes('northprosports.com')) {
-      // OpenCart — firearm-related category paths
-      urls.push(
-        `${origin}/index.php?route=product/category&path=1055`,  // Sale
-        `${origin}/index.php?route=product/category&path=62`,    // Firearms
-        `${origin}/index.php?route=product/category&path=64`,    // Used
-        `${origin}/`,
-      );
-    }
-    if (origin.includes('londerosports.com')) {
-      // Magento — needs specific category URLs
-      urls.push(
-        `${origin}/firearms.html`,
-        `${origin}/ammunition.html`,
-        `${origin}/optics.html`,
-        `${origin}/`,
-      );
-    }
-    if (origin.includes('outfitters.goldnloan.com')) {
-      // LightSpeed — product listing pages
-      urls.push(
-        `${origin}/firearms/`,
-        `${origin}/ammunition/`,
-        `${origin}/`,
-      );
-    }
-    if (origin.includes('triggersandbows.com')) {
-      // Ecwid on WordPress — homepage has .grid-product cards
-      urls.push(`${origin}/`);
-    }
-    if (origin.includes('gotenda.com')) {
-      // WooCommerce behind Sucuri WAF — API blocked, uses Playwright HTML scraping
-      // Category URLs provide tags via _deriveCategoryTag()
-      urls.push(
-        `${origin}/product-category/firearms/`,
-        `${origin}/product-category/ammunition/`,
-        `${origin}/product-category/accessories/`,
-        `${origin}/product-category/reloading/`,
-        `${origin}/product-category/optic/`,
-        `${origin}/product-category/knives/`,
-        `${origin}/product-category/hunting-outdoor/`,
-        `${origin}/shop/`,
-      );
-    }
-    if (origin.includes('bullseyenorth.com')) {
-      // Custom retail CMS — products at /shop/slug, category pages at root level
-      // Breadcrumbs show "Home / Firearms / ...", "Home / Magazines / ..."
-      urls.push(
-        `${origin}/firearms`,
-        `${origin}/ammunition`,
-        `${origin}/magazines`,
-        `${origin}/reloading`,
-        `${origin}/optics`,
-        `${origin}/knives`,
-        `${origin}/accessories`,
-        `${origin}/on-sale`,
-        `${origin}/shop`,
-      );
-    }
-
-    return urls;
+    // No profile — return empty (generic URLs added by callers)
+    return [];
   }
 
-  // ── Platform detection for sort parameter selection ────────────────────────
-  // BigCommerce sites: categories.php, search.php, or known BigCommerce domains
-  private static readonly BIGCOMMERCE_DOMAINS = [
-    'truenortharms.com', 'frontierfirearms.ca', 'firearmsoutletcanada.com',
-    'nordicmarksman.com', 'rdsc.ca', 'alflahertys.com', 'wolverinesupplies.com',
-    'store.theshootingcentre.com', 'store.prophetriver.com',
-  ];
-  // Magento sites: .html category pages, /catalogsearch/ paths
-  private static readonly MAGENTO_DOMAINS = [
-    'ellwoodepps.com', 'sail.ca', 'londerosports.com',
-  ];
-  // Lightspeed eCom sites: shoplightspeed.com subdomains or known Lightspeed stores
-  private static readonly LIGHTSPEED_DOMAINS = [
-    'solelyoutdoors.com', 'gagnonsports.com', 'fulcrum-outdoors',
-    'outfitters.goldnloan.com',
-  ];
-  // ColdFusion (Celerant) sites
-  private static readonly COLDFUSION_DOMAINS = [
-    'bullseyenorth.com',
-  ];
-
-  /**
-   * Detect the e-commerce platform for a given origin.
-   * Used to select the correct "sort by newest" query parameter.
-   */
-  private _detectPlatform(origin: string): 'bigcommerce' | 'magento' | 'lightspeed' | 'coldfusion' | 'unknown' {
-    if (GenericRetailAdapter.BIGCOMMERCE_DOMAINS.some(d => origin.includes(d))) return 'bigcommerce';
-    if (GenericRetailAdapter.MAGENTO_DOMAINS.some(d => origin.includes(d))) return 'magento';
-    if (GenericRetailAdapter.LIGHTSPEED_DOMAINS.some(d => origin.includes(d))) return 'lightspeed';
-    if (GenericRetailAdapter.COLDFUSION_DOMAINS.some(d => origin.includes(d))) return 'coldfusion';
-    return 'unknown';
-  }
-
-  /**
-   * Append the correct "sort by newest" query parameter to a URL based on platform.
-   * Preserves existing query strings (uses & if ? already present, otherwise ?).
-   * Skips URLs that already contain a sort/order parameter to avoid duplicates.
-   */
-  private _appendSortNewest(url: string, platform: string): string {
-    // Skip if URL already has a sort or order parameter
-    if (/[?&](sort|orderby|product_list_order)=/.test(url)) return url;
-    const separator = url.includes('?') ? '&' : '?';
-    switch (platform) {
-      case 'bigcommerce':
-        return `${url}${separator}sort=newest`;
-      case 'magento':
-        return `${url}${separator}product_list_order=created_at&product_list_dir=desc`;
-      case 'lightspeed':
-        return `${url}${separator}sort=newest`;
-      case 'coldfusion':
-        return `${url}${separator}sort=new-arrivals`;
-      default:
-        return url; // Unknown platform — return URL as-is
-    }
-  }
+  // Platform detection domain lists REMOVED — sort params now in siteProfile.sortParam
 
   /**
    * URLs for Tier 1 watermark crawl (new product discovery).
-   * Site-specific URLs with platform-correct "sort by newest" parameters
+   * Sort parameters come from site profile.
    * so T1 reliably catches ALL new listings on every platform.
    */
   getNewArrivalsUrls(origin: string): string[] {
+    const profile = GenericRetailAdapter._getProfileSync(origin);
     const siteUrls = this._getSiteSpecificUrls(origin);
-    const platform = this._detectPlatform(origin);
+    const sortParam = profile?.sortParam || '';
 
-    // Apply sort-by-newest to each site-specific URL
-    const sortedUrls = siteUrls.map(url => this._appendSortNewest(url, platform));
+    // Apply sort param from profile to each site-specific URL
+    const sortedUrls = sortParam
+      ? siteUrls.map(url => {
+          if (/[?&](sort=|orderby=|product_list_order=)/.test(url)) return url; // Already has sort
+          return url + (url.includes('?') ? '&' : '') + sortParam.replace(/^\?/, '');
+        })
+      : [];
 
-    // Also keep the original unsorted URLs as fallback (some pages may not support sort params)
     const urls = [...sortedUrls, ...siteUrls];
 
-    // Generic "new arrivals" fallback patterns with platform-specific sort params
+    // Generic fallback URLs (for sites without profiles or missing catalog URLs)
     urls.push(
-      `${origin}/new-arrivals`,                                                    // Common pattern
-      `${origin}/new`,                                                             // Shorthand variant
-      `${origin}/whats-new`,                                                       // BigCommerce pattern
-      `${origin}/categories.php?sort=newest`,                                      // BigCommerce all-categories sorted
-      `${origin}/categories.php`,                                                  // BigCommerce all-categories unsorted
-      `${origin}/?sort=newest`,                                                    // BigCommerce + Lightspeed root sorted
-      `${origin}/catalogsearch/result/?q=&product_list_order=created_at&product_list_dir=desc`, // Magento sorted
-      `${origin}/?product_list_order=created_at&product_list_dir=desc`,            // Magento root sorted
-      `${origin}/shop/?orderby=date`,                                              // WooCommerce-like
-      `${origin}/`,                                                                // Homepage (last resort)
+      `${origin}/new-arrivals`,
+      `${origin}/whats-new`,
+      `${origin}/shop/?orderby=date`,
+      `${origin}/`,
     );
 
-    return [...new Set(urls)]; // Deduplicate (sorted + unsorted variants may overlap)
+    return [...new Set(urls)];
   }
 
   getNewArrivalsUrl(origin: string): string {
