@@ -345,7 +345,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
       let resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
         params,
         headers,
-        timeout: 15000,
+        timeout: options?.hasWaf ? 30000 : 15000, // WAF sites need more time
         validateStatus: (s) => s === 200 || s === 307 || s === 403,
       });
 
@@ -358,7 +358,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
           const fresh = await solveCookies(domain, origin);
           headers = { 'User-Agent': fresh.userAgent, Accept: 'application/json', Cookie: fresh.cookies };
           resp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
-            params, headers, timeout: 15000, validateStatus: (s) => s === 200,
+            params, headers, timeout: 30000, validateStatus: (s) => s === 200,
           });
         } else {
           throw new Error(`WP REST API returned ${resp.status}`);
@@ -392,7 +392,15 @@ export class WooCommerceAdapter extends AbstractAdapter {
           if (p.id) wpIdToUrl.set(p.id, url);
         }
       }
-    } catch { /* fall through */ }
+    } catch (err) {
+      // Rethrow timeouts and network errors — let the caller (crawlStreamTier) handle retry.
+      // Only swallow parse/data errors where we can fall through to Store API.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('timeout') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('WAF_COOKIE_FAILED')) {
+        throw err;
+      }
+      // Other errors (parse, malformed response) — fall through to Store API
+    }
 
     // 2. Store API — enrich with prices, thumbnails, stock, categories
     //    Uses `include` param with WP REST product IDs + two stock_status passes
