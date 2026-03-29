@@ -421,7 +421,11 @@ export class WooCommerceAdapter extends AbstractAdapter {
             if (Array.isArray(resp.data)) {
               this.mergeStoreApiProducts(resp.data, seen, origin);
             }
-          } catch { /* Store API enrichment failed — continue with WP REST data */ }
+          } catch (enrichErr) {
+            // Log enrichment failures — this is why products have no prices
+            const msg = enrichErr instanceof Error ? enrichErr.message : String(enrichErr);
+            console.log(`[WooCommerce] Store API enrichment failed for ${origin} (chunk ${i}-${i + chunk.length}): ${msg.substring(0, 80)}`);
+          }
         }
       }
     }
