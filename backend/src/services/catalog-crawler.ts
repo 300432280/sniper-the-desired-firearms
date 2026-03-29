@@ -513,6 +513,13 @@ export async function crawlStreamTier(params: {
         if (catalogPage.totalPages) totalPagesDiscovered = catalogPage.totalPages;
 
         if (catalogPage.products.length === 0) {
+          // Only mark cycle complete if we believe this is truly the end of data.
+          // If we know totalPages and haven't reached it, an empty page is likely
+          // a transient error (WAF timeout, cookie expiry) — stop but resume later.
+          if (totalPagesDiscovered && page < totalPagesDiscovered) {
+            console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: empty page ${page} but totalPages=${totalPagesDiscovered} — will resume`);
+            break;
+          }
           cycleComplete = true;
           break;
         }
