@@ -31,14 +31,16 @@ Uses an adapter-based scraping framework with platform-specific adapters for Sho
 ### v3 Two-Phase Crawler System
 
 ```
-Phase 1: BOOTSTRAP (new sites — index everything via listing pages)
-  Crawl Scheduler (every 2 min tick)
-    +---> T1: Watermark Crawl (sort by newest, catch new listings)
-    +---> T2-T4: Listing Page Crawl (stream-based, page/date partitioned)
-          - WooCommerce: date-partitioned via REST API
-          - HTML sites: page-range partitioned (T2: 1-30%, T3: 30-65%, T4: 65%+)
-          - No cooldowns — crawl fast to get everything indexed
-    +---> Auto-transition: when all tiers complete → enter Maintain phase
+Phase 1: BOOTSTRAP (new sites — get ALL products with complete data ASAP)
+  Crawl Scheduler (T1 on interval, T2-T4 self-queue continuously)
+    +---> T1: Watermark Crawl (sort by newest, catch new listings, ~20min interval)
+    +---> T2-T4: Single Continuous Crawl (all catalog tokens, no tier split)
+          - One paginated crawl: page 1 → 2 → ... → N (no date filters)
+          - Self-queues next batch immediately — no waiting for scheduler tick
+          - ALL catalog tokens go to one crawler (not split 3 ways)
+          - Unused T1 tokens overflow to catalog automatically
+          - Must achieve: product count ≥80% of live, price ≥60%, stock ≥60%
+    +---> Manual transition: verify-maintain-ready.js --transition (auto disabled)
 
 Phase 2: MAINTAIN (after bootstrap — verify products from DB)
   Crawl Scheduler (every 2 min tick)
@@ -54,7 +56,11 @@ Phase 2: MAINTAIN (after bootstrap — verify products from DB)
           - All product data preserved on deletion (for reporting/analytics)
 
 T1 Priority: T1 consumes budget first. T2-T4 share ALL remaining tokens.
-Token Budget: per-site (auto-adjusted by product count), T1 reserves 70%
+Token Budget: per-site (auto-adjusted by product count), T1 reserves 70%.
+Unused T1 tokens flow to catalog. WAF sites use 30s timeout (vs 15s default).
+T1 sort URLs: Shopify (created-descending), WooCommerce (orderby=date),
+  BigCommerce (?sort=newest), Magento (product_list_order=created_at),
+  Lightspeed (?sort=newest), ColdFusion (?sort=new-arrivals)
 ```
 
 ### sourceId Product Tracking (v2.2)
