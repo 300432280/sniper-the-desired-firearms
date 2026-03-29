@@ -35,6 +35,7 @@ interface CachedSiteInfo {
   siteType: string;
   searchUrlPattern: string | null;
   requiresSucuri: boolean;
+  siteProfile: any | null; // SiteProfile JSON from DB
 }
 
 let siteCache: Map<string, CachedSiteInfo> = new Map();
@@ -53,6 +54,7 @@ async function refreshCache(): Promise<void> {
         siteType: true,
         searchUrlPattern: true,
         requiresSucuri: true,
+        siteProfile: true,
       },
     });
 
@@ -63,6 +65,7 @@ async function refreshCache(): Promise<void> {
         siteType: site.siteType,
         searchUrlPattern: site.searchUrlPattern,
         requiresSucuri: site.requiresSucuri,
+        siteProfile: site.siteProfile ?? null,
       });
     }
 
@@ -82,6 +85,7 @@ export interface AdapterLookupResult {
   adapterType: string;
   searchUrlPattern: string | null;
   requiresSucuri: boolean;
+  siteProfile: any | null; // SiteProfile JSON — per-site config
 }
 
 /**
@@ -100,6 +104,7 @@ export async function getAdapterForUrl(url: string): Promise<AdapterLookupResult
       adapterType: 'generic',
       searchUrlPattern: null,
       requiresSucuri: false,
+      siteProfile: null,
     };
   }
 
@@ -114,6 +119,7 @@ export async function getAdapterForUrl(url: string): Promise<AdapterLookupResult
       adapterType: siteInfo.adapterType,
       searchUrlPattern: siteInfo.searchUrlPattern,
       requiresSucuri: siteInfo.requiresSucuri,
+      siteProfile: siteInfo.siteProfile,
     };
   }
 
@@ -129,17 +135,28 @@ export async function getAdapterForUrl(url: string): Promise<AdapterLookupResult
         adapterType: parentInfo.adapterType,
         searchUrlPattern: parentInfo.searchUrlPattern,
         requiresSucuri: parentInfo.requiresSucuri,
+        siteProfile: parentInfo.siteProfile,
       };
     }
   }
 
   // Unknown domain → generic
   return {
+
     adapter: adapters.generic,
     adapterType: 'generic',
     searchUrlPattern: null,
     requiresSucuri: false,
+    siteProfile: null,
   };
+}
+
+/**
+ * Synchronous access to a cached site entry (used by adapters for profile lookup).
+ * Returns the CachedSiteInfo or undefined if not found.
+ */
+export function _getSiteCacheEntry(domain: string): CachedSiteInfo | undefined {
+  return siteCache.get(domain);
 }
 
 /**

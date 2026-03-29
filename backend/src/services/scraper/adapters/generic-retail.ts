@@ -11,35 +11,34 @@ import { fetchPageWithMeta } from '../http-client';
 export class GenericRetailAdapter extends AbstractAdapter {
   name = 'GenericRetail';
   siteType = 'retailer' as const;
-  supportsDateFilter = false; // Klevu API (alflahertys) and HTML scraping have no date filtering
+  supportsDateFilter = false;
 
+  /**
+   * Get search URL — reads from site profile first, falls back to generic pattern.
+   */
   getSearchUrl(origin: string, keyword: string): string {
-    // Celerant e-commerce (bullseyenorth)
-    if (origin.includes('bullseyenorth.com')) {
-      return `${origin}/all-products/browse/keyword/${encodeURIComponent(keyword)}`;
+    const profile = GenericRetailAdapter._getProfileSync(origin);
+    if (profile?.searchUrl) {
+      return `${origin}${profile.searchUrl.replace('{keyword}', encodeURIComponent(keyword))}`;
     }
-    // Sail.ca (Magento) — search submits to /en/shop?q= (not catalogsearch)
-    if (origin.includes('sail.ca')) {
-      return `${origin}/en/shop?q=${encodeURIComponent(keyword)}`;
-    }
-    // Magento sites use /catalogsearch/result/?q=
-    if (origin.includes('ellwoodepps.com')) {
-      return `${origin}/catalogsearch/result/?q=${encodeURIComponent(keyword)}`;
-    }
-    // BigCommerce uses /search.php?search_query=
-    if (origin.includes('alflahertys.com') || origin.includes('truenortharms.com') ||
-        origin.includes('frontierfirearms.ca') || origin.includes('firearmsoutletcanada.com') ||
-        origin.includes('nordicmarksman.com') || origin.includes('rdsc.ca') ||
-        origin.includes('wolverinesupplies.com')) {
-      return `${origin}/search.php?search_query=${encodeURIComponent(keyword)}`;
-    }
-    // Lightspeed eCom uses /search/{keyword}/
-    if (origin.includes('shoplightspeed.com') || origin.includes('gagnonsports.com') ||
-        origin.includes('solelyoutdoors.com')) {
-      return `${origin}/search/${encodeURIComponent(keyword)}/`;
-    }
-    // Default: /search?q= (works for Shopify, WooCommerce, most generic sites)
+    // Default: /search?q= (works for most generic sites)
     return `${origin}/search?q=${encodeURIComponent(keyword)}`;
+  }
+
+  /**
+   * Synchronous profile lookup from adapter registry cache.
+   * Returns null if no profile exists.
+   */
+  private static _getProfileSync(origin: string): any | null {
+    try {
+      const domain = new URL(origin).hostname.replace(/^www\./, '');
+      // Access the adapter registry's site cache directly
+      // This is populated during refreshCache() which runs every 5 minutes
+      const { _getSiteCacheEntry } = require('../adapter-registry');
+      return _getSiteCacheEntry?.(domain)?.siteProfile ?? null;
+    } catch {
+      return null;
+    }
   }
 
   extractMatches(
@@ -186,11 +185,16 @@ export class GenericRetailAdapter extends AbstractAdapter {
   // ── Catalog Crawl Methods (Phase 3) ───────────────────────────────────────
 
   /**
-   * Site-specific product listing URLs for each generic-retail site.
-   * Shared by getNewArrivalsUrls() (Tier 1 watermark) and getCatalogUrls() (Tiers 2-4 catalog).
-   * Each block is tagged with the platform/CMS for the site.
+   * Site-specific product listing URLs — reads from site profile.
+   * Falls back to empty array if no profile (generic URLs added by callers).
    */
   private _getSiteSpecificUrls(origin: string): string[] {
+    const profile = GenericRetailAdapter._getProfileSync(origin);
+    if (profile?.catalogUrls?.length) {
+      return profile.catalogUrls.map((u: string) => u.startsWith('http') ? u : `${origin}${u}`);
+    }
+
+    // Legacy fallback for sites without profiles yet
     const urls: string[] = [];
 
     if (origin.includes('lockharttactical.com')) {

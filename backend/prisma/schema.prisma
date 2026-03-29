@@ -187,6 +187,11 @@ model MonitoredSite {
   // Stream state (per-stream tier structure — Bootstrap phase)
   streamState Json?
 
+  // Site profile: ALL site-specific config in one JSON record
+  // Replaces hardcoded domain checks in adapters. Contains: platform, URLs, WAF config,
+  // data flow, crawler config, custom selectors, structural notes.
+  siteProfile Json?
+
   // Crawl phase: bootstrap (index via listing pages) or maintain (verify from DB)
   crawlPhase         String    @default("bootstrap") // "bootstrap" | "maintain"
   bootstrapStartedAt DateTime? // When bootstrap began (watermark anchor date)
