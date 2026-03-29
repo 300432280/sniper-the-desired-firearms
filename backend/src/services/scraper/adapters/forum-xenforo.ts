@@ -66,23 +66,17 @@ export class XenForoAdapter extends AbstractAdapter {
   getNewArrivalsUrls(origin: string): string[] {
     const urls: string[] = [];
 
-    // Site-specific exchange/classified forum sections (public, no auth)
-    // Must target individual sub-forums (which list threads/structItems),
-    // NOT the parent category page (which only lists sub-forum links)
-    if (origin.includes('canadiangunnutz.com')) {
-      urls.push(
-        `${origin}/forum/forums/exchange-of-hunting-and-sporting-rifles.64/`,
-        `${origin}/forum/forums/exchange-of-modern-sporting-rifles.65/`,
-        `${origin}/forum/forums/exchange-of-pistols-and-revolvers.66/`,
-        `${origin}/forum/forums/exchange-of-shotguns.145/`,
-        `${origin}/forum/forums/exchange-of-rimfire-firearms.160/`,
-        `${origin}/forum/forums/exchange-of-military-surplus-rifle.128/`,
-        `${origin}/forum/forums/exchange-of-precision-and-target-rifles.156/`,
-        `${origin}/forum/forums/exchange-of-12x-prohib-firearms.330/`,
-        `${origin}/forum/forums/exchange-of-optics.67/`,
-        `${origin}/forum/forums/exchange-of-reloading-components-and-equipment.68/`,
-      );
-    }
+    // Read forum sections from site profile
+    try {
+      const domain = new URL(origin).hostname.replace(/^www\./, '');
+      const { _getSiteCacheEntry } = require('../adapter-registry');
+      const entry = _getSiteCacheEntry?.(domain);
+      if (entry?.siteProfile?.apiConfig?.forumSections?.length) {
+        for (const section of entry.siteProfile.apiConfig.forumSections) {
+          urls.push(`${origin}/forum/forums/${section}/`);
+        }
+      }
+    } catch { /* profile lookup failed — use defaults below */ }
 
     urls.push(
       `${origin}/whats-new/posts/`,

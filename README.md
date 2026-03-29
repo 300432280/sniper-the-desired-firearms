@@ -63,7 +63,20 @@ T1 sort URLs: Shopify (created-descending), WooCommerce (orderby=date),
   Lightspeed (?sort=newest), ColdFusion (?sort=new-arrivals)
 ```
 
-### sourceId Product Tracking (v2.2)
+### Site Profile System (v3.1)
+
+Each site has a **SiteProfile** JSON (`MonitoredSite.siteProfile`) containing ALL site-specific config:
+- Platform type, search URL, catalog URLs, sort parameter
+- WAF type, timeout overrides, Playwright needs
+- Data flow documentation (which API provides what — e.g., gotenda: WP REST for discovery, Store API for prices)
+- Crawler config (bootstrap/maintain methods, cooldowns, tier shares)
+- Custom selectors, Klevu API keys, forum sections
+- Structural notes persisting across sessions
+
+Generic adapters read from profiles — zero hardcoded domain checks in adapter code.
+32 sites have profiles. New sites get profiles via DB insert, not code changes.
+
+### sourceId Product Tracking
 
 Products are tracked by platform-stable IDs instead of URLs:
 

@@ -254,35 +254,17 @@ export class WooCommerceAdapter extends AbstractAdapter {
   getNewArrivalsUrls(origin: string): string[] {
     const urls: string[] = [];
 
-    // Site-specific category pages for WAF-blocked WooCommerce sites
-    // whose /shop/ page shows category grids instead of products
-    if (origin.includes('doctordeals.ca')) {
-      urls.push(
-        `${origin}/product-category/gun-shop/firearms/rifles/`,
-        `${origin}/product-category/gun-shop/firearms/shotguns/`,
-        `${origin}/product-category/gun-shop/firearms/non-restricted/`,
-        `${origin}/product-category/gun-shop/firearms/used-and-war/`,
-        `${origin}/product-category/gun-shop/ammunition/`,
-        `${origin}/product-category/gun-shop/optics-sights/`,
-      );
-    }
-    if (origin.includes('g4cgunstore.com')) {
-      urls.push(
-        `${origin}/product-category/firearms/rifles/non-restricted-rifles/`,
-        `${origin}/product-category/firearms/handguns/pistols/`,
-        `${origin}/product-category/firearms/shotguns/`,
-        `${origin}/product-category/firearms/rifles/restricted-rifles/`,
-        `${origin}/product-category/new-arrivals/`,
-        `${origin}/product-category/ammunition/`,
-      );
-    }
-    if (origin.includes('corwin-arms.com')) {
-      // WooCommerce — /shop redirects to homepage, add category pages
-      urls.push(
-        `${origin}/product-category/firearms/`,
-        `${origin}/product-category/clearance/`,
-      );
-    }
+    // Read catalog URLs from site profile (replaces hardcoded domain checks)
+    try {
+      const domain = new URL(origin).hostname.replace(/^www\./, '');
+      const { _getSiteCacheEntry } = require('../adapter-registry');
+      const entry = _getSiteCacheEntry?.(domain);
+      if (entry?.siteProfile?.catalogUrls?.length) {
+        for (const u of entry.siteProfile.catalogUrls) {
+          urls.push(u.startsWith('http') ? u : `${origin}${u}`);
+        }
+      }
+    } catch { /* profile lookup failed — use defaults below */ }
 
     urls.push(
       `${origin}/shop/?orderby=date`,
