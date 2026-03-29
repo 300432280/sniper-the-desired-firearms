@@ -114,9 +114,28 @@ async function main() {
   // 5. Data quality quick check
   var noPrice = await p.productIndex.count({ where: { siteId: site.id, isActive: true, price: null } });
   var noThumb = await p.productIndex.count({ where: { siteId: site.id, isActive: true, thumbnail: null } });
+  var noStock = await p.productIndex.count({ where: { siteId: site.id, isActive: true, stockStatus: null } });
+  var inStock = await p.productIndex.count({ where: { siteId: site.id, isActive: true, stockStatus: 'in_stock' } });
   var pricePct = dbActive > 0 ? Math.round((dbActive - noPrice) / dbActive * 100) : 0;
   var thumbPct = dbActive > 0 ? Math.round((dbActive - noThumb) / dbActive * 100) : 0;
-  console.log('\n[5] Quality: price=' + pricePct + '% thumb=' + thumbPct + '%');
+  var stockPct = dbActive > 0 ? Math.round((dbActive - noStock) / dbActive * 100) : 0;
+  console.log('\n[5] Quality: price=' + pricePct + '% stock=' + stockPct + '% thumb=' + thumbPct + '%');
+  console.log('    In stock: ' + inStock + ' | No price: ' + noPrice + ' | No stock: ' + noStock);
+
+  // Price and stock must be >= 60% for bootstrap to be considered complete
+  // (some OOS products genuinely have no price — 60% is the minimum acceptable)
+  if (pricePct < 60) {
+    console.log('    FAIL — price coverage ' + pricePct + '% < 60% minimum');
+    pass = false;
+  } else {
+    console.log('    PASS — price coverage ' + pricePct + '%');
+  }
+  if (stockPct < 60) {
+    console.log('    FAIL — stock coverage ' + stockPct + '% < 60% minimum');
+    pass = false;
+  } else {
+    console.log('    PASS — stock coverage ' + stockPct + '%');
+  }
 
   // Verdict
   console.log('\n=== VERDICT: ' + (pass ? 'READY' : 'NOT READY') + ' ===');

@@ -412,7 +412,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
         const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
           params: { per_page: 1, page: 1 },
           headers,
-          timeout: 10000,
+          timeout: options?.hasWaf ? 30000 : 10000,
           validateStatus: (s) => s === 200,
         });
         totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10) || totalPages;
@@ -433,7 +433,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
             const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
               params,
               headers,
-              timeout: 15000,
+              timeout: options?.hasWaf ? 30000 : 15000,
               validateStatus: (s) => s === 200,
             });
             if (Array.isArray(resp.data)) {
