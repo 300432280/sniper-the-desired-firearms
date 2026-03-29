@@ -412,17 +412,26 @@ export class WooCommerceAdapter extends AbstractAdapter {
           try {
             const params: Record<string, any> = { include: chunk.join(','), per_page: chunk.length };
             if (stockFilter) params.stock_status = stockFilter;
-            const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
+            let resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
               params,
               headers,
               timeout: options?.hasWaf ? 30000 : 15000,
-              validateStatus: (s) => s === 200,
+              validateStatus: (s) => s === 200 || s === 403 || s === 307,
             });
-            if (Array.isArray(resp.data)) {
+            // Retry with fresh cookies on WAF block
+            if ((resp.status === 403 || resp.status === 307) && options?.hasWaf) {
+              const domain = new URL(origin).hostname;
+              await reportFailure(domain);
+              const fresh = await solveCookies(domain, origin);
+              headers = { 'User-Agent': fresh.userAgent, Accept: 'application/json', Cookie: fresh.cookies };
+              resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
+                params, headers, timeout: 30000, validateStatus: (s) => s === 200,
+              });
+            }
+            if (resp.status === 200 && Array.isArray(resp.data)) {
               this.mergeStoreApiProducts(resp.data, seen, origin);
             }
           } catch (enrichErr) {
-            // Log enrichment failures — this is why products have no prices
             const msg = enrichErr instanceof Error ? enrichErr.message : String(enrichErr);
             console.log(`[WooCommerce] Store API enrichment failed for ${origin} (chunk ${i}-${i + chunk.length}): ${msg.substring(0, 80)}`);
           }
