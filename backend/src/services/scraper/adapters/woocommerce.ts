@@ -406,8 +406,10 @@ export class WooCommerceAdapter extends AbstractAdapter {
       // Two passes: in-stock (default) then out-of-stock, since Store API
       // only returns in-stock products unless stock_status=outofstock is set.
       const ids = [...wpIdToUrl.keys()];
-      for (let i = 0; i < ids.length; i += 100) {
-        const chunk = ids.slice(i, i + 100);
+      // Use smaller chunks for WAF sites (long include= params get blocked by Sucuri)
+      const chunkSize = options?.hasWaf ? 10 : 100;
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
         for (const stockFilter of [undefined, 'outofstock'] as const) {
           try {
             const params: Record<string, any> = { include: chunk.join(','), per_page: chunk.length };
