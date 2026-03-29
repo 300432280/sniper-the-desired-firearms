@@ -141,8 +141,13 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
 }
 
 /**
- * Stream-based catalog crawl (Phase 2).
- * Each tier picks ONE stream (highest priority) and concentrates all tokens on it.
+ * Stream-based catalog crawl.
+ *
+ * BOOTSTRAP MODE: All catalog tokens go to a single continuous paginated crawl.
+ * No date filters, no tier partitioning. Just page 1 → 2 → ... → N as fast as possible.
+ * Uses T4's tier state to track currentPage (T2/T3 are unused in bootstrap).
+ *
+ * MAINTAIN MODE is handled by processVerifyCrawl (separate job type).
  */
 async function processStreamCatalogCrawl(
   data: CatalogJobData,
@@ -152,14 +157,123 @@ async function processStreamCatalogCrawl(
 ): Promise<void> {
   const { siteId, domain, url, baseBudget, capacity } = data;
   const now = new Date();
-  // No cooldowns — T2-T4 run continuously, limited only by budget
   const cooldownMap = { 2: 0, 3: 0, 4: 0 } as const;
 
-  // Stale tier recovery is handled by the scheduler (crawl-scheduler.ts)
-  // which runs every 2 minutes on ALL enabled sites, including cooldown expiry.
+  // ── BOOTSTRAP: single continuous crawl using ALL catalog tokens ──
+  // No date filters, no tier splitting. One stream, one pagination cursor.
+  // Track progress in T4's tier state (T2/T3 mirror T4 for compatibility).
+  const stream = streamState.streams[0];
+  if (!stream) return;
 
-  console.log(`[CatalogWorker] Stream catalog crawl: ${domain} (${streamState.streams.length} streams, tiers: ${Object.entries(activeTiers).filter(([, v]) => v).map(([k]) => k).join(',')})`);
+  const stateKey = `${stream.id}:4`; // Use T4 as the bootstrap cursor
+  let tierState = streamState.tiers[stateKey];
+  if (!tierState) {
+    // Initialize if missing
+    tierState = {
+      streamId: stream.id, tier: 4, status: 'idle',
+      currentPage: 1, pageRangeStart: 1,
+    } as any;
+    streamState.tiers[stateKey] = tierState;
+  }
 
+  // Get ALL remaining catalog tokens (not split by tier)
+  const { getCatalogRemaining } = await import('./token-budget');
+  const totalCatalogTokens = getCatalogRemaining(siteId, baseBudget, capacity);
+  if (totalCatalogTokens <= 0) return;
+
+  // Start cycle if idle
+  if (tierState.status === 'idle' || tierState.status === 'cooldown') {
+    tierState.status = 'in_progress';
+    tierState.cycleStartedAt = now.toISOString();
+    // DON'T reset currentPage — resume from where we left off
+    // Clear date ranges — bootstrap crawls ALL products, no date filter
+    tierState.dateRangeStart = undefined;
+    tierState.dateRangeEnd = undefined;
+  }
+
+  console.log(`[CatalogWorker] Bootstrap crawl: ${domain} — page ${tierState.currentPage}, ${totalCatalogTokens} tokens`);
+
+  // Crawl using the adapter, NO date filters
+  const result = await crawlStreamTier({
+    siteId, url, domain, stream,
+    tier: 4, // Use tier 4 for token tracking
+    tierState,
+    tokensAllocated: totalCatalogTokens,
+    hasWaf: data.hasWaf,
+  });
+
+  // Update totalPages if discovered
+  if (result.totalPagesDiscovered) {
+    stream.totalPages = result.totalPagesDiscovered;
+  }
+
+  if (result.cycleComplete) {
+    // Truly reached the end — reset to page 1 for next full pass
+    tierState.status = 'idle';
+    tierState.currentPage = 1;
+    tierState.lastRefreshedAt = now.toISOString();
+    tierState.lastCycleStartedAt = tierState.cycleStartedAt;
+    tierState.lastCycleCompletedAt = now.toISOString();
+    tierState.cycleStartedAt = undefined;
+    // Also mark T2/T3 as complete (for bootstrap completion check)
+    for (const t of [2, 3] as const) {
+      const k = `${stream.id}:${t}`;
+      if (streamState.tiers[k]) {
+        streamState.tiers[k].lastCycleCompletedAt = now.toISOString();
+        streamState.tiers[k].status = 'idle';
+      }
+    }
+    console.log(`[CatalogWorker] Bootstrap complete for ${domain}: ${result.productsFound} products on final pass`);
+  }
+  // If not complete, currentPage was updated in-place by crawlStreamTier
+
+  // Persist
+  await prisma.monitoredSite.update({
+    where: { id: siteId },
+    data: { streamState: streamState as any },
+  });
+
+  pushEvent({ type: 'info', message: `Bootstrap crawl: ${domain} page ${tierState.currentPage}` });
+
+  // Self-queue next batch
+  try {
+    const remaining = getCatalogRemaining(siteId, baseBudget, capacity);
+    if (remaining > 0 && !result.cycleComplete) {
+      const { scrapeQueue: sq } = await import('./queue');
+      const site = await prisma.monitoredSite.findUnique({
+        where: { id: siteId },
+        select: { streamState: true, crawlTuning: true, crawlPhase: true },
+      });
+      if (site && (site as any).crawlPhase === 'bootstrap') {
+        await sq.add('crawl-catalog', {
+          siteId, domain, url: data.url,
+          baseBudget: data.baseBudget, capacity: data.capacity,
+          tierState: data.tierState, activeTiers: data.activeTiers,
+          hasWaf: data.hasWaf, crawlTuning: site.crawlTuning,
+          streamState: parseStreamState(site.streamState) ?? undefined,
+        }, {
+          jobId: `catalog-${siteId}-${Date.now()}`,
+          attempts: 1, removeOnComplete: 50, removeOnFail: 100,
+        });
+      }
+    }
+  } catch (err) {
+    console.error(`[CatalogWorker] Bootstrap self-queue failed for ${domain}:`, err instanceof Error ? err.message : err);
+  }
+
+  return;
+}
+
+// ── OLD TIER-SPLIT CODE (preserved as _legacyStreamCatalogCrawl for potential reuse) ──
+async function _legacyStreamCatalogCrawl(
+  data: CatalogJobData,
+  streamState: SiteStreamState,
+  tuning: ReturnType<typeof resolveTuning>,
+  activeTiers: { tier2: boolean; tier3: boolean; tier4: boolean },
+): Promise<void> {
+  const { siteId, domain, url, baseBudget, capacity } = data;
+  const now = new Date();
+  const cooldownMap = { 2: 0, 3: 0, 4: 0 } as const;
   const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers, tuning);
 
   for (const tier of [2, 3, 4] as const) {
