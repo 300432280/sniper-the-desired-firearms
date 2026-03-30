@@ -411,31 +411,36 @@ export class WooCommerceAdapter extends AbstractAdapter {
       for (let i = 0; i < ids.length; i += chunkSize) {
         const chunk = ids.slice(i, i + chunkSize);
         for (const stockFilter of [undefined, 'outofstock'] as const) {
-          try {
-            const params: Record<string, any> = { include: chunk.join(','), per_page: chunk.length };
-            if (stockFilter) params.stock_status = stockFilter;
-            let resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
-              params,
-              headers,
-              timeout: options?.hasWaf ? 30000 : 15000,
-              validateStatus: (s) => s === 200 || s === 403 || s === 307,
-            });
-            // Retry with fresh cookies on WAF block
-            if ((resp.status === 403 || resp.status === 307) && options?.hasWaf) {
-              const domain = new URL(origin).hostname;
-              await reportFailure(domain);
-              const fresh = await solveCookies(domain, origin);
-              headers = { 'User-Agent': fresh.userAgent, Accept: 'application/json', Cookie: fresh.cookies };
-              resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
-                params, headers, timeout: 30000, validateStatus: (s) => s === 200,
+          let enriched = false;
+          // Retry up to 3 times with fresh cookies each attempt
+          for (let attempt = 1; attempt <= 3 && !enriched; attempt++) {
+            try {
+              const params: Record<string, any> = { include: chunk.join(','), per_page: chunk.length };
+              if (stockFilter) params.stock_status = stockFilter;
+              const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
+                params, headers,
+                timeout: options?.hasWaf ? 30000 : 15000,
+                validateStatus: (s) => s === 200 || s === 403 || s === 307,
               });
+              if (resp.status === 200 && Array.isArray(resp.data)) {
+                this.mergeStoreApiProducts(resp.data, seen, origin);
+                enriched = true;
+              } else if ((resp.status === 403 || resp.status === 307) && options?.hasWaf) {
+                // Refresh cookies for next attempt
+                const domain = new URL(origin).hostname;
+                await reportFailure(domain);
+                const fresh = await solveCookies(domain, origin);
+                headers = { 'User-Agent': fresh.userAgent, Accept: 'application/json', Cookie: fresh.cookies };
+                if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
+              }
+            } catch (enrichErr) {
+              if (attempt === 3) {
+                const msg = enrichErr instanceof Error ? enrichErr.message : String(enrichErr);
+                console.log(`[WooCommerce] Store API enrichment failed after 3 attempts for ${origin} (chunk ${i}-${i + chunk.length}): ${msg.substring(0, 80)}`);
+              } else {
+                await new Promise(r => setTimeout(r, attempt * 1000));
+              }
             }
-            if (resp.status === 200 && Array.isArray(resp.data)) {
-              this.mergeStoreApiProducts(resp.data, seen, origin);
-            }
-          } catch (enrichErr) {
-            const msg = enrichErr instanceof Error ? enrichErr.message : String(enrichErr);
-            console.log(`[WooCommerce] Store API enrichment failed for ${origin} (chunk ${i}-${i + chunk.length}): ${msg.substring(0, 80)}`);
           }
         }
       }
