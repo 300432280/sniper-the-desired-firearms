@@ -406,7 +406,15 @@ export class WooCommerceAdapter extends AbstractAdapter {
       // Two passes: in-stock (default) then out-of-stock, since Store API
       // only returns in-stock products unless stock_status=outofstock is set.
       const ids = [...wpIdToUrl.keys()];
-      const chunkSize = options?.hasWaf ? 10 : 100;
+      // chunkSize from site profile, or default: WAF=10, normal=100
+      const profileChunkSize = (() => {
+        try {
+          const domain = new URL(origin).hostname.replace(/^www\./, '');
+          const { _getSiteCacheEntry } = require('../adapter-registry');
+          return _getSiteCacheEntry?.(domain)?.siteProfile?.enrichmentChunkSize;
+        } catch { return undefined; }
+      })();
+      const chunkSize = profileChunkSize || (options?.hasWaf ? 10 : 100);
       for (let i = 0; i < ids.length; i += chunkSize) {
         const chunk = ids.slice(i, i + chunkSize);
         // Delay between chunks for WAF sites — prevents Sucuri from detecting burst
