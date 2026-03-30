@@ -220,10 +220,19 @@ export class GenericRetailAdapter extends AbstractAdapter {
 
     const urls = [...sortedUrls, ...siteUrls];
 
-    // Generic fallback URLs (for sites without profiles or missing catalog URLs)
+    // Generic fallback URLs with platform-aware sort params from profile
+    const platform = profile?.platform || '';
+    const platformSort = sortParam || ({
+      bigcommerce: 'sort=newest',
+      magento: 'product_list_order=created_at&product_list_dir=desc',
+      lightspeed: 'sort=newest',
+      coldfusion: 'sort=new-arrivals',
+    } as Record<string, string>)[platform] || '';
+
     urls.push(
       `${origin}/new-arrivals`,
       `${origin}/whats-new`,
+      ...(platformSort ? [`${origin}/?${platformSort}`] : []),
       `${origin}/shop/?orderby=date`,
       `${origin}/`,
     );
@@ -259,29 +268,16 @@ export class GenericRetailAdapter extends AbstractAdapter {
   // The Klevu search API is public (key embedded in page source) and returns
   // structured product data with prices, stock status, images, and URLs.
 
-  private static KLEVU_CONFIG = {
-    apiKey: 'klevu-170966446878517137',
-    endpoint: 'https://uscs33v2.ksearchnet.com/cs/v2/search',
-    perPage: 36,
-    // Map category URL slugs → Klevu categoryPath strings.
-    // These paths are found via klevu_pageCategory in the page source.
-    categoryPaths: [
-      { slug: 'rifles', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Rifles' },
-      { slug: 'shotguns', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Shotguns' },
-      { slug: 'long-range-precision', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Long Range Precision' },
-      { slug: 'used-firearms', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Used Firearms' },
-      { slug: 'airguns', path: 'Shooting Supplies, Firearms & Ammunition;Firearms;Airguns 500FPS or More - PAL Required' },
-      { slug: 'centerfire-ammunition', path: 'Shooting Supplies, Firearms & Ammunition;Ammunition;Centerfire Ammunition' },
-      { slug: 'rimfire-ammunition', path: 'Shooting Supplies, Firearms & Ammunition;Ammunition;Rimfire Ammunition' },
-      { slug: 'shotgun-ammunition', path: 'Shooting Supplies, Firearms & Ammunition;Ammunition;Shotgun Ammunition' },
-    ],
-  };
+  // Klevu config defaults (overridden by siteProfile.apiConfig)
+  private static KLEVU_DEFAULTS = { perPage: 36 };
 
-  /** Discover the Klevu categoryPath for a page by reading klevu_pageCategory from the HTML. */
+  /** Discover the Klevu categoryPath for a page using profile or HTML fallback. */
   private async _resolveKlevuCategoryPath(pageUrl: string): Promise<string | null> {
-    // First check static map using URL slug
+    // Check profile's klevuCategoryPaths first
+    const profile = GenericRetailAdapter._getProfileSync(new URL(pageUrl).origin);
+    const paths = profile?.apiConfig?.klevuCategoryPaths || [];
     const urlLower = pageUrl.toLowerCase();
-    for (const { slug, path } of GenericRetailAdapter.KLEVU_CONFIG.categoryPaths) {
+    for (const { slug, path } of paths) {
       if (urlLower.includes(slug)) return path;
     }
     // Fallback: fetch the page and extract klevu_pageCategory
@@ -308,18 +304,17 @@ export class GenericRetailAdapter extends AbstractAdapter {
       return { products: [] };
     }
 
-    const perPage = options?.perPage || GenericRetailAdapter.KLEVU_CONFIG.perPage;
+    const klevuKey = profile.apiConfig.klevuApiKey;
+    const klevuEndpoint = profile.apiConfig.klevuEndpoint || 'https://uscs33v2.ksearchnet.com/cs/v2/search';
+    const perPage = options?.perPage || GenericRetailAdapter.KLEVU_DEFAULTS.perPage;
     const offset = (page - 1) * perPage;
     const allProducts: CatalogProduct[] = [];
     let maxTotalPages = 0;
 
     // Fetch ALL products via wildcard SEARCH (not per-category CATNAV).
-    // This ensures we index products from every category (optics, accessories,
-    // reloading, knives, etc.) — not just the 8 hardcoded firearm/ammo categories.
-    // Klevu returns ~5,266 total products at perPage=36 → ~147 pages.
     try {
-      const response = await axios.post(GenericRetailAdapter.KLEVU_CONFIG.endpoint, {
-        context: { apiKeys: [GenericRetailAdapter.KLEVU_CONFIG.apiKey] },
+      const response = await axios.post(klevuEndpoint, {
+        context: { apiKeys: [klevuKey] },
         recordQueries: [{
           id: 'catalog',
           typeOfRequest: 'SEARCH',

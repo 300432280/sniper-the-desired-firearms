@@ -250,7 +250,7 @@ async function processStreamCatalogCrawl(
         where: { id: siteId },
         select: { streamState: true, crawlTuning: true, crawlPhase: true },
       });
-      if (site && (site as any).crawlPhase === 'bootstrap') {
+      if (site && site.crawlPhase === 'bootstrap') {
         await sq.add('crawl-catalog', {
           siteId, domain, url: data.url,
           baseBudget: data.baseBudget, capacity: data.capacity,
@@ -270,8 +270,10 @@ async function processStreamCatalogCrawl(
   return;
 }
 
-// ── OLD TIER-SPLIT CODE (preserved as _legacyStreamCatalogCrawl for potential reuse) ──
-async function _legacyStreamCatalogCrawl(
+// ── Legacy tier-split code removed (was _legacyStreamCatalogCrawl) ──
+// Bootstrap now uses single continuous crawl. Maintain uses DB verification.
+// If needed for reference, see git commit before this cleanup.
+async function _removed_legacyStreamCatalogCrawl(
   data: CatalogJobData,
   streamState: SiteStreamState,
   tuning: ReturnType<typeof resolveTuning>,
@@ -370,7 +372,7 @@ async function _legacyStreamCatalogCrawl(
         where: { id: siteId },
         select: { tierState: true, streamState: true, crawlTuning: true, hasWaf: true, crawlPhase: true },
       });
-      if (site && (site as any).crawlPhase === 'bootstrap') {
+      if (site && site.crawlPhase === 'bootstrap') {
         const freshStreamState = parseStreamState(site.streamState);
         const freshTierState = parseTierState(site.tierState);
         const freshActiveTiers = getActiveTiers(freshTierState);
@@ -521,21 +523,8 @@ async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
   await selfQueueNextBatch(siteId, domain, tier, hasWaf);
 }
 
-// Track when each tier completed its cycle (no more products to verify).
-// Key: "siteId:tier" → cooldown end time. Scheduler tick also checks this.
-const maintainCooldowns = new Map<string, number>();
-
-/** Check if a maintain tier is in cooldown */
-export function isMaintainTierInCooldown(siteId: string, tier: 2 | 3 | 4): boolean {
-  const key = `${siteId}:${tier}`;
-  const cooldownEnd = maintainCooldowns.get(key);
-  if (!cooldownEnd) return false;
-  if (Date.now() >= cooldownEnd) {
-    maintainCooldowns.delete(key);
-    return false;
-  }
-  return true;
-}
+// Cooldown tracking extracted to maintain-cooldown.ts (shared with scheduler)
+import { isMaintainTierInCooldown, setMaintainTierCooldown } from './maintain-cooldown';
 
 /**
  * After finishing a verify batch, immediately queue the next batch if budget allows.
@@ -557,7 +546,7 @@ async function selfQueueNextBatch(
       where: { id: siteId },
       select: { baseBudget: true, capacity: true, crawlTuning: true, crawlPhase: true, hasWaf: true },
     });
-    if (!site || (site as any).crawlPhase !== 'maintain') return;
+    if (!site || site.crawlPhase !== 'maintain') return;
 
     const { allocateMaintainTokens } = await import('./token-budget');
     const tuning = resolveTuning(site.crawlTuning);
@@ -593,8 +582,7 @@ async function selfQueueNextBatch(
     if (products.length === 0) {
       // Tier completed its cycle — enter cooldown
       const cooldownHrs = { 2: tuning.maintainT2CooldownHrs, 3: tuning.maintainT3CooldownHrs, 4: tuning.maintainT4CooldownHrs }[tier];
-      const cooldownEnd = Date.now() + cooldownHrs * 3600000;
-      maintainCooldowns.set(`${siteId}:${tier}`, cooldownEnd);
+      setMaintainTierCooldown(siteId, tier, cooldownHrs);
       console.log(`[VerifyWorker] ${domain} T${tier}: cycle complete, cooldown ${cooldownHrs}h`);
       return;
     }

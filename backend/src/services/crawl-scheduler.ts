@@ -222,7 +222,7 @@ export async function schedulerTick(): Promise<void> {
 
     // Queue T2-T4 work based on crawl phase
     if (coldStart.catalogAllowed) {
-      if ((site as any).crawlPhase === 'maintain') {
+      if (site.crawlPhase === 'maintain') {
         // ── MAINTAIN PHASE: verify products from DB ──
         console.log(`[Scheduler] ${site.domain}: maintain phase, queuing verification`);
         await queueMaintainVerification(site, effectiveBudgetCap, tuning);
@@ -485,8 +485,7 @@ async function queueMaintainVerification(
     { tier: 4 as const, minDays: tuning.maintainT4MinDays, maxDays: tuning.maintainT4MaxDays ?? 365, tokens: allocation.tier4 },
   ];
 
-  // Import cooldown check from worker
-  const { isMaintainTierInCooldown } = await import('./worker');
+  const { isMaintainTierInCooldown } = await import('./maintain-cooldown');
 
   for (const t of tiers) {
     if (t.tokens <= 0) continue;
@@ -536,7 +535,7 @@ async function queueMaintainVerification(
  * Also compares DB count vs live count — if significantly lower, don't transition.
  */
 async function checkBootstrapComplete(site: any): Promise<void> {
-  if ((site as any).crawlPhase !== 'bootstrap') return;
+  if (site.crawlPhase !== 'bootstrap') return;
 
   const streamState = parseStreamState(site.streamState);
   if (!streamState) return;
