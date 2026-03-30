@@ -186,7 +186,7 @@ export async function crawlCatalogTier(params: {
 
         const catalogPage = await adapter.fetchCatalogPage(origin, page, {
           sortBy: 'newest',
-          perPage: params.hasWaf ? 100 : 50,
+          perPage: params.hasWaf ? 20 : 50,
           dateAfter: tierState.dateRangeStart || undefined,
           dateBefore: tierState.dateRangeEnd || undefined,
           hasWaf: params.hasWaf,
@@ -503,7 +503,7 @@ export async function crawlStreamTier(params: {
 
         const catalogPage = await adapter.fetchCatalogPage(origin, page, {
           sortBy: 'newest',
-          perPage: params.hasWaf ? 100 : 50, // WAF sites use cookie-based API — can handle larger pages
+          perPage: params.hasWaf ? 20 : 50, // WAF sites use smaller pages to avoid Store API enrichment 403s
           dateAfter: useDateRanges ? (tierState.dateRangeStart || undefined) : undefined,
           dateBefore: useDateRanges ? (tierState.dateRangeEnd || undefined) : undefined,
           hasWaf: params.hasWaf,
