@@ -406,10 +406,11 @@ export class WooCommerceAdapter extends AbstractAdapter {
       // Two passes: in-stock (default) then out-of-stock, since Store API
       // only returns in-stock products unless stock_status=outofstock is set.
       const ids = [...wpIdToUrl.keys()];
-      // Use smaller chunks for WAF sites (long include= params get blocked by Sucuri)
       const chunkSize = options?.hasWaf ? 10 : 100;
       for (let i = 0; i < ids.length; i += chunkSize) {
         const chunk = ids.slice(i, i + chunkSize);
+        // Delay between chunks for WAF sites — prevents Sucuri from detecting burst
+        if (options?.hasWaf && i > 0) await new Promise(r => setTimeout(r, 800));
         for (const stockFilter of [undefined, 'outofstock'] as const) {
           let enriched = false;
           // Retry up to 3 times with fresh cookies each attempt
