@@ -193,13 +193,19 @@ async function processStreamCatalogCrawl(
 
   console.log(`[CatalogWorker] Bootstrap crawl: ${domain} — page ${tierState.currentPage}, ${totalCatalogTokens} tokens`);
 
+  // Read perPage from site profile (WAF sites need smaller pages for Store API enrichment)
+  const { _getSiteCacheEntry } = await import('./scraper/adapter-registry');
+  const profileEntry = _getSiteCacheEntry(domain.replace(/^www\./, ''));
+  const profilePerPage = profileEntry?.siteProfile?.perPage;
+
   // Crawl using the adapter, NO date filters
   const result = await crawlStreamTier({
     siteId, url, domain, stream,
-    tier: 4, // Use tier 4 for token tracking
+    tier: 4,
     tierState,
     tokensAllocated: totalCatalogTokens,
     hasWaf: data.hasWaf,
+    perPage: profilePerPage,
   });
 
   // Update totalPages if discovered

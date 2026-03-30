@@ -470,6 +470,7 @@ export async function crawlStreamTier(params: {
   tierState: StreamTierState;
   tokensAllocated: number;
   hasWaf?: boolean;
+  perPage?: number; // From site profile — overrides default (WAF: 20, normal: 50)
 }): Promise<StreamCrawlResult> {
   const { siteId, url, stream, tier, tierState, tokensAllocated } = params;
   const { adapter } = await getAdapterForUrl(url);
@@ -503,7 +504,7 @@ export async function crawlStreamTier(params: {
 
         const catalogPage = await adapter.fetchCatalogPage(origin, page, {
           sortBy: 'newest',
-          perPage: params.hasWaf ? 20 : 50, // WAF sites use smaller pages to avoid Store API enrichment 403s
+          perPage: params.perPage || (params.hasWaf ? 20 : 50),
           dateAfter: useDateRanges ? (tierState.dateRangeStart || undefined) : undefined,
           dateBefore: useDateRanges ? (tierState.dateRangeEnd || undefined) : undefined,
           hasWaf: params.hasWaf,
