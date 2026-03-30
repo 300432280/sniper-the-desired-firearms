@@ -302,8 +302,9 @@ export class GenericRetailAdapter extends AbstractAdapter {
     page: number,
     options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string },
   ): Promise<CatalogPage> {
-    // Only use Klevu API for alflahertys.com
-    if (!origin.includes('alflahertys.com')) {
+    // Only use Klevu API for sites with klevuApiKey in profile
+    const profile = GenericRetailAdapter._getProfileSync(origin);
+    if (!profile?.apiConfig?.klevuApiKey) {
       return { products: [] };
     }
 

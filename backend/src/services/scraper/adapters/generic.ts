@@ -73,19 +73,19 @@ export class GenericAdapter extends AbstractAdapter {
   }
 
   getNewArrivalsUrls(origin: string): string[] {
-    const urls = [
-      `${origin}/`,
-    ];
+    // Read catalog URLs from site profile
+    try {
+      const domain = new URL(origin).hostname.replace(/^www\./, '');
+      const { _getSiteCacheEntry } = require('../adapter-registry');
+      const entry = _getSiteCacheEntry?.(domain);
+      if (entry?.siteProfile?.catalogUrls?.length) {
+        const urls = entry.siteProfile.catalogUrls.map((u: string) => u.startsWith('http') ? u : `${origin}${u}`);
+        urls.push(`${origin}/`);
+        return urls;
+      }
+    } catch { /* profile lookup failed */ }
 
-    // TownPost classifieds — firearms and sporting goods categories
-    if (origin.includes('townpost.ca')) {
-      urls.unshift(
-        `${origin}/category/guns`,
-        `${origin}/category/sporting-goods`,
-      );
-    }
-
-    return urls;
+    return [`${origin}/`];
   }
 
   extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
