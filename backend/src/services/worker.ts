@@ -270,10 +270,10 @@ async function processStreamCatalogCrawl(
   return;
 }
 
-// ── Legacy tier-split code removed (was _legacyStreamCatalogCrawl) ──
-// Bootstrap now uses single continuous crawl. Maintain uses DB verification.
-// If needed for reference, see git commit before this cleanup.
-async function _removed_legacyStreamCatalogCrawl(
+// Legacy _legacyStreamCatalogCrawl removed — see git history.
+// Bootstrap: single continuous crawl (above). Maintain: DB verification (below).
+
+async function _legacyRemoved(
   data: CatalogJobData,
   streamState: SiteStreamState,
   tuning: ReturnType<typeof resolveTuning>,

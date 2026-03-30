@@ -124,14 +124,14 @@ async function main() {
 
   // Price and stock must be >= 60% for bootstrap to be considered complete
   // (some OOS products genuinely have no price — 60% is the minimum acceptable)
-  if (pricePct < 60) {
-    console.log('    FAIL — price coverage ' + pricePct + '% < 60% minimum');
+  if (pricePct < 95) {
+    console.log('    FAIL — price coverage ' + pricePct + '% < 95% minimum');
     pass = false;
   } else {
     console.log('    PASS — price coverage ' + pricePct + '%');
   }
-  if (stockPct < 60) {
-    console.log('    FAIL — stock coverage ' + stockPct + '% < 60% minimum');
+  if (stockPct < 95) {
+    console.log('    FAIL — stock coverage ' + stockPct + '% < 95% minimum');
     pass = false;
   } else {
     console.log('    PASS — stock coverage ' + stockPct + '%');
