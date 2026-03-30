@@ -2,7 +2,7 @@
 
 Canadian firearm market monitoring web app. Monitors 60+ retailer websites, classifieds, forums, and auction platforms for user-defined keywords and sends email/SMS alerts when **new** matches are found.
 
-**v3.0 Architecture:** Two-phase crawler system (Bootstrap → Maintain) with sourceId product tracking. **Bootstrap phase** indexes all products via listing pages using per-stream tier engine (page-range or date-range partitioning). **Maintain phase** verifies products from DB by visiting each product's detail page — detecting sold/deleted/wanted status, updating prices/titles/thumbnails with authoritative detail-page data. T1 catches new listings with platform-specific sort-by-date URLs. 125,000+ products indexed across 60+ sites. Products tracked by platform-stable IDs (Shopify product ID, WP post ID, Drupal node ID, auction lot ID). Uses pressure/capacity model with per-site token budgets and admin-tunable parameters.
+**v3.1 Architecture:** Two-phase crawler (Bootstrap → Maintain) with Site Profile modularity and sourceId tracking. **Bootstrap** indexes all products via single continuous paginated crawl (no date filters, no tier split, self-queuing). **Maintain** verifies products from DB by visiting each detail page — detecting sold/deleted/wanted, updating prices/titles/thumbnails via JSON-LD/OG/HTML extraction. Each of 63 sites has a complete SiteProfile JSON — zero hardcoded domain checks in adapter code. T1 catches new listings with platform-specific sort URLs. 140,000+ products indexed across 60+ sites. Products tracked by platform-stable IDs. Per-site token budgets with WAF-aware timeouts (30s) and profile-driven perPage.
 
 Uses an adapter-based scraping framework with platform-specific adapters for Shopify, WooCommerce, BigCommerce, Magento, and more. Supports "Search All Sites" to scan across the entire monitored network in one click. Includes authenticated forum scanning with encrypted credential storage and a built-in test store for end-to-end testing.
 
@@ -74,7 +74,9 @@ Each site has a **SiteProfile** JSON (`MonitoredSite.siteProfile`) containing AL
 - Structural notes persisting across sessions
 
 Generic adapters read from profiles — zero hardcoded domain checks in adapter code.
-32 sites have profiles. New sites get profiles via DB insert, not code changes.
+All 63 sites have complete profiles. New sites onboarded via DB insert, not code changes.
+Profile-driven: searchUrl, catalogUrls, sortParam, perPage, timeout, WAF config, Klevu API keys, forum sections.
+Maintain cooldowns and tier shares configurable per-site via profile.
 
 ### sourceId Product Tracking
 
