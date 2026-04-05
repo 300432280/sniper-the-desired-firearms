@@ -1040,13 +1040,18 @@ async function probeB1_PlatformDetect(site) {
   var issues = [];
   var origin = site.url.replace(/\/$/, '');
 
-  var wpResp = await safeFetch(origin + '/wp-json/wp/v2/product?per_page=1', 5000);
+  // Use WAF-aware fetching — sites with hasWaf (e.g. Sucuri) need cookies for API probes
+  var wpResp = await wafApiGet(origin + '/wp-json/wp/v2/product', { per_page: 1 }, site, 5000)
+    .then(function(r) { return { status: r.status, data: typeof r.data === 'string' ? r.data : JSON.stringify(r.data || ''), headers: r.headers }; })
+    .catch(function() { return { status: 0, data: '', headers: {} }; });
   await delay(300);
-  var storeResp = await safeFetch(origin + '/wp-json/wc/store/v1/products?per_page=1', 5000);
+  var storeResp = await wafApiGet(origin + '/wp-json/wc/store/v1/products', { per_page: 1 }, site, 5000)
+    .then(function(r) { return { status: r.status, data: typeof r.data === 'string' ? r.data : JSON.stringify(r.data || ''), headers: r.headers }; })
+    .catch(function() { return { status: 0, data: '', headers: {} }; });
   await delay(300);
   var shopifyResp = await safeFetch(origin + '/products.json?limit=1', 5000);
   await delay(300);
-  var homeResp = await safeFetch(origin, 10000);
+  var homeResp = await wafFetch(origin, site, 10000);
 
   var detected = null;
   var signals = [];
@@ -1127,40 +1132,48 @@ async function probeB2_ApiHealth(site) {
     } catch (e) { results.push(fail('Homepage: ' + e.message)); }
   }
 
-  // Anti-bot check
-  var uas = [UA, UA_ALT1, UA_ALT2];
-  var uaLabels = ['Chrome/Win', 'Chrome/Mac', 'Firefox/Linux'];
-  var blocked = 0;
-  for (var i = 0; i < uas.length; i++) {
-    try {
-      var resp = await axios.get(origin, {
-        headers: { 'User-Agent': uas[i], Accept: 'text/html' },
-        timeout: 10000, validateStatus: function() { return true; },
-      });
-      if (resp.status === 403 || resp.status === 429) blocked++;
-      else {
-        var body = typeof resp.data === 'string' ? resp.data.slice(0, 5000) : '';
-        if (/captcha|challenge-platform|cf-browser-verification|please verify/i.test(body)) blocked++;
-      }
-    } catch { blocked++; }
+  // Anti-bot check — skip for known WAF sites (raw requests always blocked by WAF, not anti-bot)
+  if (site.hasWaf) {
+    results.push(info('Anti-bot: skipped (site has WAF — raw requests blocked by WAF, not anti-bot)'));
+  } else {
+    var uas = [UA, UA_ALT1, UA_ALT2];
+    var uaLabels = ['Chrome/Win', 'Chrome/Mac', 'Firefox/Linux'];
+    var blocked = 0;
+    for (var i = 0; i < uas.length; i++) {
+      try {
+        var resp = await axios.get(origin, {
+          headers: { 'User-Agent': uas[i], Accept: 'text/html' },
+          timeout: 10000, validateStatus: function() { return true; },
+        });
+        if (resp.status === 403 || resp.status === 429) blocked++;
+        else {
+          var body = typeof resp.data === 'string' ? resp.data.slice(0, 5000) : '';
+          if (/captcha|challenge-platform|cf-browser-verification|please verify/i.test(body)) blocked++;
+        }
+      } catch { blocked++; }
+    }
+    if (blocked === 0) results.push(pass('Anti-bot: 3/3 UAs accepted'));
+    else if (blocked < 3) results.push(warn(`Anti-bot: ${blocked}/3 blocked`));
+    else { results.push(fail('Anti-bot: All blocked')); issues.push(makeIssue('ALL_UAS_BLOCKED', 'All UAs blocked', null, 'high')); }
   }
-  if (blocked === 0) results.push(pass('Anti-bot: 3/3 UAs accepted'));
-  else if (blocked < 3) results.push(warn(`Anti-bot: ${blocked}/3 blocked`));
-  else { results.push(fail('Anti-bot: All blocked')); issues.push(makeIssue('ALL_UAS_BLOCKED', 'All UAs blocked', null, 'high')); }
 
-  // Rate limit check (3 requests with 200ms gaps — NOT a burst)
-  var rateLimited = 0;
-  for (var j = 0; j < 3; j++) {
-    try {
-      var resp2 = await axios.get(origin, {
-        headers: { 'User-Agent': UA }, timeout: 10000, validateStatus: function() { return true; },
-      });
-      if (resp2.status === 429) rateLimited++;
-      await delay(200);
-    } catch { /* ignore */ }
+  // Rate limit check — skip for WAF sites (307/403 from WAF is not rate limiting)
+  if (site.hasWaf) {
+    results.push(info('Rate limit: skipped (WAF site — use cookies to test rate limits)'));
+  } else {
+    var rateLimited = 0;
+    for (var j = 0; j < 3; j++) {
+      try {
+        var resp2 = await axios.get(origin, {
+          headers: { 'User-Agent': UA }, timeout: 10000, validateStatus: function() { return true; },
+        });
+        if (resp2.status === 429) rateLimited++;
+        await delay(200);
+      } catch { /* ignore */ }
+    }
+    if (rateLimited > 0) results.push(warn(`Rate limit: ${rateLimited}/3 got 429`));
+    else results.push(pass('No 429s on 3 requests'));
   }
-  if (rateLimited > 0) results.push(warn(`Rate limit: ${rateLimited}/3 got 429`));
-  else results.push(pass('No 429s on 3 requests'));
 
   var hasFail = issues.some(i => i.severity === 'high') || results.some(r => r.includes('FAIL'));
   var hasWarn = issues.some(i => i.severity === 'medium') || results.some(r => r.includes('WARN'));

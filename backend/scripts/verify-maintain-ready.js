@@ -29,40 +29,25 @@ async function main() {
   var dbTotal = await p.productIndex.count({ where: { siteId: site.id } });
   console.log('\n[1] DB: ' + dbActive + ' active / ' + dbTotal + ' total');
 
-  // 2. Live product count (platform-specific)
+  // 2. Live product count (profile-driven — no hardcoded platform checks)
   var liveCount = null;
+  var profile = site.siteProfile || {};
   try {
-    if (site.adapterType === 'shopify') {
-      var r = await axios.get(site.url + '/products.json?limit=1', { timeout: 10000, validateStatus: function() { return true; } });
-      if (r.status === 200 && r.data.products) {
-        // Shopify doesn't give total count from products.json, estimate from pages
-        var r2 = await axios.get(site.url + '/products.json?limit=250', { timeout: 10000 });
-        liveCount = r2.data.products.length;
-        if (liveCount === 250) liveCount = '250+'; // More than one page
-      }
-    } else if (site.adapterType === 'woocommerce') {
-      var headers = { 'User-Agent': 'Mozilla/5.0' };
-      if (site.hasWaf) {
-        try {
-          var { ensureCookies } = require('../src/services/scraper/waf-cookie-manager');
-          var creds = await ensureCookies(new URL(site.url).hostname, site.url);
-          headers['Cookie'] = creds.cookies;
-          headers['User-Agent'] = creds.userAgent;
-        } catch (e) {}
-      }
-      var r3 = await axios.get(site.url.replace(/\/$/, '') + '/wp-json/wp/v2/product', {
-        params: { per_page: 1 }, headers: headers, timeout: 15000, validateStatus: function() { return true; }
-      });
-      if (r3.status === 200) liveCount = parseInt(r3.headers['x-wp-total'] || '0');
+    if (profile.productCountMethod) {
+      var { probeExpectedProductCount } = require('../dist/services/product-count-probe');
+      liveCount = await probeExpectedProductCount(site.url, profile.productCountMethod, { hasWaf: site.hasWaf });
     }
-  } catch (e) {}
+  } catch (e) {
+    // Probe failed — try stored expectedProductCount
+    if (profile.expectedProductCount) liveCount = profile.expectedProductCount;
+  }
 
   if (liveCount !== null) {
     var ratio = typeof liveCount === 'number' ? Math.round(dbActive / liveCount * 100) : '?';
     console.log('[2] Live: ~' + liveCount + ' | Coverage: ' + ratio + '%');
-    if (typeof liveCount === 'number' && dbActive >= liveCount * 0.8) {
+    if (typeof liveCount === 'number' && dbActive >= liveCount * 0.95) {
       checks.coverage = true;
-      console.log('    PASS — DB has >= 80% of live products');
+      console.log('    PASS — DB has >= 95% of live products');
     } else {
       pass = false;
       console.log('    FAIL — DB coverage too low');
@@ -93,13 +78,26 @@ async function main() {
   if (ss && ss.streams && ss.tiers) {
     var allComplete = true;
     var tierStatus = [];
-    for (var stream of ss.streams) {
-      for (var tier of [2, 3, 4]) {
-        var key = stream.id + ':' + tier;
+    if (site.crawlPhase === 'bootstrap') {
+      // Bootstrap: only check T4 on the first stream
+      var firstStream = ss.streams[0];
+      if (firstStream) {
+        var key = firstStream.id + ':4';
         var ts = ss.tiers[key];
         var completed = ts && ts.lastCycleCompletedAt;
         tierStatus.push(key + '=' + (completed ? 'done' : 'pending'));
         if (!completed) allComplete = false;
+      }
+    } else {
+      // Maintain: check all tiers on all streams
+      for (var stream of ss.streams) {
+        for (var tier of [2, 3, 4]) {
+          var key = stream.id + ':' + tier;
+          var ts = ss.tiers[key];
+          var completed = ts && ts.lastCycleCompletedAt;
+          tierStatus.push(key + '=' + (completed ? 'done' : 'pending'));
+          if (!completed) allComplete = false;
+        }
       }
     }
     console.log('\n[4] Tiers: ' + (allComplete ? 'ALL COMPLETE' : 'NOT COMPLETE'));
