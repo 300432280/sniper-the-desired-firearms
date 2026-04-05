@@ -17,13 +17,16 @@ interface ICollectorItem {
   ImageUrl?: string;
 }
 
-function icollectorFriendlyUrl(title: string, itemId: number): string {
+function icollectorFriendlyUrl(title: string, itemId: number, origin: string, urlPattern?: string): string {
   const slug = title
     .replace(/[^a-zA-Z0-9\- ]/g, ' ')
     .trim()
     .replace(/\s+/g, '-')
     .replace(/-+$|(-)+/g, '-');
-  return `https://www.icollector.com/${slug}_i${itemId}`;
+  if (urlPattern) {
+    return `${origin}${urlPattern.replace('{slug}', slug).replace('{itemId}', String(itemId))}`;
+  }
+  return `${origin}/${slug}_i${itemId}`;
 }
 
 /**
@@ -39,7 +42,12 @@ export class ICollectorAdapter extends AbstractAdapter {
   }
 
   async searchViaApi(_origin: string, keyword: string, options: ScrapeOptions): Promise<ScrapedMatch[]> {
-    const API_URL = 'https://www.icollector.com/handlers/controls/CloudsearchItemSearch.ashx';
+    // Read API endpoint and origin from site profile, fall back to defaults
+    const { _getSiteCacheEntry } = require('../adapter-registry');
+    const domain = new URL(_origin).hostname;
+    const entry = _getSiteCacheEntry?.(domain);
+    const profile = entry?.siteProfile;
+    const API_URL = profile?.apiEndpoint || `${_origin}/handlers/controls/CloudsearchItemSearch.ashx`;
     const maxItems = options.fast ? 50 : 100;
 
     const response = await axios.get(API_URL, {
@@ -56,10 +64,10 @@ export class ICollectorAdapter extends AbstractAdapter {
         hasImage: 'false',
       },
       headers: {
-        'User-Agent': pickUserAgent('icollector.com'),
+        'User-Agent': pickUserAgent(domain),
         Accept: 'application/json, text/javascript, */*; q=0.01',
         'X-Requested-With': 'XMLHttpRequest',
-        Referer: 'https://www.icollector.com/search.aspx',
+        Referer: `${_origin}/search.aspx`,
       },
       timeout: 20000,
     });
@@ -83,7 +91,7 @@ export class ICollectorAdapter extends AbstractAdapter {
       if (seen.has(titleKey)) continue;
       seen.add(titleKey);
 
-      const url = icollectorFriendlyUrl(title, item.ItemID);
+      const url = icollectorFriendlyUrl(title, item.ItemID, _origin, profile?.urlPattern);
       const price = item.ItemCurrentBidAmount > 0 ? item.ItemCurrentBidAmount : undefined;
       const seller = item.AuctioneerName || undefined;
       const thumbnail = item.ImageUrl || undefined;
@@ -189,7 +197,12 @@ export class ICollectorAdapter extends AbstractAdapter {
     page: number,
     options?: { sortBy?: 'newest' | 'oldest'; perPage?: number },
   ): Promise<CatalogPage> {
-    const API_URL = 'https://www.icollector.com/handlers/controls/CloudsearchItemSearch.ashx';
+    // Read API endpoint from site profile, fall back to defaults
+    const { _getSiteCacheEntry } = require('../adapter-registry');
+    const domain = new URL(origin).hostname;
+    const entry = _getSiteCacheEntry?.(domain);
+    const profile = entry?.siteProfile;
+    const API_URL = profile?.apiEndpoint || `${origin}/handlers/controls/CloudsearchItemSearch.ashx`;
     const perPage = Math.min(options?.perPage ?? 100, 100);
 
     const resp = await axios.get(API_URL, {
@@ -206,10 +219,10 @@ export class ICollectorAdapter extends AbstractAdapter {
         hasImage: 'false',
       },
       headers: {
-        'User-Agent': pickUserAgent('icollector.com'),
+        'User-Agent': pickUserAgent(domain),
         Accept: 'application/json, text/javascript, */*; q=0.01',
         'X-Requested-With': 'XMLHttpRequest',
-        Referer: 'https://www.icollector.com/search.aspx',
+        Referer: `${origin}/search.aspx`,
       },
       timeout: 20000,
     });
@@ -224,7 +237,7 @@ export class ICollectorAdapter extends AbstractAdapter {
     }
 
     const products: CatalogProduct[] = items.map(item => ({
-      url: icollectorFriendlyUrl(item.ItemTitle || '', item.ItemID),
+      url: icollectorFriendlyUrl(item.ItemTitle || '', item.ItemID, origin, profile?.urlPattern),
       sourceId: String(item.ItemID),
       title: (item.ItemTitle || '').trim().slice(0, 160),
       price: item.ItemCurrentBidAmount > 0 ? item.ItemCurrentBidAmount : undefined,
