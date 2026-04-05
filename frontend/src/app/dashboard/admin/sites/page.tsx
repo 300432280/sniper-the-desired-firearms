@@ -817,12 +817,20 @@ export default function SiteMonitorPage() {
           </h1>
           <p className="text-[10px] text-foreground-dim mt-1">v2 Pressure/Capacity Model + Catalog Tiers</p>
         </div>
-        <button
-          onClick={() => { setLoading(true); fetchSites(); }}
-          className="text-[11px] font-heading uppercase tracking-wider px-4 py-2 border border-border text-foreground-muted hover:border-accent/30 hover:text-accent transition-colors"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/admin/profiles"
+            className="text-[11px] font-heading uppercase tracking-wider px-4 py-2 border border-border text-foreground-muted hover:border-accent/30 hover:text-accent transition-colors"
+          >
+            Site Profiles
+          </Link>
+          <button
+            onClick={() => { setLoading(true); fetchSites(); }}
+            className="text-[11px] font-heading uppercase tracking-wider px-4 py-2 border border-border text-foreground-muted hover:border-accent/30 hover:text-accent transition-colors"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Stats bar */}
