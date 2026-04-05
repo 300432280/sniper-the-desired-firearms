@@ -270,6 +270,10 @@ model CrawlEvent {
   responseTimeMs Int?
   statusCode     Int?
   matchesFound   Int           @default(0)
+  pagesScanned   Int?
+  tokensUsed     Int?
+  tier           Int?
+  jobType        String?
   errorMessage   String?
   crawledAt      DateTime      @default(now())
 

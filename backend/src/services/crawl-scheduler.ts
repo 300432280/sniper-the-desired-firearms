@@ -7,10 +7,11 @@
  *
  * v2: Integrates token budget, cold start, and tier-based catalog crawling.
  *
- * Safety ceilings (hard limits, no override):
- * - MAX_CRAWLS_PER_SITE_PER_HOUR = 4
- * - MAX_CONCURRENT_CRAWLS = 10
- * - MAX_GLOBAL_CRAWLS_PER_HOUR = 200
+ * Rate limiting:
+ * - Token budget: per-site hourly request cap (the primary rate limiter)
+ * - BullMQ concurrency=20: max simultaneous jobs across all sites
+ * - MAX_CONCURRENT_CRAWLS = 10: max sites dispatched per scheduler tick
+ * - MAX_GLOBAL_CRAWLS_PER_HOUR = 200: global hourly dispatch cap
  * - CRAWL_LOCK_TIMEOUT_MS = 5 minutes (auto-expire)
  */
 
@@ -27,32 +28,12 @@ import { resolveTuning } from './crawl-tuning';
 
 // ── Safety Ceilings ──────────────────────────────────────────────────────────
 
-const MAX_CRAWLS_PER_SITE_PER_HOUR = 4;
-const MAX_CONCURRENT_CRAWLS = 10;
-const MAX_GLOBAL_CRAWLS_PER_HOUR = 200;
+const MAX_CONCURRENT_CRAWLS = 10;     // Max sites dispatched per tick (based on active crawlLocks)
+const MAX_GLOBAL_CRAWLS_PER_HOUR = 200; // Global hourly cap across all sites
 const CRAWL_LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
-// Track recent crawl counts in memory (reset periodically)
-const siteCrawlCounts = new Map<string, { count: number; windowStart: number }>();
+// Track global crawl count in memory (reset hourly)
 let globalCrawlCount = { count: 0, windowStart: Date.now() };
-
-function getSiteCrawlCount(siteId: string): number {
-  const entry = siteCrawlCounts.get(siteId);
-  if (!entry || Date.now() - entry.windowStart > 60 * 60 * 1000) {
-    return 0; // Window expired
-  }
-  return entry.count;
-}
-
-function incrementSiteCrawlCount(siteId: string): void {
-  const now = Date.now();
-  const entry = siteCrawlCounts.get(siteId);
-  if (!entry || now - entry.windowStart > 60 * 60 * 1000) {
-    siteCrawlCounts.set(siteId, { count: 1, windowStart: now });
-  } else {
-    entry.count++;
-  }
-}
 
 function getGlobalCrawlCount(): number {
   if (Date.now() - globalCrawlCount.windowStart > 60 * 60 * 1000) {
@@ -115,27 +96,39 @@ export async function schedulerTick(): Promise<void> {
     orderBy: { nextCrawlAt: 'asc' }, // Most overdue first
   });
 
-  // 2b. Recover stale/expired stream tiers for ALL enabled sites
+  // 2b. Recover stale/expired stream tiers for ALL enabled sites (not just due ones).
   // This runs regardless of whether sites are "due" — stuck tiers can prevent
   // sites from becoming due in the first place, creating a deadlock.
-  const STALE_PROGRESS_MS = 15 * 60 * 1000;
-  const allEnabledSites = dueSites.length > 0 ? dueSites : await prisma.monitoredSite.findMany({
+  // IMPORTANT: Always query all enabled sites. Previously this only checked dueSites
+  // when non-empty, which missed stuck tiers on sites that weren't "due" yet.
+  const STUCK_TIER_MS = 2 * 60 * 60 * 1000; // 2 hours — hard stuck, likely crashed worker
+  const STALE_PROGRESS_MS = 15 * 60 * 1000; // 15 min — stale in_progress without active lock
+  const allEnabledSites = await prisma.monitoredSite.findMany({
     where: { isEnabled: true, isPaused: false, NOT: { streamState: { equals: Prisma.DbNull } } },
-    select: { id: true, domain: true, streamState: true },
+    select: { id: true, domain: true, streamState: true, crawlLock: true, crawlPhase: true },
   });
   for (const site of allEnabledSites) {
     const ss = parseStreamState(site.streamState);
     if (!ss) continue;
     let needsPersist = false;
-    for (const [, ts] of Object.entries(ss.tiers)) {
+    for (const [tierKey, ts] of Object.entries(ss.tiers)) {
       if (ts.status === 'in_progress' && ts.cycleStartedAt) {
         const age = now.getTime() - new Date(ts.cycleStartedAt).getTime();
-        if (age > STALE_PROGRESS_MS) {
+        // If no active crawlLock, 15 min is enough to declare stale.
+        // If crawlLock exists, wait 2 hours (worker may still be running).
+        const threshold = site.crawlLock ? STUCK_TIER_MS : STALE_PROGRESS_MS;
+        if (age > threshold) {
+          const hours = (age / (60 * 60 * 1000)).toFixed(1);
           ts.status = 'idle';
-          ts.currentPage = ts.pageRangeStart || 1;
+          // During bootstrap, preserve currentPage so the crawl resumes where it left off.
+          // Resetting to page 1 causes re-crawling of already-seen pages and incomplete coverage.
+          if (site.crawlPhase !== 'bootstrap') {
+            ts.currentPage = ts.pageRangeStart || 1;
+          }
           ts.currentPageUrl = undefined;
           ts.cycleStartedAt = undefined;
           needsPersist = true;
+          console.log(`[Scheduler] ${site.domain}: recovered stuck tier ${tierKey} (in_progress for ${hours}h)${site.crawlPhase === 'bootstrap' ? ` — preserving page ${ts.currentPage}` : ''}`);
         }
       }
       if (ts.status === 'cooldown' && ts.cooldownEndsAt && new Date(ts.cooldownEndsAt) <= now) {
@@ -149,7 +142,6 @@ export async function schedulerTick(): Promise<void> {
         where: { id: site.id },
         data: { streamState: ss as any },
       });
-      console.log(`[Scheduler] ${site.domain}: recovered stale/expired stream tiers`);
     }
   }
 
@@ -178,11 +170,9 @@ export async function schedulerTick(): Promise<void> {
     if (queued >= availableSlots) break;
     if (getGlobalCrawlCount() >= MAX_GLOBAL_CRAWLS_PER_HOUR) break;
 
-    // Per-site hourly ceiling
-    if (getSiteCrawlCount(site.id) >= MAX_CRAWLS_PER_SITE_PER_HOUR) {
-      console.log(`[Scheduler] ${site.domain} hit per-site hourly ceiling (${MAX_CRAWLS_PER_SITE_PER_HOUR}), skipping`);
-      continue;
-    }
+    // Rate limiting: token budget is the per-site limiter (tokens/hr).
+    // BullMQ concurrency=20 is the worker-level limiter.
+    // No per-site dispatch limit needed — self-queue bypasses it anyway.
 
     // Determine cold start phase for budget cap
     const coldStart = getColdStartStatus(site.addedAt, site.baseBudget, site.coldStartOverride);
@@ -201,6 +191,10 @@ export async function schedulerTick(): Promise<void> {
     });
 
     // Queue Tier 1 watermark crawl
+    // BullMQ priority: lower number = higher priority.
+    // T1 watermark (new listing detection) is always top priority.
+    // Maintain T1 > Bootstrap T1 > Maintain verify > Bootstrap catalog.
+    const isMaintain = site.crawlPhase === 'maintain';
     const tuning = resolveTuning(site.crawlTuning);
     const tuningObj = (site.crawlTuning && typeof site.crawlTuning === 'object') ? site.crawlTuning as Record<string, any> : {};
     await scrapeQueue.add('crawl-watermark', {
@@ -215,6 +209,7 @@ export async function schedulerTick(): Promise<void> {
       hasWaf: site.hasWaf,
     }, {
       jobId: `watermark-${site.id}-${Date.now()}`,
+      priority: isMaintain ? 1 : 2, // T1 maintain=1 (top), T1 bootstrap=2
       attempts: 1,
       removeOnComplete: 50,
       removeOnFail: 100,
@@ -225,7 +220,11 @@ export async function schedulerTick(): Promise<void> {
       if (site.crawlPhase === 'maintain') {
         // ── MAINTAIN PHASE: verify products from DB ──
         console.log(`[Scheduler] ${site.domain}: maintain phase, queuing verification`);
-        await queueMaintainVerification(site, effectiveBudgetCap, tuning);
+        try {
+          await queueMaintainVerification(site, effectiveBudgetCap, tuning);
+        } catch (err) {
+          console.error(`[Scheduler] ${site.domain}: maintain verification queue failed:`, err instanceof Error ? err.message : err);
+        }
       } else {
         // ── BOOTSTRAP PHASE: crawl listing pages (current approach) ──
         const tierState = parseTierState(site.tierState);
@@ -235,16 +234,36 @@ export async function schedulerTick(): Promise<void> {
         let streamState = parseStreamState(site.streamState);
         if (!streamState) {
           try {
-            const streams = await detectStreams(site.url, { hasWaf: site.hasWaf });
+            // Pass siteProfile so detectStreams uses catalogUrls from profile (profile-first)
+            const { _getSiteCacheEntry } = await import('./scraper/adapter-registry');
+            const profileEntry = _getSiteCacheEntry(site.domain.replace(/^www\./, ''));
+            const siteProfile = profileEntry?.siteProfile ?? null;
+
+            const streams = await detectStreams(site.url, { hasWaf: site.hasWaf, siteProfile });
             if (streams.length > 0) {
               await probeStreamTotalPages(streams, site.url, { hasWaf: site.hasWaf });
-              streamState = initStreamState(streams);
+              streamState = initStreamState(streams, site.crawlPhase);
               const pagesInfo = streams.filter(s => s.totalPages).map(s => `${s.id}:${s.totalPages}p`).join(', ');
               await prisma.monitoredSite.update({
                 where: { id: site.id },
                 data: { streamState: streamState as any },
               });
               console.log(`[Scheduler] Detected ${streams.length} stream(s) for ${site.domain}: ${streams.map(s => s.id).join(', ')}${pagesInfo ? ` (pages: ${pagesInfo})` : ''}`);
+
+              // Probe expected product count if profile has a method but no stored count
+              if (siteProfile?.productCountMethod && !siteProfile?.expectedProductCount) {
+                try {
+                  const { probeExpectedProductCount } = await import('./product-count-probe');
+                  const count = await probeExpectedProductCount(site.url, siteProfile.productCountMethod, { hasWaf: site.hasWaf });
+                  if (count !== null) {
+                    const updatedProfile = { ...siteProfile, expectedProductCount: count };
+                    await prisma.monitoredSite.update({ where: { id: site.id }, data: { siteProfile: updatedProfile } });
+                    console.log(`[Scheduler] ${site.domain}: probed expectedProductCount = ${count}`);
+                  }
+                } catch (probeErr) {
+                  console.error(`[Scheduler] ${site.domain}: product count probe failed:`, probeErr instanceof Error ? probeErr.message : probeErr);
+                }
+              }
             }
           } catch (err) {
             console.error(`[Scheduler] Stream detection failed for ${site.domain}:`, err instanceof Error ? err.message : err);
@@ -263,8 +282,10 @@ export async function schedulerTick(): Promise<void> {
             hasWaf: site.hasWaf,
             crawlTuning: site.crawlTuning,
             streamState: streamState ?? undefined,
+            crawlIntervalMin: site.crawlIntervalMin,
           }, {
             jobId: `catalog-${site.id}-${Date.now()}`,
+            priority: 10,
             attempts: 1,
             removeOnComplete: 50,
             removeOnFail: 100,
@@ -276,7 +297,6 @@ export async function schedulerTick(): Promise<void> {
       }
     }
 
-    incrementSiteCrawlCount(site.id);
     incrementGlobalCrawlCount();
     queued++;
   }
@@ -305,6 +325,10 @@ export async function onCrawlComplete(params: {
   responseTimeMs?: number;
   statusCode?: number;
   matchesFound: number;
+  pagesScanned?: number;
+  tokensUsed?: number;
+  tier?: number;
+  jobType?: string;
   errorMessage?: string;
   signals?: { hasWaf: boolean; hasRateLimit: boolean; hasCaptcha: boolean };
   headers?: Record<string, any>;
@@ -331,6 +355,10 @@ export async function onCrawlComplete(params: {
       responseTimeMs,
       statusCode,
       matchesFound,
+      pagesScanned: params.pagesScanned,
+      tokensUsed: params.tokensUsed,
+      tier: params.tier,
+      jobType: params.jobType,
       errorMessage: errorMessage?.slice(0, 500),
     },
   });
@@ -467,8 +495,14 @@ export async function initializeCrawlSchedule(): Promise<void> {
 
 /**
  * Queue verification jobs for maintain-phase sites.
- * Queries products from DB sorted by lastSeenAt ASC within each tier's date window.
+ * Products are PARTITIONED by firstSeenAt (product age), not staleVerifiedAt.
+ * Within each tier, products are ordered by staleVerifiedAt ASC (oldest verification first).
  * T1 gets priority on budget, T2-T4 share ALL remaining tokens.
+ *
+ * Tier assignment:
+ *   T2 = new listings (firstSeenAt 0-7 days ago) — verified most frequently
+ *   T3 = aging listings (firstSeenAt 8-20 days ago)
+ *   T4 = bulk catalog (firstSeenAt 21+ days ago) — verified least frequently
  */
 async function queueMaintainVerification(
   site: any,
@@ -477,7 +511,7 @@ async function queueMaintainVerification(
 ): Promise<void> {
   const now = new Date();
   const { allocateMaintainTokens } = await import('./token-budget');
-  const allocation = allocateMaintainTokens(site.id, effectiveBudgetCap, site.capacity, tuning);
+  const allocation = allocateMaintainTokens(site.id, effectiveBudgetCap, site.capacity, tuning, site.crawlIntervalMin || 20);
 
   const tiers = [
     { tier: 2 as const, minDays: tuning.maintainT2MinDays, maxDays: tuning.maintainT2MaxDays, tokens: allocation.tier2 },
@@ -487,32 +521,53 @@ async function queueMaintainVerification(
 
   const { isMaintainTierInCooldown } = await import('./maintain-cooldown');
 
+  console.log(`[MaintainVerify] ${site.domain}: token allocation T2=${allocation.tier2} T3=${allocation.tier3} T4=${allocation.tier4}`);
+
   for (const t of tiers) {
-    if (t.tokens <= 0) continue;
-    if (isMaintainTierInCooldown(site.id, t.tier)) continue; // Tier in cooldown
+    if (t.tokens <= 0) {
+      console.log(`[MaintainVerify] ${site.domain} T${t.tier}: skipped (0 tokens)`);
+      continue;
+    }
+    if (isMaintainTierInCooldown(site.id, t.tier)) {
+      console.log(`[MaintainVerify] ${site.domain} T${t.tier}: skipped (in cooldown)`);
+      continue;
+    }
 
-    const minDate = new Date(now.getTime() - t.maxDays * 86400000);
-    const maxDate = new Date(now.getTime() - t.minDays * 86400000);
+    // Partition by product age (firstSeenAt), NOT by last verification date.
+    // This prevents T2 from hoarding all products by constantly refreshing staleVerifiedAt.
+    const ageMaxDate = new Date(now.getTime() - t.minDays * 86400000);
+    const ageMinDate = new Date(now.getTime() - t.maxDays * 86400000);
 
-    // Use staleVerifiedAt (last detail-page check) not lastSeenAt (last listing-page crawl).
-    // Products with null staleVerifiedAt have NEVER been verified — T4 picks them up.
+    // Only select products that NEED verification:
+    // - Never verified (staleVerifiedAt is null), OR
+    // - Verified before the current cycle started (older than the tier's cooldown period)
+    // This ensures each product is verified at most once per cycle, then the tier
+    // enters cooldown. Without this filter, tiers with few products would re-verify
+    // the same products endlessly and never enter cooldown.
+    const cooldownHrs = { 2: tuning.maintainT2CooldownHrs, 3: tuning.maintainT3CooldownHrs, 4: tuning.maintainT4CooldownHrs }[t.tier]!;
+    const cycleThreshold = new Date(now.getTime() - cooldownHrs * 3600000);
+
     const products = await prisma.productIndex.findMany({
       where: {
         siteId: site.id,
         isActive: true,
+        // Product age window based on firstSeenAt
+        firstSeenAt: { gte: ageMinDate, lte: ageMaxDate },
+        // Only products not yet verified in this cycle
         OR: [
-          // Products verified within the tier's date window
-          { staleVerifiedAt: { gte: minDate, lte: maxDate } },
-          // Products NEVER verified — T4 (21+ days) picks up all unverified products
-          ...(t.tier === 4 ? [{ staleVerifiedAt: null }] : []),
+          { staleVerifiedAt: null },
+          { staleVerifiedAt: { lt: cycleThreshold } },
         ],
       },
+      // Within the tier, verify the least-recently-verified products first.
+      // nulls first (never verified) via Prisma default null sort behavior.
       orderBy: { staleVerifiedAt: 'asc' },
       take: t.tokens,
       select: { id: true },
     });
 
     if (products.length > 0) {
+      console.log(`[MaintainVerify] ${site.domain} T${t.tier}: queuing ${products.length} products (budget=${t.tokens})`);
       await scrapeQueue.add('crawl-verify', {
         siteId: site.id,
         domain: site.domain,
@@ -521,46 +576,15 @@ async function queueMaintainVerification(
         hasWaf: site.hasWaf,
       }, {
         jobId: `verify-${site.id}-t${t.tier}-${Date.now()}`,
+        priority: 3, // Below T1 watermarks, above bootstrap catalog
         attempts: 1,
         removeOnComplete: 50,
         removeOnFail: 100,
       });
+    } else {
+      console.log(`[MaintainVerify] ${site.domain} T${t.tier}: no products need verification (cycle complete)`);
     }
   }
-}
-
-/**
- * Check if a site's bootstrap is complete.
- * All streams must have completed at least one cycle across all tiers.
- * Also compares DB count vs live count — if significantly lower, don't transition.
- */
-async function checkBootstrapComplete(site: any): Promise<void> {
-  if (site.crawlPhase !== 'bootstrap') return;
-
-  const streamState = parseStreamState(site.streamState);
-  if (!streamState) return;
-
-  // All tiers on all streams must have completed at least one cycle
-  for (const stream of streamState.streams) {
-    for (const tier of [2, 3, 4]) {
-      const key = `${stream.id}:${tier}`;
-      const ts = streamState.tiers[key];
-      if (!ts?.lastCycleCompletedAt) return; // Not complete yet
-    }
-  }
-
-  // All tiers completed — transition to maintain phase
-  await prisma.monitoredSite.update({
-    where: { id: site.id },
-    data: {
-      crawlPhase: 'maintain',
-      bootstrapCompletedAt: new Date(),
-      // Clear streamState — not needed in maintain phase
-      // (but keep it in DB for reference, just don't use it)
-    },
-  });
-
-  console.log(`[Scheduler] ${site.domain}: bootstrap complete → maintain phase`);
 }
 
 // ── Crawl Event Cleanup ──────────────────────────────────────────────────────

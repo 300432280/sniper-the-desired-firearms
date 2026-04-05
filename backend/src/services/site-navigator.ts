@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { prisma } from '../lib/prisma';
 import { fetchPage } from './scraper';
+import { _getSiteCacheEntry } from './scraper/adapter-registry';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,38 +28,20 @@ interface DiscoveryResult {
   siteType: string;
 }
 
-// ── Known site overrides (skip discovery for these) ──────────────────────────
+// ── Profile-driven site overrides (read from siteProfile in DB) ─────────────
 
-interface SiteOverride {
-  listingPaths: string[];
-  searchTemplate?: string;
-  siteType: string;
+function getProfileOverride(domain: string): { listingPaths: string[]; searchTemplate?: string; siteType: string } | null {
+  const entry = _getSiteCacheEntry(domain);
+  if (!entry?.siteProfile) return null;
+  const profile = entry.siteProfile;
+  const listingUrls: string[] | undefined = profile.listingUrls;
+  if (!listingUrls || listingUrls.length === 0) return null;
+  return {
+    listingPaths: listingUrls,
+    searchTemplate: profile.searchUrlTemplate || undefined,
+    siteType: entry.siteType || 'generic',
+  };
 }
-
-const SITE_OVERRIDES: Record<string, SiteOverride> = {
-  'canadiangunnutz.com': {
-    listingPaths: [
-      '/forum/index.php?forums/exchange-of-military-surplus-rifle.44/',
-      '/forum/index.php?forums/exchange-of-handguns.7/',
-      '/forum/index.php?forums/exchange-of-rifles.8/',
-      '/forum/index.php?forums/exchange-of-shotguns.9/',
-      '/forum/index.php?forums/exchange-of-firearm-parts.46/',
-    ],
-    searchTemplate: '/forum/search/?q={keyword}&t=post',
-    siteType: 'forum',
-  },
-  'gunownersofcanada.ca': {
-    listingPaths: [
-      '/forums/equipment-exchange.35/',
-    ],
-    searchTemplate: '/search/?q={keyword}&t=post',
-    siteType: 'forum',
-  },
-  'icollector.com': {
-    listingPaths: ['/Firearms-Gun-Auctions_aca880000'],
-    siteType: 'auction',
-  },
-};
 
 // ── Scoring keywords ─────────────────────────────────────────────────────────
 
@@ -218,7 +201,7 @@ function measureListingDensity($: cheerio.CheerioAPI): number {
     // Retailer
     ['[data-product-id]', '[class*="product-card"]', '[class*="product-item"]', '[class*="product-tile"]'],
     // Classifieds
-    ['[class*="classified-ad"]', '[class*="classified-item"]', '[class*="listing-card"]', '[class*="listing-item"]', '[class*="gunpost-teaser"]'],
+    ['[class*="classified-ad"]', '[class*="classified-item"]', '[class*="listing-card"]', '[class*="listing-item"]'],
   ];
 
   let maxCount = 0;
@@ -295,7 +278,7 @@ function detectSiteTypeFromHtml($: cheerio.CheerioAPI): string {
   if ($('[class*="threadbit"]').length || html.includes('vBulletin')) return 'forum';
   if ($('[class*="lot-item"]').length || $('[class*="auction-item"]').length) return 'auction';
   if ($('[data-product-id]').length || html.includes('Shopify') || html.includes('WooCommerce')) return 'retailer';
-  if ($('[class*="classified"]').length >= 2 || $('[class*="gunpost"]').length) return 'classifieds';
+  if ($('[class*="classified"]').length >= 2) return 'classifieds';
   return 'generic';
 }
 
@@ -314,10 +297,10 @@ async function discoverSite(websiteUrl: string, cookies?: string): Promise<Disco
     }
   } catch { /* keep original */ }
 
-  // Check for hardcoded override
-  const override = SITE_OVERRIDES[domain];
+  // Check for profile-driven override from DB
+  const override = getProfileOverride(domain);
   if (override) {
-    console.log(`[SiteNavigator] Using override for ${domain}`);
+    console.log(`[SiteNavigator] Using profile override for ${domain}`);
     return {
       listingUrls: override.listingPaths.map(p => `${origin.replace(/\/$/, '')}${p}`),
       searchUrlTemplate: override.searchTemplate ? `${origin.replace(/\/$/, '')}${override.searchTemplate}` : null,

@@ -20,6 +20,7 @@
 import * as cheerio from 'cheerio';
 import { extractPrice } from './scraper/utils/price';
 import { resolveUrl } from './scraper/utils/url';
+import { _getSiteCacheEntry } from './scraper/adapter-registry';
 
 // ── Public interface ────────────────────────────────────────────────────────
 
@@ -35,17 +36,17 @@ export interface VerifyProductResult {
   errorMessage?: string;
 }
 
-// ── Constants ───────────────────────────────────────────────────────────────
+// ── Default constants (overridable via site profile) ────────────────────────
 
-const FETCH_TIMEOUT_MS = 15_000;
-const RETRY_DELAY_MS = 2_000;
-const MAX_RETRIES = 2;
+const DEFAULT_FETCH_TIMEOUT_MS = 15_000;
+const DEFAULT_RETRY_DELAY_MS = 2_000;
+const DEFAULT_MAX_RETRIES = 2;
 
 /** Minimum response body size — anything smaller is likely a WAF challenge page */
-const MIN_REAL_PAGE_BYTES = 2_000;
+const DEFAULT_MIN_REAL_PAGE_BYTES = 2_000;
 
 /** Patterns that indicate a WAF/bot-protection page rather than real content */
-const WAF_PATTERNS = [
+const DEFAULT_WAF_PATTERNS = [
   'cf-browser-verification',
   'Just a moment...',
   'challenge-platform',
@@ -69,8 +70,24 @@ export async function verifyProduct(params: {
   const { url, domain, hasWaf } = params;
   const startTime = Date.now();
 
+  // Look up site profile for per-site overrides
+  const profile = _getSiteCacheEntry(domain)?.siteProfile;
+  const FETCH_TIMEOUT_MS = profile?.httpTimeout ?? profile?.timeout ?? DEFAULT_FETCH_TIMEOUT_MS;
+  const RETRY_DELAY_MS = profile?.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
+  const MAX_RETRIES = profile?.maxHttpRetries ?? DEFAULT_MAX_RETRIES;
+  const MIN_REAL_PAGE_BYTES = profile?.wafConfig?.minPageBytes ?? DEFAULT_MIN_REAL_PAGE_BYTES;
+  const WAF_PATTERNS: string[] = profile?.wafConfig?.challengePatterns ?? DEFAULT_WAF_PATTERNS;
+
   try {
-    const { html, statusCode, responseTimeMs } = await fetchProductPage(url, domain, !!hasWaf);
+    const playwrightTimeout = profile?.playwrightTimeout ?? profile?.timeout ?? 30_000;
+    const { html, statusCode, responseTimeMs } = await fetchProductPage(url, domain, !!hasWaf, {
+      fetchTimeoutMs: FETCH_TIMEOUT_MS,
+      retryDelayMs: RETRY_DELAY_MS,
+      maxRetries: MAX_RETRIES,
+      minRealPageBytes: MIN_REAL_PAGE_BYTES,
+      wafPatterns: WAF_PATTERNS,
+      playwrightTimeout,
+    });
 
     // HTTP-level deletion signals
     if (statusCode === 404 || statusCode === 410) {
@@ -78,7 +95,7 @@ export async function verifyProduct(params: {
     }
 
     const $ = cheerio.load(html);
-    const result = analyzeProductPage($, html, url);
+    const result = analyzeProductPage($, html, url, domain);
     result.responseTimeMs = responseTimeMs;
     result.statusCode = statusCode;
     return result;
@@ -100,31 +117,42 @@ interface FetchedPage {
   responseTimeMs: number;
 }
 
+/** Per-call fetch configuration derived from site profile */
+interface FetchConfig {
+  fetchTimeoutMs: number;
+  retryDelayMs: number;
+  maxRetries: number;
+  minRealPageBytes: number;
+  wafPatterns: string[];
+  playwrightTimeout?: number;
+}
+
 async function fetchProductPage(
   url: string,
   domain: string,
   hasWaf: boolean,
+  cfg: FetchConfig,
 ): Promise<FetchedPage> {
   // WAF sites go straight to Playwright — no point wasting a plain HTTP attempt
   if (hasWaf) {
-    return fetchViaPlaywright(url);
+    return fetchViaPlaywright(url, cfg);
   }
 
   // Try plain HTTP first
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 1; attempt <= cfg.maxRetries; attempt++) {
     try {
       const { fetchPageWithMeta } = await import('./scraper/http-client');
       const result = await fetchPageWithMeta(url, undefined, { difficultyRating: 0 });
 
       // Transient Cloudflare errors — retry
       if ([520, 502, 503].includes(result.statusCode)) {
-        if (attempt < MAX_RETRIES) {
-          await delay(RETRY_DELAY_MS);
+        if (attempt < cfg.maxRetries) {
+          await delay(cfg.retryDelayMs);
           continue;
         }
         // Last attempt still transient — fall back to Playwright
         console.warn(`[ProductVerifier] ${url}: transient ${result.statusCode} after ${attempt} attempts, trying Playwright`);
-        return fetchViaPlaywright(url);
+        return fetchViaPlaywright(url, cfg);
       }
 
       // 404/410 can be returned immediately — no WAF concern
@@ -137,9 +165,9 @@ async function fetchProductPage(
       }
 
       // Check if we got a real page or a WAF challenge
-      if (isBlockedResponse(result.html)) {
+      if (isBlockedResponse(result.html, cfg)) {
         console.warn(`[ProductVerifier] ${url}: blocked response detected (${result.html.length}b), falling back to Playwright`);
-        return fetchViaPlaywright(url);
+        return fetchViaPlaywright(url, cfg);
       }
 
       return {
@@ -148,13 +176,13 @@ async function fetchProductPage(
         responseTimeMs: result.responseTimeMs,
       };
     } catch (err) {
-      if (attempt < MAX_RETRIES) {
-        await delay(RETRY_DELAY_MS);
+      if (attempt < cfg.maxRetries) {
+        await delay(cfg.retryDelayMs);
         continue;
       }
       // All HTTP attempts failed — try Playwright as last resort
       console.warn(`[ProductVerifier] ${url}: HTTP failed after ${attempt} attempts, trying Playwright`);
-      return fetchViaPlaywright(url);
+      return fetchViaPlaywright(url, cfg);
     }
   }
 
@@ -162,9 +190,10 @@ async function fetchProductPage(
   throw new Error(`[ProductVerifier] fetchProductPage exhausted all paths for ${url}`);
 }
 
-async function fetchViaPlaywright(url: string): Promise<FetchedPage> {
+async function fetchViaPlaywright(url: string, cfg: FetchConfig): Promise<FetchedPage> {
   const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
-  const result = await fetchWithPlaywright(url, { timeout: 30_000 });
+  const pwTimeout = cfg.playwrightTimeout ?? 30_000;
+  const result = await fetchWithPlaywright(url, { timeout: pwTimeout });
 
   // Playwright doesn't give us a status code directly — infer from content
   const statusCode = result.html.length < 500 ? 404 : 200;
@@ -175,10 +204,10 @@ async function fetchViaPlaywright(url: string): Promise<FetchedPage> {
   };
 }
 
-function isBlockedResponse(html: string): boolean {
-  if (html.length < MIN_REAL_PAGE_BYTES) return true;
+function isBlockedResponse(html: string, cfg: FetchConfig): boolean {
+  if (html.length < cfg.minRealPageBytes) return true;
   const lower = html.toLowerCase();
-  return WAF_PATTERNS.some(pattern => lower.includes(pattern.toLowerCase()));
+  return cfg.wafPatterns.some(pattern => lower.includes(pattern.toLowerCase()));
 }
 
 function delay(ms: number): Promise<void> {
@@ -191,6 +220,7 @@ function analyzeProductPage(
   $: cheerio.CheerioAPI,
   html: string,
   baseUrl: string,
+  domain?: string,
 ): VerifyProductResult {
   // 1. Soft-404 detection (page returns 200 but content says "not found")
   const h1Text = $('h1').first().text().toLowerCase();
@@ -211,7 +241,7 @@ function analyzeProductPage(
   }
 
   // 2. Sold detection
-  if (isSold($, html)) {
+  if (isSold($, html, domain)) {
     const data = extractProductData($, html, baseUrl);
     return {
       status: 'sold',
@@ -225,7 +255,10 @@ function analyzeProductPage(
   const title = extractTitle($, html);
   if (title) {
     const titleLower = title.toLowerCase().trim();
-    if (/\b(wanted|wtb|wtt|iso)\s*$/.test(titleLower)) {
+    const entry = domain ? _getSiteCacheEntry(domain) : undefined;
+    const wantedPattern = entry?.siteProfile?.classifiedRules?.wantedDetection;
+    const wantedRegex = wantedPattern ? new RegExp(wantedPattern, 'i') : /\b(wanted|wtb|wtt|iso)\s*$/;
+    if (wantedRegex.test(titleLower)) {
       const data = extractProductData($, html, baseUrl);
       return {
         status: 'wanted',
@@ -250,11 +283,29 @@ function analyzeProductPage(
 
 // ── Sold detection ──────────────────────────────────────────────────────────
 
-function isSold($: cheerio.CheerioAPI, html: string): boolean {
-  // CSS class-based sold indicators
+function isSold($: cheerio.CheerioAPI, html: string, domain?: string): boolean {
+  // Check site profile for custom sold detection patterns
+  if (domain) {
+    const entry = _getSiteCacheEntry(domain);
+    const patterns: string[] | undefined = entry?.siteProfile?.classifiedRules?.soldDetection;
+    if (patterns && patterns.length > 0) {
+      for (const pattern of patterns) {
+        if (pattern.startsWith('class=')) {
+          const className = pattern.slice(6);
+          const re = new RegExp(`class="[^"]*\\b${className}\\b[^"]*"`, 'i');
+          if (re.test(html)) return true;
+        } else {
+          const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+          if (new RegExp(escaped, 'i').test(html)) return true;
+        }
+      }
+      // Profile had patterns — don't fall through to generic class checks below,
+      // but still check JSON-LD / schema.org / text-based detection
+    }
+  }
+
+  // CSS class-based sold indicators (generic)
   if ($('.sold, .ad-sold, .field-sold').length > 0) return true;
-  // Gunpost-specific: class="field-sold Yes"
-  if (/class="field-sold\s+Yes"/i.test(html)) return true;
   // Generic sold CSS classes
   if ($('.out-of-stock, .outofstock, .product-unavailable').length > 0) {
     // Only treat as "sold" if there's also explicit sold text — out-of-stock
@@ -406,6 +457,21 @@ function extractFromJsonLd($: cheerio.CheerioAPI): JsonLdData {
                 result.price = p;
               }
             }
+            // Check priceSpecification (WooCommerce Yoast uses this instead of direct price)
+            if (!result.price && offer.priceSpecification) {
+              const specs = Array.isArray(offer.priceSpecification) ? offer.priceSpecification : [offer.priceSpecification];
+              for (const spec of specs) {
+                if (spec.price !== undefined) {
+                  const p = typeof spec.price === 'number'
+                    ? spec.price
+                    : parseFloat(String(spec.price).replace(/,/g, ''));
+                  if (!isNaN(p) && p >= 10) {
+                    result.price = p;
+                    break;
+                  }
+                }
+              }
+            }
             // Check for highPrice/lowPrice (aggregate offers)
             if (!result.price && offer.lowPrice !== undefined) {
               const p = typeof offer.lowPrice === 'number'
@@ -555,6 +621,17 @@ function extractFromHtml($: cheerio.CheerioAPI, baseUrl: string): HtmlData {
   }
 
   // Price: sale/current price
+  // Scope to product summary area first to avoid picking up related/upsell product prices.
+  // WooCommerce product pages have a .summary section for the main product, with
+  // related products in section.related or .upsells further down the page.
+  const PRODUCT_SCOPES = [
+    '.summary',                          // WooCommerce
+    '.product-single', '.product-info',  // Shopify / generic
+    '.productView',                      // BigCommerce
+    '#product-detail', '.product-detail',// Generic
+  ];
+  const EXCLUDE_SCOPES = '.related, .upsells, .cross-sells, [class*="related-product"], [class*="recently-viewed"]';
+
   const priceSelectors = [
     'ins .woocommerce-Price-amount',           // WooCommerce sale price
     '.special-price .price',                    // Magento sale
@@ -565,41 +642,74 @@ function extractFromHtml($: cheerio.CheerioAPI, baseUrl: string): HtmlData {
     '.price--withoutTax',                       // BigCommerce
     '.woocommerce-Price-amount',                // WooCommerce (non-sale)
   ];
-  for (const sel of priceSelectors) {
-    const el = $(sel).first();
-    if (el.length) {
-      // itemprop="price" may store the value in content attribute
-      const content = el.attr('content');
-      if (content) {
-        const p = parseFloat(content.replace(/,/g, ''));
-        if (!isNaN(p) && p >= 10) {
-          result.price = p;
-          break;
-        }
-      }
-      const p = extractPrice(el.text());
-      if (p) {
-        result.price = p;
-        break;
-      }
+
+  // Helper to extract price from a matched element
+  const tryExtractPriceFromEl = (el: cheerio.Cheerio<any>): number | undefined => {
+    if (!el.length) return undefined;
+    // Skip elements inside related/upsell sections
+    if (el.closest(EXCLUDE_SCOPES).length > 0) return undefined;
+    // Skip cart totals ($0.00 in header)
+    if (el.closest('.cart-contents, .mini-cart, .cart-sidebar, [class*="cart"]').length > 0) return undefined;
+    const content = el.attr('content');
+    if (content) {
+      const p = parseFloat(content.replace(/,/g, ''));
+      if (!isNaN(p) && p >= 10) return p;
+    }
+    const p = extractPrice(el.text());
+    return p || undefined;
+  };
+
+  // Pass 1: Try scoped selectors (product summary area only)
+  for (const scope of PRODUCT_SCOPES) {
+    if (!$(scope).length) continue;
+    for (const sel of priceSelectors) {
+      const el = $(`${scope} ${sel}`).first();
+      const p = tryExtractPriceFromEl(el);
+      if (p) { result.price = p; break; }
+    }
+    if (result.price) break;
+  }
+
+  // Pass 2: Unscoped but exclude related/upsell/cart areas
+  if (!result.price) {
+    for (const sel of priceSelectors) {
+      // Find first matching element that isn't in an excluded section
+      $(sel).each((_, rawEl) => {
+        if (result.price) return false; // break .each
+        const el = $(rawEl);
+        const p = tryExtractPriceFromEl(el);
+        if (p) { result.price = p; return false; }
+      });
+      if (result.price) break;
     }
   }
 
   // Regular price (struck-through or marked as original)
+  // Same scoping logic: product summary first, then unscoped with exclusions
   const regularSelectors = [
     'del .woocommerce-Price-amount',            // WooCommerce original
     '.regular-price .price', '.was-price',
     '.old-price', '.original-price', '.listPrice',
     'del .amount', 's .amount',
   ];
-  for (const sel of regularSelectors) {
-    const el = $(sel).first();
-    if (el.length) {
-      const p = extractPrice(el.text());
-      if (p) {
-        result.regularPrice = p;
-        break;
-      }
+  for (const scope of PRODUCT_SCOPES) {
+    if (!$(scope).length) continue;
+    for (const sel of regularSelectors) {
+      const el = $(`${scope} ${sel}`).first();
+      const p = tryExtractPriceFromEl(el);
+      if (p) { result.regularPrice = p; break; }
+    }
+    if (result.regularPrice) break;
+  }
+  if (!result.regularPrice) {
+    for (const sel of regularSelectors) {
+      $(sel).each((_, rawEl) => {
+        if (result.regularPrice) return false;
+        const el = $(rawEl);
+        const p = tryExtractPriceFromEl(el);
+        if (p) { result.regularPrice = p; return false; }
+      });
+      if (result.regularPrice) break;
     }
   }
 

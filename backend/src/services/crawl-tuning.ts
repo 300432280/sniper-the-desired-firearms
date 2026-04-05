@@ -17,12 +17,14 @@ export const TUNING_DEFAULTS = {
   t3SharePct: 32.5,                 // Tier 3 share of catalog tokens (aging: 8-20 days)
   t4SharePct: 25,                   // Tier 4 share of catalog tokens (archive: 21+ days)
 
-  // Maintain-phase tier date windows (days since last verified)
-  maintainT2MinDays: 1,             // T2 checks products last verified 1-7 days ago
+  // Maintain-phase tier product-age windows (days since firstSeenAt)
+  // Products are partitioned by how old they are, NOT by when last verified.
+  // Within each tier, products are verified in staleVerifiedAt ASC order (oldest verification first).
+  maintainT2MinDays: 0,             // T2 checks products first seen 0-7 days ago (new listings)
   maintainT2MaxDays: 7,
-  maintainT3MinDays: 8,             // T3 checks products last verified 8-20 days ago
+  maintainT3MinDays: 7,             // T3 checks products first seen 7-20 days ago (contiguous with T2)
   maintainT3MaxDays: 20,
-  maintainT4MinDays: 21,            // T4 checks products last verified 21+ days ago
+  maintainT4MinDays: 20,            // T4 checks products first seen 20+ days ago (contiguous with T3)
   maintainT4MaxDays: null as number | null, // No upper limit
 
   // Maintain-phase cooldowns (hours between full verification cycles per tier)

@@ -18,10 +18,14 @@
 
 import { prisma } from '../lib/prisma';
 import { pushEvent } from './debugLog';
+import { _getSiteCacheEntry } from './scraper/adapter-registry';
 import type { SiteStreamState } from './scraper/types';
 
 /** Max detail-page verifications per trigger (rate limiting) */
 const MAX_VERIFY_PER_TICK = 10;
+
+/** Higher batch for bootstrap-phase bulk reconciliation (no detail-page fetch) */
+const MAX_BOOTSTRAP_BULK_PER_TICK = 200;
 
 /** Hours between re-verification attempts on the same product */
 const REVERIFY_COOLDOWN_HOURS = 48;
@@ -47,17 +51,30 @@ export interface StaleCheckResult {
  * time has been missed by ALL tiers in their most recent complete sweep.
  *
  * Returns null if any tier hasn't completed a cycle yet (not safe to detect).
+ *
+ * In bootstrap phase, only the mono crawl (T4) runs — T2/T3 don't exist yet.
+ * We use T4's last cycle completion as the safe window without requiring T2/T3.
  */
 function computeSafeWindow(
   streamId: string,
   streamState: SiteStreamState,
+  crawlPhase: string = 'maintain',
 ): Date | null {
+  // In bootstrap phase, only T4 (mono crawl) runs. Use its cycle as safe window.
+  if (crawlPhase === 'bootstrap') {
+    const key = `${streamId}:4`;
+    const ts = streamState.tiers[key];
+    if (!ts || !ts.lastCycleCompletedAt || !ts.lastCycleStartedAt) return null;
+    return new Date(ts.lastCycleStartedAt);
+  }
+
+  // Maintain phase: require all active tiers to have completed
   const startTimes: Date[] = [];
 
   for (const tier of [2, 3, 4] as const) {
     const key = `${streamId}:${tier}`;
     const ts = streamState.tiers[key];
-    if (!ts) return null; // Tier doesn't exist
+    if (!ts) continue; // Tier doesn't exist in state — skip (may not be configured)
 
     // Skip tiers with no work (pageRangeStart > pageRangeEnd = empty range)
     if (ts.pageRangeStart && ts.pageRangeEnd && ts.pageRangeStart > ts.pageRangeEnd) {
@@ -81,7 +98,7 @@ function computeSafeWindow(
  * Fetch a product's detail page and determine its status.
  * Uses the shared http-client for UA rotation, rate limiting, and SSRF protection.
  */
-async function verifyDetailPage(url: string): Promise<'alive' | 'sold' | 'deleted'> {
+async function verifyDetailPage(url: string, domain?: string): Promise<'alive' | 'sold' | 'deleted'> {
   // Retry up to 2 times on transient errors (Cloudflare 520/502/503).
   // These status codes hide real 404s — a single attempt is not reliable.
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -98,8 +115,8 @@ async function verifyDetailPage(url: string): Promise<'alive' | 'sold' | 'delete
         throw new Error(`Transient ${statusCode} after retry`);
       }
 
-      // Sold indicators (gunpost: class="sold Yes", class="field-sold Yes")
-      if (/class="[^"]*\bsold\b[^"]*"/i.test(html) || /class="field-sold\s+Yes"/i.test(html)) {
+      // Sold indicators — check site profile for custom patterns, fall back to generic
+      if (hasSoldIndicators(html, domain)) {
         return 'sold';
       }
 
@@ -126,6 +143,41 @@ async function verifyDetailPage(url: string): Promise<'alive' | 'sold' | 'delete
 }
 
 /**
+ * Build sold-detection regex patterns from site profile or use generic defaults.
+ * Profile entries like "field-sold Yes" become /field-sold\s+Yes/i,
+ * entries like "class=sold" become /class="[^"]*\bsold\b[^"]*"/i.
+ */
+function hasSoldIndicators(html: string, domain?: string): boolean {
+  // Try to get site-specific sold detection patterns from profile
+  if (domain) {
+    const entry = _getSiteCacheEntry(domain);
+    const patterns: string[] | undefined = entry?.siteProfile?.classifiedRules?.soldDetection;
+    if (patterns && patterns.length > 0) {
+      for (const pattern of patterns) {
+        // Convert pattern entries to regex:
+        // "class=sold" → match class attribute containing "sold"
+        // "field-sold Yes" → literal match in HTML
+        // "SOLD" → case-insensitive literal match
+        if (pattern.startsWith('class=')) {
+          const className = pattern.slice(6); // after "class="
+          const re = new RegExp(`class="[^"]*\\b${className}\\b[^"]*"`, 'i');
+          if (re.test(html)) return true;
+        } else {
+          // Literal pattern match (escape regex special chars, allow flexible whitespace)
+          const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+          if (new RegExp(escaped, 'i').test(html)) return true;
+        }
+      }
+      return false; // Profile had patterns but none matched — don't fall through to generic
+    }
+  }
+
+  // Generic fallback: detect common sold CSS classes
+  if (/class="[^"]*\bsold\b[^"]*"/i.test(html)) return true;
+  return false;
+}
+
+/**
  * Check for stale products after a tier cycle completes.
  *
  * Called from worker.ts when any tier's cycleComplete = true.
@@ -134,20 +186,91 @@ export async function checkStaleProducts(
   siteId: string,
   streamId: string,
   streamState: SiteStreamState,
+  crawlPhase: string = 'maintain',
 ): Promise<StaleCheckResult> {
   const result: StaleCheckResult = {
     candidatesFound: 0, verified: 0, markedSold: 0,
     markedInactive: 0, falsePositives: 0, skippedBudget: 0, errors: 0,
   };
 
+  // Look up domain + adapter type for reconciliation strategy
+  const site = await prisma.monitoredSite.findUnique({
+    where: { id: siteId },
+    select: { domain: true, adapterType: true },
+  });
+  const domain = site?.domain;
+
+  // ── Bootstrap bulk reconciliation for API-backed sites ──────────────────
+  // WooCommerce and Shopify catalog crawlers get authoritative stock data from
+  // their Store/Admin APIs. During bootstrap, the mono tier (T4) visits every
+  // catalog page. Products not seen by the crawler for >7 days are genuinely
+  // absent from the catalog — we can mark them out_of_stock in bulk without
+  // expensive detail-page verification.
+  //
+  // This fixes the bootstrap stock mismatch (e.g. 9,532 DB in_stock vs 3,488
+  // actual) which previously couldn't self-correct because:
+  //   1. computeSafeWindow returns null until T4 completes a full cycle
+  //   2. The 7-day fallback only processed 10 products/tick (600 days to reconcile)
+  const isApiBacked = site?.adapterType === 'woocommerce' || site?.adapterType === 'shopify';
+  if (crawlPhase === 'bootstrap' && isApiBacked) {
+    const BOOTSTRAP_STALE_DAYS = 7;
+    const bootstrapCutoff = new Date(Date.now() - BOOTSTRAP_STALE_DAYS * 24 * 60 * 60 * 1000);
+
+    const bulkCandidates = await prisma.productIndex.findMany({
+      where: {
+        siteId,
+        isActive: true,
+        stockStatus: 'in_stock',
+        lastSeenAt: { lt: bootstrapCutoff },
+      },
+      orderBy: { lastSeenAt: 'asc' },
+      take: MAX_BOOTSTRAP_BULK_PER_TICK,
+      select: { id: true },
+    });
+
+    if (bulkCandidates.length > 0) {
+      const now = new Date();
+      // Bulk update — no detail-page fetch needed, API data is authoritative
+      await prisma.productIndex.updateMany({
+        where: { id: { in: bulkCandidates.map(p => p.id) } },
+        data: {
+          stockStatus: 'out_of_stock',
+          staleSince: now,
+          staleVerifiedAt: now,
+        },
+      });
+      result.candidatesFound = bulkCandidates.length;
+      result.markedSold = bulkCandidates.length;
+
+      console.log(
+        `[StaleDetector] ${domain}: bootstrap bulk reconciliation — ` +
+        `marked ${bulkCandidates.length} unseen products out_of_stock ` +
+        `(not seen since ${bootstrapCutoff.toISOString().slice(0, 10)})`
+      );
+
+      pushEvent({
+        type: 'info',
+        message: `StaleDetector: ${domain} bootstrap reconciliation — ${bulkCandidates.length} products → out_of_stock`,
+      });
+    }
+
+    return result;
+  }
+
+  // ── Standard stale detection (maintain phase + non-API sites) ───────────
+
   // 1. Compute safe window — returns null if not all tiers have completed
-  const safeWindow = computeSafeWindow(streamId, streamState);
+  const safeWindow = computeSafeWindow(streamId, streamState, crawlPhase);
 
   // Fallback: if safe window isn't available (tiers haven't completed),
-  // still check products unseen for >14 days as a safety net.
+  // still check products unseen for >N days as a safety net.
   // This prevents dead products from staying active forever on sites
   // where tiers take a long time to complete full cycles.
-  const FALLBACK_STALE_DAYS = 14;
+  //
+  // Bootstrap phase uses a shorter window (7 days) because T4 mono crawl
+  // takes a long time to complete a full cycle, and stock data drifts
+  // significantly in the meantime (e.g. 9k in_stock vs 3.5k real).
+  const FALLBACK_STALE_DAYS = crawlPhase === 'bootstrap' ? 7 : 14;
   const fallbackWindow = new Date(Date.now() - FALLBACK_STALE_DAYS * 24 * 60 * 60 * 1000);
   const cutoffDate = safeWindow ?? fallbackWindow;
 
@@ -171,14 +294,14 @@ export async function checkStaleProducts(
   result.candidatesFound = candidates.length;
   if (candidates.length === 0) {
     // Also try re-checking sold items while we're here
-    await recheckSoldProducts(siteId, result);
+    await recheckSoldProducts(siteId, result, domain);
     return result;
   }
 
   // 3. Verify each candidate via detail page
   for (const product of candidates) {
     try {
-      const status = await verifyDetailPage(product.url);
+      const status = await verifyDetailPage(product.url, domain);
       result.verified++;
       const now = new Date();
 
@@ -223,19 +346,20 @@ export async function checkStaleProducts(
 
   // 4. Re-check sold products only when no new candidates were found (lower priority)
   if (candidates.length === 0) {
-    await recheckSoldProducts(siteId, result);
+    await recheckSoldProducts(siteId, result, domain);
   }
 
   return result;
 }
 
 /**
- * Re-check products previously marked sold. Gunpost removes sold listings
- * after ~3 days — transition them from out_of_stock to isActive=false.
+ * Re-check products previously marked sold. Classifieds sites often remove
+ * sold listings after a few days — transition them from out_of_stock to isActive=false.
  */
 async function recheckSoldProducts(
   siteId: string,
   result: StaleCheckResult,
+  domain?: string,
 ): Promise<void> {
   const recheckCutoff = new Date(Date.now() - SOLD_RECHECK_DAYS * 24 * 60 * 60 * 1000);
   const reverifyBefore = new Date(Date.now() - REVERIFY_COOLDOWN_HOURS * 60 * 60 * 1000);
@@ -257,7 +381,7 @@ async function recheckSoldProducts(
 
   for (const product of soldProducts) {
     try {
-      const status = await verifyDetailPage(product.url);
+      const status = await verifyDetailPage(product.url, domain);
       const now = new Date();
 
       if (status === 'deleted') {

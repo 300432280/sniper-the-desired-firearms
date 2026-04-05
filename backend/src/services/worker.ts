@@ -6,13 +6,11 @@ import { runHealthChecks, pruneOldHealthChecks } from './health-monitor';
 import { schedulerTick, onCrawlComplete, initializeCrawlSchedule, pruneCrawlEvents } from './crawl-scheduler';
 import { sendDailyDigests } from './daily-digest';
 import { crawlWatermark } from './watermark-crawler';
-import { crawlCatalogTier, parseTierState, getActiveTiers, startTierCycle, updateTierProgress, type TierState, crawlStreamTier, isStreamTierActive, startStreamTierCycle, completeStreamTierCycle } from './catalog-crawler';
+import { crawlCatalogTier, parseTierState, startTierCycle, updateTierProgress, type TierState, crawlStreamTier } from './catalog-crawler';
 import { expireFreeAlerts } from './free-tier';
 import { allocateCatalogTokens } from './token-budget';
 import { resolveTuning } from './crawl-tuning';
-import { parseStreamState, updateStreamPageRanges } from './stream-detector';
-import { pickStream } from './stream-priority';
-import { firearmsPriority } from './stream-priority-firearms';
+import { parseStreamState } from './stream-detector';
 import type { SiteStreamState } from './scraper/types';
 
 interface WatermarkJobData {
@@ -38,6 +36,7 @@ interface CatalogJobData {
   hasWaf?: boolean;
   crawlTuning?: unknown;
   streamState?: unknown;
+  crawlIntervalMin?: number;
 }
 
 // ─── Watermark Crawl Job Processor (Tier 1 — New Items) ─────────────────────
@@ -58,12 +57,20 @@ async function processWatermarkCrawl(job: Job<WatermarkJobData>): Promise<void> 
     responseTimeMs: result.responseTimeMs,
     statusCode: result.statusCode,
     matchesFound: result.productsFound,
+    pagesScanned: result.pagesScanned,
+    tokensUsed: result.tokensUsed,
+    tier: 1,
+    jobType: 'crawl-watermark',
     errorMessage: result.errorMessage,
     signals: result.signals,
     headers: result.headers,
     newWatermarkUrl: result.newWatermarkUrl,
     newWatermarkDate: result.newWatermarkDate,
   });
+
+  // Mark T1 run as completed — releases proportional token share to verify tiers
+  const { completeTier1Run } = await import('./token-budget');
+  completeTier1Run(siteId);
 
   pushEvent({
     type: result.status === 'success' ? 'scrape_done' : 'scrape_fail',
@@ -91,8 +98,11 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
 
     console.log(`[CatalogWorker] Legacy catalog crawl: ${domain} (tiers: ${Object.entries(activeTiers).filter(([, v]) => v).map(([k]) => k).join(',')})`);
 
-    const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers, tuning);
+    const allocation = allocateCatalogTokens(siteId, baseBudget, capacity, activeTiers, tuning, job.data.crawlIntervalMin || 20);
     const updatedState: TierState = { ...tierState };
+    let totalProductsFound = 0;
+    let totalPagesScanned = 0;
+    let legacyError: string | undefined;
 
     for (const tier of [2, 3, 4] as const) {
       const tierKey = `tier${tier}` as keyof typeof activeTiers;
@@ -119,6 +129,10 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
       // No cooldowns — T2-T4 run continuously, limited only by budget
       updatedState[tierKey] = updateTierProgress(cycleState, result.pagesScanned, result.cycleComplete, tier, 0);
 
+      totalProductsFound += result.productsFound;
+      totalPagesScanned += result.pagesScanned;
+      if (result.status === 'fail' && result.errorMessage) legacyError = result.errorMessage;
+
       console.log(`[CatalogWorker] Tier ${tier} ${result.status}: ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens${result.cycleComplete ? ' (cycle complete)' : ''}`);
     }
 
@@ -127,7 +141,17 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
       data: { tierState: updatedState as any },
     });
 
-    pushEvent({ type: 'info', message: `Catalog crawl complete: ${domain}` });
+    // Record CrawlEvent and update site metrics
+    await onCrawlComplete({
+      siteId,
+      status: legacyError ? 'fail' : 'success',
+      matchesFound: totalProductsFound,
+      pagesScanned: totalPagesScanned,
+      jobType: 'crawl-catalog',
+      errorMessage: legacyError,
+    });
+
+    pushEvent({ type: 'info', message: `Catalog crawl complete: ${domain} — ${totalProductsFound} products, ${totalPagesScanned} pages` });
   } catch (err) {
     console.error(`[CatalogWorker] Fatal error for ${domain}:`, err);
     pushEvent({ type: 'scrape_fail', websiteUrl: url, message: `Catalog crawl error: ${domain} — ${(err as Error).message}` });
@@ -157,8 +181,6 @@ async function processStreamCatalogCrawl(
 ): Promise<void> {
   const { siteId, domain, url, baseBudget, capacity } = data;
   const now = new Date();
-  const cooldownMap = { 2: 0, 3: 0, 4: 0 } as const;
-
   // ── BOOTSTRAP: single continuous crawl using ALL catalog tokens ──
   // No date filters, no tier splitting. One stream, one pagination cursor.
   // Track progress in T4's tier state (T2/T3 mirror T4 for compatibility).
@@ -213,23 +235,67 @@ async function processStreamCatalogCrawl(
     stream.totalPages = result.totalPagesDiscovered;
   }
 
+  let shouldSelfQueue = false;
+
   if (result.cycleComplete) {
-    // Truly reached the end — reset to page 1 for next full pass
-    tierState.status = 'idle';
-    tierState.currentPage = 1;
-    tierState.lastRefreshedAt = now.toISOString();
-    tierState.lastCycleStartedAt = tierState.cycleStartedAt;
-    tierState.lastCycleCompletedAt = now.toISOString();
-    tierState.cycleStartedAt = undefined;
-    // Also mark T2/T3 as complete (for bootstrap completion check)
-    for (const t of [2, 3] as const) {
-      const k = `${stream.id}:${t}`;
-      if (streamState.tiers[k]) {
-        streamState.tiers[k].lastCycleCompletedAt = now.toISOString();
-        streamState.tiers[k].status = 'idle';
+    // ── Coverage verification gate ──
+    // Before marking bootstrap complete, verify we captured enough products.
+    const siteProfile = profileEntry?.siteProfile ?? null;
+    const productCountMethod = siteProfile?.productCountMethod ?? null;
+    const expectedProductCount = siteProfile?.expectedProductCount ?? null;
+
+    const passCount = tierState.bootstrapPassCount ?? 0;
+    let markComplete = true;
+
+    if (productCountMethod !== null || expectedProductCount !== null) {
+      const { verifyBootstrapCoverage, COVERAGE_THRESHOLD } = await import('./product-count-probe');
+      const coverage = await verifyBootstrapCoverage(siteId, data.url, productCountMethod, expectedProductCount, { hasWaf: data.hasWaf });
+
+      // Store expectedProductCount for future checks
+      if (coverage.expectedCount !== null && !siteProfile?.expectedProductCount) {
+        try {
+          const updatedProfile = { ...(siteProfile ?? {}), expectedProductCount: coverage.expectedCount };
+          await prisma.monitoredSite.update({ where: { id: siteId }, data: { siteProfile: updatedProfile } });
+        } catch { /* non-fatal */ }
+      }
+
+      if (coverage.ratio !== null && coverage.ratio < COVERAGE_THRESHOLD) {
+        if (passCount < 3) {
+          markComplete = false;
+          tierState.bootstrapPassCount = passCount + 1;
+          tierState.currentPage = 1;
+          tierState.currentPageUrl = undefined;
+          tierState.status = 'idle';
+          // Signal self-queue to continue crawling despite cycleComplete
+          shouldSelfQueue = true;
+          console.log(`[CatalogWorker] ${domain}: coverage ${(coverage.ratio * 100).toFixed(1)}% < 95% (${coverage.dbCount}/${coverage.expectedCount}), retrying pass ${passCount + 1}/3`);
+        } else {
+          markComplete = true;
+          tierState.coverageWarning = true;
+          console.warn(`[CatalogWorker] ${domain}: COVERAGE WARNING — ${(coverage.ratio * 100).toFixed(1)}% after ${passCount + 1} passes (${coverage.dbCount}/${coverage.expectedCount}). Marking complete anyway.`);
+        }
+      } else {
+        console.log(`[CatalogWorker] ${domain}: coverage OK — ${coverage.dbCount}/${coverage.expectedCount ?? '?'} (${coverage.ratio !== null ? (coverage.ratio * 100).toFixed(1) + '%' : 'unmeasurable'})`);
       }
     }
-    console.log(`[CatalogWorker] Bootstrap complete for ${domain}: ${result.productsFound} products on final pass`);
+
+    if (markComplete) {
+      tierState.status = 'idle';
+      tierState.currentPage = 1;
+      tierState.lastRefreshedAt = now.toISOString();
+      tierState.lastCycleStartedAt = tierState.cycleStartedAt;
+      tierState.lastCycleCompletedAt = now.toISOString();
+      tierState.cycleStartedAt = undefined;
+      // Also mark T2/T3 as complete (for bootstrap completion check)
+      for (const t of [2, 3] as const) {
+        const k = `${stream.id}:${t}`;
+        if (streamState.tiers[k]) {
+          streamState.tiers[k].lastCycleCompletedAt = now.toISOString();
+          streamState.tiers[k].status = 'idle';
+        }
+      }
+      console.log(`[CatalogWorker] Bootstrap complete for ${domain}: ${result.productsFound} products on final pass`);
+    }
   }
   // If not complete, currentPage was updated in-place by crawlStreamTier
 
@@ -239,12 +305,24 @@ async function processStreamCatalogCrawl(
     data: { streamState: streamState as any },
   });
 
-  pushEvent({ type: 'info', message: `Bootstrap crawl: ${domain} page ${tierState.currentPage}` });
+  // Record CrawlEvent and update site metrics
+  await onCrawlComplete({
+    siteId,
+    status: result.status === 'success' || result.status === 'partial' ? 'success' : 'fail',
+    matchesFound: result.productsFound,
+    pagesScanned: result.pagesScanned,
+    tokensUsed: result.tokensUsed,
+    tier: 4,
+    jobType: 'crawl-catalog',
+    errorMessage: result.errorMessage,
+  });
+
+  pushEvent({ type: 'info', message: `Bootstrap crawl: ${domain} page ${tierState.currentPage}, ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens` });
 
   // Self-queue next batch
   try {
     const remaining = getCatalogRemaining(siteId, baseBudget, capacity);
-    if (remaining > 0 && !result.cycleComplete) {
+    if (remaining > 0 && (!result.cycleComplete || shouldSelfQueue)) {
       const { scrapeQueue: sq } = await import('./queue');
       const site = await prisma.monitoredSite.findUnique({
         where: { id: siteId },
@@ -259,6 +337,7 @@ async function processStreamCatalogCrawl(
           streamState: parseStreamState(site.streamState) ?? undefined,
         }, {
           jobId: `catalog-${siteId}-${Date.now()}`,
+          priority: 10, // Lower priority than maintain-phase verify/watermark jobs
           attempts: 1, removeOnComplete: 50, removeOnFail: 100,
         });
       }
@@ -280,26 +359,240 @@ interface VerifyJobData {
   hasWaf?: boolean;
 }
 
-async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
-  const { siteId, domain, tier, productIds, hasWaf } = job.data;
-  const { verifyProduct } = await import('./product-verifier');
-  const { randomDelay } = await import('./scraper/http-client');
+interface WooVerifyResult {
+  verified: number;
+  updated: number;
+  deleted: number;
+  errors: number;
+  handled: number;
+  handledProductIds: string[];
+}
 
-  console.log(`[VerifyWorker] T${tier} verifying ${productIds.length} products for ${domain}`);
+/**
+ * WooCommerce Store API fast-path for product verification.
+ * Batches products by sourceId and verifies via the public Store API instead of
+ * launching Playwright per-product. Returns null if the site is not WooCommerce
+ * or none of the products have sourceIds.
+ */
+async function tryStoreApiVerify(
+  products: Array<{ id: string; sourceId: string | null; url: string; staleSince: Date | null; verifyErrors: number; title: string }>,
+  domain: string,
+  siteId: string,
+  hasWaf?: boolean,
+): Promise<WooVerifyResult | null> {
+  const { _getSiteCacheEntry } = await import('./scraper/adapter-registry');
+  const siteInfo = _getSiteCacheEntry(domain);
+  if (!siteInfo) return null;
 
-  const products = await prisma.productIndex.findMany({
-    where: { id: { in: productIds } },
-  });
+  const profile = siteInfo.siteProfile;
 
-  let verified = 0, updated = 0, sold = 0, deleted = 0, errors = 0;
+  // Read verify method from site profile — NOT from adapter type
+  // Profile should have: crawlers.maintain.verifyMethod = "store-api"
+  //                  and: crawlers.maintain.verifyEndpoint = "/wp-json/wc/store/v1/products"
+  const maintainConfig = profile?.crawlers?.maintain;
+  if (!maintainConfig || maintainConfig.verifyMethod !== 'store-api') return null;
+
+  const verifyEndpoint = maintainConfig.verifyEndpoint;
+  if (!verifyEndpoint) return null;
+
+  // Filter products with sourceIds (Store API queries by product ID)
+  const withSourceId = products.filter(p => p.sourceId != null);
+  if (withSourceId.length === 0) return null;
+
+  const axios = (await import('axios')).default;
+  const { ensureCookies, reportFailure } = await import('./scraper/waf-cookie-manager');
+  const { PLAYWRIGHT_UA } = await import('./scraper/playwright-fetcher');
+
+  // Derive origin from first product URL
+  const origin = new URL(products[0].url).origin;
+
+  let verified = 0, updated = 0, deleted = 0, errors = 0;
+  const handledProductIds: string[] = [];
+
+  // Batch sourceIds into chunks — read from profile
+  const CHUNK_SIZE = profile?.storeApiChunkSize ?? profile?.enrichmentChunkSize ?? 10;
+  const chunks: typeof withSourceId[] = [];
+  for (let i = 0; i < withSourceId.length; i += CHUNK_SIZE) {
+    chunks.push(withSourceId.slice(i, i + CHUNK_SIZE));
+  }
+
+  // Get WAF cookies if needed
+  let cookies: string | undefined;
+  let userAgent = PLAYWRIGHT_UA;
+  if (hasWaf) {
+    try {
+      const creds = await ensureCookies(domain, origin);
+      cookies = creds.cookies;
+      userAgent = creds.userAgent;
+    } catch (err) {
+      console.warn(`[VerifyWorker] ${domain}: WAF cookie solve failed, falling back to Playwright`, err instanceof Error ? err.message : err);
+      return null; // Fall back to Playwright
+    }
+  }
+
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const chunk = chunks[ci];
+    const ids = chunk.map(p => p.sourceId).join(',');
+    const apiUrl = `${origin}${verifyEndpoint}`;
+
+    let response: any;
+
+    // Fetch with 403 retry logic
+    const maxRetries = profile?.maxApiRetries ?? 2;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const headers: Record<string, string> = { 'User-Agent': userAgent };
+        if (cookies) headers['Cookie'] = cookies;
+
+        const apiTimeout = profile?.apiTimeout ?? profile?.timeout ?? 15000;
+        response = await axios.get(apiUrl, {
+          params: { include: ids, per_page: CHUNK_SIZE },
+          headers,
+          timeout: apiTimeout,
+          validateStatus: () => true,
+        });
+
+        if (response.status === 403 && hasWaf && attempt === 0) {
+          // WAF cookies expired — refresh and retry
+          console.log(`[VerifyWorker] ${domain}: Store API 403, refreshing WAF cookies...`);
+          await reportFailure(domain);
+          try {
+            const creds = await ensureCookies(domain, origin);
+            cookies = creds.cookies;
+            userAgent = creds.userAgent;
+            continue; // Retry this chunk
+          } catch {
+            console.warn(`[VerifyWorker] ${domain}: WAF cookie refresh failed, falling back to Playwright for remaining`);
+            return {
+              verified, updated, deleted, errors,
+              handled: handledProductIds.length,
+              handledProductIds,
+            };
+          }
+        }
+
+        break; // Success or non-403 error
+      } catch (err) {
+        console.error(`[VerifyWorker] ${domain}: Store API request failed:`, err instanceof Error ? err.message : err);
+        // Network error — fall back to Playwright for remaining
+        return {
+          verified, updated, deleted, errors,
+          handled: handledProductIds.length,
+          handledProductIds,
+        };
+      }
+    }
+
+    if (!response || response.status !== 200) {
+      console.warn(`[VerifyWorker] ${domain}: Store API returned ${response?.status}, falling back to Playwright for remaining`);
+      return {
+        verified, updated, deleted, errors,
+        handled: handledProductIds.length,
+        handledProductIds,
+      };
+    }
+
+    // Build lookup map from API response: sourceId -> API product
+    const apiProducts: any[] = response.data;
+    const apiMap = new Map<string, any>();
+    for (const ap of apiProducts) {
+      apiMap.set(String(ap.id), ap);
+    }
+
+    // Process each product in this chunk — collect updates, then batch via $transaction
+    const now = new Date();
+    const batchOps: ReturnType<typeof prisma.productIndex.update>[] = [];
+
+    for (const product of chunk) {
+      const apiProduct = apiMap.get(product.sourceId!);
+
+      if (apiProduct) {
+        // Found in Store API — extract data and update
+        const price = apiProduct.prices?.price ? Number(apiProduct.prices.price) / 100 : null;
+        const regularPrice = apiProduct.prices?.regular_price ? Number(apiProduct.prices.regular_price) / 100 : null;
+        const stockStatus = apiProduct.is_in_stock ? 'in_stock' : 'out_of_stock';
+        const thumbnail = apiProduct.images?.[0]?.src || null;
+
+        const updateData: Record<string, any> = {
+          lastSeenAt: now,
+          staleSince: null,
+          staleVerifiedAt: now,
+          verifyErrors: 0,
+          isActive: true,
+          stockStatus,
+        };
+        if (price != null) updateData.price = price;
+        if (regularPrice != null) updateData.regularPrice = regularPrice;
+        if (thumbnail) updateData.thumbnail = thumbnail;
+
+        batchOps.push(prisma.productIndex.update({
+          where: { id: product.id },
+          data: updateData,
+        }));
+        updated++;
+      } else {
+        // Not found in Store API — may be deleted, but the API has per_page
+        // Store API "not found" does NOT mean product is deleted.
+        // The API has pagination limits, caching, and visibility filters
+        // that can cause real products to be missing from responses.
+        // Do NOT increment verifyErrors or deactivate — just skip.
+        // The Playwright detail-page path is the only reliable way to
+        // confirm a product is truly deleted (HTTP 404 on the actual URL).
+        // Leave this product for the next verify cycle or Playwright fallback.
+      }
+
+      verified++;
+      handledProductIds.push(product.id);
+    }
+
+    // Execute all updates for this chunk in a single transaction
+    if (batchOps.length > 0) {
+      await prisma.$transaction(batchOps);
+    }
+
+    // Delay between chunks for WAF sites
+    if (hasWaf && ci < chunks.length - 1) {
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
+
+  // Also mark products without sourceIds as handled if ALL were handled via API
+  // (they weren't — they need Playwright fallback)
+  return {
+    verified,
+    updated,
+    deleted,
+    errors,
+    handled: handledProductIds.length,
+    handledProductIds,
+  };
+}
+
+/**
+ * Shared Playwright per-product verification loop.
+ * Used by both WooCommerce fallback and standard Playwright paths.
+ */
+async function verifyProductsViaPlaywright(
+  products: Array<{ id: string; url: string; title: string; staleSince: Date | null; verifyErrors: number | null; [key: string]: any }>,
+  domain: string,
+  siteId: string,
+  tier: number,
+  hasWaf: boolean | undefined,
+  deps: {
+    verifyProduct: (params: { url: string; domain: string; hasWaf?: boolean }) => Promise<any>;
+    randomDelay: (min: number, max: number) => Promise<void>;
+    consumeToken: (siteId: string, tier: 1 | 2 | 3 | 4) => void;
+  },
+): Promise<{ alive: number; sold: number; deleted: number; wanted: number; errors: number }> {
+  let alive = 0, sold = 0, deleted = 0, wanted = 0, errors = 0;
 
   for (const product of products) {
     try {
-      const result = await verifyProduct({ url: product.url, domain, hasWaf });
+      deps.consumeToken(siteId, tier as 1 | 2 | 3 | 4);
+      const result = await deps.verifyProduct({ url: product.url, domain, hasWaf });
       const now = new Date();
 
       if (result.status === 'deleted') {
-        // Preserve all last known data — just mark inactive
         await prisma.productIndex.update({
           where: { id: product.id },
           data: {
@@ -317,7 +610,7 @@ async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
             stockStatus: 'out_of_stock',
             staleSince: product.staleSince ?? now,
             staleVerifiedAt: now,
-            lastSeenAt: now, // Page exists, just sold
+            lastSeenAt: now,
             verifyErrors: 0,
           },
         });
@@ -332,7 +625,7 @@ async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
             verifyErrors: 0,
           },
         });
-        updated++;
+        wanted++;
       } else if (result.status === 'alive') {
         const update: Record<string, any> = {
           lastSeenAt: now,
@@ -351,13 +644,11 @@ async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
           where: { id: product.id },
           data: update,
         });
-        updated++;
+        alive++;
       } else {
-        // status === 'error' — increment error counter
         const newErrors = (product.verifyErrors || 0) + 1;
         const tuning = resolveTuning(null);
         if (newErrors >= tuning.maxVerifyErrors) {
-          // Too many consecutive errors — mark as deleted (garbage collection)
           await prisma.productIndex.update({
             where: { id: product.id },
             data: {
@@ -378,17 +669,122 @@ async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
         }
       }
 
-      verified++;
-      await randomDelay(300, 800);
+      await deps.randomDelay(300, 800);
     } catch (err) {
       console.error(`[VerifyWorker] ${domain}: error verifying ${product.url}:`, err instanceof Error ? err.message : err);
       errors++;
     }
   }
 
+  return { alive, sold, deleted, wanted, errors };
+}
+
+async function processVerifyCrawl(job: Job<VerifyJobData>): Promise<void> {
+  const { siteId, domain, tier, productIds, hasWaf } = job.data;
+  const { verifyProduct } = await import('./product-verifier');
+  const { randomDelay } = await import('./scraper/http-client');
+  const { consumeToken } = await import('./token-budget');
+
+  console.log(`[VerifyWorker] T${tier} verifying ${productIds.length} products for ${domain}`);
+
+  const products = await prisma.productIndex.findMany({
+    where: { id: { in: productIds } },
+  });
+
+  let verified = 0, updated = 0, sold = 0, deleted = 0, errors = 0;
+
+  // ─── WooCommerce Store API Fast-Path ───────────────────────────────────────
+  // If the site profile specifies store-api verify method, use batch API verification
+  // instead of launching Playwright per-product.
+  const storeApiFastPath = await tryStoreApiVerify(products, domain, siteId, hasWaf);
+  if (storeApiFastPath) {
+    verified = storeApiFastPath.verified;
+    updated = storeApiFastPath.updated;
+    deleted = storeApiFastPath.deleted;
+    errors = storeApiFastPath.errors;
+
+    // If fast-path handled everything, record event and self-queue
+    if (storeApiFastPath.handled === products.length) {
+      console.log(
+        `[VerifyWorker] ${domain} T${tier} (WooAPI): verified=${verified} updated=${updated} deleted=${deleted} errors=${errors}`
+      );
+      await onCrawlComplete({
+        siteId,
+        status: errors === products.length ? 'fail' : 'success',
+        matchesFound: verified,
+        pagesScanned: products.length,
+        tokensUsed: products.length,
+        tier,
+        jobType: 'crawl-verify',
+        errorMessage: errors > 0 ? `${errors} verification errors` : undefined,
+      });
+      await selfQueueNextBatch(siteId, domain, tier, hasWaf);
+      return;
+    }
+
+    // Partial fast-path: some products lacked sourceIds or API failed.
+    // Fall through to Playwright for remaining products.
+    const handledIds = new Set(storeApiFastPath.handledProductIds);
+    const remaining = products.filter(p => !handledIds.has(p.id));
+    if (remaining.length === 0) {
+      console.log(
+        `[VerifyWorker] ${domain} T${tier} (WooAPI): verified=${verified} updated=${updated} deleted=${deleted} errors=${errors}`
+      );
+      await onCrawlComplete({
+        siteId,
+        status: errors === products.length ? 'fail' : 'success',
+        matchesFound: verified,
+        pagesScanned: products.length,
+        tokensUsed: products.length,
+        tier,
+        jobType: 'crawl-verify',
+        errorMessage: errors > 0 ? `${errors} verification errors` : undefined,
+      });
+      await selfQueueNextBatch(siteId, domain, tier, hasWaf);
+      return;
+    }
+
+    // Continue with Playwright for remaining products
+    console.log(`[VerifyWorker] ${domain} T${tier}: WooAPI handled ${storeApiFastPath.handled}, falling back to Playwright for ${remaining.length}`);
+    const pwResult = await verifyProductsViaPlaywright(remaining, domain, siteId, tier, hasWaf, { verifyProduct, randomDelay, consumeToken });
+    deleted += pwResult.deleted;
+    sold += pwResult.sold;
+    updated += pwResult.alive + pwResult.wanted;
+    errors += pwResult.errors;
+    verified += pwResult.alive + pwResult.sold + pwResult.deleted + pwResult.wanted;
+  } else {
+    // ─── Verify method must be declared in site profile ──────────────────────────
+    const { _getSiteCacheEntry: getEntry } = await import('./scraper/adapter-registry');
+    const entry = getEntry(domain.replace(/^www\./, ''));
+    const verifyMethod = entry?.siteProfile?.crawlers?.maintain?.verifyMethod;
+    if (!verifyMethod) {
+      console.error(`[VerifyWorker] ${domain}: MISSING verifyMethod in site profile (crawlers.maintain.verifyMethod). Skipping verification.`);
+      return;
+    }
+    // verifyMethod === 'detail-page' — visit each product URL via Playwright
+    const pwResult = await verifyProductsViaPlaywright(products, domain, siteId, tier, hasWaf, { verifyProduct, randomDelay, consumeToken });
+    deleted += pwResult.deleted;
+    sold += pwResult.sold;
+    updated += pwResult.alive + pwResult.wanted;
+    errors += pwResult.errors;
+    verified += pwResult.alive + pwResult.sold + pwResult.deleted + pwResult.wanted;
+  }
+
   console.log(
     `[VerifyWorker] ${domain} T${tier}: verified=${verified} updated=${updated} sold=${sold} deleted=${deleted} errors=${errors}`
   );
+
+  // Record CrawlEvent and update site metrics
+  await onCrawlComplete({
+    siteId,
+    status: errors === products.length ? 'fail' : 'success',
+    matchesFound: verified,
+    pagesScanned: products.length,
+    tokensUsed: products.length,
+    tier,
+    jobType: 'crawl-verify',
+    errorMessage: errors > 0 ? `${errors} verification errors` : undefined,
+  });
 
   // Self-queue: immediately check for more work instead of waiting for scheduler tick
   await selfQueueNextBatch(siteId, domain, tier, hasWaf);
@@ -415,17 +811,19 @@ async function selfQueueNextBatch(
 
     const site = await prisma.monitoredSite.findUnique({
       where: { id: siteId },
-      select: { baseBudget: true, capacity: true, crawlTuning: true, crawlPhase: true, hasWaf: true },
+      select: { baseBudget: true, capacity: true, crawlTuning: true, crawlPhase: true, hasWaf: true, crawlIntervalMin: true },
     });
     if (!site || site.crawlPhase !== 'maintain') return;
 
     const { allocateMaintainTokens } = await import('./token-budget');
     const tuning = resolveTuning(site.crawlTuning);
-    const allocation = allocateMaintainTokens(siteId, site.baseBudget, site.capacity, tuning);
+    const allocation = allocateMaintainTokens(siteId, site.baseBudget, site.capacity, tuning, site.crawlIntervalMin || 20);
 
     const tierTokens = tier === 2 ? allocation.tier2 : tier === 3 ? allocation.tier3 : allocation.tier4;
     if (tierTokens <= 0) return; // No budget left
 
+    // Partition by product age (firstSeenAt), not last verification date.
+    // Matches queueMaintainVerification logic in crawl-scheduler.ts.
     const tierConfig = {
       2: { minDays: tuning.maintainT2MinDays, maxDays: tuning.maintainT2MaxDays },
       3: { minDays: tuning.maintainT3MinDays, maxDays: tuning.maintainT3MaxDays },
@@ -433,16 +831,25 @@ async function selfQueueNextBatch(
     }[tier];
 
     const now = new Date();
-    const minDate = new Date(now.getTime() - tierConfig.maxDays * 86400000);
-    const maxDate = new Date(now.getTime() - tierConfig.minDays * 86400000);
+    const ageMaxDate = new Date(now.getTime() - tierConfig.minDays * 86400000);
+    const ageMinDate = new Date(now.getTime() - tierConfig.maxDays * 86400000);
+
+    // Only select products that NEED verification in this cycle:
+    // - Never verified (staleVerifiedAt is null), OR
+    // - Verified before the current cycle (older than the tier's cooldown period)
+    // This ensures each product is verified once per cycle, then the tier enters cooldown.
+    const cooldownHrs = { 2: tuning.maintainT2CooldownHrs, 3: tuning.maintainT3CooldownHrs, 4: tuning.maintainT4CooldownHrs }[tier]!;
+    const cycleThreshold = new Date(now.getTime() - cooldownHrs * 3600000);
 
     const products = await prisma.productIndex.findMany({
       where: {
         siteId,
         isActive: true,
+        firstSeenAt: { gte: ageMinDate, lte: ageMaxDate },
+        // Only products not yet verified in this cycle
         OR: [
-          { staleVerifiedAt: { gte: minDate, lte: maxDate } },
-          ...(tier === 4 ? [{ staleVerifiedAt: null }] : []),
+          { staleVerifiedAt: null },
+          { staleVerifiedAt: { lt: cycleThreshold } },
         ],
       },
       orderBy: { staleVerifiedAt: 'asc' },
@@ -451,8 +858,7 @@ async function selfQueueNextBatch(
     });
 
     if (products.length === 0) {
-      // Tier completed its cycle — enter cooldown
-      const cooldownHrs = { 2: tuning.maintainT2CooldownHrs, 3: tuning.maintainT3CooldownHrs, 4: tuning.maintainT4CooldownHrs }[tier];
+      // Tier completed its cycle — all products verified recently. Enter cooldown.
       setMaintainTierCooldown(siteId, tier, cooldownHrs);
       console.log(`[VerifyWorker] ${domain} T${tier}: cycle complete, cooldown ${cooldownHrs}h`);
       return;
@@ -467,6 +873,7 @@ async function selfQueueNextBatch(
       hasWaf: hasWaf ?? site.hasWaf,
     }, {
       jobId: `verify-${siteId}-t${tier}-${Date.now()}`,
+      priority: 3, // Below T1 watermarks, above bootstrap catalog
       attempts: 1,
       removeOnComplete: 50,
       removeOnFail: 100,
@@ -629,11 +1036,10 @@ export function startStaleCheckWorker(): Worker {
 
     const sites = await prisma.monitoredSite.findMany({
       where: { isEnabled: true, isPaused: false },
-      select: { id: true, domain: true, streamState: true },
+      select: { id: true, domain: true, streamState: true, crawlPhase: true },
     });
 
     const { checkStaleProducts } = await import('./stale-detector');
-    const { parseStreamState } = await import('./stream-detector');
 
     let totalSold = 0;
     let totalInactive = 0;
@@ -644,7 +1050,7 @@ export function startStaleCheckWorker(): Worker {
       if (!ss || ss.streams.length === 0) continue;
 
       try {
-        const result = await checkStaleProducts(site.id, ss.streams[0].id, ss);
+        const result = await checkStaleProducts(site.id, ss.streams[0].id, ss, site.crawlPhase);
         totalSold += result.markedSold;
         totalInactive += result.markedInactive;
         totalFP += result.falsePositives;

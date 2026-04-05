@@ -13,6 +13,47 @@ import { prisma } from '../lib/prisma';
 import { classifyProduct } from './product-classifier';
 import type { CatalogProduct } from './scraper/types';
 
+/**
+ * Tracking/search query parameters that should be stripped from product URLs
+ * to prevent duplicate entries from search results, UTM campaigns, etc.
+ */
+const TRACKING_PARAMS = new Set([
+  // BigCommerce search result tracking
+  'searchid', 'search_query',
+  // UTM parameters
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+  // Common tracking/session params
+  'fbclid', 'gclid', 'gclsrc', 'dclid', 'msclkid',
+  'mc_cid', 'mc_eid',
+  'ref', 'ref_', 'referrer',
+  '_ga', '_gl',
+  'si', 'spm',
+]);
+
+/**
+ * Normalize a product URL by stripping tracking/search query parameters.
+ * Preserves meaningful query params (like variant selectors) while removing
+ * params that create duplicate entries for the same product.
+ */
+function normalizeProductUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    let changed = false;
+    for (const param of TRACKING_PARAMS) {
+      if (parsed.searchParams.has(param)) {
+        parsed.searchParams.delete(param);
+        changed = true;
+      }
+    }
+    if (!changed) return url;
+    // Remove trailing ? if no params remain
+    const result = parsed.toString();
+    return result.endsWith('?') ? result.slice(0, -1) : result;
+  } catch {
+    return url;
+  }
+}
+
 export type SavedProduct = {
   id: string;
   siteId: string;
@@ -77,6 +118,9 @@ export async function saveProducts(
 
   for (const product of filtered) {
     try {
+      // Normalize URL to strip tracking/search params before deduplication
+      product.url = normalizeProductUrl(product.url);
+
       const productType = product.productType || classifyProduct({
         title: product.title,
         url: product.url,

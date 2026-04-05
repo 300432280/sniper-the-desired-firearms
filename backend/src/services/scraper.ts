@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
 import { getListingUrls } from './site-navigator';
+import { _getSiteCacheEntry } from './scraper/adapter-registry';
 
 // ── Import from new modular architecture ────────────────────────────────────
 import type { SiteType, ExtractionOptions } from './scraper/types';
@@ -90,7 +91,6 @@ function extractClassifiedsMatches(
 
   const CLASSIFIED_SELECTORS = [
     '[class*="node--type-classified"]',
-    '[class*="gunpost-teaser"]',
     '[class*="node--type-"][class*="teaser"]',
     '[class*="classified-ad"]',
     '[class*="classified-item"]',
@@ -532,22 +532,25 @@ function buildForumSearchUrls(baseUrl: string, keyword: string): string[] {
   try {
     const u = new URL(baseUrl);
     const origin = u.origin;
-    const hostname = u.hostname.toLowerCase();
+    const bare = u.hostname.toLowerCase().replace(/^www\./, '');
     const encoded = encodeURIComponent(keyword);
     const urls: string[] = [];
 
-    if (hostname.includes('canadiangunnutz.com')) {
-      urls.push(
-        `${origin}/forum/search/?q=${encoded}&t=post`,
-        `${origin}/forum/search/search?keywords=${encoded}`,
-        `${origin}/forum/index.php?forums/exchange-of-military-surplus-rifle.44/`,
-        `${origin}/forum/index.php?forums/exchange-of-handguns.7/`,
-        `${origin}/forum/index.php?forums/exchange-of-rifles.8/`,
-        `${origin}/forum/index.php?forums/exchange-of-shotguns.9/`,
-        `${origin}/forum/index.php?forums/exchange-of-firearm-parts.46/`,
-      );
+    // Read listing URLs and search template from site profile
+    const entry = _getSiteCacheEntry(bare);
+    const profile = entry?.siteProfile;
+
+    if (profile?.searchUrlTemplate) {
+      const searchPath = profile.searchUrlTemplate.replace('{keyword}', encoded);
+      urls.push(`${origin}${searchPath}`);
+    }
+    if (profile?.listingUrls && Array.isArray(profile.listingUrls)) {
+      for (const path of profile.listingUrls) {
+        urls.push(`${origin}${path}`);
+      }
     }
 
+    // Generic forum search fallbacks
     urls.push(
       `${origin}/forum/search.php?do=process&query=${encoded}&titleonly=1`,
       `${origin}/search/?q=${encoded}&t=post`,
@@ -565,20 +568,20 @@ function buildAuctionSearchUrls(baseUrl: string, keyword: string): string[] {
   try {
     const u = new URL(baseUrl);
     const origin = u.origin;
-    const hostname = u.hostname.toLowerCase();
+    const bare = u.hostname.toLowerCase().replace(/^www\./, '');
     const encoded = encodeURIComponent(keyword);
     const urls: string[] = [];
 
-    if (hostname.includes('hibid.com')) {
-      urls.push(`${origin}/search?searchPhrase=${encoded}`);
-      urls.push(`${origin}/auctions/search?searchPhrase=${encoded}`);
+    // Read search URL template from site profile
+    const entry = _getSiteCacheEntry(bare);
+    const profile = entry?.siteProfile;
+
+    if (profile?.searchUrlTemplate) {
+      const searchPath = profile.searchUrlTemplate.replace('{keyword}', encoded);
+      urls.push(`${origin}${searchPath}`);
     }
-    if (hostname.includes('proxibid.com')) {
-      urls.push(`${origin}/asp/search.asp?ahid=&type=0&word=${encoded}`);
-    }
-    if (hostname.includes('icollector.com')) {
-      urls.push(`${origin}/search/?q=${encoded}`);
-    }
+
+    // Generic auction search fallbacks
     urls.push(`${origin}/search?q=${encoded}`);
     urls.push(`${origin}/search?keyword=${encoded}`);
 
@@ -629,13 +632,17 @@ function extractAuctionSessionLinks($: cheerio.CheerioAPI, baseUrl: string): str
 
 // ── iCollector CloudSearch JSON API ─────────────────────────────────────────────
 
-function icollectorFriendlyUrl(title: string, itemId: number): string {
+function icollectorFriendlyUrl(title: string, itemId: number, origin: string, urlPattern?: string): string {
   const slug = title
     .replace(/[^a-zA-Z0-9\- ]/g, ' ')
     .trim()
     .replace(/\s+/g, '-')
     .replace(/-+$|(-)+/g, '-');
-  return `https://www.icollector.com/${slug}_i${itemId}`;
+  // Use profile's urlPattern if available, otherwise default
+  if (urlPattern) {
+    return `${origin}${urlPattern.replace('{slug}', slug).replace('{itemId}', String(itemId))}`;
+  }
+  return `${origin}/${slug}_i${itemId}`;
 }
 
 interface ICollectorItem {
@@ -654,7 +661,17 @@ async function searchICollector(
   keyword: string,
   options: { fast?: boolean } = {}
 ): Promise<ScrapedMatch[]> {
-  const API_URL = 'https://www.icollector.com/handlers/controls/CloudsearchItemSearch.ashx';
+  // Read API endpoint and origin from site profile, fall back to defaults
+  const entry = _getSiteCacheEntry('icollector.com');
+  const profile = entry?.siteProfile;
+  const API_URL = profile?.apiEndpoint || 'https://www.icollector.com/handlers/controls/CloudsearchItemSearch.ashx';
+  const urlPattern = profile?.urlPattern;
+  const origin = profile?.apiEndpoint
+    ? new URL(profile.apiEndpoint).origin
+    : 'https://www.icollector.com';
+  const domain = profile?.apiEndpoint
+    ? new URL(profile.apiEndpoint).hostname
+    : 'icollector.com';
   const maxItems = options.fast ? 50 : 100;
 
   const response = await axios.get(API_URL, {
@@ -670,10 +687,10 @@ async function searchICollector(
       hasImage: 'false',
     },
     headers: {
-      'User-Agent': pickUserAgent('icollector.com'),
+      'User-Agent': pickUserAgent(domain),
       Accept: 'application/json, text/javascript, */*; q=0.01',
       'X-Requested-With': 'XMLHttpRequest',
-      Referer: 'https://www.icollector.com/search.aspx',
+      Referer: `${origin}/search.aspx`,
     },
     timeout: 20000,
   });
@@ -696,7 +713,7 @@ async function searchICollector(
     if (seen.has(titleKey)) continue;
     seen.add(titleKey);
 
-    const url = icollectorFriendlyUrl(title, item.ItemID);
+    const url = icollectorFriendlyUrl(title, item.ItemID, origin, urlPattern);
     const price = item.ItemCurrentBidAmount > 0 ? item.ItemCurrentBidAmount : undefined;
 
     matches.push({ title: title.slice(0, 160), price, url });
@@ -730,19 +747,20 @@ export async function scrapeForKeyword(
     };
   }
 
-  // iCollector: use CloudSearch API as primary method (finds lots across ALL auctions)
+  // CloudSearch API for sites that support it (e.g. iCollector)
   if (matches.length === 0 && isBareDomain(websiteUrl)) {
     try {
-      const hostname = new URL(websiteUrl).hostname.toLowerCase();
-      if (hostname.includes('icollector.com')) {
+      const hostname = new URL(websiteUrl).hostname.toLowerCase().replace(/^www\./, '');
+      const siteEntry = _getSiteCacheEntry(hostname);
+      if (siteEntry?.siteProfile?.searchApiMethod === 'cloudsearch') {
         const icMatches = await searchICollector(keyword, { fast: options.fast });
         if (icMatches.length > 0) {
           matches = icMatches;
-          console.log(`[Scraper] iCollector search found ${matches.length} lots for "${keyword}"`);
+          console.log(`[Scraper] CloudSearch API found ${matches.length} lots for "${keyword}" on ${hostname}`);
         }
       }
     } catch (err) {
-      console.log(`[Scraper] iCollector API search failed: ${err instanceof Error ? err.message : 'unknown'}`);
+      console.log(`[Scraper] CloudSearch API search failed: ${err instanceof Error ? err.message : 'unknown'}`);
     }
   }
 

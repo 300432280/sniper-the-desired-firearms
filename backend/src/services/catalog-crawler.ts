@@ -22,6 +22,9 @@ import type { CatalogProduct, Stream, StreamTierState } from './scraper/types';
 import { saveProducts } from './product-upsert';
 import * as cheerio from 'cheerio';
 
+/** WAF sites require multiple consecutive empty pages before declaring end-of-catalog. */
+const MAX_CONSECUTIVE_EMPTY_PAGES = 3;
+
 /**
  * Detect total pages from HTML pagination links on the first page.
  * Looks for common patterns: numbered page links, "last" links, "of N" text.
@@ -76,6 +79,28 @@ export function detectTotalPagesFromHtml($: cheerio.CheerioAPI, currentUrl: stri
   }
 
   return maxPage > 1 ? maxPage : undefined;
+}
+
+/**
+ * Construct a paginated URL from a base URL and a page number.
+ * If the base URL already has a `page=` query param, replaces its value.
+ * Otherwise appends `page=N` to the query string.
+ * Returns the base URL unchanged if pageNum <= 1.
+ */
+export function buildPaginatedUrl(baseUrl: string, pageNum: number): string {
+  if (pageNum <= 1) return baseUrl;
+  try {
+    const url = new URL(baseUrl);
+    url.searchParams.set('page', String(pageNum));
+    return url.toString();
+  } catch {
+    // Fallback for malformed URLs: simple string manipulation
+    if (baseUrl.includes('page=')) {
+      return baseUrl.replace(/([?&])page=\d+/, `$1page=${pageNum}`);
+    }
+    const sep = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${sep}page=${pageNum}`;
+  }
 }
 
 // ── Tier Configuration ──────────────────────────────────────────────────────
@@ -177,8 +202,12 @@ export async function crawlCatalogTier(params: {
 
   try {
     // API-based catalog crawl (preferred — Shopify, WooCommerce, iCollector)
+    // fetchCatalogPage returns null when the adapter doesn't support API crawl for this site
+    // (e.g. GenericRetail without Klevu API key). In that case, fall through to HTML extraction.
+    let apiCrawlUsed = false;
     if (adapter.fetchCatalogPage) {
       let page = tierState.currentPage || 1;
+      let consecutiveEmptyApi = 0;
 
       while (tokensUsed < tokensAllocated) {
         consumeToken(siteId, tier);
@@ -191,12 +220,32 @@ export async function crawlCatalogTier(params: {
           dateBefore: tierState.dateRangeEnd || undefined,
           hasWaf: params.hasWaf,
         });
+
+        // null = adapter doesn't support API crawl for this site, fall through to HTML
+        if (catalogPage === null) {
+          // Refund the token we consumed for this failed probe
+          tokensUsed--;
+          break;
+        }
+        apiCrawlUsed = true;
         pagesScanned++;
 
         if (catalogPage.products.length === 0) {
+          if (params.hasWaf) {
+            consecutiveEmptyApi++;
+            console.log(`[CatalogCrawl] ${params.domain} T${tier}: empty API page ${page} (WAF site, consecutive=${consecutiveEmptyApi}/${MAX_CONSECUTIVE_EMPTY_PAGES})`);
+            if (consecutiveEmptyApi >= MAX_CONSECUTIVE_EMPTY_PAGES) {
+              cycleComplete = true;
+              break;
+            }
+            page++;
+            await randomDelay(1000, 2000);
+            continue;
+          }
           cycleComplete = true;
           break;
         }
+        consecutiveEmptyApi = 0;
 
         allProducts.push(...catalogPage.products);
         productsFound += catalogPage.products.length;
@@ -212,7 +261,8 @@ export async function crawlCatalogTier(params: {
     }
     // HTML-based catalog crawl — uses adapter's catalog URLs with pagination
     // (BigCommerce, Magento, custom PHP, etc.)
-    else if (adapter.extractCatalogProducts) {
+    // Also used when fetchCatalogPage returns null (API not supported for this site).
+    if (!apiCrawlUsed && adapter.extractCatalogProducts) {
       // Get catalog URLs from adapter — prefer getCatalogUrls() (designed for full catalog refresh),
       // fall back to getNewArrivalsUrls() (watermark URLs also work for catalog), then generic /shop/
       const rawUrls: string[] = [];
@@ -229,6 +279,8 @@ export async function crawlCatalogTier(params: {
 
       // Resume from tracked URL index (persisted across ticks for partial cycles)
       let urlIdx = tierState.currentUrlIndex ?? 0;
+
+      let consecutiveEmptyHtml = 0;
 
       while (urlIdx < catalogUrls.length && tokensUsed < tokensAllocated) {
         // Resume from saved page URL if tokens ran out mid-pagination last tick
@@ -248,7 +300,18 @@ export async function crawlCatalogTier(params: {
               const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
               html = pwResult.html;
             } catch {
-              break; // Playwright failed, try next URL
+              // Retry once after 3s delay
+              console.log(`[CatalogCrawl] ${params.domain} T${tier}: Playwright failed for ${currentUrl}, retrying in 3s...`);
+              await new Promise(r => setTimeout(r, 3000));
+              try {
+                const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+                const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
+                html = pwResult.html;
+              } catch {
+                console.log(`[CatalogCrawl] ${params.domain} T${tier}: Playwright retry failed for ${currentUrl}, skipping page`);
+                // Skip this page, continue to next page via getNextPageUrl or next catalog URL
+                break;
+              }
             }
           } else {
             try {
@@ -287,7 +350,34 @@ export async function crawlCatalogTier(params: {
             } catch { /* continue */ }
           }
 
-          if (products.length === 0) break; // No products on this URL, try next
+          // WAF sites: 0 products might be Cloudflare block, not end-of-catalog
+          if (products.length === 0 && params.hasWaf && html.length > 2000) {
+            // Got HTML but no products — could be a Cloudflare challenge page. Retry with Playwright.
+            console.log(`[CatalogCrawl] ${params.domain} T${tier}: 0 products but ${html.length} bytes HTML (WAF), retrying with Playwright...`);
+            try {
+              const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+              const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
+              const $pw = cheerio.load(pwResult.html);
+              products = adapter.extractCatalogProducts($pw, currentUrl);
+            } catch { /* still 0 products */ }
+          }
+
+          if (products.length === 0) {
+            if (params.hasWaf) {
+              consecutiveEmptyHtml++;
+              console.log(`[CatalogCrawl] ${params.domain} T${tier}: 0 products on ${currentUrl} (WAF, consecutive=${consecutiveEmptyHtml}/${MAX_CONSECUTIVE_EMPTY_PAGES})`);
+              if (consecutiveEmptyHtml >= MAX_CONSECUTIVE_EMPTY_PAGES) break; // consecutive empty = real end
+              // Try next page instead of breaking
+              const skipNextUrl: string | null = adapter.getNextPageUrl?.($, currentUrl) ?? null;
+              if (skipNextUrl) {
+                currentUrl = skipNextUrl;
+                await randomDelay(1000, 2000);
+                continue;
+              }
+            }
+            break; // Non-WAF or no next page: 0 products = end
+          }
+          consecutiveEmptyHtml = 0; // Reset on success
 
           allProducts.push(...products);
           productsFound += products.length;
@@ -484,13 +574,14 @@ export async function crawlStreamTier(params: {
   const allProducts: CatalogProduct[] = [];
 
   try {
-    if (adapter.fetchCatalogPage) {
-      // ── API-based fetch: structured JSON with prices/stock
+    if (adapter.fetchCatalogPage && stream.type === 'api') {
+      // ── API-based fetch: structured JSON with prices/stock (only for 'api' streams)
       // 'api' type streams use date ranges for tier partitioning (WooCommerce)
       // 'html' type API streams use page ranges for tier partitioning (Shopify — no date filter support)
       const useDateRanges = stream.type === 'api';
       let page = tierState.currentPage || tierState.pageRangeStart || 1;
       const pageRangeEnd = tierState.pageRangeEnd;
+      let consecutiveEmptyStreamApi = 0;
 
       while (tokensUsed < tokensAllocated) {
         // Stop if we've exceeded this tier's page range (page-partitioned APIs only)
@@ -509,21 +600,38 @@ export async function crawlStreamTier(params: {
           dateBefore: useDateRanges ? (tierState.dateRangeEnd || undefined) : undefined,
           hasWaf: params.hasWaf,
         });
+        // null = adapter doesn't support API crawl (shouldn't happen for 'api' streams, but guard anyway)
+        if (catalogPage === null) {
+          tokensUsed--;
+          break;
+        }
         pagesScanned++;
 
         if (catalogPage.totalPages) totalPagesDiscovered = catalogPage.totalPages;
 
         if (catalogPage.products.length === 0) {
-          // Only mark cycle complete if we believe this is truly the end of data.
           // If we know totalPages and haven't reached it, an empty page is likely
           // a transient error (WAF timeout, cookie expiry) — stop but resume later.
           if (totalPagesDiscovered && page < totalPagesDiscovered) {
             console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: empty page ${page} but totalPages=${totalPagesDiscovered} — will resume`);
             break;
           }
+          // WAF sites: require 3 consecutive empty pages before declaring end-of-catalog
+          if (params.hasWaf) {
+            consecutiveEmptyStreamApi++;
+            console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: empty API page ${page} (WAF, consecutive=${consecutiveEmptyStreamApi}/${MAX_CONSECUTIVE_EMPTY_PAGES})`);
+            if (consecutiveEmptyStreamApi >= MAX_CONSECUTIVE_EMPTY_PAGES) {
+              cycleComplete = true;
+              break;
+            }
+            page++;
+            await randomDelay(1000, 2000);
+            continue;
+          }
           cycleComplete = true;
           break;
         }
+        consecutiveEmptyStreamApi = 0;
 
         allProducts.push(...catalogPage.products);
         productsFound += catalogPage.products.length;
@@ -542,12 +650,16 @@ export async function crawlStreamTier(params: {
 
     } else if (stream.type === 'html' && adapter.extractCatalogProducts) {
       // ── HTML stream: crawl one URL with page-range boundaries
-      let currentUrl: string | null = tierState.currentPageUrl ?? stream.url;
-      tierState.currentPageUrl = undefined;
-
       // Skip to pageRangeStart if resuming from beginning
       let currentPageNum = tierState.currentPage || tierState.pageRangeStart || 1;
+
+      // If we have a saved URL, use it. Otherwise construct the correct paginated URL
+      // so that resuming at currentPage > 1 doesn't accidentally fetch page 1.
+      let currentUrl: string | null = tierState.currentPageUrl
+        ?? buildPaginatedUrl(stream.url, currentPageNum);
+      tierState.currentPageUrl = undefined;
       const pageRangeEnd = tierState.pageRangeEnd;
+      let consecutiveEmptyStreamHtml = 0;
 
       while (currentUrl && tokensUsed < tokensAllocated) {
         // Stop if we've exceeded this tier's page range
@@ -567,7 +679,24 @@ export async function crawlStreamTier(params: {
             const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
             html = pwResult.html;
           } catch {
-            break;
+            // Retry once after 3s delay
+            console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: Playwright failed for ${currentUrl}, retrying in 3s...`);
+            await new Promise(r => setTimeout(r, 3000));
+            try {
+              const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+              const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
+              html = pwResult.html;
+            } catch {
+              console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: Playwright retry failed for ${currentUrl}, skipping page`);
+              // Skip this page, try next via getNextPageUrl
+              const skipUrl: string | null = adapter.getNextPageUrl?.(cheerio.load(''), currentUrl) ?? null;
+              if (skipUrl) {
+                currentUrl = skipUrl;
+                currentPageNum++;
+                continue;
+              }
+              break;
+            }
           }
         } else {
           try {
@@ -610,11 +739,39 @@ export async function crawlStreamTier(params: {
           } catch { /* continue */ }
         }
 
+        // WAF sites: 0 products might be Cloudflare block, not end-of-catalog
+        if (products.length === 0 && params.hasWaf && html.length > 2000) {
+          console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: 0 products but ${html.length} bytes HTML (WAF), retrying with Playwright...`);
+          try {
+            const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
+            const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
+            const $pw = cheerio.load(pwResult.html);
+            products = adapter.extractCatalogProducts($pw, currentUrl);
+          } catch { /* still 0 products */ }
+        }
+
         if (products.length === 0) {
-          // No products = end of this stream's pages
+          if (params.hasWaf) {
+            consecutiveEmptyStreamHtml++;
+            console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: 0 products on page ${currentPageNum} (WAF, consecutive=${consecutiveEmptyStreamHtml}/${MAX_CONSECUTIVE_EMPTY_PAGES})`);
+            if (consecutiveEmptyStreamHtml >= MAX_CONSECUTIVE_EMPTY_PAGES) {
+              cycleComplete = true;
+              break;
+            }
+            // Try next page instead of declaring end
+            const skipNextUrl: string | null = adapter.getNextPageUrl?.($, currentUrl) ?? null;
+            if (skipNextUrl) {
+              currentUrl = skipNextUrl;
+              currentPageNum++;
+              await randomDelay(1000, 2000);
+              continue;
+            }
+          }
+          // Non-WAF or no next page: end of this stream's pages
           cycleComplete = true;
           break;
         }
+        consecutiveEmptyStreamHtml = 0;
 
         allProducts.push(...products);
         productsFound += products.length;
@@ -654,7 +811,11 @@ export async function crawlStreamTier(params: {
         cycleComplete = true;
       } else {
         tierState.currentPage = nextPage;
-        tierState.currentPageUrl = undefined;
+        // Construct the correct URL for the skipped-to page so the next
+        // invocation doesn't fall back to page 1 from stream.url.
+        tierState.currentPageUrl = stream.type === 'html'
+          ? buildPaginatedUrl(stream.url, nextPage)
+          : undefined;
         console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: fetch failed on page ${nextPage - 1}, skipping to page ${nextPage}`);
       }
     }
@@ -686,12 +847,18 @@ export async function crawlStreamTier(params: {
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    // If we scanned some pages before failing, advance currentPage so we don't
-    // re-crawl the same pages on retry. If we failed on the first page, skip ahead
-    // by 1 so we don't get stuck retrying the same blocked page forever.
-    if (pagesScanned === 0 && !cycleComplete) {
+    // If we scanned some pages before failing, currentPage was already advanced
+    // in the loop. If we failed on the very first page attempt:
+    // - For timeouts/network errors: DON'T skip ahead — the whole server is likely
+    //   down, and skipping just wastes tokens on the next page which will also fail.
+    // - For page-specific errors (403, WAF block): skip ahead by 1 to avoid retrying
+    //   the same blocked page forever.
+    const isServerWideError = /timeout|ECONNREFUSED|ENOTFOUND|ECONNRESET|socket hang up/i.test(msg);
+    if (pagesScanned === 0 && !cycleComplete && !isServerWideError) {
       tierState.currentPage = (tierState.currentPage || 1) + 1;
-      console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: API error on page ${tierState.currentPage - 1}, will skip to page ${tierState.currentPage} on retry: ${msg.substring(0, 80)}`);
+      console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: page-specific error on page ${tierState.currentPage - 1}, will skip to page ${tierState.currentPage} on retry: ${msg.substring(0, 80)}`);
+    } else if (pagesScanned === 0 && isServerWideError) {
+      console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: server error on page ${tierState.currentPage}, will retry same page: ${msg.substring(0, 80)}`);
     }
     return {
       streamId: stream.id,

@@ -1,42 +1,36 @@
 import type * as cheerio from 'cheerio';
 import type { SiteType } from '../types';
+import { _getSiteCacheEntry } from '../adapter-registry';
 
-// Known domains → instant classification (no HTML parsing needed)
-const KNOWN_DOMAINS: Record<string, SiteType> = {
-  'canadiangunnutz.com': 'forum',
-  'gunownersofcanada.ca': 'forum',
-  'gunpost.ca': 'classifieds',
-  'hibid.com': 'auction',
-  'icollector.com': 'auction',
-  'proxibid.com': 'auction',
-  'millerandmillerauctions.com': 'auction',
-  'gotenda.com': 'retailer',
-  'ellwoodepps.com': 'retailer',
-  'alflahertys.com': 'retailer',
-  'bullseyelondon.com': 'retailer',
-  'irunguns.com': 'retailer',
-  'theammosource.com': 'retailer',
-  'cabelas.ca': 'retailer',
-  'sailoutdoors.com': 'retailer',
-};
-
-/** Classify a URL by domain lookup (strips www. and checks subdomains) */
+/** Classify a URL by domain lookup from adapter registry cache */
 export function detectSiteTypeFromDomain(url: string): SiteType | null {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
     const bare = hostname.replace(/^www\./, '');
 
-    // Exact match (bare domain)
-    if (KNOWN_DOMAINS[bare]) return KNOWN_DOMAINS[bare];
+    // Exact match from adapter registry
+    const entry = _getSiteCacheEntry(bare);
+    if (entry?.siteType) return entry.siteType as SiteType;
 
-    // Subdomain match (e.g. "forum.canadiangunnutz.com")
-    for (const [domain, type] of Object.entries(KNOWN_DOMAINS)) {
-      if (bare.endsWith(`.${domain}`)) return type;
-    }
-
-    // Auction platform subdomains (e.g. "millerandmiller.hibid.com")
-    if (bare.endsWith('.hibid.com') || bare.endsWith('.proxibid.com') || bare.endsWith('.icollector.com')) {
-      return 'auction';
+    // Subdomain match: extract parent domain and check for subdomainPattern
+    const parts = bare.split('.');
+    if (parts.length > 2) {
+      const parentDomain = parts.slice(-2).join('.');
+      const parentEntry = _getSiteCacheEntry(parentDomain);
+      if (parentEntry?.siteType) {
+        // Check if the parent profile declares a subdomain pattern
+        const pattern = parentEntry.siteProfile?.subdomainPattern;
+        if (pattern && pattern.startsWith('*.')) {
+          const patternDomain = pattern.slice(2);
+          if (bare.endsWith(`.${patternDomain}`)) {
+            return parentEntry.siteType as SiteType;
+          }
+        }
+        // Also match any subdomain of a known domain
+        if (bare.endsWith(`.${parentDomain}`)) {
+          return parentEntry.siteType as SiteType;
+        }
+      }
     }
 
     return null;
@@ -97,7 +91,6 @@ export function detectSiteTypeFromHtml($: cheerio.CheerioAPI): SiteType {
   // Classifieds detection
   if (
     $('[class*="node--type-classified"]').length ||
-    $('[class*="gunpost-teaser"]').length ||
     $('[class*="classified-ad"]').length ||
     ($('[class*="classified"]').length >= 2) ||
     ($('[class*="listing"]').length >= 3 && $('[class*="ad"]').length >= 1)

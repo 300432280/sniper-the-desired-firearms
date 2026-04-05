@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { fetchPage } from './scraper';
+import { _getSiteCacheEntry } from './scraper/adapter-registry';
 
 /**
  * Authenticate to a forum and return serialized cookies for subsequent requests.
@@ -109,9 +110,11 @@ async function loginXenForo(baseUrl: string, username: string, password: string)
 type ForumType = 'vbulletin' | 'xenforo' | 'unknown';
 
 function detectForumType(domain: string): ForumType {
-  const d = domain.toLowerCase();
-  if (d.includes('canadiangunnutz.com')) return 'xenforo';
-  if (d.includes('gunownersofcanada.ca')) return 'xenforo';
+  const bare = domain.toLowerCase().replace(/^www\./, '');
+  const entry = _getSiteCacheEntry(bare);
+  const platform = entry?.siteProfile?.forumPlatform;
+  if (platform === 'xenforo') return 'xenforo';
+  if (platform === 'vbulletin') return 'vbulletin';
   return 'unknown';
 }
 
@@ -130,9 +133,12 @@ export async function loginToSite(domain: string, username: string, password: st
       return loginVBulletin(baseUrl.includes('www.') ? baseUrl : baseUrl.replace('://', '://www.'), username, password);
     case 'xenforo': {
       let xfBase = baseUrl.includes('www.') ? baseUrl : baseUrl.replace('://', '://www.');
-      // CGN runs XenForo under /forum/ path
-      if (domain.toLowerCase().includes('canadiangunnutz.com')) {
-        xfBase = `${xfBase}/forum`;
+      // Read forum base path from site profile (e.g. '/forum' for CGN)
+      const bare = domain.toLowerCase().replace(/^www\./, '');
+      const entry = _getSiteCacheEntry(bare);
+      const forumBasePath = entry?.siteProfile?.forumBasePath;
+      if (forumBasePath) {
+        xfBase = `${xfBase}${forumBasePath}`;
       }
       return loginXenForo(xfBase, username, password);
     }

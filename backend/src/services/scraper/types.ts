@@ -118,6 +118,10 @@ export interface StreamTierState {
   dateRangeStart?: string;
   dateRangeEnd?: string;
   status: 'idle' | 'in_progress' | 'cooldown';
+  /** Number of full bootstrap passes completed (for coverage retry logic) */
+  bootstrapPassCount?: number;
+  /** True if bootstrap completed without reaching 95% coverage */
+  coverageWarning?: boolean;
 }
 
 /** Full stream state stored on MonitoredSite (JSON column). */
@@ -165,7 +169,7 @@ export interface SiteAdapter {
    */
   getCatalogUrls?(origin: string): string[];
   /** Fetch a catalog page via API (preferred — structured data with prices) */
-  fetchCatalogPage?(origin: string, page: number, options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string; hasWaf?: boolean }): Promise<CatalogPage>;
+  fetchCatalogPage?(origin: string, page: number, options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string; hasWaf?: boolean }): Promise<CatalogPage | null>;
   /** Whether fetchCatalogPage supports dateAfter/dateBefore filtering. If false, tiers use page ranges instead. */
   supportsDateFilter?: boolean;
   /** Extract catalog products from an HTML page (fallback when no API available) */

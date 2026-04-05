@@ -20,6 +20,8 @@ export interface TokenBudgetState {
   tokensUsed: number;
   /** Tokens consumed by Tier 1 this hour */
   tier1Used: number;
+  /** T1 runs completed this window (for per-run reserve calculation) */
+  tier1Runs: number;
   /** Hour window start (ms since epoch) */
   windowStart: number;
   /** Minimum seconds between requests to this site */
@@ -57,6 +59,7 @@ export function getBudget(siteId: string, baseBudget: number, capacity: number):
       effectiveBudget,
       tokensUsed: 0,
       tier1Used: 0,
+      tier1Runs: 0,
       windowStart: now,
       minGapSeconds: Math.round(3600 / effectiveBudget),
       lastRequestAt: 0,
@@ -99,6 +102,15 @@ export function consumeToken(siteId: string, tier: 1 | 2 | 3 | 4): void {
 }
 
 /**
+ * Mark a T1 watermark run as completed. Releases that run's proportional
+ * token share to verify tiers on next allocation calculation.
+ */
+export function completeTier1Run(siteId: string): void {
+  const budget = budgets.get(siteId);
+  if (budget) budget.tier1Runs++;
+}
+
+/**
  * Get remaining tokens for Tier 1 this hour.
  */
 export function getTier1Remaining(siteId: string, baseBudget: number, capacity: number, tuning?: CrawlTuning): number {
@@ -119,6 +131,21 @@ export function getCatalogRemaining(siteId: string, baseBudget: number, capacity
 }
 
 /**
+ * Compute the current T1 reserve (tokens held back for future T1 runs).
+ * Shared by allocateCatalogTokens and allocateMaintainTokens.
+ */
+function computeCurrentReserve(budget: TokenBudgetState, reservePct: number, crawlIntervalMin: number): number {
+  const expectedRuns = Math.max(1, Math.floor(60 / (crawlIntervalMin || 20)));
+  const tier1Total = Math.floor(budget.effectiveBudget * reservePct);
+  const originalPerRun = Math.floor(tier1Total / expectedRuns);
+  const runsRemaining = Math.max(0, expectedRuns - budget.tier1Runs);
+  const tier1Reserve = Math.max(0, tier1Total - budget.tier1Used);
+  if (runsRemaining <= 0) return 0;
+  const perRunAllocation = Math.min(originalPerRun, Math.floor(tier1Reserve / runsRemaining));
+  return Math.max(0, tier1Reserve - perRunAllocation);
+}
+
+/**
  * Compute token allocation for active catalog tiers.
  * Distributes remaining tokens based on per-site tuning shares.
  * Tier 2 gets the larger of its share or whatever remains after T3+T4.
@@ -129,6 +156,7 @@ export function allocateCatalogTokens(
   capacity: number,
   activeTiers: { tier2: boolean; tier3: boolean; tier4: boolean },
   tuning?: CrawlTuning,
+  crawlIntervalMin = 20,
 ): TierAllocation {
   const t = tuning ?? TUNING_DEFAULTS;
   const reservePct = t.tier1ReservePct / 100;
@@ -137,18 +165,14 @@ export function allocateCatalogTokens(
   const t4Share = t.t4SharePct / 100;
 
   const budget = getBudget(siteId, baseBudget, capacity);
-  const tier1Budget = Math.floor(budget.effectiveBudget * reservePct);
-  const tier1Remaining = Math.max(0, tier1Budget - budget.tier1Used);
 
-  // Catalog gets ALL remaining tokens after what T1 has ACTUALLY used (not reserved).
-  // If T1 used 5 tokens out of 84 reserved, catalog gets 120-5=115, not 120-84=36.
-  // T1 reserve only applies when T1 hasn't run yet this hour (tier1Used=0).
+  const currentReserve = computeCurrentReserve(budget, reservePct, crawlIntervalMin);
+  const tier1Reserve = Math.max(0, Math.floor(budget.effectiveBudget * reservePct) - budget.tier1Used);
+
   const remaining = Math.max(0, budget.effectiveBudget - budget.tokensUsed);
-  const catalogRemaining = budget.tier1Used > 0
-    ? remaining  // T1 already ran — catalog gets everything left
-    : Math.max(0, remaining - tier1Remaining); // T1 hasn't run — reserve its budget
+  const catalogRemaining = Math.max(0, remaining - currentReserve);
 
-  const allocation: TierAllocation = { tier1: tier1Remaining, tier2: 0, tier3: 0, tier4: 0 };
+  const allocation: TierAllocation = { tier1: tier1Reserve, tier2: 0, tier3: 0, tier4: 0 };
 
   if (catalogRemaining <= 0) return allocation;
 
@@ -172,8 +196,8 @@ export function allocateCatalogTokens(
 
 /**
  * Allocate tokens for maintain-phase verification.
- * T1 gets priority (consumes first). T2-T4 share ALL remaining tokens.
- * No cooldowns — always working, limited only by budget.
+ * T1 reserve is respected — verify tiers only get tokens after T1's share is set aside.
+ * If T1 has already run this hour (tier1Used > 0), verify tiers get everything remaining.
  * Remainder tokens (can't divide evenly) go to T2.
  */
 export function allocateMaintainTokens(
@@ -181,22 +205,29 @@ export function allocateMaintainTokens(
   baseBudget: number,
   capacity: number,
   tuning?: CrawlTuning,
+  crawlIntervalMin = 20,
 ): { tier2: number; tier3: number; tier4: number } {
   const t = tuning ?? TUNING_DEFAULTS;
   const budget = getBudget(siteId, baseBudget, capacity);
 
-  // T2-T4 get ALL remaining tokens after T1 usage
   const remaining = Math.max(0, budget.effectiveBudget - budget.tokensUsed);
   if (remaining <= 0) return { tier2: 0, tier3: 0, tier4: 0 };
+
+  // Per-run T1 reserve (shared helper, same logic as allocateCatalogTokens)
+  const reservePct = t.tier1ReservePct / 100;
+  const currentReserve = computeCurrentReserve(budget, reservePct, crawlIntervalMin);
+
+  const verifyBudget = Math.max(0, remaining - currentReserve);
+  if (verifyBudget <= 0) return { tier2: 0, tier3: 0, tier4: 0 };
 
   const t2Share = t.t2SharePct / 100;
   const t3Share = t.t3SharePct / 100;
   const t4Share = t.t4SharePct / 100;
 
-  const tier3 = Math.floor(remaining * t3Share);
-  const tier4 = Math.floor(remaining * t4Share);
+  const tier3 = Math.floor(verifyBudget * t3Share);
+  const tier4 = Math.floor(verifyBudget * t4Share);
   // T2 gets its share + any remainder from rounding
-  const tier2 = remaining - tier3 - tier4;
+  const tier2 = verifyBudget - tier3 - tier4;
 
   return { tier2, tier3, tier4 };
 }

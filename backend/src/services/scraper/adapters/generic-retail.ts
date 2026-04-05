@@ -84,6 +84,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '[class*="ols-product"]',     // GoDaddy Online Store
       '.store_product_list_wrapper', // Activant/Epicor iNet (canadasgunstore)
       '.grid-product',               // Ecwid (triggersandbows)
+      '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]', // GoDaddy OLS (liangjian.ca)
     ];
 
     for (const selector of SELECTORS) {
@@ -214,7 +215,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
     const sortedUrls = sortParam
       ? siteUrls.map(url => {
           if (/[?&](sort=|orderby=|product_list_order=)/.test(url)) return url; // Already has sort
-          return url + (url.includes('?') ? '&' : '') + sortParam.replace(/^\?/, '');
+          return url + (url.includes('?') ? '&' : '?') + sortParam.replace(/^\?/, '');
         })
       : [];
 
@@ -297,11 +298,12 @@ export class GenericRetailAdapter extends AbstractAdapter {
     origin: string,
     page: number,
     options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string },
-  ): Promise<CatalogPage> {
-    // Only use Klevu API for sites with klevuApiKey in profile
+  ): Promise<CatalogPage | null> {
+    // Only use Klevu API for sites with klevuApiKey in profile.
+    // Return null for non-Klevu sites so the catalog crawler falls through to HTML extraction.
     const profile = GenericRetailAdapter._getProfileSync(origin);
     if (!profile?.apiConfig?.klevuApiKey) {
-      return { products: [] };
+      return null;
     }
 
     const klevuKey = profile.apiConfig.klevuApiKey;
@@ -417,6 +419,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '[class*="ols-product"]',     // GoDaddy Online Store
       '.store_product_list_wrapper', // Activant/Epicor iNet (canadasgunstore)
       '.grid-product',               // Ecwid (triggersandbows)
+      '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]', // GoDaddy OLS (liangjian.ca)
     ];
 
     for (const selector of SELECTORS) {
@@ -515,7 +518,178 @@ export class GenericRetailAdapter extends AbstractAdapter {
       });
     }
 
+    // Phase 3: Enrich no-price products from page-level JSON-LD and meta tags.
+    // BigCommerce (and some other platforms) serve prices in structured data that
+    // the card-level CSS extraction misses (JS-rendered or non-standard markup).
+    this._enrichPricesFromStructuredData($, products);
+
     return products;
+  }
+
+  /**
+   * Enrich catalog products that have no price using page-level structured data.
+   * Sources (highest priority first):
+   *   1. meta[property="product:price:amount"] — single-product pages
+   *   2. JSON-LD Product offers.price / offers.lowPrice
+   *   3. meta[property="og:price:amount"]
+   *
+   * For listing pages with multiple products, builds a URL→price map from JSON-LD
+   * ItemList/Product entries. For single-product pages, applies the page-level price
+   * to the sole product.
+   */
+  private _enrichPricesFromStructuredData(
+    $: cheerio.CheerioAPI,
+    products: CatalogProduct[],
+  ): void {
+    const noPriceProducts = products.filter(p => !p.price);
+    if (noPriceProducts.length === 0) return;
+
+    // Build a URL→{price, regularPrice} map from JSON-LD on the page
+    const jsonLdPrices = new Map<string, { price: number; regularPrice?: number }>();
+    let singleJsonLdPrice: { price: number; regularPrice?: number } | undefined;
+
+    $('script[type="application/ld+json"]').each((_, el) => {
+      try {
+        const raw = $(el).html();
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        const items = Array.isArray(data) ? data : [data];
+
+        for (const item of items) {
+          // Handle ItemList (BigCommerce category pages)
+          if (item['@type'] === 'ItemList' && Array.isArray(item.itemListElement)) {
+            for (const entry of item.itemListElement) {
+              const product = entry.item || entry;
+              this._extractJsonLdProductPrice(product, jsonLdPrices);
+            }
+          }
+          // Handle direct Product or @graph containing Products
+          this._extractJsonLdProductPrice(item, jsonLdPrices);
+          if (Array.isArray(item['@graph'])) {
+            for (const node of item['@graph']) {
+              this._extractJsonLdProductPrice(node, jsonLdPrices);
+            }
+          }
+        }
+      } catch { /* malformed JSON-LD — skip */ }
+    });
+
+    // If JSON-LD had exactly one product with a price and no URL match, save it
+    if (jsonLdPrices.size === 1) {
+      singleJsonLdPrice = [...jsonLdPrices.values()][0];
+    }
+
+    // Also extract from product:price:amount and og:price:amount meta tags
+    let metaPrice: number | undefined;
+    const productPriceMeta = $('meta[property="product:price:amount"]').attr('content');
+    if (productPriceMeta) {
+      const p = parseFloat(productPriceMeta.replace(/,/g, ''));
+      if (!isNaN(p) && p > 0) metaPrice = p;
+    }
+    if (!metaPrice) {
+      const ogPriceMeta = $('meta[property="og:price:amount"]').attr('content');
+      if (ogPriceMeta) {
+        const p = parseFloat(ogPriceMeta.replace(/,/g, ''));
+        if (!isNaN(p) && p > 0) metaPrice = p;
+      }
+    }
+
+    // Apply prices to products that are missing them
+    for (const product of noPriceProducts) {
+      // Try URL-matched JSON-LD price first
+      const normalized = product.url.replace(/\/$/, '').toLowerCase();
+      for (const [jsonUrl, priceData] of jsonLdPrices) {
+        if (!jsonUrl) continue; // Skip empty-key fallback entries for now
+        try {
+          const normalizedJson = jsonUrl.replace(/\/$/, '').toLowerCase();
+          if (normalizedJson === normalized) {
+            product.price = priceData.price;
+            if (priceData.regularPrice && priceData.regularPrice > priceData.price) {
+              product.regularPrice = priceData.regularPrice;
+            }
+            break;
+          }
+          // Also match by pathname (JSON-LD may have full URL, product may have relative)
+          const jsonPath = new URL(jsonUrl).pathname.replace(/\/$/, '').toLowerCase();
+          if (normalized.endsWith(jsonPath)) {
+            product.price = priceData.price;
+            if (priceData.regularPrice && priceData.regularPrice > priceData.price) {
+              product.regularPrice = priceData.regularPrice;
+            }
+            break;
+          }
+        } catch { /* invalid URL — skip */ }
+      }
+      if (product.price) continue;
+
+      // Single JSON-LD product on the page — apply to single no-price product
+      if (singleJsonLdPrice && noPriceProducts.length === 1) {
+        product.price = singleJsonLdPrice.price;
+        if (singleJsonLdPrice.regularPrice && singleJsonLdPrice.regularPrice > singleJsonLdPrice.price) {
+          product.regularPrice = singleJsonLdPrice.regularPrice;
+        }
+        continue;
+      }
+      // Also try the empty-key fallback (JSON-LD Product with no URL)
+      const fallback = jsonLdPrices.get('');
+      if (fallback && noPriceProducts.length === 1) {
+        product.price = fallback.price;
+        if (fallback.regularPrice && fallback.regularPrice > fallback.price) {
+          product.regularPrice = fallback.regularPrice;
+        }
+        continue;
+      }
+
+      // Meta tag price — only apply to single-product pages
+      if (metaPrice && products.length === 1) {
+        product.price = metaPrice;
+      }
+    }
+  }
+
+  /** Extract price from a JSON-LD Product node and add to the URL→price map */
+  private _extractJsonLdProductPrice(
+    node: any,
+    priceMap: Map<string, { price: number; regularPrice?: number }>,
+  ): void {
+    if (!node || typeof node !== 'object') return;
+    if (node['@type'] !== 'Product' && node['@type'] !== 'IndividualProduct') return;
+
+    const url = node.url;
+    const offers = node.offers;
+    if (!offers) return;
+
+    const offerList = Array.isArray(offers) ? offers : [offers];
+    let price: number | undefined;
+    let regularPrice: number | undefined;
+
+    for (const offer of offerList) {
+      if (!price && offer.price !== undefined) {
+        const p = typeof offer.price === 'number'
+          ? offer.price
+          : parseFloat(String(offer.price).replace(/,/g, ''));
+        if (!isNaN(p) && p > 0) price = p;
+      }
+      if (!price && offer.lowPrice !== undefined) {
+        const p = typeof offer.lowPrice === 'number'
+          ? offer.lowPrice
+          : parseFloat(String(offer.lowPrice).replace(/,/g, ''));
+        if (!isNaN(p) && p > 0) price = p;
+      }
+      if (offer.highPrice !== undefined) {
+        const rp = typeof offer.highPrice === 'number'
+          ? offer.highPrice
+          : parseFloat(String(offer.highPrice).replace(/,/g, ''));
+        if (!isNaN(rp) && rp > 0) regularPrice = rp;
+      }
+    }
+
+    if (price && url) {
+      priceMap.set(url, { price, regularPrice });
+    } else if (price) {
+      // No URL but has price — use empty string key as fallback
+      priceMap.set('', { price, regularPrice });
+    }
   }
 
   getNextPageUrl($: cheerio.CheerioAPI, currentUrl: string): string | null {
@@ -523,10 +697,13 @@ export class GenericRetailAdapter extends AbstractAdapter {
     const nextLink = $(
       'a.next, a[rel="next"], ' +                                    // Standard
       '[class*="pagination"] a:contains("Next"), ' +                  // Text-based
-      '[class*="pagination"] a:contains("›"), ' +                     // Arrow-based
+      '[class*="pagination"] a:contains("›"), ' +                     // Arrow-based (single chevron)
+      '[class*="pagination"] a:contains("»"), ' +                     // Arrow-based (double chevron — Epicor/Activant iNet)
       '.pagination-item--next a, ' +                                  // BigCommerce
       '.pages-item-next a, ' +                                        // Magento
-      'a.page-numbers.next'                                           // WordPress
+      'a.page-numbers.next, ' +                                         // WordPress
+      '[data-aid="PAGINATION_ARROW_FORWARD"] a, ' +                     // GoDaddy OLS (liangjian.ca)
+      'a[data-aid="PAGINATION_ARROW_FORWARD"]'                          // GoDaddy OLS (alternate)
     ).first();
 
     if (nextLink.length) {

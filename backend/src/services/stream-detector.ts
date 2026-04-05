@@ -40,10 +40,26 @@ function deriveCategoryFromUrl(url: string): string | undefined {
  * API sites → single "api" stream (date filtering handles tier division)
  * HTML sites → one stream per catalog URL (page-range tier division)
  */
-export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolean }): Promise<Stream[]> {
+export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolean; siteProfile?: any }): Promise<Stream[]> {
   const { adapter } = await getAdapterForUrl(siteUrl);
   const origin = new URL(siteUrl).origin;
   const streams: Stream[] = [];
+
+  // Step 0: Profile-first path — if siteProfile has catalogUrls, build streams directly.
+  // This bypasses adapter heuristics entirely — the profile is the source of truth.
+  if (options?.siteProfile?.catalogUrls?.length) {
+    const seenIds = new Set<string>();
+    for (const rawUrl of options.siteProfile.catalogUrls as string[]) {
+      const url = rawUrl.startsWith('http') ? rawUrl : `${origin}${rawUrl}`;
+      const category = deriveCategoryFromUrl(url);
+      const id = category || `profile-${streams.length}`;
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      streams.push({ id, url, type: 'html', category });
+    }
+    if (streams.length > 0) return streams;
+    // Empty or invalid catalogUrls — fall through to adapter detection
+  }
 
   // Step 1: Try API stream — but verify it actually returns products for this site.
   // Some adapters (generic-retail) have fetchCatalogPage but only support it for
@@ -51,7 +67,7 @@ export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolea
   if (adapter.fetchCatalogPage) {
     try {
       const probe = await adapter.fetchCatalogPage(origin, 1, { perPage: 10, hasWaf: options?.hasWaf });
-      if (probe.products.length > 0) {
+      if (probe && probe.products.length > 0) {
         const streamType = adapter.supportsDateFilter !== false ? 'api' : 'html';
         streams.push({
           id: 'api',
@@ -122,9 +138,9 @@ export async function probeStreamTotalPages(streams: Stream[], siteUrl: string, 
       if (adapter.fetchCatalogPage) {
         // Page-partitioned API (e.g. Shopify) — fetch page 1 to discover total
         const result = await adapter.fetchCatalogPage(new URL(siteUrl).origin, 1, { perPage: 250, hasWaf: options?.hasWaf });
-        if (result.totalPages) {
+        if (result && result.totalPages) {
           stream.totalPages = result.totalPages;
-        } else if (result.products.length > 0 && result.products.length < 250) {
+        } else if (result && result.products.length > 0 && result.products.length < 250) {
           stream.totalPages = 1; // Less than a full page = single page
         }
       } else if (stream.url) {
@@ -151,8 +167,9 @@ export async function probeStreamTotalPages(streams: Stream[], siteUrl: string, 
  * Initialize stream state for a site from detected streams.
  * Sets up tier states with page ranges from totalPages (if discovered during probe).
  */
-export function initStreamState(streams: Stream[]): SiteStreamState {
+export function initStreamState(streams: Stream[], crawlPhase?: string): SiteStreamState {
   const tiers: Record<string, StreamTierState> = {};
+  const tierList = crawlPhase === 'bootstrap' ? [4] as const : [2, 3, 4] as const;
 
   for (const stream of streams) {
     // If totalPages was discovered during probe, compute ranges upfront
@@ -160,7 +177,7 @@ export function initStreamState(streams: Stream[]): SiteStreamState {
       ? computePageRanges(stream.totalPages)
       : null;
 
-    for (const tier of [2, 3, 4] as const) {
+    for (const tier of tierList) {
       const key = `${stream.id}:${tier}`;
       const tierKey = `t${tier}` as 't2' | 't3' | 't4';
       const range = ranges ? ranges[tierKey] : null;

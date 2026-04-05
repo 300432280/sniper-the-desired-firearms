@@ -4,12 +4,30 @@ import { config } from '../config';
 
 export const redisConnection = new IORedis(config.redisUrl, {
   maxRetriesPerRequest: null, // Required by BullMQ
-  enableReadyCheck: false,
-  lazyConnect: true,
+  enableReadyCheck: true,
+  lazyConnect: false,
+  retryStrategy: (times: number) => {
+    const delay = Math.min(times * 500, 30000); // 500ms, 1s, 1.5s, ... max 30s
+    console.log(`[Redis] Reconnecting in ${delay}ms (attempt ${times})`);
+    return delay;
+  },
+  reconnectOnError: (err: Error) => {
+    const targetErrors = ['READONLY', 'ECONNRESET', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNREFUSED'];
+    return targetErrors.some(e => err.message.includes(e));
+  },
 });
 
 redisConnection.on('error', (err) => {
   console.error('[Redis] Connection error:', err.message);
+});
+redisConnection.on('close', () => {
+  console.warn('[Redis] Connection closed');
+});
+redisConnection.on('reconnecting', (ms: number) => {
+  console.log(`[Redis] Reconnecting in ${ms}ms`);
+});
+redisConnection.on('ready', () => {
+  console.log('[Redis] Connection ready');
 });
 
 export const scrapeQueue = new Queue('scrape', {

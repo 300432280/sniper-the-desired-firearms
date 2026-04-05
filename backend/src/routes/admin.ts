@@ -687,4 +687,36 @@ router.post('/crawl-now', async (_req: Request, res: Response) => {
   }
 });
 
+// ─── Site Profiles Viewer ─────────────────────────────────────────────────────
+
+// GET /api/admin/sites/profiles — all sites with their siteProfile JSON
+router.get('/sites/profiles', async (_req: Request, res: Response) => {
+  try {
+    const sites = await prisma.monitoredSite.findMany({
+      select: {
+        id: true,
+        domain: true,
+        name: true,
+        url: true,
+        isEnabled: true,
+        adapterType: true,
+        siteType: true,
+        siteCategory: true,
+        hasWaf: true,
+        hasRateLimit: true,
+        hasCaptcha: true,
+        requiresSucuri: true,
+        crawlPhase: true,
+        siteProfile: true,
+      },
+      orderBy: { domain: 'asc' },
+    });
+
+    return res.json({ sites });
+  } catch (err) {
+    console.error('[Admin] Site profiles error:', err);
+    return res.status(500).json({ error: 'Failed to load site profiles' });
+  }
+});
+
 export default router;
