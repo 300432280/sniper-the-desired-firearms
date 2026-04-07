@@ -99,6 +99,7 @@ function isCategoryUrl(url: string): boolean {
 export async function saveProducts(
   siteId: string,
   products: CatalogProduct[],
+  forceNew?: Set<string>,
 ): Promise<SavedProduct[]> {
   if (products.length === 0) return [];
 
@@ -228,8 +229,13 @@ export async function saveProducts(
         });
       }
 
-      // Only include in "new" list if it was just created
-      if (isNew || result.firstSeenAt.getTime() === result.lastSeenAt.getTime()) {
+      // Only include in "new" list if it was just created, OR if the caller
+      // explicitly requested this URL be treated as new (e.g. back-in-stock).
+      if (
+        isNew ||
+        result.firstSeenAt.getTime() === result.lastSeenAt.getTime() ||
+        (forceNew && forceNew.has(result.url))
+      ) {
         saved.push(result);
       }
     } catch (err) {
@@ -282,4 +288,64 @@ export async function checkExistingProducts(
   }
 
   return known;
+}
+
+/**
+ * Like checkExistingProducts, but returns the CURRENT DB stockStatus for each
+ * known product (keyed by the URL as supplied in the input list).
+ *
+ * Return value: Map<inputUrl, 'in_stock' | 'out_of_stock' | 'unknown' | null>
+ * - Products NOT in DB are absent from the map.
+ * - Products in DB whose stockStatus column is NULL map to `null`.
+ *
+ * Uses the same URL + sourceId fallback matching as checkExistingProducts so
+ * that a row whose URL has changed is still found via sourceId.
+ */
+export async function checkExistingProductsWithStock(
+  siteId: string,
+  products: CatalogProduct[],
+): Promise<Map<string, 'in_stock' | 'out_of_stock' | 'unknown' | null>> {
+  const result = new Map<string, 'in_stock' | 'out_of_stock' | 'unknown' | null>();
+  if (products.length === 0) return result;
+
+  const urls = products.map(p => p.url);
+  const sourceIds = products.filter(p => p.sourceId).map(p => p.sourceId!);
+
+  const [byUrl, bySourceId] = await Promise.all([
+    prisma.productIndex.findMany({
+      where: { siteId, url: { in: urls } },
+      select: { url: true, sourceId: true, stockStatus: true },
+    }),
+    sourceIds.length > 0
+      ? prisma.productIndex.findMany({
+          where: { siteId, sourceId: { in: sourceIds } },
+          select: { url: true, sourceId: true, stockStatus: true },
+        })
+      : [],
+  ]);
+
+  const urlToStock = new Map<string, string | null>();
+  for (const row of byUrl) urlToStock.set(row.url, row.stockStatus);
+  const sourceIdToStock = new Map<string, string | null>();
+  for (const row of bySourceId) {
+    if (row.sourceId) sourceIdToStock.set(row.sourceId, row.stockStatus);
+  }
+
+  const normalize = (s: string | null): 'in_stock' | 'out_of_stock' | 'unknown' | null => {
+    if (s === null) return null;
+    if (s === 'in_stock' || s === 'out_of_stock' || s === 'unknown') return s;
+    return null;
+  };
+
+  for (const product of products) {
+    if (urlToStock.has(product.url)) {
+      result.set(product.url, normalize(urlToStock.get(product.url)!));
+      continue;
+    }
+    if (product.sourceId && sourceIdToStock.has(product.sourceId)) {
+      result.set(product.url, normalize(sourceIdToStock.get(product.sourceId)!));
+    }
+  }
+
+  return result;
 }

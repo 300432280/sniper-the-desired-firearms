@@ -1,28 +1,36 @@
 /**
  * Watermark Crawler — Tier 1 new-items crawl.
  *
- * TWO crawl methods based on siteProfile.t1ResumeMethod:
+ * THREE crawl methods based on siteProfile.crawlers.watermark.method:
  *
- * Method A: "api-date-filter" (WooCommerce and other API sites with date support)
+ * Method A: "api-date-since-watermark" (WooCommerce and other API sites with date support)
  *   - Query API with dateAfter=watermark_date, order=asc (oldest first)
  *   - Walk forward from watermark toward newest
  *   - Watermark = last product processed (gap-free on token exhaustion)
  *
- * Method B: "navigate-then-walk" (HTML sites, BigCommerce, default)
+ * Method B: "navigate-from-watermark" (HTML sites, BigCommerce, default)
  *   - Navigate from page 1 (newest) toward older pages to FIND the watermark
  *   - Once found, walk BACK toward page 1, indexing new products
  *   - Watermark = last new product indexed (closest to newest)
  *   - Gap-free: always indexes from the watermark toward newest
+ *
+ * Method C: "full-catalog-sweep" (sites with NO date-based sort anywhere)
+ *   - For each catalogUrl, walk every page using buildPaginatedUrl + adapter.getNextPageUrl
+ *   - Extract products via adapter.extractCatalogProducts
+ *   - Batch DB lookup; collect any URL not already in DB as a "new" product
+ *   - Stops on empty page, repeated empty pages, or token exhaustion
+ *   - Required for sites where page 1 is not necessarily newest
  */
 
 import { prisma } from '../lib/prisma';
 import { getAdapterForUrl, _getSiteCacheEntry } from './scraper/adapter-registry';
 import { fetchPageWithMeta, randomDelay } from './scraper/http-client';
+import { buildPaginatedUrl } from './catalog-crawler';
 import { pushEvent } from './debugLog';
 import { consumeToken, getTier1Remaining } from './token-budget';
 import { matchNewProducts } from './keyword-matcher';
 import type { CatalogProduct, CatalogPage } from './scraper/types';
-import { saveProducts, checkExistingProducts } from './product-upsert';
+import { saveProducts, checkExistingProducts, checkExistingProductsWithStock } from './product-upsert';
 import * as cheerio from 'cheerio';
 
 /** Reject nav/utility URLs that should never be stored as watermarks */
@@ -516,11 +524,135 @@ async function crawlNavigateThenWalk(params: {
   return { products: allNewProducts, pagesScanned, tokensUsed, newWatermarkUrl, newestDateSeen };
 }
 
+// ── Method C: full-catalog-sweep ────────────────────────────────────────────
+
+/**
+ * Walk every page of every catalogUrl, collecting IN-STOCK products not already in DB.
+ * For sites with NO date-based sort anywhere — page 1 is not necessarily newest,
+ * so we must visit every page to discover new products.
+ *
+ * IMPORTANT: Out-of-stock products are SKIPPED entirely. T1 only indexes products
+ * that are currently purchasable. If an OOS product later comes back in stock, T1
+ * will see it as "not in DB" and index it then — that's the desired behavior for
+ * "back in stock" alerts.
+ *
+ * Stops on token exhaustion, repeated empty pages, or end of pagination.
+ */
+async function crawlFullCatalogSweep(params: {
+  siteId: string;
+  domain: string;
+  baseBudget: number;
+  capacity: number;
+  hasWaf?: boolean;
+  adapter: any;
+  origin: string;
+  catalogUrls: string[];
+  paginationPattern?: any;
+}): Promise<{ products: CatalogProduct[]; pagesScanned: number; tokensUsed: number; newWatermarkUrl: string | null; newestDateSeen: string | null; backInStockUrls: Set<string> }> {
+  const { siteId, domain, baseBudget, capacity, hasWaf, adapter, catalogUrls, paginationPattern } = params;
+
+  const MAX_PAGES_PER_CATALOG = 500; // safety cap
+  const CONSECUTIVE_EMPTY_THRESHOLD = 2;
+
+  let pagesScanned = 0;
+  let tokensUsed = 0;
+  const newProducts: CatalogProduct[] = [];
+  const seenUrls = new Set<string>();
+  const backInStockUrls = new Set<string>();
+
+  for (const catalogUrl of catalogUrls) {
+    if (!hasBudget(siteId, baseBudget, capacity)) break;
+
+    let pageNum = 1;
+    let currentUrl: string | null = catalogUrl;
+    let consecutiveEmpty = 0;
+
+    while (currentUrl && hasBudget(siteId, baseBudget, capacity) && pageNum <= MAX_PAGES_PER_CATALOG) {
+      consumeToken(siteId, 1);
+      tokensUsed++;
+
+      const html = await fetchHtml(currentUrl, domain, hasWaf);
+      if (!html) {
+        console.log(`[WatermarkCrawler] ${domain}: full-catalog-sweep fetch failed for ${currentUrl}`);
+        break;
+      }
+      pagesScanned++;
+
+      const products = await extractProductsFromHtml(html, currentUrl, domain, hasWaf, adapter);
+
+      if (products.length === 0) {
+        consecutiveEmpty++;
+        console.log(`[WatermarkCrawler] ${domain}: full-catalog-sweep got 0 products on page ${pageNum} of ${catalogUrl}`);
+        if (consecutiveEmpty >= CONSECUTIVE_EMPTY_THRESHOLD) break;
+      } else {
+        consecutiveEmpty = 0;
+        // Skip products that are explicitly out of stock — T1 doesn't index OOS items.
+        // Items with stockStatus === 'unknown' are kept (adapter couldn't detect).
+        const visibleProducts = products.filter(p => p.stockStatus !== 'out_of_stock');
+        const oosSkipped = products.length - visibleProducts.length;
+        if (oosSkipped > 0) {
+          console.log(`[WatermarkCrawler] ${domain}: full-catalog-sweep skipped ${oosSkipped} OOS product(s) on page ${pageNum} of ${catalogUrl}`);
+        }
+
+        if (visibleProducts.length > 0) {
+          const existingStock = await checkExistingProductsWithStock(siteId, visibleProducts);
+          let backInStockCount = 0;
+          for (const product of visibleProducts) {
+            if (isNavOrUtilityUrl(product.url)) continue;
+            if (seenUrls.has(product.url)) continue;
+
+            const dbStock = existingStock.get(product.url);
+            if (dbStock === undefined) {
+              // Not in DB → genuinely new product
+              seenUrls.add(product.url);
+              newProducts.push(product);
+            } else if (dbStock === 'out_of_stock') {
+              // Back-in-stock event — was OOS in DB, now in stock on page
+              seenUrls.add(product.url);
+              newProducts.push(product);
+              backInStockUrls.add(product.url);
+              backInStockCount++;
+            }
+            // else: dbStock is 'in_stock', 'unknown', or null → already known, skip
+          }
+          if (backInStockCount > 0) {
+            console.log(`[WatermarkCrawler] ${domain}: full-catalog-sweep detected ${backInStockCount} back-in-stock product(s) on page ${pageNum} of ${catalogUrl}`);
+          }
+        }
+      }
+
+      // Try adapter-discovered next page first; fall back to manual increment
+      const $ = cheerio.load(html);
+      const adapterNext: string | null = adapter.getNextPageUrl?.($, currentUrl) ?? null;
+      if (adapterNext && adapterNext !== currentUrl) {
+        currentUrl = adapterNext;
+      } else {
+        const nextPageNum = pageNum + 1;
+        const built = buildPaginatedUrl(catalogUrl, nextPageNum, paginationPattern);
+        if (!built || built === currentUrl) break;
+        currentUrl = built;
+      }
+      pageNum++;
+
+      await randomDelay(300, 800);
+    }
+  }
+
+  return {
+    products: newProducts,
+    pagesScanned,
+    tokensUsed,
+    newWatermarkUrl: newProducts[0]?.url || null,
+    newestDateSeen: null,
+    backInStockUrls,
+  };
+}
+
 // ── Main entry point ────────────────────────────────────────────────────────
 
 /**
  * Run a Tier 1 watermark crawl for a site.
- * Selects method based on siteProfile.t1ResumeMethod.
+ * Selects method based on siteProfile.crawlers.watermark.method.
  */
 export async function crawlWatermark(params: {
   siteId: string;
@@ -540,9 +672,12 @@ export async function crawlWatermark(params: {
   const { adapter } = await getAdapterForUrl(url);
   const origin = new URL(url).origin;
 
-  // Resolve t1ResumeMethod from site profile
+  // Resolve watermark method from site profile (nested under crawlers.watermark.method)
   const entry = _getSiteCacheEntry(domain.replace(/^www\./, ''));
-  const t1ResumeMethod: string = entry?.siteProfile?.t1ResumeMethod || 'navigate-then-walk';
+  const watermarkMethod: string =
+    entry?.siteProfile?.crawlers?.watermark?.method || 'navigate-from-watermark';
+  const catalogUrls: string[] = entry?.siteProfile?.catalogUrls || [];
+  const paginationPattern = entry?.siteProfile?.paginationPattern;
 
   const CONSECUTIVE_KNOWN_THRESHOLD = params.wmKnownThreshold ?? 40;
   const CONSECUTIVE_OLD_DATE_THRESHOLD = params.wmOldDateThreshold ?? 25;
@@ -553,10 +688,30 @@ export async function crawlWatermark(params: {
     let tokensUsed = 0;
     let newWatermarkUrl: string | null = null;
     let newestDateSeen: string | null = null;
+    let backInStockUrls: Set<string> | undefined;
 
-    if (t1ResumeMethod === 'api-date-filter' && adapter.fetchCatalogPage) {
+    if (watermarkMethod === 'full-catalog-sweep') {
+      // ── Method C: full-catalog-sweep ──────────────────────────────────
+      console.log(`[WatermarkCrawler] ${domain}: using full-catalog-sweep method (${catalogUrls.length} catalogUrls)`);
+
+      if (catalogUrls.length === 0) {
+        console.log(`[WatermarkCrawler] ${domain}: full-catalog-sweep requested but no catalogUrls in profile`);
+      }
+
+      const result = await crawlFullCatalogSweep({
+        siteId, domain, baseBudget, capacity, hasWaf,
+        adapter, origin, catalogUrls, paginationPattern,
+      });
+
+      pagesScanned = result.pagesScanned;
+      tokensUsed = result.tokensUsed;
+      allNewProducts = result.products;
+      newWatermarkUrl = result.newWatermarkUrl;
+      newestDateSeen = result.newestDateSeen;
+      backInStockUrls = result.backInStockUrls;
+    } else if (watermarkMethod === 'api-date-since-watermark' && adapter.fetchCatalogPage) {
       // ── Method A: API date filter (oldest→newest from watermark) ────────
-      console.log(`[WatermarkCrawler] ${domain}: using api-date-filter method`);
+      console.log(`[WatermarkCrawler] ${domain}: using api-date-since-watermark method`);
 
       const result = await crawlApiDateFilter({
         siteId, url, domain, baseBudget, capacity,
@@ -575,7 +730,7 @@ export async function crawlWatermark(params: {
         newestDateSeen = result.newestDateSeen;
       } else {
         // Fall back to Method B with remaining budget
-        console.log(`[WatermarkCrawler] ${domain}: falling back to navigate-then-walk`);
+        console.log(`[WatermarkCrawler] ${domain}: falling back to navigate-from-watermark`);
         const fallback = await crawlNavigateThenWalk({
           siteId, url, domain, baseBudget, capacity,
           lastWatermarkUrl, lastWatermarkDate, hasWaf,
@@ -592,10 +747,10 @@ export async function crawlWatermark(params: {
         newestDateSeen = fallback.newestDateSeen;
       }
     } else {
-      // ── Method B: navigate-then-walk (default) ─────────────────────────
-      const methodLabel = t1ResumeMethod === 'api-date-filter'
-        ? 'navigate-then-walk (api-date-filter requested but no API adapter)'
-        : 'navigate-then-walk';
+      // ── Method B: navigate-from-watermark (default) ─────────────────────
+      const methodLabel = watermarkMethod === 'api-date-since-watermark'
+        ? 'navigate-from-watermark (api-date-since-watermark requested but no API adapter)'
+        : 'navigate-from-watermark';
       console.log(`[WatermarkCrawler] ${domain}: using ${methodLabel} method`);
 
       const result = await crawlNavigateThenWalk({
@@ -614,10 +769,12 @@ export async function crawlWatermark(params: {
       newestDateSeen = result.newestDateSeen;
     }
 
-    // Save to ProductIndex and run keyword matcher
-    const savedProducts = await saveProducts(siteId, allNewProducts);
+    // Save to ProductIndex and run keyword matcher.
+    // `backInStockUrls` (only set by full-catalog-sweep) forces previously-OOS
+    // products to be included in the saved array so they flow through matching.
+    const savedProducts = await saveProducts(siteId, allNewProducts, backInStockUrls);
     if (savedProducts.length > 0) {
-      await matchNewProducts(savedProducts);
+      await matchNewProducts(savedProducts, backInStockUrls);
     }
 
     return {

@@ -81,25 +81,87 @@ export function detectTotalPagesFromHtml($: cheerio.CheerioAPI, currentUrl: stri
   return maxPage > 1 ? maxPage : undefined;
 }
 
+export interface PaginationPattern {
+  /**
+   * 'query'          = ?page=N (default)
+   * 'path'           = /page/N suffix
+   * 'offset-query'   = ?top=(N-1)*perPage (offset/skip-style, e.g. Activant/iNet)
+   * 'suffix-replace' = replace trailing literal (e.g. '.html') with '-{N}.html'
+   *                    (CS-Cart legacy PHP, e.g. durhamoutdoors.ca)
+   */
+  type: 'query' | 'path' | 'offset-query' | 'suffix-replace';
+  /**
+   * For type='query': param name (default 'page')
+   * For type='path': segment template with {N} (default '/page/{N}')
+   * For type='offset-query': param name (default 'offset')
+   * For type='suffix-replace': replacement template with {N} (default '-{N}.html')
+   */
+  template?: string;
+  /**
+   * Required for type='offset-query': items per page used to compute offset = (pageNum-1) * perPage
+   */
+  perPage?: number;
+  /**
+   * For type='suffix-replace': the literal suffix to match and replace
+   * (e.g. '.html'). Default: '.html'.
+   */
+  match?: string;
+}
+
 /**
  * Construct a paginated URL from a base URL and a page number.
- * If the base URL already has a `page=` query param, replaces its value.
- * Otherwise appends `page=N` to the query string.
+ * Default behavior is query-style (`?page=N`). When `pattern.type === 'path'`,
+ * a path segment (default `/page/{N}`) is appended instead — required for sites
+ * like Celerant ColdFusion that silently ignore query-style pagination.
  * Returns the base URL unchanged if pageNum <= 1.
  */
-export function buildPaginatedUrl(baseUrl: string, pageNum: number): string {
+export function buildPaginatedUrl(baseUrl: string, pageNum: number, pattern?: PaginationPattern): string {
   if (pageNum <= 1) return baseUrl;
+
+  if (pattern?.type === 'path') {
+    const template = pattern.template || '/page/{N}';
+    const stripped = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    return `${stripped}${template.replace('{N}', String(pageNum))}`;
+  }
+
+  if (pattern?.type === 'suffix-replace') {
+    const match = pattern.match || '.html';
+    const template = pattern.template || '-{N}.html';
+    if (!baseUrl.endsWith(match)) {
+      // Fall back: append template as-is
+      return baseUrl + template.replace('{N}', String(pageNum));
+    }
+    const withoutSuffix = baseUrl.slice(0, baseUrl.length - match.length);
+    return withoutSuffix + template.replace('{N}', String(pageNum));
+  }
+
+  if (pattern?.type === 'offset-query') {
+    const paramName = pattern.template || 'offset';
+    if (!pattern.perPage) {
+      console.warn(`[buildPaginatedUrl] offset-query pattern missing perPage; falling back to query type for ${baseUrl}`);
+      const sep = baseUrl.includes('?') ? '&' : '?';
+      return `${baseUrl}${sep}${paramName}=${pageNum}`;
+    }
+    const offset = (pageNum - 1) * pattern.perPage;
+    // Use string concatenation to preserve literal characters like `|` which
+    // the URL constructor would percent-encode.
+    const sep = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${sep}${paramName}=${offset}`;
+  }
+
+  const paramName = pattern?.template || 'page';
   try {
     const url = new URL(baseUrl);
-    url.searchParams.set('page', String(pageNum));
+    url.searchParams.set(paramName, String(pageNum));
     return url.toString();
   } catch {
     // Fallback for malformed URLs: simple string manipulation
-    if (baseUrl.includes('page=')) {
-      return baseUrl.replace(/([?&])page=\d+/, `$1page=${pageNum}`);
+    const re = new RegExp(`([?&])${paramName}=\\d+`);
+    if (re.test(baseUrl)) {
+      return baseUrl.replace(re, `$1${paramName}=${pageNum}`);
     }
     const sep = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${sep}page=${pageNum}`;
+    return `${baseUrl}${sep}${paramName}=${pageNum}`;
   }
 }
 
@@ -561,6 +623,7 @@ export async function crawlStreamTier(params: {
   tokensAllocated: number;
   hasWaf?: boolean;
   perPage?: number; // From site profile — overrides default (WAF: 20, normal: 50)
+  paginationPattern?: PaginationPattern; // From site profile — for path-style pagination
 }): Promise<StreamCrawlResult> {
   const { siteId, url, stream, tier, tierState, tokensAllocated } = params;
   const { adapter } = await getAdapterForUrl(url);
@@ -656,7 +719,7 @@ export async function crawlStreamTier(params: {
       // If we have a saved URL, use it. Otherwise construct the correct paginated URL
       // so that resuming at currentPage > 1 doesn't accidentally fetch page 1.
       let currentUrl: string | null = tierState.currentPageUrl
-        ?? buildPaginatedUrl(stream.url, currentPageNum);
+        ?? buildPaginatedUrl(stream.url, currentPageNum, params.paginationPattern);
       tierState.currentPageUrl = undefined;
       const pageRangeEnd = tierState.pageRangeEnd;
       let consecutiveEmptyStreamHtml = 0;
@@ -814,7 +877,7 @@ export async function crawlStreamTier(params: {
         // Construct the correct URL for the skipped-to page so the next
         // invocation doesn't fall back to page 1 from stream.url.
         tierState.currentPageUrl = stream.type === 'html'
-          ? buildPaginatedUrl(stream.url, nextPage)
+          ? buildPaginatedUrl(stream.url, nextPage, params.paginationPattern)
           : undefined;
         console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: fetch failed on page ${nextPage - 1}, skipping to page ${nextPage}`);
       }

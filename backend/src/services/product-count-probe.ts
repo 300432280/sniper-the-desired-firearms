@@ -86,7 +86,13 @@ export async function probeExpectedProductCount(
   if (!productCountMethod) return null;
 
   const origin = new URL(siteUrl).origin;
-  const headers: Record<string, string> = { 'User-Agent': UA };
+  // Honor siteProfile.userAgentOverride via resolveUserAgent (falls back to default UA)
+  let resolvedUa = UA;
+  try {
+    const { resolveUserAgent } = await import('./scraper/http-client');
+    resolvedUa = resolveUserAgent(new URL(siteUrl).hostname) || UA;
+  } catch { /* use fallback */ }
+  const headers: Record<string, string> = { 'User-Agent': resolvedUa };
 
   // WAF cookie support
   if (options?.hasWaf) {
@@ -171,9 +177,19 @@ export async function probeExpectedProductCount(
       }
 
       case 'klevu-api-count': {
+        // Self-heal the Klevu key before probing (key may have rotated upstream)
+        if (!options?.siteId) return null;
+        const { resolveKlevuKey } = await import('./scraper/klevu-key-resolver');
+        const resolvedKey = await resolveKlevuKey(options.siteId, siteUrl, {
+          hasWaf: options.hasWaf || false,
+        });
+        if (!resolvedKey) {
+          console.log(`[ProductCountProbe] klevu-api-count: no working key for ${origin}`);
+          return null;
+        }
         // Query the Klevu search API for total product count
         const r = await axios.post(m.endpoint, {
-          context: { apiKeys: [m.apiKey] },
+          context: { apiKeys: [resolvedKey] },
           recordQueries: [{
             id: 'count',
             typeOfRequest: 'SEARCH',

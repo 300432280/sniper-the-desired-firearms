@@ -306,7 +306,16 @@ export class GenericRetailAdapter extends AbstractAdapter {
       return null;
     }
 
-    const klevuKey = profile.apiConfig.klevuApiKey;
+    // Self-heal the Klevu key — probe stored key first, re-scrape homepage on failure.
+    const { resolveKlevuKey } = await import('../klevu-key-resolver');
+    const domain = new URL(origin).hostname.replace(/^www\./, '');
+    const klevuKey = await resolveKlevuKey(domain, origin, {
+      hasWaf: profile?.requiresSucuri || profile?.hasWaf || false,
+    });
+    if (!klevuKey) {
+      console.log(`[GenericRetail] Klevu key unresolved for ${origin} — returning empty catalog page`);
+      return { products: [], totalPages: 0 };
+    }
     const klevuEndpoint = profile.apiConfig.klevuEndpoint || 'https://uscs33v2.ksearchnet.com/cs/v2/search';
     const perPage = options?.perPage || GenericRetailAdapter.KLEVU_DEFAULTS.perPage;
     const offset = (page - 1) * perPage;
@@ -434,7 +443,12 @@ export class GenericRetailAdapter extends AbstractAdapter {
 
         const url = this.extractLink(element, baseUrl);
         if (!url || seen.has(url)) return;
-        if (this.isNavUrl(url)) return;
+        // Magento 1.x product detail URLs follow `/catalog/product/view/id/NN/s/slug/category/NN/`.
+        // The trailing `/category/NN/` breadcrumb segment trips the generic `isNavUrl`
+        // category-page filter even though this is unambiguously a product detail page.
+        // Whitelist the Magento 1 product view pattern so these survive the nav check.
+        const isMagento1ProductView = /\/catalog\/product\/view\/id\/\d+\//i.test(url);
+        if (!isMagento1ProductView && this.isNavUrl(url)) return;
         seen.add(url);
 
         const { price, regularPrice } = this.extractPricesFromElement(element);

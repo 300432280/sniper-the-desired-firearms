@@ -118,11 +118,77 @@ interface MatchResult {
 }
 
 /**
+ * Send a PRO-tier instant notification for a set of products matched against
+ * a search. Handles both fresh-new matches and back-in-stock restocks — the
+ * only difference is how Match rows are resolved (look up by (searchId, url)
+ * in both cases, since fresh Match rows have just been inserted by the caller).
+ *
+ * Returns true if an email was attempted (for notification counter accounting).
+ */
+async function sendProNotification(
+  search: { id: string; keyword: string; websiteUrl: string; notifyEmail: string | null; notificationType: string; user: { email: string | null; tier: string } | null },
+  products: Array<{ title: string; price?: number | null; url: string; thumbnail?: string | null }>,
+  isRestock: boolean,
+): Promise<boolean> {
+  if (!search.user || search.user.tier !== 'PRO' || products.length === 0) return false;
+  const recipientEmail = search.user.email ?? search.notifyEmail;
+  if (!recipientEmail) return false;
+  if (search.notificationType !== 'EMAIL' && search.notificationType !== 'BOTH') return false;
+
+  try {
+    const notification = await prisma.notification.create({
+      data: { searchId: search.id, type: 'EMAIL', status: 'pending' },
+    });
+
+    const matchRows = await prisma.match.findMany({
+      where: { searchId: search.id, url: { in: products.map(p => p.url) } },
+      select: { id: true },
+    });
+
+    if (matchRows.length > 0) {
+      await prisma.notificationMatch.createMany({
+        data: matchRows.map(m => ({ notificationId: notification.id, matchId: m.id })),
+      });
+    }
+
+    await sendAlertEmail({
+      to: recipientEmail,
+      keyword: search.keyword,
+      matches: products.map(p => ({
+        title: p.title,
+        price: p.price ?? undefined,
+        url: p.url,
+        thumbnail: p.thumbnail ?? undefined,
+      })),
+      notificationId: notification.id,
+      backendUrl: config.backendUrl,
+      isRestock,
+    });
+
+    await prisma.notification.update({ where: { id: notification.id }, data: { status: 'sent' } });
+    return true;
+  } catch (err) {
+    console.error(`[KeywordMatcher] Failed to send notification for search ${search.id}:`, err);
+    return false;
+  }
+}
+
+/**
  * Match a batch of new products against all active searches.
  * Called after products are upserted into ProductIndex.
+ *
+ * @param products  The freshly saved products to match against active searches.
+ * @param restockUrls  Optional set of URLs that represent back-in-stock events
+ *   (products that were previously out_of_stock and are now in_stock). For URLs
+ *   in this set, the matcher will NOT attempt to create new Match rows (which
+ *   would violate the unique([searchId, url]) constraint). Instead, it finds
+ *   the existing Match rows, creates a fresh Notification + NotificationMatch
+ *   rows linking to them, bumps each Match.foundAt to now, and sends an alert
+ *   email to PRO users with a "BACK IN STOCK" subject line.
  */
 export async function matchNewProducts(
   products: Array<{ id: string; siteId: string; url: string; title: string; price?: number | null; thumbnail?: string | null; tags?: string | null }>,
+  restockUrls?: Set<string>,
 ): Promise<MatchResult> {
   if (products.length === 0) return { matchesCreated: 0, notificationsSent: 0 };
 
@@ -188,7 +254,15 @@ export async function matchNewProducts(
 
     if (matchingProducts.length === 0) continue;
 
-    // Check existing matches to avoid duplicates
+    // Split into fresh-new vs restock groups
+    const restockCandidates = restockUrls && restockUrls.size > 0
+      ? matchingProducts.filter(p => restockUrls.has(p.url))
+      : [];
+    const nonRestockCandidates = restockUrls && restockUrls.size > 0
+      ? matchingProducts.filter(p => !restockUrls.has(p.url))
+      : matchingProducts;
+
+    // Check existing matches to avoid duplicates (for the fresh-new group)
     const existingUrls = new Set(
       (await prisma.match.findMany({
         where: { searchId: search.id, url: { in: matchingProducts.map(p => p.url) } },
@@ -196,63 +270,48 @@ export async function matchNewProducts(
       })).map(m => m.url),
     );
 
-    const newProducts = matchingProducts.filter(p => !existingUrls.has(p.url));
-    if (newProducts.length === 0) continue;
+    const freshNewProducts = nonRestockCandidates.filter(p => !existingUrls.has(p.url));
+    // Restock products must already have a Match row for this search — otherwise
+    // they are effectively new (first time this search has ever matched them) and
+    // should go through the fresh-new path instead.
+    const restockProducts = restockCandidates.filter(p => existingUrls.has(p.url));
+    const restockAsNewProducts = restockCandidates.filter(p => !existingUrls.has(p.url));
+    freshNewProducts.push(...restockAsNewProducts);
 
-    // Create Match records with FK to ProductIndex for live data enrichment
-    await prisma.match.createMany({
-      data: newProducts.map(p => ({
-        searchId: search.id,
-        productIndexId: p.id, // FK to ProductIndex — enables live title/price enrichment
-        title: p.title,
-        price: p.price ?? null,
-        url: p.url,
-        hash: `pi:${p.id}`, // ProductIndex-sourced match
-        thumbnail: p.thumbnail ?? null,
-      })),
-      skipDuplicates: true,
-    });
+    // ── Fresh-new products: create Match rows and notify ────────────────────
+    if (freshNewProducts.length > 0) {
+      await prisma.match.createMany({
+        data: freshNewProducts.map(p => ({
+          searchId: search.id,
+          productIndexId: p.id, // FK to ProductIndex — enables live title/price enrichment
+          title: p.title,
+          price: p.price ?? null,
+          url: p.url,
+          hash: `pi:${p.id}`, // ProductIndex-sourced match
+          thumbnail: p.thumbnail ?? null,
+        })),
+        skipDuplicates: true,
+      });
 
-    matchesCreated += newProducts.length;
+      matchesCreated += freshNewProducts.length;
 
-    // Notify PRO users instantly
-    if (search.user && search.user.tier === 'PRO' && newProducts.length > 0) {
-      const recipientEmail = search.user.email ?? search.notifyEmail;
-      if (recipientEmail && (search.notificationType === 'EMAIL' || search.notificationType === 'BOTH')) {
-        try {
-          const notification = await prisma.notification.create({
-            data: { searchId: search.id, type: 'EMAIL', status: 'pending' },
-          });
+      if (await sendProNotification(search, freshNewProducts, false)) {
+        notificationsSent++;
+      }
+    }
 
-          const insertedMatches = await prisma.match.findMany({
-            where: { searchId: search.id, url: { in: newProducts.map(p => p.url) } },
-            select: { id: true },
-          });
+    // ── Restock products: reuse existing Match rows, new Notification ──────
+    if (restockProducts.length > 0) {
+      // Bump foundAt on the existing Match rows so dashboards reflect the restock
+      await prisma.match.updateMany({
+        where: { searchId: search.id, url: { in: restockProducts.map(p => p.url) } },
+        data: { foundAt: new Date() },
+      });
 
-          if (insertedMatches.length > 0) {
-            await prisma.notificationMatch.createMany({
-              data: insertedMatches.map(m => ({ notificationId: notification.id, matchId: m.id })),
-            });
-          }
+      console.log(`[Matcher] ${search.id}: ${restockProducts.length} restock notifications queued`);
 
-          await sendAlertEmail({
-            to: recipientEmail,
-            keyword: search.keyword,
-            matches: newProducts.map(p => ({
-              title: p.title,
-              price: p.price ?? undefined,
-              url: p.url,
-              thumbnail: p.thumbnail ?? undefined,
-            })),
-            notificationId: notification.id,
-            backendUrl: config.backendUrl,
-          });
-
-          await prisma.notification.update({ where: { id: notification.id }, data: { status: 'sent' } });
-          notificationsSent++;
-        } catch (err) {
-          console.error(`[KeywordMatcher] Failed to send notification for search ${search.id}:`, err);
-        }
+      if (await sendProNotification(search, restockProducts, true)) {
+        notificationsSent++;
       }
     }
   }

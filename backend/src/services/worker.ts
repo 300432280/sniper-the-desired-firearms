@@ -219,6 +219,7 @@ async function processStreamCatalogCrawl(
   const { _getSiteCacheEntry } = await import('./scraper/adapter-registry');
   const profileEntry = _getSiteCacheEntry(domain.replace(/^www\./, ''));
   const profilePerPage = profileEntry?.siteProfile?.perPage;
+  const profilePaginationPattern = profileEntry?.siteProfile?.paginationPattern;
 
   // Crawl using the adapter, NO date filters
   const result = await crawlStreamTier({
@@ -228,6 +229,7 @@ async function processStreamCatalogCrawl(
     tokensAllocated: totalCatalogTokens,
     hasWaf: data.hasWaf,
     perPage: profilePerPage,
+    paginationPattern: profilePaginationPattern,
   });
 
   // Update totalPages if discovered

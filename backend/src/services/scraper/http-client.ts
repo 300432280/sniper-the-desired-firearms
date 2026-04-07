@@ -19,6 +19,33 @@ export function pickUserAgent(domain?: string): string {
   return USER_AGENTS[hash[0] % USER_AGENTS.length];
 }
 
+/**
+ * Resolve the User-Agent to use for a domain, honoring `siteProfile.userAgentOverride`
+ * if present. Falls back to the rotated default from `pickUserAgent`.
+ *
+ * Some sites (e.g. nginx WAFs that hard-block desktop UAs) require a specific UA
+ * — set `siteProfile.userAgentOverride` in the DB. Backward-compatible: sites
+ * without an override get the rotated default exactly as before.
+ *
+ * Uses sync require() to avoid a circular-dep with adapter-registry — matches
+ * the existing pattern in adapters (e.g. woocommerce.ts, auction-icollector.ts).
+ */
+export function resolveUserAgent(domain?: string): string {
+  const fallback = pickUserAgent(domain);
+  if (!domain) return fallback;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { _getSiteCacheEntry } = require('./adapter-registry');
+    const bare = domain.replace(/^www\./, '');
+    const entry = _getSiteCacheEntry?.(bare);
+    const override = entry?.siteProfile?.userAgentOverride;
+    if (override && typeof override === 'string' && override.length > 0) {
+      return override;
+    }
+  } catch { /* cache not initialized yet — use fallback */ }
+  return fallback;
+}
+
 // ── Rate limiting ────────────────────────────────────────────────────────────
 
 /**
@@ -267,7 +294,7 @@ async function nativeFetchFallback(
 export async function fetchPageWithMeta(url: string, cookies?: string, options?: FetchOptions): Promise<FetchResult> {
   let domain: string | undefined;
   try { domain = new URL(url).hostname; } catch {}
-  const ua = pickUserAgent(domain);
+  const ua = resolveUserAgent(domain);
   const difficultyRating = options?.difficultyRating ?? 0;
   const baseHeaders: Record<string, string> = {
     'User-Agent': ua,

@@ -12,6 +12,22 @@ import type { Browser, Page } from 'playwright-core';
 
 export const PLAYWRIGHT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+/**
+ * Resolve the UA to use for a given URL, honoring siteProfile.userAgentOverride.
+ * Dynamic require avoids circular deps with adapter-registry.
+ */
+function resolvePlaywrightUa(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { _getSiteCacheEntry } = require('./adapter-registry');
+    const entry = _getSiteCacheEntry?.(hostname);
+    const override = entry?.siteProfile?.userAgentOverride;
+    if (override && typeof override === 'string' && override.length > 0) return override;
+  } catch { /* fall through */ }
+  return PLAYWRIGHT_UA;
+}
+
 let browser: Browser | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // Close browser after 5 min idle
@@ -101,8 +117,8 @@ export async function fetchWithPlaywright(
 
   const b = await getBrowser();
   const context = await b.newContext({
-    // Use a recent, realistic Chrome user agent
-    userAgent: PLAYWRIGHT_UA,
+    // Use a recent, realistic Chrome user agent (or site-profile override)
+    userAgent: resolvePlaywrightUa(url),
     locale: 'en-CA',
     viewport: { width: 1366, height: 768 },
     // Stealth: set common browser properties
@@ -270,7 +286,7 @@ export async function fetchWithPlaywrightPaginated(
 
   const b = await getBrowser();
   const context = await b.newContext({
-    userAgent: PLAYWRIGHT_UA,
+    userAgent: resolvePlaywrightUa(url),
     locale: 'en-CA',
     viewport: { width: 1366, height: 768 },
     extraHTTPHeaders: {

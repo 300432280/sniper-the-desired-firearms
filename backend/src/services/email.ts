@@ -9,10 +9,11 @@ export interface AlertEmailPayload {
   matches: Array<{ title: string; price?: number | null; url: string }>;
   notificationId: string;
   backendUrl: string;
+  isRestock?: boolean;
 }
 
 export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> {
-  const { to, keyword, matches, notificationId, backendUrl } = payload;
+  const { to, keyword, matches, notificationId, backendUrl, isRestock } = payload;
   const landingUrl = `${backendUrl}/notifications/${notificationId}`;
   const dashboardUrl = `${config.frontendUrl}/dashboard`;
 
@@ -33,7 +34,9 @@ export async function sendAlertEmail(payload: AlertEmailPayload): Promise<void> 
     .join('');
 
   const itemCount = matches.length;
-  const subject = `[FirearmAlert] ${itemCount} new item${itemCount > 1 ? 's' : ''}: "${keyword}"`;
+  const subject = isRestock
+    ? `[FirearmAlert] BACK IN STOCK: ${itemCount} item${itemCount > 1 ? 's' : ''}: "${keyword}"`
+    : `[FirearmAlert] ${itemCount} new item${itemCount > 1 ? 's' : ''}: "${keyword}"`;
 
   await resend.emails.send({
     from: config.fromEmail,

@@ -16,6 +16,22 @@ import axios from 'axios';
 import { redisConnection } from '../queue';
 import { PLAYWRIGHT_UA } from './playwright-fetcher';
 
+/**
+ * Resolve the UA to use for a domain, honoring siteProfile.userAgentOverride.
+ * Dynamic require avoids circular deps with adapter-registry.
+ */
+function resolveWafUa(domain: string): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { _getSiteCacheEntry } = require('./adapter-registry');
+    const bare = domain.replace(/^www\./, '');
+    const entry = _getSiteCacheEntry?.(bare);
+    const override = entry?.siteProfile?.userAgentOverride;
+    if (override && typeof override === 'string' && override.length > 0) return override;
+  } catch { /* fall through */ }
+  return PLAYWRIGHT_UA;
+}
+
 const COOKIE_TTL_MS = 90 * 60 * 1000;        // 90 minutes (conservative; real Sucuri TTL is 24h)
 const MUTEX_TTL_SECONDS = 45;                  // Max time to hold the solve lock
 const MUTEX_WAIT_MS = 2000;                    // Poll interval while waiting for another solver
@@ -87,7 +103,8 @@ export async function solveCookies(domain: string, url: string): Promise<{ cooki
     // Reuse the shared Playwright browser singleton (managed by playwright-fetcher)
     const { getBrowser } = await import('./playwright-fetcher');
     const browser = await getBrowser();
-    const context = await browser.newContext({ userAgent: PLAYWRIGHT_UA });
+    const ua = resolveWafUa(domain);
+    const context = await browser.newContext({ userAgent: ua });
 
     try {
       const page = await context.newPage();
@@ -110,7 +127,7 @@ export async function solveCookies(domain: string, url: string): Promise<{ cooki
       // Verify the cookies work by making a test request
       const testResp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
         params: { per_page: 1 },
-        headers: { 'User-Agent': PLAYWRIGHT_UA, 'Cookie': cookieString },
+        headers: { 'User-Agent': ua, 'Cookie': cookieString },
         timeout: 15000,
         validateStatus: () => true,
       });
@@ -122,7 +139,7 @@ export async function solveCookies(domain: string, url: string): Promise<{ cooki
       // Cache in Redis
       const entry: CookieEntry = {
         cookies: cookieString,
-        userAgent: PLAYWRIGHT_UA,
+        userAgent: ua,
         acquiredAt: Date.now(),
         failureCount: 0,
       };
@@ -132,7 +149,7 @@ export async function solveCookies(domain: string, url: string): Promise<{ cooki
 
       console.log(`[WafCookieManager] ${domain}: cookies cached (${browserCookies.length} cookies, verified via API)`);
 
-      return { cookies: cookieString, userAgent: PLAYWRIGHT_UA };
+      return { cookies: cookieString, userAgent: ua };
     } finally {
       await context.close(); // Close context but NOT the shared browser
     }

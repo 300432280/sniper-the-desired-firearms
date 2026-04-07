@@ -2,7 +2,7 @@ import type * as cheerio from 'cheerio';
 import type { ScrapedMatch, ExtractionOptions, ScrapeOptions, CatalogProduct, CatalogPage } from '../types';
 import { AbstractAdapter } from './base';
 import axios from 'axios';
-import { pickUserAgent } from '../http-client';
+import { resolveUserAgent } from '../http-client';
 import { ensureCookies, reportFailure, solveCookies } from '../waf-cookie-manager';
 
 /**
@@ -26,7 +26,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
   }
 
   async searchViaApi(origin: string, keyword: string, options: ScrapeOptions): Promise<ScrapedMatch[]> {
-    let ua = pickUserAgent(new URL(origin).hostname);
+    let ua = resolveUserAgent(new URL(origin).hostname);
     let headers: Record<string, string> = { 'User-Agent': ua, Accept: 'application/json' };
     const limit = options.fast ? 10 : 100;
     const apiTimeout = options.fast ? 8000 : 15000;
@@ -292,7 +292,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
     const hasDateFilter = !!(options?.dateAfter || options?.dateBefore);
 
     // For Sucuri WAF sites: use Playwright-obtained cookies for fast API access
-    let ua = pickUserAgent(new URL(origin).hostname);
+    let ua = resolveUserAgent(new URL(origin).hostname);
     let headers: Record<string, string> = { 'User-Agent': ua, Accept: 'application/json' };
     if (options?.hasWaf) {
       try {
