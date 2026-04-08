@@ -692,6 +692,58 @@ If present, trust NO URL sort params on the native platform. Sort is client-side
 
 ---
 
+### Mistake 26 — LightSpeed eCom (hosted) silently ignores `?page=N`; pagination pattern must bake sortParam into the suffix template
+**Site**: solelyoutdoors.com (LightSpeed eCom hosted, shop 613284, Nova theme)
+**What happened**: the existing profile had `sortParam: '?sort=newest'` and **no** `paginationPattern`. `buildPaginatedUrl` therefore fell through to the default query-style branch, producing URLs like `/firearms/non-restricted/?sort=newest&page=2`. LightSpeed's category controller silently ignores the `page` query parameter — page 2 returned **byte-for-byte identical products** to page 1. Consequence: T1 watermark was only ever seeing the first 24 newest items per category, missing everything from page 2 onwards until full catalog refresh eventually picked them up.
+
+**Compounding factor — the `sortParam` × `suffix-replace` interaction**: the obvious fix is `paginationPattern: {type: 'suffix-replace', match: '.html', template: 'page{N}.html'}` (matches site 9 fulcrum-outdoors and site 11 gagnonsports precedents). But `GenericRetailAdapter.getNewArrivalsUrls` at `generic-retail.ts:215-220` appends `profile.sortParam` (`?sort=newest`) to every catalogUrl **before** handing them to the watermark crawler. So the T1 input URL is `/firearms/non-restricted/?sort=newest`, which doesn't end in `.html`. With match `.html`, `buildPaginatedUrl` at `catalog-crawler.ts:127-136` falls into the append branch → `baseUrl + 'page2.html'` → `/firearms/non-restricted/?sort=newestpage2.html` — the sort value and filename are concatenated with no separator. Garbage URL, 404 or page 1 default.
+
+**The working pattern**: anchor `match` on the sort query segment itself, and bake the sort into the template.
+```json
+{"type": "suffix-replace", "match": "?sort=newest", "template": "page{N}.html?sort=newest"}
+```
+- **T1 watermark path** (URL arrives with `?sort=newest` already appended): match finds `?sort=newest`, strips it, appends `page{N}.html?sort=newest` → `/firearms/non-restricted/page2.html?sort=newest` ✓
+- **T2-4 catalog path** (URL arrives bare, `getCatalogUrls` does NOT inject sortParam): match `?sort=newest` not found → falls to append branch → `baseUrl + 'page2.html?sort=newest'` → `/firearms/non-restricted/page2.html?sort=newest` ✓ (trailing `/` of the bare URL joins cleanly with `page2.html`)
+
+Both paths produce the same correct URL.
+
+**LIVE verification on solelyoutdoors.com 2026-04-08**:
+- `/firearms/non-restricted/` walked all 7 pages: **146 unique products**, zero overlap page-to-page (24+24+24+24+24+24+2=146)
+- `/firearms/shotguns/` walked all 6 pages: **128 unique products** (24+24+24+24+24+8=128)
+- Default (popular) first product: `norinco-type-81-sr-762x39-semi-auto`
+- `?sort=newest` first product: `morisson-lever-action-22lr-walnut-18bbl` (ID-jump confirms real date sort)
+
+**Detection signature** — LightSpeed eCom hosted (Nova theme):
+- `cdn.shoplightspeed.com/shops/<shopId>/themes/` in HTML
+- `class="fancy-select"` widgets
+- `<select name="sort">` with options `default, popular, newest, lowest, highest, asc, desc`
+- `<form id="sort_filters">` with no `action=` (submits to current URL as GET)
+- Product URLs at site root: `/<product-slug>.html`
+- Category URLs as directories with trailing `/`: `/firearms/non-restricted/`
+- Pagination links in HTML as `page2.html`, `page3.html`, etc.
+
+**Test procedure before writing a `paginationPattern` for any hosted LightSpeed eCom site**:
+1. Fetch `{cat}/?sort=newest` → capture first product slug
+2. Fetch `{cat}/?sort=newest&page=2` → compare first product slug
+3. If identical → `?page=N` is silently ignored, MUST use `page{N}.html` suffix
+4. Fetch `{cat}/page2.html?sort=newest` → verify different first product + zero overlap with page 1
+5. Write `paginationPattern: {type: 'suffix-replace', match: '<exact sortParam incl. leading ?>', template: 'page{N}.html<exact sortParam incl. leading ?>'}`
+6. Run `buildPaginatedUrl` locally against BOTH a bare catalogUrl and a sort-appended catalogUrl and confirm both produce the same correct URL
+
+**Why this wasn't caught earlier on site 9 (fulcrum-outdoors) or site 11 (gagnonsports)**: those earlier LightSpeed audits used `match: '.html'` because their `sortParam` was empty or the fallback append produced a working URL by accident. The interaction only breaks when `sortParam` is non-empty AND ends before the pagination segment AND the adapter appends it before `buildPaginatedUrl` runs.
+
+**Cross-references**:
+- Mistake 2 (read the HTML sort `<select>` first) — got us `?sort=newest` correctly
+- Mistake 14 (paginationPattern template format) — `{N}` is uppercase, param/suffix form matters
+- Fulcrum-outdoors site 9 precedent — suffix-replace pagination on LightSpeed eCom (no sortParam)
+- Gagnonsports site 11 precedent — suffix-replace fallback via append branch for bare category URLs
+- `catalog-crawler.ts:118-166` (`buildPaginatedUrl`)
+- `generic-retail.ts:209-239` (`getNewArrivalsUrls` — the sortParam injector)
+
+**Lesson summary**: For ANY site with a non-empty `sortParam` AND a suffix-replace pagination scheme, always test `buildPaginatedUrl` against BOTH the bare catalogUrl AND the sort-appended catalogUrl. If the same pattern can't produce the correct paginated URL from both inputs, you need to bake the sortParam into the suffix template so the T1 watermark path works correctly. And never assume query-style `?page=N` works on hosted LightSpeed eCom — always verify with a live page-2 ID-jump test.
+
+---
+
 ## Adapter-side bugs discovered during site audits
 
 These are issues in `backend/src/services/scraper/adapters/generic-retail.ts` that were caught during site verification work. Listed so future agents can find them quickly when auditing similar sites.
