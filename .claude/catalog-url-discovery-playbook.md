@@ -636,6 +636,60 @@ Verified via ID-jump test on precisionoptics.net `/category_s/662.htm`:
 
 **Fleet note**: Volusion is obscure (1 site in the 34-site fleet so far — precisionoptics.net). This lesson is narrow but saves ~30 min of "why isn't sort working" debugging when the next Volusion site appears. Cross-references: Mistake 2 (read HTML), Mistake 21 (OpenCart dropdown-incomplete pattern — similar but different root cause), Mistake 20 (Magento merchant-customizable — similar but different quirk).
 
+### Mistake 25 — Searchspring overlay hijacks URL sort semantics; real sort lives in a hash fragment
+**Site**: sail.ca (Magento 2 + Searchspring overlay `siteId=s8zq1c`)
+**What happened**: sail.ca is a stock Magento 2 install, so the audit initially tried the standard Magento URL sort params:
+- `?product_list_order=created_at&product_list_dir=desc`
+- `?sort=created_at`
+- `?sort.created_at=desc`
+- `?product_list_order=new&product_list_dir=desc` (the merchant-customized value seen on site 18 londerosports)
+
+**All four variants returned IDENTICAL ordering** — the same "Best Selling" default. Mistake 20 discipline (read the `<select id="sorter">` HTML) got confusing because the sort control was an Angular `<select>` with `ng-options` and values `0/1/2/3` rather than the stock Magento option values. The actual sort mechanism wasn't a URL query param at all.
+
+**Reality**: the page loads a third-party JS overlay from Searchspring:
+```html
+<script src="//cdn.searchspring.net/search/v3/js/searchspring.catalog.js?s8zq1c"
+        hierarchy="Hunting>Firearms"></script>
+```
+When the user clicks "Newest" in the dropdown, Searchspring's JS **replaces the URL hash fragment** with `#/sort:created_at:desc` and re-fetches products from its own JSON API at `https://<siteId>.a.searchspring.io/api/search/search.json`. The native Magento category controller never sees the sort param — it's handled entirely client-side by Searchspring.
+
+**Proof via Playwright ID-jump**:
+- `#/sort:created_at:desc` page 1: tikka-t1x-...1618256, winchester-xpert-...1608993 (7-digit IDs ≥ 1,500,000, 2026 dates)
+- `#/sort:created_at:desc` page 22 (last): sako-gamehead-...1356073 (6-7 digit IDs ≤ 1,400,000, 2024 dates)
+- ASC sort via direct Searchspring API: remington-...690195, winchester-...632287 (oldest 3-6 digit IDs)
+
+Monotonic ID increase asc→default→desc confirms `created_at` is a true date sort, not a popularity alias.
+
+**Fragment preservation is free**: Node's `URL` class preserves hash fragments through `searchParams.set()`, so `buildPaginatedUrl()` at `catalog-crawler.ts:118-166` works unchanged. Example:
+```js
+new URL('https://www.sail.ca/en/hunting/firearms#/sort:created_at:desc').searchParams.set('page', '3').toString()
+// → 'https://www.sail.ca/en/hunting/firearms?page=3#/sort:created_at:desc'
+```
+This matches sail.ca's native pager output byte-for-byte.
+
+**Fix for this and any future Searchspring-overlaid site**:
+1. Bake the hash fragment into each `catalogUrl` in the profile: `/en/hunting/firearms#/sort:created_at:desc`
+2. Set `sortParam: ""` (empty — the adapter's `getNewArrivalsUrls` would otherwise append a useless Magento URL suffix that's ignored)
+3. Use normal query-based pagination (`paginationPattern: {type: 'query', template: 'page'}`); Node's URL class preserves the fragment automatically
+4. Keep `needsPlaywright: true` — catalog is JS-injected (plain HTML has zero product cards)
+
+**Detection signature** — grep any page HTML for:
+```
+cdn.searchspring.net/search/v3/js/searchspring.catalog.js?<siteId>
+```
+If present, trust NO URL sort params on the native platform. Sort is client-side JS, not server-side. Also worth noting: the sort dropdown may appear Angular-ish (`ng-options`, integer values 0/1/2/3) because Searchspring renders its own sort control on top of the platform UI.
+
+**Cross-platform note**: Searchspring is used by Magento, BigCommerce Stencil, and Shopify stores. If you see it on BC or Shopify, the same rule applies — native platform sort params are overridden. Always render via Playwright, click "Newest" programmatically, then capture `page.url()` to discover the real fragment scheme.
+
+**Cross-references**:
+- Mistake 2 (read the HTML) — doesn't help directly because the sort control is Angular-templated, not a native `<select>`
+- Mistake 18 (cross-reference DOM ordering) — the right fallback when no URL param works: render via Playwright, drive the UI, capture the resulting URL
+- Mistake 19 sub-lesson (drive Playwright as a real user) — this is the procedure to use
+- Mistake 20 (merchant-customized Magento sort values) — similar in appearance but different root cause; Searchspring isn't Magento-customization, it's a platform-layer bypass
+- Alflahertys Klevu pattern (site 1) — similar architecture (JS overlay hijacks native catalog) but Klevu exposes a clean JSON API that we call directly; Searchspring also exposes a JSON API but we can reach the HTML via hash-fragment URLs without calling the API
+
+**Lesson summary**: When a JS overlay (Searchspring, Klevu, Algolia Search, Constructor.io, etc.) replaces the native catalog renderer, the URL contract changes. Always check for third-party JS layer signatures in the HTML BEFORE assuming the native platform's URL sort/pagination works.
+
 ---
 
 ## Adapter-side bugs discovered during site audits
