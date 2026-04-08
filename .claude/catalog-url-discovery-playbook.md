@@ -63,8 +63,55 @@ and resource-heavy. If a specific UA is required, set `siteProfile.userAgentOver
 hasWaf: true|false,
 wafType: 'cloudflare-active' | 'cloudflare-passive' | 'sucuri' | 'nginx-ua-block' | 'unknown',
 userAgentOverride: <only if specific UA required>,
-wafWorkaround: { method: '...', notes: '...', steps: [...] }
+wafWorkaround: { method: '...', notes: '...', steps: [...] }  // informational only, not consumed by runtime code
+wafLastProbedAt: '<ISO timestamp>',                             // when the heavy probe was run
+wafProbeMethod: 'heavy-8-batch' | 'single-request' | 'other',    // which method produced the verdict
+wafProbeResult: '<one-line summary of probe findings>',         // human-readable verdict
+wafProbeEvidence: { ... },                                      // structured data from probe
 ```
+
+**NOTE on `wafWorkaround`**: this field is **documentation only** — no backend code reads it. Runtime WAF handling is driven by `hasWaf` (for HTML-size threshold in the fallback path at `catalog-crawler.ts:404-421`) and the generic `waf-cookie-manager` + `applyBackoff` infrastructure. Setting `wafWorkaround: null` is safe for sites that don't need a site-specific workaround; the generic runtime fallback chain still fires regardless.
+
+---
+
+### ⚡ Heavy WAF verification procedure (MANDATORY — use for every audit)
+
+**Why**: A single 200 response proves *"this request on this path with this UA at this moment was not challenged"* — NOT *"this site has no WAF."* Many WAFs are behavior-based (rate limit, bot fingerprint, OWASP rule set, path-selective) and don't fire on a single probe. The heavy probe fires 8 batches designed to trigger every common WAF trigger.
+
+**Tool**: `backend/scripts/heavy-waf-probe.sh <https://target>` — a bash script that runs the full 8-batch probe. Keep this file permanently in the repo; do NOT delete it after an audit.
+
+**The 8 batches**:
+1. **Header fingerprint** — GET homepage + `/robots.txt` + `/sitemap.xml` with `curl -I`, grep for `server:`, `cf-ray`, `cf-cache-status`, `x-sucuri-id`, `x-amzn-*`, `x-waf-*`, `x-cache`, `via`, `set-cookie` (cf_clearance, __cf_bm, incap_ses_*, visid_incap_*)
+2. **Multi-UA probe** — same path with Desktop Chrome, iPhone Safari, `python-requests/2.31.0` (obvious bot), `curl/8.1.2` — checks for UA filtering
+3. **Rapid burst** — 10 sequential GETs with cache-busting query strings in ~2-5 seconds — triggers rate-limit rules
+4. **Honeypot/admin path probe** — `/wp-admin/`, `/wp-login.php`, `/xmlrpc.php`, `/.env`, `/.git/config`, `/phpinfo.php` — many WAFs have active rules for these paths
+5. **Barebones headers** — GET with no Accept-Language, no Accept-Encoding — some WAFs require full browser header sets
+6. **SQLi-shaped query string** — `?id=1' OR '1'='1` and `?id=1 UNION SELECT 1,2,3` — triggers OWASP CRS SQLi rules
+7. **XSS-shaped query string** — `?q=<script>alert(1)</script>` — triggers OWASP CRS XSS rules
+8. **No User-Agent** — GET with `-A ""` — some WAFs require a UA header
+
+**Interpretation**:
+- **All 8 batches return 200 with consistent timing AND no `cf-ray`/`x-sucuri-id`/challenge markers** → `hasWaf: false` (verified, high confidence)
+- **Any batch returns 403/503/challenge body** → `hasWaf: true`, `wafType` = vendor from headers
+- **`cf-ray` header present on EVERY 200 response** → `hasWaf: true`, `wafType: 'cloudflare-passive'` — Cloudflare is proxying but not actively filtering. **Set hasWaf=true**, because CF can be activated at any time by the site owner, and the crawler's `hasWaf: true` fallback path (2KB HTML threshold + 45s Playwright timeout at `catalog-crawler.ts:416-421`) gives tighter recovery if it suddenly fires.
+- **Honeypot paths 403 but category 200** → `hasWaf: true`, `wafType: 'path-selective'`
+- **SQLi/XSS 403 but normal 200** → `hasWaf: true`, `wafType: 'owasp-crs'`
+- **Rapid burst triggers 429/503** → `hasWaf: true`, `wafType: 'rate-limit'`
+- **`python-requests/2.31.0` UA blocked but Chrome UA allowed** → `hasWaf: true`, `wafType: 'ua-filter'`, and set `userAgentOverride` if needed
+
+**ANTI-PATTERN**: Setting `hasWaf: false` after a single 200 response without heavy-probing. This was how site 19 nordicmarksman (Stencil), site 20 northprosports (OpenCart), and site 21 outfitters (Odoo) were initially mis-flagged. All three actually HAD Cloudflare in front of them — the single-shot probe missed the `cf-ray` header. **You MUST run the heavy probe before declaring `hasWaf: false`.**
+
+**Corollary — `hasWaf: true, wafType: 'cloudflare-passive'` is NOT blanket tagging**: setting `hasWaf: true` requires the heavy probe to first detect `server: cloudflare` + `cf-ray` headers. If those headers are absent, CF is not in front and `hasWaf: false` is correct. The rule is **verify, then set** — never blanket.
+
+**Record every heavy probe** in the profile via:
+- `wafLastProbedAt`: ISO timestamp of the probe run
+- `wafProbeMethod`: `'heavy-8-batch'` (or other method if warranted)
+- `wafProbeResult`: one-line verdict
+- `wafProbeEvidence`: structured data (CF headers detected, rate-limit fired, etc.)
+
+Future auditors can see WHEN the WAF state was last verified and re-probe if stale (recommend re-probe every 90 days or on SRE alert).
+
+---
 
 ### Phase 2: Discover product count via API (preferred)
 
@@ -446,6 +493,146 @@ If the selector match count is high but the final count is low, the bug is in a 
 **Also**: this is a special case of the global rule in `~/.claude/CLAUDE.md`: *"Never give up after first failure. Test at least 3 alternative approaches with evidence before declaring 'unfixable.' If a human can access something in their browser, there IS a way to get it programmatically."* If your conclusion is "build a new adapter" or "the site is blocked", you have given up too early.
 
 **Sub-lesson — When investigating a SPA, you MUST drive Playwright as a real user, not as a static fetcher.** Static `goto()` + `waitForSelector` only loads the default state. To find sort params, pagination behavior, filter UI, etc., you must `page.click()` the actual controls and capture (a) the URL change, (b) the network XHRs fired, (c) the new visible state. On liangjian.ca, the sort dropdown was visible the entire time as `[data-aid="PRODUCT_SORT_DROPDOWN"]` containing a "Newest" option. THREE prior audits never clicked it and concluded "no sort exists." Truth: clicking "Newest" sets URL `?sortOption=descend_by_created_at` AND fires `GET ...mysimplestore.com/api/v2/products?...q[descend_by_created_at]=true`. Mistake 2 (read HTML before guessing params) extends to SPAs as: **drive the UI before guessing URL params**. If a `<select>` / dropdown / button looks like a sort/filter/paginate control, click it in a live Playwright session with `page.on('request', ...)` logging — then read the URL and the XHR. Do not rely on static HTML scans for SPA controls; the handlers are in JS, not markup.
+
+### Mistake 20 — Assuming platform-default sort option values are universal (Magento 2.x `product_list_order`)
+**Site**: londerosports.com (Magento 2.x)
+**What happened**: The previous profile had `sortParam: '?product_list_order=created_at&product_list_dir=desc'` — the widely-documented Magento 2 "newest first" sort. On londerosports, this param is **silently ignored** — Magento falls back to the default `bestsellers` sort because `created_at` is not a configured option value on this install. The audit would have missed this if the auditor hadn't read the actual `<select id="sorter">` HTML.
+**Reality**: Read the option values directly from the select element:
+```html
+<select id="sorter" data-role="sorter">
+  <option value="bestsellers" selected>Best Sellers</option>
+  <option value="new">New Products</option>        <!-- THIS is newest-first on this install -->
+  <option value="most_viewed">Most Viewed</option>
+  <option value="quantity_and_stock_status">In Stock</option>
+  <option value="price">Price</option>
+  <option value="marque">Brand</option>
+  <option value="rating_summary">Rating</option>
+  <option value="saving">Savings</option>
+</select>
+```
+The newest-first value here is literally `new`, not `created_at`. Proven via ID-jump test: default rifles first = "maple-ridge-armoury-renegade-mk-ii"; with `?product_list_order=new` first = "weatherby-mark-v-live-wild-30-06-sprg" — different product, confirming the sort is working.
+**Fix**: `sortParam: '?product_list_order=new&product_list_dir=desc'` in the profile.
+**Why it matters**: Magento 2.x's `<select id="sorter">` option values come from the merchant's `catalog_config` and can be customized / renamed / localized per store. Common values seen in the wild:
+- `created_at` / `creation_time` (stock Magento default label)
+- `news_from_date` (Magento 1.x legacy, used on ellwoodepps — site 6)
+- `new` (londerosports — site 18)
+- `date_added` / `newest` (themed installs)
+- `bestsellers` (often the store default, NOT newest)
+
+**Lesson**: Mistake 2 ("never guess sort params") applies with extra force to Magento sites. Every Magento audit MUST:
+1. Fetch a category page with production HTTP client / Playwright
+2. Grep for `<select id="sorter"` (M2) or `<select id="sorter"` / `<select name="order"` (M1)
+3. Print every `<option value="..." text="...">` from the select
+4. Identify the label that sounds like "newest"/"new"/"latest"/"date"/"created" and use ITS value, not the default you remember from another site
+5. Verify via ID-jump test (default first product vs sorted first product) — if identical, the param is being ignored
+6. Verify sort survives pagination (page 2 IDs strictly different from page 1)
+
+**Corollary**: When re-verifying Magento sites where the stored `sortParam` is `product_list_order=created_at` or `order=news_from_date`, treat those as UNVERIFIED and re-read the `<select>` HTML. They may be stored from a blind copy/paste and silently ignored by the target store.
+
+### Mistake 21 — OpenCart's visible sort dropdown does not expose every server-accepted column
+**Site**: northprosports.com (OpenCart stock 2.x/3.x)
+**What happened**: The `<select id="input-sort">` dropdown only exposed these options:
+```
+p.sort_order-ASC (default)
+pd.name-ASC / pd.name-DESC
+p.price-ASC / p.price-DESC
+p.model-ASC / p.model-DESC
+```
+**No `p.date_added` / "Newest" option in the dropdown.** A strict Mistake-2-only read would have concluded "no date sort exists" and the site would have been routed to `full-catalog-sweep` unnecessarily.
+**Reality**: OpenCart's stock `product/category` controller accepts **any** `p.*` or `pd.*` column via the `sort` query parameter, server-side. The dropdown is a UI convenience, not an exhaustive whitelist. Directly hitting `?sort=p.date_added&order=DESC` on northprosports returned newest-first results — verified by ID-jump test:
+- Default sort: first product_id = 22944 ("Display Model CZ-USA 600 ST3")
+- `sort=p.date_added&order=DESC`: first product_id = **24005** (Stoeger P3000 Freedom Series)
+- Higher product_id = newer (OpenCart autoincrements)
+**Fix**: `sortParam: 'sort=p.date_added&order=DESC'` in the profile. Watermark method stays `navigate-from-watermark`.
+**Why it matters**: This is a narrow extension of Mistake 2 for OpenCart specifically. The general rule ("read the HTML, don't guess") is still correct as the FIRST step — but for OpenCart sites, if the dropdown lacks a date option, you must ALSO probe `p.date_added` directly before declaring sort impossible. OpenCart's server-side column whitelist is broader than what the default theme surfaces in the UI.
+
+**Lesson**: On OpenCart sites, the sort-param audit is a TWO-step process:
+1. Read `<select id="input-sort">` HTML and try the values listed there (per Mistake 2)
+2. Even if no date option is visible, ALSO probe these known stock OpenCart server-accepted sorts:
+   - `?sort=p.date_added&order=DESC` (explicit date column)
+   - `?sort=p.product_id&order=DESC` (equivalent — autoincremented PK)
+   - `?sort=p.date_modified&order=DESC` (if p.date_added doesn't work)
+3. Verify via ID-jump test; if the first product_id is strictly higher than the default first product_id, the sort is server-honoured
+4. The UI dropdown being silent about the option is NOT evidence the column is unsupported
+
+**Cross-reference**: this is a Mistake-2 extension in the same family as the Stencil default-newest gotcha (site 19 nordicmarksman.com) and the Magento merchant-customized option values (Mistake 20). All three are variants of "the dropdown doesn't tell the whole story." For BC Stencil: read the dropdown but use `alphaasc` as a reliable counter-control. For Magento: read the dropdown because `created_at` may not be a valid value. For OpenCart: read the dropdown AND probe `p.date_added` directly because the dropdown is incomplete.
+
+**Corollary**: When re-verifying OpenCart sites whose stored `sortParam` is `null` (with a note like "no sort exists"), treat those as UNVERIFIED and re-probe `?sort=p.date_added&order=DESC` directly. Prior auditors may have stopped at the dropdown.
+
+### Mistake 22 — Odoo eCommerce platform reference + stored platform tags need verification
+**Site**: outfitters.goldnloan.com (Odoo eCommerce with Theme Pixel)
+**What happened**: The prior session recorded `platform: 'lightspeed'` in the profile even though the notes field explicitly said "Odoo, bilingual" — nobody cross-validated. Audit discovered the site is actually Odoo, not LightSpeed. Production selectors happened to work anyway (generic `[class*="product-item"]` matched the Odoo `.tp-product-item` class), so the misidentification hadn't caused extraction failures — but the stored `sortParam: '?sort=newest'` was a LightSpeed guess that Odoo silently ignored, and `paginationPattern` was missing entirely, leaving the crawler stuck at ~42 products out of 1,787.
+
+**Reality — Odoo eCommerce signature** (how to identify it in future audits):
+- HTML markers: `<meta name="generator" content="Odoo">`, `oe_website_sale`, `oe_currency_value`, `oe_structure`, `o_wsale_products_grid_table_wrapper`
+- Theme class prefix: typically `tp-*` (Theme Pixel) or raw `oe-*` classes
+- Product card: `.tp-product-item.tp-product-item-grid-1` (Theme Pixel) — matched by existing `[class*="product-item"]` selector
+- URL pattern: `/shop/category/<slug>-<id>` (category) and `/shop/<slug>-<id>` (product detail)
+
+**Odoo sort param format** (important quirk):
+- Uses **literal `+` for space** in the URL: `?order=create_date+desc`
+- `create_date%20desc` also works
+- Values from the stock Theme Pixel dropdown: `website_sequence+asc` (default/Featured), `create_date+desc` (Newest), `name+asc` (Name), `list_price+asc`, `list_price+desc`
+- **Read the actual `<a href="?order=...">` in the sort dropdown** — on outfitters this is `#tp-shop-sort-sidebar` — before writing anything
+
+**Odoo pagination**: `path` type, template `/page/{N}` — "Load more" anchor is `/shop/category/firearms-42/page/2`. Odoo clamps overshoots by repeating the last page (dedup-on-zero-added stop handles this).
+
+**Odoo sitemap over-count quirk**: `/sitemap.xml` includes out-of-stock products, but the storefront hides them via `hide_out_of_stock=1`. Expect sitemap counts to be ~5-10% higher than a live catalog walk. **Catalog walk is ground truth** for `expectedProductCount`, not sitemap `<loc>` count.
+
+**Fleet observation on platform misidentification**: 11/21 audited sites have had wrong WAF flags OR wrong platform tags at onboarding. Treat stored `platform` tags with the same suspicion as stored `wafType` — re-verify by reading HTML generator meta tag + theme markers before trusting any stored value.
+
+**Lesson**: Before starting Phase 2 of any audit, grep the HTML for `<meta name="generator">` and all known platform markers (`BCData` → BC Blueprint, `stencil`+`cdn11.bigcommerce` → BC Stencil, `catalog/view/` → OpenCart, `static/version` + `requirejs-config` → Magento 2, `BCData` without version → Magento 1, `oe_website_sale` → Odoo, `mysimplestore` or `godaddy-ols` → GoDaddy OLS SPA, `Stencil.storefrontAPIToken` → BC Stencil with GraphQL API, `lightspeed` / `shoplightspeed` → LightSpeed). **If any marker contradicts the stored `platform` tag, the stored tag is WRONG — verify before proceeding.**
+
+### Mistake 23 — Declaring `hasWaf: false` from a single 200 response
+**Sites**: nordicmarksman.com (site 19), northprosports.com (site 20), outfitters.goldnloan.com (site 21) — all initially mis-flagged as `hasWaf: false` because the audit stopped at the first 200 response without inspecting response headers or running a multi-request probe.
+**What happened**: On all three sites, a single `GET /` with a desktop Chrome UA returned HTTP 200 with product HTML. The audit concluded "no WAF" and cleared `hasWaf`, `wafType`, `needsPlaywright`, `wafWorkaround`. But all three sites actually have Cloudflare in front of them (`server: cloudflare` + `cf-ray: <hash>-YYZ` headers visible on every response). The heavy WAF probe (8-batch procedure, documented in Phase 1 above) immediately caught this on probe #1.
+**Why it matters**:
+1. A single 200 proves *"this request was not challenged"* — not *"this site has no WAF."*
+2. Many WAFs are behavior-based (rate limit, OWASP CRS, path-selective, bot fingerprint) and don't fire on a single probe.
+3. `hasWaf: false` routes the site through the **5KB HTML fallback threshold** at `catalog-crawler.ts:404`. If a WAF later activates and returns a small challenge page (~3KB), the fallback won't trigger Playwright — the site silently stalls for hours until `consecutiveFailures` + `applyBackoff` catch it.
+4. `hasWaf: true` routes the site through the **2KB threshold** at `catalog-crawler.ts:416` with a 45s Playwright timeout — instant recovery when WAF fires.
+5. Even Cloudflare "passive" (headers present, no active filtering) should be `hasWaf: true` because CF can be activated at any moment by the site owner.
+
+**Fix**: Run `backend/scripts/heavy-waf-probe.sh <target>` (8-batch probe). Record:
+- `hasWaf`: true if ANY WAF-vendor header (`cf-ray`, `x-sucuri-id`, `x-amzn-*`, `x-waf-*`) is present OR ANY probe returns 403/503/challenge — regardless of whether filtering is active today
+- `wafType`: vendor name (`cloudflare-active`, `cloudflare-passive`, `sucuri`, etc.)
+- `wafLastProbedAt`: ISO timestamp
+- `wafProbeMethod`: `'heavy-8-batch'`
+- `wafProbeResult`: one-line verdict
+- `wafProbeEvidence`: structured data (header detected, rate-limit fired, honeypot blocked, etc.)
+
+**Corollary — NOT blanket tagging**: Setting `hasWaf: true` for all sites is wrong. The rule is **verify via heavy probe, then set**. If the heavy probe finds NO WAF headers on any response AND no batch fires a challenge, `hasWaf: false` is correct. The point of the heavy probe is to distinguish *"genuinely no WAF"* from *"one lucky 200."*
+
+**Lesson**: Single-shot WAF probes are insufficient. The heavy probe is mandatory for every audit. When re-verifying old sites where `hasWaf: false` was set before 2026-04-08, treat the flag as UNVERIFIED and re-run the heavy probe.
+
+### Mistake 24 — Volusion sort param is silently ignored unless `searching=Y` is also present
+**Site**: precisionoptics.net (Volusion legacy hosted eCommerce)
+**What happened**: The audit read the `<select id="SortBy">` HTML and found the newest-first option has `value="3"`. Building `?sort=3&show=90&page=N` seemed sufficient — but all sort values returned IDENTICAL ordering (the default `Availability` / `sort=11`). The sort param was being silently ignored. A strict Mistake 21 lookalike — the dropdown was telling the truth, but the URL format was incomplete.
+**Reality**: Volusion's category controller only honors the `sort` parameter when `searching=Y` is ALSO present in the query string. This is visible in the inline JS at `/a/j/productlist.js` where `Refine()` rebuilds URLs from `SearchParams` which always hardcodes `searching=Y&sort=11&...`. Without the `searching=Y` flag, the controller treats the request as a plain category browse and uses the default sort (Availability), silently discarding the `sort` parameter.
+**Fix**: Build Volusion catalog URLs as:
+```
+{path}?searching=Y&sort={N}&show={N}&page={N}
+```
+Example: `/category_s/662.htm?searching=Y&sort=3&show=90&page=1` → returns products sorted newest-first.
+
+Verified via ID-jump test on precisionoptics.net `/category_s/662.htm`:
+- `?sort=3` (no searching=Y): first products = Beretta_686 → Benelli_Super_Black_Eagle → Benelli_Nova_3 (default Availability order, sort ignored)
+- `?searching=Y&sort=3`: first products = Benelli_Nova_Pump → Benelli_M2_Tactical → Benelli_M4_Tactical (newest order)
+- `?searching=Y&sort=4` (Oldest): first products = Beretta_686 → Benelli_Super_Black_Eagle → Benelli_Nova_3 (matches first test above — confirms default was Availability, NOT oldest)
+- Different first products across sort values ONLY when `searching=Y` is present → quirk confirmed.
+
+**Why it matters**: This is a legacy Volusion platform quirk (early-2000s-vintage hosted eCommerce). Common Volusion sort values: `1=Price Low→High`, `2=Price High→Low`, `3=Newest`, `4=Oldest`, `5=Most Popular`, `7=Title`, `9=Manufacturer`, `11=Availability (default)`. But the values are **inert without `searching=Y`** — exactly the kind of trap that Mistake 2 ("read the HTML") catches for the param name but not for the activation flag.
+
+**Lesson**: On Volusion sites, the sort audit is a THREE-step process:
+1. Read `<select id="SortBy">` HTML and find the `value=` attribute for "Newest" per Mistake 2
+2. Build the full URL as `?searching=Y&sort={N}&show={N}&page={N}` — the `searching=Y` flag is mandatory
+3. ID-jump verify with `searching=Y` present — if ordering still doesn't change, the flag or the sort value is wrong
+
+**Also**: `show={N}` controls products per page (max typically 90 on Volusion). `page={N}` starts at 1. Pagination is `query` type, template `'page'`, Mistake 14 compliant.
+
+**Platform signature**: `x-powered-by: Volusion` response header, `/v/vspfiles/` asset paths, `volusion.js`, `volses` cookie, `cdn4.volusion.store` CDN, URL patterns like `/category_s/NNN.htm` and `/ProductDetails.asp?ProductCode=XXX`. If you see any of these, you're on Volusion and the `searching=Y` rule applies.
+
+**Fleet note**: Volusion is obscure (1 site in the 34-site fleet so far — precisionoptics.net). This lesson is narrow but saves ~30 min of "why isn't sort working" debugging when the next Volusion site appears. Cross-references: Mistake 2 (read HTML), Mistake 21 (OpenCart dropdown-incomplete pattern — similar but different root cause), Mistake 20 (Magento merchant-customizable — similar but different quirk).
 
 ---
 
