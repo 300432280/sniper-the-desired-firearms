@@ -80,6 +80,8 @@ wafProbeEvidence: { ... },                                      // structured da
 
 **Tool**: `backend/scripts/heavy-waf-probe.sh <https://target>` — a bash script that runs the full 8-batch probe. Keep this file permanently in the repo; do NOT delete it after an audit.
 
+**Pre-flight step (as of 2026-04-08 after Site 24)**: the script automatically resolves the canonical host via redirect-following before running the 8 batches. Apex domains that 301 to `www` (or elsewhere) are common, and sometimes the apex runs on a DIFFERENT stack than the canonical (e.g. reliablegun.com apex is Microsoft-IIS/10.0 that 301s to `www.reliablegun.com` which is Cloudflare-fronted — probing only the apex would miss the WAF entirely). The pre-flight prints both the apex `server:` header and the canonical `server:` header, warns if they differ, and updates all subsequent probes to target the canonical. If the probe tool is missing this pre-flight, UPDATE IT before running an audit.
+
 **The 8 batches**:
 1. **Header fingerprint** — GET homepage + `/robots.txt` + `/sitemap.xml` with `curl -I`, grep for `server:`, `cf-ray`, `cf-cache-status`, `x-sucuri-id`, `x-amzn-*`, `x-waf-*`, `x-cache`, `via`, `set-cookie` (cf_clearance, __cf_bm, incap_ses_*, visid_incap_*)
 2. **Multi-UA probe** — same path with Desktop Chrome, iPhone Safari, `python-requests/2.31.0` (obvious bot), `curl/8.1.2` — checks for UA filtering

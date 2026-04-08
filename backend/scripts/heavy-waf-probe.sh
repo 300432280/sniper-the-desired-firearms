@@ -25,7 +25,7 @@ probe() {
   local t0 t1 dur
   t0=$(date +%s%N)
   local out
-  out=$(curl -sS -o /dev/null -w "STATUS=%{http_code} BYTES=%{size_download} TIME=%{time_total} REDIRECTS=%{num_redirects}" --max-time 20 "$@" "$url" 2>&1)
+  out=$(curl -sSL -o /dev/null -w "STATUS=%{http_code} BYTES=%{size_download} TIME=%{time_total} REDIRECTS=%{num_redirects} FINAL=%{url_effective}" --max-time 20 "$@" "$url" 2>&1)
   t1=$(date +%s%N)
   dur=$(( (t1 - t0) / 1000000 ))
   echo "[$label] $url"
@@ -37,7 +37,7 @@ probe_headers() {
   local label="$1"; shift
   local url="$1"; shift
   echo "[$label] HEADERS FOR $url"
-  curl -sSI --max-time 20 -A "$DESKTOP_UA" "$@" "$url" 2>&1 | grep -iE '^(HTTP|server|cf-ray|cf-cache|x-sucuri|x-amz|x-waf|x-cache|set-cookie|via|x-served)' | head -20
+  curl -sSLI --max-time 20 -A "$DESKTOP_UA" "$@" "$url" 2>&1 | grep -iE '^(HTTP|server|cf-ray|cf-cache|x-sucuri|x-amz|x-waf|x-cache|set-cookie|via|x-served|location)' | head -30
   echo
 }
 
@@ -45,6 +45,25 @@ echo "========================================"
 echo "HEAVY WAF PROBE: $DOMAIN"
 echo "Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 echo "========================================"
+
+# ── PRE-FLIGHT: resolve canonical host ─────────────────────────────────
+# Many sites run the apex on one stack (IIS/Apache/cPanel) that 301s to
+# `www` which is behind the CDN/WAF. Probing only the apex will miss the
+# real WAF. Resolve the canonical host by following redirects ONCE and
+# report if apex and www differ. (Site 24 reliablegun.com lesson.)
+echo
+echo "=== PRE-FLIGHT: canonical host resolution ==="
+APEX_FINAL=$(curl -sSLI --max-time 20 -A "$DESKTOP_UA" -o /dev/null -w '%{url_effective}' "$DOMAIN" 2>/dev/null || echo "$DOMAIN")
+APEX_SERVER=$(curl -sSI --max-time 20 -A "$DESKTOP_UA" "$DOMAIN" 2>/dev/null | grep -i '^server:' | head -1 || true)
+FINAL_SERVER=$(curl -sSLI --max-time 20 -A "$DESKTOP_UA" "$DOMAIN" 2>/dev/null | grep -i '^server:' | tail -1 || true)
+echo "   requested: $DOMAIN"
+echo "   canonical: $APEX_FINAL"
+echo "   apex_server_header:     $APEX_SERVER"
+echo "   canonical_server_header: $FINAL_SERVER"
+if [[ "$APEX_FINAL" != "$DOMAIN/" && "$APEX_FINAL" != "$DOMAIN" ]]; then
+  echo "   ⚠️  Apex redirects to a different canonical host. All probes below target the canonical."
+  DOMAIN="${APEX_FINAL%/}"
+fi
 
 echo
 echo "=== BATCH 1: header fingerprint (single GET per path) ==="
