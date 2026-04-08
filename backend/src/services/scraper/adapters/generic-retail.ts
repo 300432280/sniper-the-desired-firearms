@@ -291,17 +291,43 @@ export class GenericRetailAdapter extends AbstractAdapter {
   }
 
   /**
-   * Fetch a catalog page for alflahertys.com via the Klevu search API.
-   * Returns null for non-alflahertys sites (falls through to HTML-based extraction).
+   * Fetch a catalog page via a profile-declared API.
+   *
+   * Two profile-driven branches are supported, in order:
+   *   1. `siteProfile.apiAlternative.type === 'mysimplestore'` — GoDaddy OLS sites whose
+   *      storefront is a SPA but whose backend exposes a clean Ransack-style JSON API
+   *      (e.g. liangjian.ca → 31990017-...mysimplestore.com/api/v2/products).
+   *      ~47x faster than the Playwright HTML route, returns real `created_at`.
+   *   2. `siteProfile.apiConfig.klevuApiKey` — Klevu-search sites (e.g. alflahertys.com).
+   *
+   * On any failure (network error, non-200, malformed JSON, missing critical fields)
+   * this method returns `null`, which the catalog/watermark crawler interprets as
+   * "no API available, fall through to HTML/Playwright extraction." Therefore the
+   * existing HTML route remains the universal fallback — we never need to call it
+   * from inside this method.
+   *
+   * Returns null for any site whose profile declares neither branch.
    */
   async fetchCatalogPage(
     origin: string,
     page: number,
     options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string; dateBefore?: string },
   ): Promise<CatalogPage | null> {
+    const profile = GenericRetailAdapter._getProfileSync(origin);
+
+    // ── Branch 1: profile-declared JSON API (e.g. mysimplestore for GoDaddy OLS) ──
+    if (profile?.apiAlternative?.type === 'mysimplestore') {
+      try {
+        return await this._fetchMysimplestorePage(profile.apiAlternative, page, options?.perPage);
+      } catch (err) {
+        console.log(`[GenericRetail] mysimplestore API error for ${origin} page ${page}: ${err instanceof Error ? err.message : err}. Returning null so dispatcher falls back to HTML.`);
+        return null;
+      }
+    }
+
+    // ── Branch 2: Klevu search API (existing) ──
     // Only use Klevu API for sites with klevuApiKey in profile.
     // Return null for non-Klevu sites so the catalog crawler falls through to HTML extraction.
-    const profile = GenericRetailAdapter._getProfileSync(origin);
     if (!profile?.apiConfig?.klevuApiKey) {
       return null;
     }
@@ -384,6 +410,102 @@ export class GenericRetailAdapter extends AbstractAdapter {
       products: deduped,
       totalPages: maxTotalPages > 0 ? maxTotalPages : undefined,
       nextPageUrl: deduped.length >= perPage ? `klevu://page/${page + 1}` : undefined,
+    };
+  }
+
+  /**
+   * Fetch a catalog page from a mysimplestore.com REST API (used by GoDaddy OLS sites).
+   *
+   * Reads ALL site-specific configuration from `apiCfg` (which comes from
+   * `siteProfile.apiAlternative`). The adapter has zero hardcoded mysimplestore
+   * domains, store IDs, or sort param strings — every site that wants to use this
+   * branch must declare its own config in the profile. The shape we expect:
+   *
+   *   {
+   *     type: 'mysimplestore',
+   *     baseUrl: 'https://<storeId>.mysimplestore.com',
+   *     productsEndpoint: '/api/v2/products',
+   *     appParam: 'app=vnext',                       // raw `key=value` string, may be omitted
+   *     sortParam: 'q[descend_by_created_at]=true',  // raw query string fragment, may be omitted
+   *     maxPerPage: 250,                              // upper bound on per_page
+   *   }
+   *
+   * Throws on network error or non-2xx — caller catches and returns null so the
+   * dispatcher falls back to HTML/Playwright. Returns null only if the JSON shape
+   * is unrecognised (no `products` array).
+   */
+  private async _fetchMysimplestorePage(
+    apiCfg: any,
+    page: number,
+    perPageOpt?: number,
+  ): Promise<CatalogPage | null> {
+    const perPage = Math.min(perPageOpt || 15, apiCfg.maxPerPage || 250);
+
+    // Build the URL by raw concatenation. We avoid URLSearchParams because
+    // mysimplestore expects literal `[` and `]` in `q[...]` keys, which
+    // URLSearchParams percent-encodes (`%5B`/`%5D`) — the API still works with
+    // either form, but we keep the raw form to match what the SPA itself sends
+    // (verified via DevTools network capture 2026-04-07).
+    const parts: string[] = [];
+    if (apiCfg.appParam) parts.push(String(apiCfg.appParam));
+    parts.push(`page=${encodeURIComponent(String(page))}`);
+    parts.push(`per_page=${encodeURIComponent(String(perPage))}`);
+    if (apiCfg.sortParam) parts.push(String(apiCfg.sortParam));
+    const url = `${apiCfg.baseUrl}${apiCfg.productsEndpoint}?${parts.join('&')}`;
+
+    const response = await axios.get(url, {
+      timeout: 15000,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    const data = response.data;
+    if (!data || !Array.isArray(data.products)) {
+      console.log(`[GenericRetail] mysimplestore: unexpected JSON shape (no products array) for ${url}`);
+      return null;
+    }
+
+    const baseDomain: string = data.base_domain_url || '';
+    const totalCount = typeof data.total_count === 'number' ? data.total_count : undefined;
+    const totalPages = typeof data.pages === 'number'
+      ? data.pages
+      : (totalCount !== undefined ? Math.ceil(totalCount / perPage) : undefined);
+
+    const products: CatalogProduct[] = [];
+    for (const p of data.products) {
+      if (!p || !p.relative_url || !p.name) continue;
+      const fullUrl: string = String(p.relative_url).startsWith('http')
+        ? String(p.relative_url)
+        : `${baseDomain}${p.relative_url}`;
+
+      const thumbRaw: string | undefined = p.default_asset_url
+        || (Array.isArray(p.image_list) && p.image_list[0]?.url)
+        || undefined;
+      const thumbnail = thumbRaw
+        ? (thumbRaw.startsWith('//') ? `https:${thumbRaw}` : thumbRaw)
+        : undefined;
+
+      const priceNumeric = typeof p.price?.numeric === 'number' ? p.price.numeric : undefined;
+      const salePriceNumeric = typeof p.sale_price?.numeric === 'number' ? p.sale_price.numeric : null;
+      const onSale = p['on_sale?'] === true && salePriceNumeric != null && salePriceNumeric > 0;
+
+      products.push({
+        url: fullUrl,
+        sourceId: p.id != null ? String(p.id) : undefined,
+        title: String(p.name).trim().slice(0, 160),
+        price: onSale ? salePriceNumeric! : priceNumeric,
+        regularPrice: onSale ? priceNumeric : undefined,
+        stockStatus: p.in_stock === true ? 'in_stock' : (p.in_stock === false ? 'out_of_stock' : 'unknown'),
+        thumbnail,
+        postDate: p.created_at || undefined,
+      });
+    }
+
+    return {
+      products,
+      totalPages,
     };
   }
 

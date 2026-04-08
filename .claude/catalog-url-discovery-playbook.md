@@ -351,6 +351,50 @@ profile JSON (the DB column is the source of truth — duplicate JSON misleads).
 3. Actually `axios.get` the generated page 2 URL and confirm it returns DIFFERENT products from page 1
 4. Don't trust the spec without running this verification
 
+### Mistake 15 — Mistaking a client-side-paginated single-page catalog for a multi-page one
+**Site**: irunguns.ca (custom PHP, site 14) — canonical example.
+**What I did initially**: Looked for `?page=N` / sort params and pagination markup, found none, almost concluded "the site is broken".
+**Reality**: The page uses **`jPages({ perPage: 12 })`** to client-side-paginate a `<ul id="content">` that already contains the ENTIRE result set, server-rendered. The "Showing 13 result" / "Showing 22 result" string at the bottom IS the full count. There is no URL pagination because there are no other pages — every product the category contains is in the initial HTML response. Total in-stock catalog was 84 products across 11 departments.
+**How to recognise**:
+1. The page HTML contains `jPages(`, `bootpag(`, or similar JS plugin call referencing `containerID`/`perPage`.
+2. A "Showing N result" / "N matching items" marker exists with a small N (often <100).
+3. Counting unique product anchors in the initial HTML matches that N.
+4. Adding `?page=2` returns the same products as page 1 (silent ignore).
+5. No `<select>` for sort, no `<a>` with text "next" pointing at a different URL.
+**Fix**: Set `paginationPattern: null`, `perPage: <large enough to never trigger next-page logic>`, treat each catalog URL as single-fetch. The production adapter will extract everything in one call. If no date sort exists either (often the case for these sites), watermark method must be `full-catalog-sweep`.
+**Critical rule**: If the site renders the full catalog server-side via plain GET, do NOT investigate the embedded AJAX/JS endpoints, SQL strings, or POST targets. Plain GET is enough. The embedded JS may exist for the sole purpose of client-side reshuffling — following it is a rabbit hole (see Mistake 16). On irunguns.ca specifically, a plain `GET /product.php?departments=Rifles` returns all 15 rifles in the initial HTML; nothing else is needed.
+
+**Sub-lesson — verifying newest-first DOM ordering when no sort UI exists**: When a site has no `<select>` for sort but you suspect the natural DOM order may be newest-first, cross-reference the GET DOM first product slug against ANY independent newest-first signal (POST endpoint baseline with no ORDER BY, sitemap lastmod ordering, RSS feed, known-recent product the operator confirms is newest). On irunguns this was a single-GET test: GET DOM first slug on Rifles = `glenfield-model-a-moss-green-308-win-20-barrel-4-rounds`, matching the earlier POST `/product_filter.php` baseline first slug (which had no `ORDER BY` and therefore used the server default = `p.id DESC`). Same first slug on both paths → same ordering → newest-first proven. This unlocks `navigate-from-watermark` on sites that initially appear "no sort possible" and saves the T1 stream from degrading to `full-catalog-sweep`. Ref: irunguns.ca audit 2026-04-07 (redo).
+
+### Mistake 16 — Following an embedded AJAX/SQL endpoint into a rabbit hole when plain GET already returns the full catalog
+**Site**: irunguns.ca (custom PHP, site 14)
+**What happened**: After a user pushback ("only 84 products for a major vendor?") I investigated the embedded `<script>` block on category pages, found it composes a raw SQL query string and POSTs it to `/product_filter.php`, and went down a multi-step path designing a custom adapter that would POST with modified SQL (`WHERE p.id > {cursor}`) for an id-based watermark. **All wasted work.** The correct answer was: for monitoring purposes (track new in-stock items + back-in-stock alerts on already-known products), the 84 products visible via plain GET are exactly what we need. The ~1,760 OOS-only products that only a modified POST-SQL can see are irrelevant — we cannot send back-in-stock alerts for products we never catalogued in the first place, and new in-stock arrivals DO appear in plain GET as soon as they're stocked.
+**Why it matters**: Distinguishes "what the site IS capable of exposing" from "what this app NEEDS." Always ask the second question first.
+**Lesson**: Before investigating any AJAX/SQL/private API on a site, ask three questions:
+1. Does plain GET against the category URLs already return the products we need?
+2. Are the extra products the AJAX endpoint exposes actually meaningful for this app's use case (new in-stock + back-in-stock alerts)?
+3. Is the existing watermark method (`full-catalog-sweep`) already sufficient given the site's size (tens to low hundreds of in-stock products)?
+If the answer to #1 is yes, STOP and use plain GET. Don't follow JS. Don't reverse-engineer the API. Don't build a custom adapter.
+**Reference**: irunguns.ca, 2026-04-07 audit.
+
+### Mistake 17 — Designing a cursor watermark around a column that isn't exposed in URL/API space
+**Site**: irunguns.ca
+**What happened**: I designed an `idCursor` watermark using `p.id` from the embedded SQL on irunguns.ca. The cursor was supposed to filter `WHERE p.id > N` so T1 could fetch only new products. **But iRunGuns product URLs are `/product_detail.php?p=<slug>` — `p` is a slug string, not a numeric id.** The `p.id` column referenced in the embedded SQL is server-side only, never visible to the client in the URL, the HTML cards, or any response payload. There was nothing to cursor on.
+**Why it matters**: A cursor watermark requires the cursor value to be (a) exposed somewhere we can read after a crawl AND (b) usable as a filter on a future fetch. A server-internal column satisfies neither.
+**Lesson**: Before proposing any cursor-based watermark, verify the cursor field is **exposed to the client** in either:
+- the product detail URL,
+- the listing card HTML (data attributes, hidden inputs, text content), or
+- a documented API response payload.
+Look at actual product detail page URLs. If the cursor field is only inferred from server-side query construction (e.g., embedded SQL strings), it does not exist from the client's perspective and cannot be used.
+**Reference**: irunguns.ca `p.id` cursor design, 2026-04-07.
+
+### Mistake 18 — Confusing "no sort UI exists" with "no sort possible"
+**Site**: irunguns.ca (custom PHP, site 14) — canonical example.
+**What happened**: An earlier audit pass concluded irunguns needed `full-catalog-sweep` because no sort `<select>` exists on the category pages. The conclusion was wrong: "no sort UI" and "no sort possible" are different questions. Many custom-PHP / legacy CMS sites lack a sort selector but render products in INSERT order — which on an auto-increment PK is effectively newest-first if the server reads `p.id DESC` by default (very common) or oldest-first if it reads in ascending PK order. The actual rendered order on irunguns was `p.id DESC` (newest first), proven by cross-referencing the GET DOM first slug against an independent baseline (see Mistake 15 sub-lesson). This unlocked `navigate-from-watermark` with zero new infrastructure.
+**Why it matters**: `navigate-from-watermark` only requires page 1 to be newest-first — the watermark cursor is the URL slug (or any stable client-visible identifier) of the most recent product, which is always exposed by definition because it IS the URL the crawler will visit. Downgrading to `full-catalog-sweep` when navigate-from-watermark is viable costs a large multiple in tokens per T1 cycle and defeats the tier engine's whole purpose.
+**Lesson**: Before declaring a site needs `full-catalog-sweep`, run ONE cross-reference test (Mistake 15 sub-lesson) against any independent newest-first signal. Only downgrade to `full-catalog-sweep` if you cannot prove newest-first ordering by any method. Document the proof method in the profile `notes`.
+**Reference**: irunguns.ca audit redo, 2026-04-07.
+
 ### Mistake 13 — Trusting a stored `expectedProductCount` that was never verified
 **Site**: fulcrum-outdoors.shoplightspeed.com
 **What I did**: Initially accepted the stored `expectedProductCount: 3629` without question.
@@ -375,6 +419,33 @@ One regex whitelist. No new selectors needed. Extraction went from 17 to 23,545 
 5. How many survived `isCategoryUrl(url)` check?
 6. How many final products returned?
 If the selector match count is high but the final count is low, the bug is in a filter. Find the step where the drop happens and fix THAT — not the selector.
+
+### Mistake 19 — Declaring a SPA site "blocked" without testing the production Playwright fallback
+**Site**: liangjian.ca (GoDaddy OLS)
+**What happened**: Two consecutive audits declared liangjian.ca "BLOCKED — needs new adapter" after testing only plain axios against `/shop/ols/products`, seeing 0 products extracted, and giving up. Both audits even ran Playwright manually and saw it render 15 products, then still wrote `siteProfile.crawlers.watermark.blockedReason: 'godaddy-ols-spa-api-on-foreign-origin'` into the profile and recommended building a new `GoDaddyOlsAdapter` from scratch. Neither tested the production `fetchWithPlaywright()` fallback that's wired into both `catalog-crawler.ts:403-413` and `watermark-crawler.ts:143-159` and auto-fires when static HTML > 5KB returns 0 products.
+
+**Reality**:
+1. The GoDaddy OLS selector has been in `generic-retail.ts:431` the entire time:
+   ```ts
+   '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]', // GoDaddy OLS (liangjian.ca)
+   ```
+2. The production Playwright fallback is wired up and used by 20+ other sites in the fleet.
+3. When tested via the production code path (`fetchWithPlaywright()` → `extractCatalogProducts`), the site extracts 15 products on the first try with zero new code.
+4. The previous audit's own profile note showed `lastWatermarkUrl: ".../glock-2141-magazine-45-auto-10-rounds?orderby=date"` — proof that an earlier crawl had succeeded with this exact URL pattern. The auditor missed evidence sitting in the profile they were editing.
+
+**Fix**: When static HTML returns 0 products from a site that a human can browse, BEFORE declaring the site blocked or proposing a new adapter, you MUST:
+1. Run `fetchWithPlaywright()` (the EXISTING production helper, do not write your own Playwright code) against the same URL.
+2. Run the production adapter's `extractCatalogProducts($, url)` against the rendered HTML.
+3. If that returns ≥1 product, the site is NOT blocked — set `needsPlaywright: true` in the profile and you are done. The catalog-crawler/watermark-crawler auto-fallback will pick it up.
+4. Check `generic-retail.ts` for an existing platform-specific selector (Klevu, GoDaddy OLS, BigCommerce Stencil, Shopify, Shoplightspeed, etc.) — many SPA frameworks already have entries.
+5. Check the existing `siteProfile.lastWatermarkUrl` for evidence that a prior crawl succeeded — if a real product slug is there, the site has been crawled before and the access path is recoverable.
+6. Only after ALL of the above fail, propose a new adapter or platform-specific code.
+
+**Lesson**: "Plain HTTP returns 0 products" is the **start** of the investigation, not the conclusion. The cost of one Playwright probe call is ~7 seconds. The cost of declaring a site blocked when it isn't is weeks of silent under-coverage and a wasted adapter build. Always pay the 7 seconds.
+
+**Also**: this is a special case of the global rule in `~/.claude/CLAUDE.md`: *"Never give up after first failure. Test at least 3 alternative approaches with evidence before declaring 'unfixable.' If a human can access something in their browser, there IS a way to get it programmatically."* If your conclusion is "build a new adapter" or "the site is blocked", you have given up too early.
+
+**Sub-lesson — When investigating a SPA, you MUST drive Playwright as a real user, not as a static fetcher.** Static `goto()` + `waitForSelector` only loads the default state. To find sort params, pagination behavior, filter UI, etc., you must `page.click()` the actual controls and capture (a) the URL change, (b) the network XHRs fired, (c) the new visible state. On liangjian.ca, the sort dropdown was visible the entire time as `[data-aid="PRODUCT_SORT_DROPDOWN"]` containing a "Newest" option. THREE prior audits never clicked it and concluded "no sort exists." Truth: clicking "Newest" sets URL `?sortOption=descend_by_created_at` AND fires `GET ...mysimplestore.com/api/v2/products?...q[descend_by_created_at]=true`. Mistake 2 (read HTML before guessing params) extends to SPAs as: **drive the UI before guessing URL params**. If a `<select>` / dropdown / button looks like a sort/filter/paginate control, click it in a live Playwright session with `page.on('request', ...)` logging — then read the URL and the XHR. Do not rely on static HTML scans for SPA controls; the handlers are in JS, not markup.
 
 ---
 
