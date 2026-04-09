@@ -742,6 +742,71 @@ Both paths produce the same correct URL.
 
 **Lesson summary**: For ANY site with a non-empty `sortParam` AND a suffix-replace pagination scheme, always test `buildPaginatedUrl` against BOTH the bare catalogUrl AND the sort-appended catalogUrl. If the same pattern can't produce the correct paginated URL from both inputs, you need to bake the sortParam into the suffix template so the T1 watermark path works correctly. And never assume query-style `?page=N` works on hosted LightSpeed eCom — always verify with a live page-2 ID-jump test.
 
+### Mistake 27 — Wix Stores sub-category URLs silently leak pagination to global `/shop` order
+**Site**: surplusherbys.com (Wix Stores / Thunderbolt SSR)
+**What happened**: The prior profile had `catalogUrls: ['/shop', '/fishing', '/hardware', '/seasonal', '/on-sale']` (one top-level + 4 sub-categories). Each sub-category URL renders a filtered page 1 correctly (e.g. `/fishing` shows 20 fishing products), which made the URL list look healthy. But `/fishing?page=2` silently returns `/shop?page=2` products — NOT fishing-filtered page 2. Category filtering is React client-side state only; pagination on sub-cats leaks to the global `/shop` ordering server-side. If the crawler walks `/fishing?page=1..N`, it gets `[fishing-page-1, shop-page-2, shop-page-3, ...]` — hybrid junk that creates dedupe noise and fake coverage metrics.
+
+**Reality**: Wix Stores on Thunderbolt only supports server-side pagination on the top-level `/shop` URL. Sub-category URLs are cosmetic React routes — the SSR render of page 1 happens to respect the category filter (because the server has enough context), but the pagination hrefs in those pages point to global `/shop?page=N`. This is a classic hybrid-SSR/SPA gotcha.
+
+**Fix**: for ANY Wix Stores site, use ONLY the top-level `/shop` URL with `?page=N` pagination. Do NOT include sub-category URLs — they produce hybrid leaking walks. Walk `/shop` exhaustively with dedupe by product URL, and rely on the fact that Wix Stores product URLs (`/product-page/<slug>`) are globally unique, so no category partitioning is needed.
+
+**Detection signature — Wix Stores / Thunderbolt**:
+- `<?xml ... generatedBy="WIX">` in `/sitemap.xml` (definitive)
+- `server: Pepyaka` header (Wix edge)
+- Homepage HTML contains `wixBiSession`, `static.wix`, `thunderbolt`, `X-Wix` headers
+- Product URL pattern: `/product-page/<slug>` (hyphenated handle)
+- Category URL pattern: `/<category-name>` flat at site root (e.g. `/fishing`, `/hardware`)
+- Top-level catalog URL: `/shop`
+- Sort: no URL parameter (React client-side state only)
+- Pagination: `?page=N`, 1-indexed, `perPage=20` (Wix default, not configurable server-side), `firstPageHasParam: false`
+- Product count: via `/store-products-sitemap.xml` (Wix-specific sitemap path)
+
+**Test procedure for any new Wix Stores site**:
+1. Confirm platform via `<?xml ... generatedBy="WIX">` in sitemap
+2. Walk `/shop?page=1..N` with production adapter until empty
+3. For each sub-category URL in the stored profile, fetch `/<cat>?page=2` and compare first 5 product slugs to `/shop?page=2` — if identical, the sub-cat pagination leaks and the URL must be REMOVED
+4. Set `catalogUrls: ['/shop']` only, with `paginationPattern: {type:'query', template:'?page={n}', startPage:1, firstPageHasParam:false}` and `perPage: 20`
+5. Set `sortParam: null` (no URL sort on Wix), set `crawlers.watermark.method: 'full-catalog-sweep'` (cheap on small Wix stores)
+6. Use sitemap `/store-products-sitemap.xml` `<lastmod>` as a future improvement for a sitemap-lastmod watermark method (not yet implemented)
+
+**Why this wasn't caught earlier**: the prior profile had a prior-session note saying "uses FastSimon search" which was wrong (no FastSimon anywhere on the site), combined with `hasCaptcha: true` (also wrong) and `platform: 'generic-retail'` (wrong — should be `wix-stores`). Three stale signals compounded to make the bootstrap crawler flag the site as unreachable and skip indexing entirely. DB was 0 for weeks. See also Mistake 28 for the general rule about DB=0 sites.
+
+**Cross-references**:
+- Mistake 22 (stored platform tags need verification)
+- Mistake 3 (stale WAF/captcha flags)
+- Mistake 28 (DB=0 sites need all stale signals re-verified before any other work)
+
+### Mistake 28 — DB=0 sites: ALL stale profile signals must be re-verified against live HTML before any other audit work
+**Site**: surplusherbys.com (symptoms); applicable to any DB=0 site in the fleet
+**What happened**: surplusherbys.com had DB=0 for weeks with zero error messages. Root cause was THREE compounding stale signals in the profile, none ever verified against live HTML:
+1. `platform: 'generic-retail'` — wrong (should be `wix-stores` per `<?xml generatedBy="WIX">`)
+2. `hasCaptcha: true` — wrong (heavy probe showed no captcha)
+3. `notes: "uses FastSimon search"` — wrong (no FastSimon JS anywhere on the site)
+
+Individually, any one of these signals might not have broken the site. Combined, they caused the bootstrap crawler to flag the site as unreachable and skip indexing entirely. The site silently under-coverage-ed at 0% for months.
+
+**Why stale signals compound**: each piece of profile metadata is a decision input for the crawler. A wrong `platform` routes through the wrong extraction code path; a wrong `hasCaptcha` forces Playwright when it's not needed (and flags the site for SRE as "needs human"); a wrong `notes` value misleads future auditors into duplicating the wrong diagnosis instead of questioning it. The combination is worse than any single failure: each wrong signal "confirms" the others by association, creating an anchor bias against re-verification.
+
+**Mandatory rule for any DB=0 site**: the FIRST actions of the audit must be:
+1. **Heavy 8-batch WAF probe** (Mistake 23) — verify `hasWaf`, `wafType`, `hasCaptcha`, `hasRateLimit` fresh
+2. **Grep live HTML for platform markers** (Mistake 22) — never trust stored `platform` tag
+3. **Re-verify every free-text `notes` claim** against live HTML — search for the specific technology/vendor mentioned in notes; if absent, the note is stale and must be deleted or corrected
+4. **Check `/sitemap.xml` + `/robots.txt`** for the actual sitemap path before trusting stored `productCountMethod`
+5. **Walk the homepage with production adapter** before trusting stored `catalogUrls`
+
+Only AFTER all five steps have produced fresh evidence should the audit proceed to Phase 3+ of the normal procedure. The goal is to start from ZERO trust of stored signals on DB=0 sites — treat them as fresh sites being onboarded, not sites being re-verified.
+
+**Corollary — fleet-scan task**: all other DB=0 or very-low-DB sites in the fleet (defined as <10% of `expectedProductCount`) should get the same treatment on their next audit. Sites 29 (surplusherbys 0), 31 (thegundealer.net 0), and any future newcomer with similar symptoms.
+
+**Why this is a new Mistake and not just a variant of existing ones**: Mistakes 3/22/13 are each about ONE signal being wrong. Mistake 28 is about the COMBINATION producing silent failure — the pattern only becomes visible when you see multiple compounding stale signals on the same site. It also adds a specific procedural rule (the 5-step mandatory order for DB=0 audits) that doesn't exist in any other Mistake.
+
+**Cross-references**:
+- Mistake 3 (stale WAF/captcha flags) — one signal
+- Mistake 22 (stored platform tags) — one signal
+- Mistake 13 (stored counts) — one signal
+- Mistake 23 (heavy WAF probe mandatory)
+- Mistake 27 (Wix Stores sub-category leak) — surplusherbys's specific extraction issue once the stale signals were cleared
+
 ---
 
 ## Adapter-side bugs discovered during site audits
