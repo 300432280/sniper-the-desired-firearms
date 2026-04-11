@@ -166,6 +166,8 @@ product** with **minimum overlap**.
 - Verify "firearm-relevant" means: firearms, ammunition, optics, accessories, parts, magazines, reloading, knives, hunting (NOT clothing-only / camping-only / fishing-only unless that's all the site sells)
 - Per project priority: firearms gets weight 3x, ammunition 2x — make sure those are covered first
 
+**NEVER drop categories for being "too small."** The goal is EVERY product, not "most products." If the platform doesn't include child products in parent category pages (e.g. BC Stencil on truenortharms.com), ALL leaf categories must be in catalogUrls — even categories with 1 product. 92% coverage is NOT acceptable. 100% is the only target. Dropping small categories saves negligible crawl budget but permanently loses products from T1/T2/T3/T4 coverage.
+
 **CRITICAL — beware of misleading category names**:
 - **"Sights" can mean optics** — on doctordeals.ca, the "Sights" category contains scopes, red dots, AND iron sights all together. Don't dismiss categories based on name alone.
 - **Verify with a known product** — if a user says "this product exists", search the WP REST products endpoint by keyword and read the `product_cat` IDs to find which category it lives in.
@@ -806,6 +808,281 @@ Only AFTER all five steps have produced fresh evidence should the audit proceed 
 - Mistake 13 (stored counts) — one signal
 - Mistake 23 (heavy WAF probe mandatory)
 - Mistake 27 (Wix Stores sub-category leak) — surplusherbys's specific extraction issue once the stale signals were cleared
+
+### Mistake 29 — Trusting raw page-1 regex counts on BigCommerce Stencil stores (double-render + inflated + unverified sort)
+**Site**: theammosource.com (re-audited 2026-04-09 after user pushback on first-pass audit)
+**What happened**: The initial audit of theammosource.com (48,012 product site, largest in the fleet) reported per-category product counts using raw `grep -oE 'data-product-id="[0-9]+"' | wc -l` against page-1 HTML. Three errors compounded:
+
+1. **Count inflation via double-render**: BC Stencil themes render each product card TWICE per listing page — once as the visible grid card, once as a hidden quick-view modal shadow-card. Both share the same `data-product-id`. Raw regex match counts returned **2× the real unique product count**. Reported "106 products in `/rimfire-rifles/`" was actually ~52 unique (walked page 1 = 52, not 106).
+
+2. **Page-1 counts reported as totals**: Reported counts were only from the first page. Never walked pagination. The real `/rifle-ammunition/` has 323 products across 7 pages, but initial audit reported ~104 (page-1 raw regex ÷ 2). `/cleaning-supplies-lubricants/` = 392 across 7 pages, reported ~104.
+
+3. **Sort verification flagged false negatives**: The audit tested `default vs ?sort=newest` on several categories and saw IDENTICAL first products. Concluded "sort is no-op" / "sort doesn't work". This was WRONG — on BC Stencil stores where the theme's default sort is already `featured selected` and `featured` happens to equal newest-first on that store, `?sort=newest` produces the same order as default (because default IS newest). The correct verification is a 3-way comparison against a counter-control (`?sort=alphaasc`). If alphaasc differs from default, sort IS honored even if newest equals default.
+
+**Fix**: re-audit with three corrected procedures.
+
+**Procedure 1 — Dedupe before counting.** Use production `GenericRetailAdapter.extractCatalogProducts` (canonical path at `generic-retail.ts:512-610`, returns a deduped `CatalogProduct[]` via an internal URL `Set`). If you must use raw shell, pipe through `sort -u`:
+```bash
+curl -sS "$url" | grep -oE 'data-product-id="[0-9]+"' | sort -u | wc -l
+```
+Never trust a raw `grep | wc -l` count on BC Stencil.
+
+**Procedure 2 — Walk pagination to the last page.** BC Stencil default `perPage` varies by theme (typically 20-52, some themes honor `?limit=50` and some don't). The only reliable way to get a category total is:
+1. Fetch page 1 with `?sort=newest` to normalize ordering
+2. Parse pagination `<a>` tags: `cheerio('a[href*="page="]').attr('href')` — extract the highest `page=N` from the visible pagination widget
+3. If BC Stencil is in "windowed pagination" mode (no `--last` marker visible), probe `&page=2, 4, 8, 16, ...` doubling until extraction returns 0, then binary-search between the last non-empty and first empty page
+4. Walk all pages, dedupe union of extracted URLs
+5. Record `{ total: uniqueCount, pages: lastPage, perPage: observedDefault }` in profile `categoryStats`
+
+**Procedure 3 — 3-outcome sort verification (not 2-outcome).** Per-URL sort check must distinguish THREE states, not just honored/not:
+
+| Outcome | Test | Action |
+|---|---|---|
+| `honored` | `?sort=newest` first ≠ default first AND differs from `?sort=alphaasc` first | Normal case. `sortParam: '?sort=newest'`. |
+| `honored (default=newest)` | `?sort=newest` first == default first BUT `?sort=alphaasc` first differs | **Sort IS honored, default just equals newest.** Do NOT flag as broken. `sortParam: '?sort=newest'`. Document in profile notes. |
+| `noop-small` | `?sort=newest` == default == `?sort=alphaasc` AND category has ≤20 products | Category is too small to reorder. Normal BC Stencil theme behavior, not a bug. Document in profile notes but don't "fix" it — sort is irrelevant for a 1-20 product category because a single page walk covers everything. |
+
+If you only test `newest vs default` and see identical results, you've produced a **false negative** — you need the alphaasc counter-control to distinguish "sort is broken" (which would be a real bug) from "sort equals default" (which is harmless) from "category too small" (which is normal).
+
+**Additional lessons surfaced**:
+- **BC Stencil theme defaults vary per merchant AND per site** (Mistake 20/22 extension): site 19 nordicmarksman = `newest selected`, site 27 prophetriver = `featured selected`, site 28 shootingcentre = `alphaasc selected`, site 30 theammosource = `featured selected`. You cannot predict the default. Always read `<select>` HTML and pick a counter-control measurably different from the observed default.
+- **`?limit=N` honoring is theme-dependent**: site 28 honored `?limit=50`, site 30 initially appeared not to but re-audit proved it does (observed 50 products returned vs 52 default). Test per-site with a large category that has enough products to fill `?limit=50`.
+- **Aggregate catalogUrls total ≠ sitemap total on multi-vertical stores**: theammosource has 48,012 sitemap products but only 2,437 firearm-relevant (out-of-scope verticals include motorcycle, ATV, fishing, camping). The DB coverage metric must compare against the firearm-relevant catalogUrls aggregate, NOT the whole sitemap.
+
+**Cross-references**:
+- Mistake 11 (selector vs filter) — extraction bugs are often in the counter/dedup step, not the selector
+- Mistake 13 (stored counts are untrusted) — this is an EXTENSION to Mistake 13 for BC Stencil specifically
+- Mistake 22 (platform tags) — catching this requires knowing the platform is BC Stencil first
+- Mistake 28 (DB=0 stale signals) — related pattern: a single layer of sloppiness produces wrong signals that compound
+
+---
+
+### Mistake 30 — SiteGround sgcaptcha PoW challenge: iPhone UA is load-bearing AND waf-cookie-manager wait strategy must wait for URL to leave challenge path
+
+**Site**: thegundealer.ca
+**Platform**: WooCommerce on WordPress
+**WAF**: `siteground-sgcaptcha` — new WAF type, first occurrence in the fleet.
+
+**What happened**: Initial profile had `adapterType: 'shopify'`, `hasWaf: false`, `siteProfile: null`, DB=0 products. Agent (correctly) ran the heavy 8-batch WAF probe and saw all 8 batches return HTTP 202 with `sg-captcha: challenge` response header and a tiny (~167-byte) HTML body containing `<meta http-equiv="refresh" content="0;/.well-known/sgcaptcha/?r=%2F&y=ipc:<clientIp>:<ts>">`. Both `thegundealer.ca` and `thegundealer.net` served the same challenge; `.net` redirected post-challenge to `.ca` so `.ca` is canonical. Calling existing `waf-cookie-manager.solveCookies()` threw `"No cookies obtained from Playwright"`. Even after manually confirming the challenge does solve in a real headful browser. Before the fix was understood, the temptation was to either (a) hardcode a site-specific Playwright fallback into the WooCommerce adapter, or (b) declare "cookie replay to axios doesn't work on this WAF — needs session stickiness" and skip. Both would have been wrong.
+
+**Reality**: There are TWO compounding bugs, both in `backend/src/services/scraper/waf-cookie-manager.ts`, and BOTH must be fixed for any generic WooCommerce / HTML path to work on sgcaptcha sites:
+
+1. **Wait strategy race**. The manager did `page.goto(url, { waitUntil: 'networkidle' })` followed by a fixed 2-second `waitForTimeout`. On sgcaptcha, the flow is: initial request → 202 meta-refresh stub → browser follows → lands on `/.well-known/sgcaptcha/?r=%2F&y=ipc:<ip>:<ts>` → JavaScript spawns 8 blob workers that compute a SHA1 proof-of-work for ~3 seconds → POSTs `sol=<token>` to same URL → server returns 302 → browser redirects to origin → `_I_` session cookie is finally set on the origin. Problem: the network briefly idles DURING the PoW compute phase (workers are spinning CPU, no HTTP traffic), which triggers `networkidle`. The 2-second grace was not enough for the PoW → POST → 302 → origin-land sequence to complete. So `context.cookies(origin)` returned `[]` and the helper threw. The fix is to poll `page.url()` in a tight loop for up to 20s, waiting for the URL to leave ANY known challenge path. Challenge paths to gate on: `/.well-known/sgcaptcha/`, `/cdn-cgi/challenge-platform/`, `/_Incapsula_Resource`. Then do a 2s settle, then extract. This fix is DOMAIN-AGNOSTIC and also benefits Cloudflare, Sucuri, and Incapsula — it was regression-tested against `doctordeals.ca` (Sucuri, got 8 cookies, x-wp-total=617) and `theammosource.com` (Cloudflare-passive, got 13 cookies) and neither regressed.
+
+2. **Desktop UA serves 403 post-challenge**. Even once fix #1 is in place, if Playwright runs with the default desktop Chrome UA, the challenge solves and exactly ONE cookie (`_I_`) is set. Replaying that `_I_` cookie from axios against `/wp-json/wc/store/v1/products` returns HTTP 403. Switching Playwright to an iPhone Safari UA (`Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1`) causes SiteGround to set TEN cookies (adds `sbjs_current`, `sbjs_first`, `sbjs_session`, `sbjs_udata`, `_ga`, `_ga_*`, etc.) — and those replay cleanly from axios against `/wp-json/` returning 200 with `x-wp-total: 11044`. SiteGround serves different cookie sets per UA class. **iPhone UA is load-bearing on sgcaptcha sites** — the profile MUST set `userAgentOverride` to an iPhone Safari string, OR every API/HTML fetch post-challenge fails. Same precedent as `doctordeals.ca` (Sucuri — iPhone UA required) and `gagnonsports.com` (Cloudflare-passive — iPhone UA required). Third occurrence of the pattern; promote to a general rule.
+
+**Fix**:
+- Patch `waf-cookie-manager.ts` (around line 113, inside `solveCookies()`, after `page.goto`): add a loop `while (Date.now() - start < 20000)` that checks `page.url()` and breaks only once the URL no longer matches any challenge-path regex. Then `await page.waitForTimeout(2000)`. Then `await context.cookies(origin)`.
+- Profile recipe for thegundealer.ca (and any future SiteGround sgcaptcha WooCommerce site):
+  - `adapterType: 'woocommerce'`
+  - `hasWaf: true` — **both the DB column AND `siteProfile.hasWaf`** (crawl-scheduler.ts:247 reads the column, not the profile)
+  - `wafType: 'siteground-sgcaptcha'`
+  - `needsPlaywright: true`
+  - `userAgentOverride: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1'`
+  - `crawlers.watermark.method: 'api-date-since-watermark'`
+  - `catalogUrls: ['https://thegundealer.ca/shop/']`
+
+**Detection signature**:
+- HTTP **202** (NOT 403/503) on first request
+- Response header `sg-captcha: challenge`
+- Response body is a tiny (~167 byte) HTML stub containing `<meta http-equiv="refresh" content="0;/.well-known/sgcaptcha/?r=...&y=ipc:<clientIp>:<ts>">`
+- No `Set-Cookie` on the initial 202 — the `_I_` cookie is only set after the PoW POST + 302
+
+**7-test regression matrix** (raw output from `backend/scripts/tgd-7tests.ts`, the canonical regression harness — do not delete):
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | Desktop Chrome UA + fixed wait strategy | 1 cookie (`_I_`), `/wp-json/wc/store/v1/products` returns **403** |
+| 2 | iPhone Safari UA + fixed wait strategy | 10 cookies, `/wp-json/wc/store/v1/products` returns **200**, `x-wp-total: 11044` |
+| 3 | Store API deep pagination with cached iPhone cookies (page=1, 50, 110) | All 200, 100 products each |
+| 4 | API date filter monotonicity | `no_filter=11044, after=14d=224, after=1d=20` (monotonic, filter honored) |
+| 5 | HTML fallback `/shop/page/N/` via axios with cached cookies | 200, 895KB body, products present |
+| 6 | Sucuri regression (doctordeals.ca) | 8 cookies, `/wp-json/` 200, x-wp-total=617 |
+| 7 | Cloudflare regression (theammosource.com) | 13 cookies |
+
+**Lesson**: When encountering an HTTP 202 + `sg-captcha: challenge` header, DO NOT: (a) give up and declare the site blocked, (b) add a site-specific Playwright fallback inside any adapter, (c) assume cookie replay to axios doesn't work. INSTEAD: extend `waf-cookie-manager.ts` (which is already domain-agnostic and wired in via `catalog-crawler.ts` / `watermark-crawler.ts` at 20+ call sites). The WAF-bypass layer is the correct place for ALL challenge-solving logic. Adapters never need to know about WAFs.
+
+**Anti-pattern warning**: Do NOT propose adding a Playwright fallback to any adapter. The generic fallback is already wired into `catalog-crawler.ts` (20+ call sites) and `watermark-crawler.ts`. Any WAF bypass work belongs in `waf-cookie-manager.ts`, which is already domain-agnostic — extend IT, not the adapters. Every time an adapter gains site-specific WAF logic, it becomes a maintenance liability and the next similar site re-discovers the same bug.
+
+**Cross-references**:
+- Mistake 19 (don't declare "blocked" too early — test WAF bypass paths first)
+- Mistake 23 (heavy 8-batch WAF probe is mandatory on any DB=0 or "blocked" claim)
+- Mistake 3 / 22 / 13 / 28 (stale signal families — this site had `adapterType: 'shopify'` which was wrong, compounding the problem)
+- `doctordeals.ca` and `gagnonsports.com` — prior precedent for iPhone UA load-bearing post-challenge (now 3 sites → general rule)
+- `backend/scripts/tgd-7tests.ts` — canonical regression harness, keep in repo
+- `backend/src/services/scraper/waf-cookie-manager.ts` — the domain-agnostic WAF bypass layer; all WAF work belongs here
+
+---
+
+### Mistake 31 — Ecwid-on-WordPress storefront: JS-hydrated catalog, API sort/filter params ignored externally, sitemap canonicalization trap
+
+**Site**: triggersandbows.com (custom Ecwid widget embedded in WordPress via `ecwid-shopping-cart` plugin)
+**Platform**: Ecwid storefront widget hosted on WordPress. Origin server is LiteSpeed — **no Cloudflare, no Sucuri, no Incapsula**. Heavy 8-batch WAF probe passed clean; honeypot 403/404 responses are normal LiteSpeed path hardening, not WAF-selective.
+
+**What happened**: The stored profile had FOUR compounding stale signals, none ever verified against live HTML — same anchor-bias pattern as Mistake 28, but this time on an already-enabled non-DB=0 site (DB count 59, well below the real catalog), so it had been silently under-indexing for an unknown duration:
+
+1. `platform: 'custom'` — notes field said "Ecwid" but stored tag was `custom`, so downstream tooling never routed to Ecwid-specific logic
+2. `hasCaptcha: true` — wrong; verified false via heavy 8-batch probe
+3. `expectedProductCount: 54` — **100× off**; real count 4,910
+4. `productCountMethod: 'stream-page-count'` — wrong; real method is Ecwid storefront API
+5. Stored `catalogUrls` had 7 entries but was **MISSING `/store/Firearms-c156824300` (1,205 products — the single largest category on the site)**
+
+**Detection signature**:
+- Homepage HTML contains `<script src="https://app.ecwid.com/script.js?<storeId>">` (or `app.ecwid.com/script.js?92697308&data_platform=...` variants)
+- `ec-store`, `ec-size`, `ec-cart-widget` classes in markup
+- WordPress plugin signature: `wp-content/plugins/ecwid-shopping-cart/` assets
+- Store ID is a 7-8 digit integer visible in the script URL and in every storefront API call
+- Yoast-style sitemap shards at `/ecstore-N-sitemap.xml` (NOT the default `/product-sitemap.xml`)
+
+**Real Ecwid storefront API endpoint** (discovered via Playwright XHR interception — NOT documented in Ecwid public API docs):
+```
+POST https://us-vir2-storefront-api.ecwid.com/storefront/api/v1/<storeId>/catalog/search
+Headers:
+  Origin: https://<merchant-site>
+  Referer: https://<merchant-site>/
+  Content-Type: application/json
+Body: {
+  lang: 'en',
+  pagination: { offset: 0, limit: 60 },
+  urlParams: {
+    baseUrl: '/store/',
+    canonicalBaseUrl: 'https://<merchant-site>/store/',
+    isCleanUrls: true,
+    isCanonicalUrlsEnabled: true,
+    isSlugsWithoutIds: false
+  }
+}
+Response: { products: [...], totalProductsCount: 4910 }
+```
+No auth token required. `Origin` + `Referer` MUST point at the WP site (not at ecwid.com) or the API returns an error. Pagination is offset/limit based.
+
+**Other useful Ecwid storefront endpoints** (same base URL, same auth model):
+- `POST /bootstrap` — returns store config, currency, language
+- `POST /initial-data` — returns featured products + category tree for homepage render
+- `POST /catalog/categories` — full category tree
+- `POST /catalog/filters` with body `{parentCategoryId: <id>}` — returns a CATEGORIES filter listing all child categories with per-subcategory product counts. This is how the 12-top-level-category count table on triggersandbows was derived.
+- `POST /catalog` with body `{parentCategoryId, categoryViewMode: 'COLLAPSED'|'EXPANDED', pagination, urlParams}` — paginated products within a category
+
+**CORRECTION (2026-04-09 re-audit after user pushback)** — the initial audit WRONGLY claimed sort/filter params are ignored. They ARE honored; the prior attempt used the wrong field names and wrong body shape. The REAL protocol was captured via live Playwright XHR intercept (see `backend/scripts/tb-real-ui4.ts`):
+
+```json
+POST /catalog
+{
+  "categoryViewMode": "COLLAPSED",
+  "lang": "en",
+  "parentCategoryId": 156823551,          // <- category ID (use leaf cat or top-level)
+  "pagination": { "offset": 0, "limit": 60 },
+  "sortBy": "addedTimeDesc",              // <- FIELD NAME IS `sortBy`, VALUES ARE camelCase
+  "urlParams": { ... }
+}
+```
+
+**Sort field is `sortBy`** (not `sortOrder`), **values are camelCase** (not uppercase). Valid values from the live `<select id="ec-products-sort">` dropdown:
+- `addedTimeDesc` — Newest arrivals ← **THE T1 WATERMARK SORT**
+- `priceAsc` / `priceDesc`
+- `nameAsc` / `nameDesc`
+- Empty string `""` — merchant-curated default ("We recommend")
+
+**ID-jump verification on `/catalog/search` global (2026-04-09)**:
+- `sortBy: 'addedTimeDesc'` → first 3 products: `CG-0239-Used-Consignment-Stevens-Favorite-17HMR`, `CG-0238-Used-Consignment-Thompson-Center-Encore`, `CG-0237-Used-Consignment-Browning-BAR` — **monotonic descending consignment IDs, newest-first proven**
+- `sortBy: 'nameAsc'` → first: `BioLite-Headlamp`, `054041401104`, `100pcs-Fly-Tying-Fishing-Barbed-Hook`
+- `sortBy: 'priceAsc'` → first: `Federal-Fusion-20-Rounds`, `Xcalibur-Minnow-Crank-Bait`, `Eppinger-Dardevle`
+- All 3 sort modes return DIFFERENT first products → **sort IS honored via direct POST with no auth token**
+
+**Category filtering** works via `parentCategoryId` body field (NOT the prior-attempt's `filtering.categoriesFilter`). Send `parentCategoryId: 156823551` → returns Rifles subcategory with `totalProductsCount: 93`. COLLAPSED view shows product list directly for leaf cats, subcategory tiles for parent cats.
+
+**Pagination** via `pagination: {offset, limit}` body field. Verified via live walk on `/catalog/search` global endpoint: offset=0,200,400,...,4800 with limit=200 walked 4,914 unique products in 25 pages, zero overlap, matches server `totalProductsCount: 4914`. Max limit observed working: 200. Default limit widget uses: 60.
+
+**Date filter NOT exposed externally** — tested `filtering.createTimeFrom`, `filtering.createdTimeFrom`, `filtering.updatedTimeFrom`, `filtering.createDateFrom`, top-level `createTimeFrom`, `filter.createdFrom` — all return same 4,914 count. ALSO: product response has NO date fields (only `categoryPaths`, `condition`, `defaultOptionsOverrides`, `description`, `flags`, `identifier`, `jsApiOnly`, `name`, `options`, `preselectedOptions`, `rating`, `seo`, `subtitle`, `slugs`, `urls`, `externalReferenceId`). No `created`, `updated`, `addedTime`, `dateAdded`, etc. **Therefore `api-date-since-watermark` is NOT viable for Ecwid** — but **`navigate-from-watermark` IS viable** via `sortBy: 'addedTimeDesc'` + offset pagination walking until a known product (watermark) is reached.
+
+**The two key findings that invalidated the prior audit**:
+1. **Wrong field name**: prior audit used `sortOrder` (guessed from Ecwid REST v3 API docs at `api.ecwid.com`) — the storefront widget's REAL field is `sortBy`. Mistake 2 lesson reinforced: **never guess API field names — drive the live UI and capture the actual XHR body.**
+2. **Wrong category walk strategy**: prior audit walked `parentCategoryId: 156824300` (Firearms parent) in COLLAPSED view which returns subcat tiles + `products.len: 0`. Real strategy is either (a) walk leaf subcategories individually, OR (b) use `/catalog/search` global endpoint which walks ALL products regardless of category nesting. **For minimum-overlap coverage, use `/catalog/search` global** — 12 top-level categories become diagnostic-only, not crawl targets.
+
+**Static HTML category pages render as subcategory tiles (not products) when category has children**:
+- `/store/Firearms-c156824300` fetched via static HTTP: 0 direct product links, only subcategory nav
+- Same URL via Playwright with full render: 0 direct products — the widget's default `categoryViewMode: 'COLLAPSED'` shows subcat tiles, not products
+- `/store/` root via Playwright: ~49 featured products rendered (enough for a homepage scan, NOT full coverage)
+- Leaf categories with no children MAY render products directly — verify per-category
+
+**Yoast ecstore sitemap canonicalization trap**:
+- Canonical product URLs take the form `/store/<Name>-p<id>` and canonical category URLs `/store/<Name>-c<id>`
+- Bare `/<Name>-c<id>` paths (without the `/store/` prefix) ALSO render on WordPress but are NOT the Ecwid-canonical form
+- Always read catalogUrls from the sitemap canonical form, NOT from homepage nav or from stored profiles
+- **Sitemap shards can be byte-identical duplicates**: triggersandbows `/ecstore-1-sitemap.xml` and `/ecstore-2-sitemap.xml` are the same MD5 (both 5,210 locs, same length, same content). `/ecstore-3` is 404. Total real products 4,910 < 5,000 sitemap cap so only ecstore-1 is needed. **Always md5sum sitemap shards to detect false multi-shard** before claiming high product counts from the sum.
+- Product `<lastmod>` entries ARE distinct per-product (span 2025-08-19 → 2026-04-09 on triggersandbows) — potentially useful for a hypothetical sitemap-lastmod watermark method IF the crawler had one
+- Category `<lastmod>` entries all share the sitemap regen timestamp — NOT useful as a signal
+
+**Fix (profile recipe)**:
+```
+platform: 'ecwid-on-wordpress'
+adapterType: 'generic-retail'   // unchanged; dedicated Ecwid branch needed in generic-retail.ts (see below)
+siteType: 'retailer'            // NOT 'js-rendered' — API path works via plain axios
+needsPlaywright: false          // Playwright only needed for discovery, not runtime crawl
+hasWaf: false
+wafType: null
+hasCaptcha: false
+wafLastProbedAt: '<today>'
+wafProbeMethod: 'heavy-8-batch'
+ecwidStoreId: '<id>'
+ecwidStorefrontApiBase: 'https://us-vir2-storefront-api.ecwid.com/storefront/api/v1/<id>'
+catalogUrls: [12 top-level /store/<Cat>-c<id> URLs]  // diagnostic — real crawl uses /catalog/search
+expectedProductCount: <totalProductsCount from /catalog/search>
+totalSiteProductCount: <same>
+productCountMethod: {
+  method: 'ecwid-storefront-api',
+  endpoint: '<base>/catalog/search',
+  httpMethod: 'POST',
+  bodyTemplate: { lang:'en', pagination:{offset:0,limit:1}, urlParams:{...} },
+  headers: { Origin:'<site>', Referer:'<site>/' },
+  field: 'totalProductsCount'
+}
+apiAlternative: {
+  type: 'ecwid-storefront-api',
+  endpoint: '<base>/catalog/search',
+  httpMethod: 'POST',
+  headers: { 'Content-Type':'application/json', 'Origin':'<site>', 'Referer':'<site>/' },
+  bodyTemplate: {
+    lang: 'en',
+    pagination: { offset: 0, limit: 100 },
+    sortBy: 'addedTimeDesc',   // newest-first, verified monotonic
+    urlParams: { baseUrl:'/store/', canonicalBaseUrl:'<site>/store/', isCleanUrls:true, isCanonicalUrlsEnabled:true, isSlugsWithoutIds:false }
+  },
+  responseSchema: {
+    productsPath: 'products',
+    totalPath: 'totalProductsCount',
+    productUrlPath: 'seo.canonicalUrl',
+    productNamePath: 'name'
+  },
+  sortOptions: ['addedTimeDesc', 'priceAsc', 'priceDesc', 'nameAsc', 'nameDesc'],
+  defaultSortBy: 'addedTimeDesc'
+}
+paginationPattern: {
+  type: 'api-offset',
+  limit: 100,
+  offsetField: 'pagination.offset',
+  limitField: 'pagination.limit',
+  maxPerRequest: 200
+}
+perPage: 100
+sortParam: {
+  type: 'api-body-field',
+  field: 'sortBy',
+  value: 'addedTimeDesc',
+  verified: true
+}
+crawlers.watermark.method: 'navigate-from-watermark'  // walk /catalog/search paginated by sortBy=addedTimeDesc, stop at known watermark product URL
+```
+
+**REQUIRED CODE CHANGE** (currently uncommitted — Site 32 profile depends on it): Add `ecwid-storefront-api` branch to `backend/src/services/scraper/adapters/generic-retail.ts` `fetchCatalogPage()`, following the **site 16 liangjian.ca mysimplestore precedent (commit a763fe4)**. The branch reads `profile.apiAlternative.type === 'ecwid-storefront-api'`, POSTs to `apiAlternative.endpoint` with `bodyTemplate` (filling `pagination.offset` and `pagination.limit` from adapter context), extracts products from `response.products[]` using `apiAlternative.responseSchema.productUrlPath`, and returns a `CatalogPage` with exact `totalProductsCount` from the response header field. ~80 lines, mirroring the mysimplestore branch structure. Without this branch, Ecwid sites fall through to HTML extraction which under-extracts (parent cats render 0 products in COLLAPSED view).
+
+**Cross-references**:
+- Mistake 1 (sitemap can lie) — here the sitemap told the truth on product count BUT the byte-identical shard duplication would have lied 2× if summed naively
+- Mistake 16 (don't follow AJAX rabbit holes) — this is the exception where the "AJAX backend" IS stable, documented (internally), and authoritative for product count
+- Mistake 22 (stored platform tags lie) — `custom` tag here hid the real platform
+- Mistake 28 (DB=0 stale signals) — SAME anchor-bias pattern (4 compounding wrong signals), this time on a non-DB=0 already-enabled site. Promotes the lesson: the "re-verify ALL stale signals" rule applies to ANY site with an outdated `lastVerified`, NOT just DB=0 sites.
+- **Site 16 liangjian mysimplestore adapter branch (commit a763fe4)** — the architectural precedent for adding a platform-specific API branch to `generic-retail.ts`
+- `backend/scripts/tb-*.ts` — audit harness scripts for triggersandbows (keep or delete per cleanup phase)
 
 ---
 

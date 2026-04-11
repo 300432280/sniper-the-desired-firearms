@@ -315,6 +315,28 @@ export class GenericRetailAdapter extends AbstractAdapter {
   ): Promise<CatalogPage | null> {
     const profile = GenericRetailAdapter._getProfileSync(origin);
 
+    // ── Branch 0: Ecwid storefront API (undocumented, used by Ecwid-on-WordPress sites) ──
+    // See playbook Mistake 31 and backend/scripts/tb-real-ui4.ts for the canonical
+    // UI-drive discovery harness that captured the real POST body byte-for-byte.
+    if (profile?.apiAlternative?.type === 'ecwid-storefront-api') {
+      try {
+        return await this._fetchEcwidStorefrontPage(profile.apiAlternative, page, options);
+      } catch (err) {
+        console.log(`[GenericRetail] ecwid-storefront-api error for ${origin} page ${page}: ${err instanceof Error ? err.message : err}. Returning null so dispatcher falls back to HTML.`);
+        return null;
+      }
+    }
+
+    // ── Branch: BigCommerce Stencil GraphQL Storefront API ──
+    if (profile?.apiAlternative?.type === 'bigcommerce-graphql') {
+      try {
+        return await this._fetchBigCommerceGraphQLPage(profile.apiAlternative, origin, page, options);
+      } catch (err) {
+        console.log(`[GenericRetail] bigcommerce-graphql error for ${origin} page ${page}: ${err instanceof Error ? err.message : err}. Returning null so dispatcher falls back to HTML.`);
+        return null;
+      }
+    }
+
     // ── Branch 1: profile-declared JSON API (e.g. mysimplestore for GoDaddy OLS) ──
     if (profile?.apiAlternative?.type === 'mysimplestore') {
       try {
@@ -509,6 +531,391 @@ export class GenericRetailAdapter extends AbstractAdapter {
     };
   }
 
+  /**
+   * Fetch a catalog page from an Ecwid storefront API (undocumented, no auth).
+   *
+   * Used by Ecwid-on-WordPress sites. Detection: `<script src="https://app.ecwid.com/script.js?<storeId>">`.
+   * Discovery harness: `backend/scripts/tb-real-ui4.ts` (Playwright drives the live sort dropdown
+   * + pagination and captures the real POST body byte-for-byte). See playbook Mistake 31.
+   *
+   * Reads ALL site-specific configuration from `apiCfg` (from `siteProfile.apiAlternative`).
+   * The adapter has ZERO hardcoded Ecwid domains, store IDs, or field names — every Ecwid site
+   * declares its own config in the profile. Expected shape:
+   *
+   *   {
+   *     type: 'ecwid-storefront-api',
+   *     endpoint: 'https://<region>-storefront-api.ecwid.com/storefront/api/v1/<storeId>/catalog/search',
+   *     httpMethod: 'POST',
+   *     headers: { 'Content-Type': 'application/json', 'Origin': '<merchant>', 'Referer': '<merchant>/' },
+   *     bodyTemplate: {
+   *       lang: 'en',
+   *       pagination: { offset: 0, limit: 100 },
+   *       sortBy: 'addedTimeDesc',
+   *       urlParams: { baseUrl, canonicalBaseUrl, isCleanUrls, isCanonicalUrlsEnabled, isSlugsWithoutIds }
+   *     },
+   *     responseSchema: {
+   *       productsPath: 'products',
+   *       totalPath: 'totalProductsCount',
+   *       productUrlPath: 'seo.canonicalUrl',
+   *       productNamePath: 'name'
+   *     },
+   *     sortOptions: ['addedTimeDesc', 'priceAsc', ...],
+   *     defaultSortBy: 'addedTimeDesc'
+   *   }
+   *
+   * Watermark crawler passes `{ sortBy: 'newest' | 'oldest', perPage }` — we map
+   * `'newest'` → `apiCfg.defaultSortBy` (usually `addedTimeDesc`) and `'oldest'` → an
+   * ascending sort from `sortOptions` if one exists.
+   *
+   * IMPORTANT: Ecwid product responses have NO `created_at` / `updated_at` fields, so
+   * `postDate` is always undefined. Watermark detection therefore relies on URL matching,
+   * not date comparison. This is why `navigate-from-watermark` is the correct crawler
+   * method (walk sorted by `addedTimeDesc` until we hit a known URL), NOT `api-date-since-watermark`.
+   *
+   * Throws on network error or non-2xx — caller catches and returns null so the
+   * dispatcher falls back to HTML/Playwright.
+   */
+  private async _fetchEcwidStorefrontPage(
+    apiCfg: any,
+    page: number,
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number },
+  ): Promise<CatalogPage | null> {
+    const templateLimit = apiCfg.bodyTemplate?.pagination?.limit;
+    const perPage = Math.min(options?.perPage || templateLimit || 100, 200);
+    const offset = (page - 1) * perPage;
+
+    // Resolve sortBy: adapter gets 'newest'/'oldest'; Ecwid wants camelCase values like 'addedTimeDesc'.
+    let sortBy: string = apiCfg.defaultSortBy || apiCfg.bodyTemplate?.sortBy || 'addedTimeDesc';
+    if (options?.sortBy === 'oldest') {
+      const asc = (apiCfg.sortOptions || []).find((s: string) => /asc$/i.test(s) && /added|created|time/i.test(s));
+      if (asc) sortBy = asc;
+    }
+
+    // Build the POST body from template, overriding pagination + sortBy.
+    const body = {
+      ...(apiCfg.bodyTemplate || {}),
+      pagination: { offset, limit: perPage },
+      sortBy,
+    };
+
+    const response = await axios.post(apiCfg.endpoint, body, {
+      timeout: 20000,
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        ...(apiCfg.headers || {}),
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      },
+      validateStatus: (s) => s === 200,
+    });
+
+    const data = response.data;
+    const schema = apiCfg.responseSchema || {};
+    const productsPath: string = schema.productsPath || 'products';
+    const totalPath: string = schema.totalPath || 'totalProductsCount';
+    const productUrlPath: string = schema.productUrlPath || 'seo.canonicalUrl';
+    const productNamePath: string = schema.productNamePath || 'name';
+
+    const getPath = (obj: any, path: string): any =>
+      path.split('.').reduce((acc: any, key: string) => (acc == null ? undefined : acc[key]), obj);
+
+    const rawProducts = getPath(data, productsPath);
+    if (!data || !Array.isArray(rawProducts)) {
+      console.log(`[GenericRetail] ecwid-storefront-api: unexpected JSON shape (no ${productsPath} array) for ${apiCfg.endpoint}`);
+      return null;
+    }
+
+    const totalProducts = getPath(data, totalPath);
+    const totalPages = typeof totalProducts === 'number' ? Math.ceil(totalProducts / perPage) : undefined;
+
+    const products: CatalogProduct[] = [];
+    for (const p of rawProducts) {
+      if (!p) continue;
+      const url = getPath(p, productUrlPath);
+      const name = getPath(p, productNamePath);
+      if (!url || !name) continue;
+
+      // Verified via live probe on 2026-04-09 (playbook Mistake 31):
+      //   - Product ID lives at `identifier.productId` (NOT `p.id`).
+      //   - Price lives at `defaultOptionsOverrides.pricesOverrides.basePrice`.
+      //   - No `media.images` / thumbnail field exists in /catalog/search responses.
+      //   - No `created_at` / `updated_at` / date fields exist (see class doc above).
+      const productId = getPath(p, 'identifier.productId');
+      const priceNumeric = getPath(p, 'defaultOptionsOverrides.pricesOverrides.basePrice');
+
+      products.push({
+        url: String(url),
+        sourceId: productId != null ? String(productId) : undefined,
+        title: String(name).trim().slice(0, 160),
+        price: typeof priceNumeric === 'number' ? priceNumeric : undefined,
+        stockStatus: 'unknown', // /catalog/search preview shape does not expose stock
+        // thumbnail: undefined — Ecwid /catalog/search does not return image URLs
+        // postDate: undefined — Ecwid product responses have no date fields
+      });
+    }
+
+    return {
+      products,
+      totalPages,
+      nextPageUrl: totalPages !== undefined && page < totalPages ? `ecwid://page/${page + 1}` : undefined,
+    };
+  }
+
+  // ── BigCommerce Stencil GraphQL Storefront API ──────────────────────────
+  // BC Stencil storefronts expose a GraphQL endpoint at POST /graphql.
+  // Auth: Bearer JWT scraped from storefront HTML. The JWT is typically found in:
+  //   - `<input class='hidden_token' value='eyJ...'>`  (filter/widget plugins)
+  //   - `data-hidden_token="eyJ..."` (script data attributes)
+  //   - `'Authorization': 'Bearer eyJ...'` (inline JS)
+  //   - or via a custom regex in the profile
+  // The JWT's `cors` claim tells us the correct origin for the /graphql endpoint,
+  // which may differ from the storefront origin (e.g. store.prophetriver.com vs
+  // www.prophetriver.com).
+  //
+  // BC Storefront GraphQL schema (verified 2026-04-10 on prophetriver.com):
+  //   - `products(first, after)` — returns ALL products by entity ID (ascending),
+  //     NO `sortBy` argument. Used for full catalog walk (T2-4).
+  //   - `newestProducts(first, after)` — returns products in descending createdAt
+  //     order with cursor pagination. Used for T1 watermark crawl.
+  //   - Both return `createdAt { utc }` — unlocks `api-date-since-watermark`.
+  //
+  // Unlike Ecwid, BC GraphQL uses cursor-based pagination, not offset.
+  // We cache `endCursor` per origin+queryType combo. If cursor is missing
+  // for page >1, return null (fallback to HTML).
+
+  private _bcGraphqlTokenCache = new Map<string, { token: string; graphqlOrigin: string; expiresAt: number }>();
+  private _bcCursorCache: Map<string, string> | undefined;
+
+  /**
+   * Fetch a catalog page from a BigCommerce Stencil GraphQL Storefront API.
+   *
+   * Reads ALL site-specific configuration from `apiCfg` (from `siteProfile.apiAlternative`).
+   * The adapter has ZERO hardcoded BC domains, tokens, or queries — every site declares
+   * its own config in the profile. Expected shape:
+   *
+   *   {
+   *     type: 'bigcommerce-graphql',
+   *     graphqlUrl: '/graphql',                    // relative to graphqlOrigin (auto-detected from JWT cors)
+   *     tokenScrapeUrl: '/',                       // page to scrape JWT from
+   *     tokenRegex: null,                          // null = use default JWT regex (eyJ...)
+   *     tokenCacheTtlMs: 3600000,                  // 1 hour cache
+   *     productsQuery: null,                       // null = use default query
+   *     currencyCode: 'CAD',                       // currency for prices
+   *   }
+   *
+   * Throws on network error or non-200 — caller catches and returns null so the
+   * dispatcher falls back to HTML/Playwright.
+   */
+  private async _fetchBigCommerceGraphQLPage(
+    apiCfg: any,
+    origin: string,
+    page: number,
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number; dateAfter?: string },
+  ): Promise<CatalogPage | null> {
+    const perPage = Math.min(options?.perPage || 50, 50); // BC GraphQL max is 50 for newestProducts
+
+    // 1. Resolve token + graphqlOrigin (scrape from HTML or use cache)
+    const resolved = await this._resolveBcGraphqlToken(apiCfg, origin);
+    if (!resolved) {
+      console.log(`[GenericRetail] bigcommerce-graphql: could not resolve token for ${origin}`);
+      return null;
+    }
+    const { token, graphqlOrigin } = resolved;
+
+    // 2. Choose query type based on sort
+    // - 'newest' → newestProducts (descending createdAt, for T1 watermark)
+    // - anything else → products (ascending entityId, for T2-4 full catalog)
+    const useNewest = options?.sortBy === 'newest';
+    const queryType = useNewest ? 'newestProducts' : 'products';
+    const currency = apiCfg.currencyCode || 'CAD';
+
+    const query = apiCfg.productsQuery || `
+      query BcCatalogPage($pageSize: Int!, $after: String) {
+        site {
+          ${queryType}(first: $pageSize, after: $after) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            edges {
+              node {
+                entityId
+                name
+                path
+                createdAt { utc }
+                prices(currencyCode: ${currency}) {
+                  price { value currencyCode }
+                  salePrice { value }
+                }
+                defaultImage { url(width: 300) }
+                availabilityV2 { status }
+                sku
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    // For cursor-based pagination, we need the endCursor from previous page.
+    // Cache it keyed by origin + queryType. If cursor is missing for page >1,
+    // return null so the dispatcher falls back to HTML.
+    const cursorKey = `${origin}:cursor:${queryType}`;
+    let afterCursor: string | null = null;
+    if (page > 1) {
+      afterCursor = this._bcCursorCache?.get(cursorKey) || null;
+      if (!afterCursor) {
+        console.log(`[GenericRetail] bigcommerce-graphql: no cursor for page ${page} (${queryType}) on ${origin}, falling back`);
+        return null;
+      }
+    }
+
+    // 3. POST to GraphQL (use graphqlOrigin from JWT cors, not storefront origin)
+    const graphqlUrl = `${graphqlOrigin}${apiCfg.graphqlUrl || '/graphql'}`;
+    const response = await axios.post(graphqlUrl, {
+      query,
+      variables: {
+        pageSize: perPage,
+        after: afterCursor,
+      },
+    }, {
+      timeout: 20000,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Origin': graphqlOrigin,
+      },
+      validateStatus: (s: number) => s === 200,
+    });
+
+    const data = response.data?.data?.site?.[queryType];
+    if (!data || !Array.isArray(data.edges)) {
+      console.log(`[GenericRetail] bigcommerce-graphql: unexpected response shape for ${origin} (${queryType})`);
+      return null;
+    }
+
+    // Cache cursor for next page
+    if (!this._bcCursorCache) this._bcCursorCache = new Map();
+    if (data.pageInfo?.endCursor) {
+      this._bcCursorCache.set(cursorKey, data.pageInfo.endCursor);
+    }
+
+    // 4. Map edges to CatalogProduct[]
+    const products: CatalogProduct[] = [];
+    for (const edge of data.edges) {
+      const node = edge.node;
+      if (!node || !node.path || !node.name) continue;
+
+      const fullUrl = node.path.startsWith('http') ? node.path : `${origin}${node.path}`;
+      const price = node.prices?.salePrice?.value ?? node.prices?.price?.value;
+
+      products.push({
+        url: fullUrl,
+        sourceId: node.entityId != null ? String(node.entityId) : undefined,
+        title: String(node.name).trim().slice(0, 160),
+        price: typeof price === 'number' ? price : undefined,
+        stockStatus: node.availabilityV2?.status === 'Available' ? 'in_stock'
+          : node.availabilityV2?.status === 'Unavailable' ? 'out_of_stock' : 'unknown',
+        thumbnail: node.defaultImage?.url || undefined,
+        postDate: node.createdAt?.utc || undefined,
+        tags: node.sku || undefined,
+      });
+    }
+
+    // BC GraphQL doesn't give total count in the products/newestProducts query.
+    // Use hasNextPage to signal more pages.
+    const hasNext = data.pageInfo?.hasNextPage === true;
+
+    return {
+      products,
+      totalPages: hasNext ? page + 1 : page, // approximate — tells crawler there's at least one more page
+      nextPageUrl: hasNext ? `bcgql://page/${page + 1}` : undefined,
+    };
+  }
+
+  /**
+   * Scrape and cache the BC Stencil GraphQL Storefront API JWT from a storefront page.
+   *
+   * Token locations in BC Stencil HTML (verified 2026-04-10):
+   *   1. `<input class='hidden_token' value='eyJ...'>`  (arizonreports filter plugin)
+   *   2. `data-hidden_token="eyJ..."` (script data attributes)
+   *   3. `'Authorization': 'Bearer eyJ...'` (inline JS)
+   *   4. Custom regex from profile (`apiCfg.tokenRegex`)
+   *
+   * The JWT's `cors` claim contains the origin to use for /graphql (may differ from
+   * the storefront domain). We decode the JWT payload to extract it.
+   *
+   * Cached for `tokenCacheTtlMs` (default 1h), re-scraped on expiry.
+   */
+  private async _resolveBcGraphqlToken(
+    apiCfg: any,
+    origin: string,
+  ): Promise<{ token: string; graphqlOrigin: string } | null> {
+    // Check cache first
+    const cached = this._bcGraphqlTokenCache.get(origin);
+    if (cached && Date.now() < cached.expiresAt) {
+      return { token: cached.token, graphqlOrigin: cached.graphqlOrigin };
+    }
+
+    // Scrape token from a storefront page
+    const scrapeUrl = `${origin}${apiCfg.tokenScrapeUrl || '/'}`;
+    try {
+      const resp = await axios.get(scrapeUrl, {
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'text/html',
+        },
+      });
+
+      const html = typeof resp.data === 'string' ? resp.data : '';
+      let token: string | null = null;
+
+      // Try profile regex first
+      if (apiCfg.tokenRegex) {
+        const regex = new RegExp(apiCfg.tokenRegex);
+        const match = html.match(regex);
+        if (match?.[1]) token = match[1];
+      }
+
+      // Default: find any JWT (eyJ...) in the HTML — BC Storefront tokens are always JWTs
+      if (!token) {
+        const jwtMatch = html.match(/eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/);
+        if (jwtMatch) token = jwtMatch[0];
+      }
+
+      if (!token) {
+        console.log(`[GenericRetail] bigcommerce-graphql: JWT not found in ${scrapeUrl}`);
+        return null;
+      }
+
+      // Decode JWT payload to get CORS origin for /graphql endpoint
+      let graphqlOrigin = origin;
+      try {
+        const payloadB64 = token.split('.')[1];
+        const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+        if (Array.isArray(payload.cors) && payload.cors.length > 0) {
+          graphqlOrigin = payload.cors[0];
+        }
+      } catch {
+        // If JWT decode fails, fall back to storefront origin
+      }
+
+      // Allow profile override for graphqlOrigin
+      if (apiCfg.graphqlOrigin) {
+        graphqlOrigin = apiCfg.graphqlOrigin;
+      }
+
+      const ttl = apiCfg.tokenCacheTtlMs || 3600000; // 1 hour default
+      this._bcGraphqlTokenCache.set(origin, { token, graphqlOrigin, expiresAt: Date.now() + ttl });
+      console.log(`[GenericRetail] bigcommerce-graphql: JWT scraped and cached for ${origin} → ${graphqlOrigin} (${token.slice(0, 12)}...)`);
+      return { token, graphqlOrigin };
+    } catch (err) {
+      console.log(`[GenericRetail] bigcommerce-graphql: token scrape failed for ${scrapeUrl}: ${err instanceof Error ? err.message : err}`);
+      return null;
+    }
+  }
+
   extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
     const products: CatalogProduct[] = [];
     const seen = new Set<string>();
@@ -553,9 +960,37 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]', // GoDaddy OLS (liangjian.ca)
     ];
 
+    // Sidebar blocks that Magento 2 (and similar platforms) render even on
+    // empty/past-last-page category responses.  Products matched inside these
+    // containers are "phantom" items — Related, Recently Viewed, Upsell, etc.
+    // Skipping them prevents the adapter from returning 10-20 ghost products
+    // when the main product grid is actually empty (e.g. requesting ?p=100 on
+    // a 71-page category).
+    const SIDEBAR_BLACKLIST = [
+      '.block-related',
+      '.block-viewed-products',
+      '.block-upsell',
+      '.block.crosssell',
+      '.related-items',
+      '.recently-viewed',
+      '.crosssell',
+      '.upsell',
+      '[class*="related-products"]',
+      '[class*="recently-viewed"]',
+      '[class*="you-may-also-like"]',
+      '.sidebar',                      // Generic sidebar wrapper
+      'aside',                         // Semantic sidebar element
+    ];
+    const sidebarSelector = SIDEBAR_BLACKLIST.join(', ');
+
     for (const selector of SELECTORS) {
       $(selector).each((_, el) => {
         const element = $(el);
+
+        // Skip products inside sidebar/related/upsell blocks (Magento 2 phantom products)
+        if (element.closest(sidebarSelector).length > 0) {
+          return; // ancestor is a sidebar block — skip
+        }
 
         const title = this.extractTitle(element, element.text());
         if (!title || title.length < 3) return;

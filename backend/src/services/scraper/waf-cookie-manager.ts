@@ -109,10 +109,23 @@ export async function solveCookies(domain: string, url: string): Promise<{ cooki
     try {
       const page = await context.newPage();
 
-      // Navigate and wait for Sucuri challenge to resolve
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      // Navigate and wait for WAF challenge to resolve
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { /* redirects mid-nav may throw; continue */ });
 
-      // Wait a bit for any secondary challenges
+      // Wait for the page to leave any known challenge path. networkidle can fire
+      // while we're still on the challenge page (e.g. SiteGround sgcaptcha solves
+      // JS then POSTs a solution token; the challenge settles BEFORE the post-
+      // challenge redirect). If we extract cookies at that point, none of the
+      // real-origin cookies (_I_, PHPSESSID) are set yet.
+      const CHALLENGE_PATHS = ['/.well-known/sgcaptcha/', '/cdn-cgi/challenge-platform/', '/_Incapsula_Resource'];
+      const challengeWaitStart = Date.now();
+      while (Date.now() - challengeWaitStart < 20000) {
+        const curUrl = page.url();
+        if (!CHALLENGE_PATHS.some(p => curUrl.includes(p))) break;
+        await page.waitForTimeout(500);
+      }
+
+      // Wait a bit for any secondary challenges and cookies to settle
       await page.waitForTimeout(2000);
 
       // Extract all cookies
