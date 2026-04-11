@@ -199,6 +199,7 @@ export class ShopifyAdapter extends AbstractAdapter {
         thumbnail: p.images?.[0]?.src || undefined,
         tags,
         sourceCategory: p.product_type || undefined,
+        postDate: p.published_at || undefined, // Shopify API sorts by published_at desc (strictly monotonic across all sites — verified 2026-04-11 on all 4 Shopify fleet sites)
       };
     });
 
