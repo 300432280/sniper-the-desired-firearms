@@ -1086,6 +1086,68 @@ crawlers.watermark.method: 'navigate-from-watermark'  // walk /catalog/search pa
 
 ---
 
+### Mistake 32 — Shopify `/products.json` API sorts by `published_at`, NOT `created_at`
+
+**Sites**: All 4 Shopify fleet sites (aagcanada, fishingworldgc, groupepronature, intersurplus)
+
+**What happened**: Initial audit of fishingworldgc.ca checked sort monotonicity on `created_at` field — found 113 violations in 250 products. Declared API sort "roughly newest-first" which is unacceptable for T1 watermark reliability.
+
+**Reality**: Shopify `/products.json` sorts by `published_at` (storefront publish time), NOT `created_at` (admin draft creation time). `published_at` is strictly monotonic descending on ALL 4 fleet sites with 0 violations. Merchants create products as drafts (`created_at`) then publish them later (`published_at`), so the two timestamps diverge.
+
+**Fix**: ShopifyAdapter now sets `postDate: p.published_at` (deployed 2026-04-11). Enables watermark crawler date-based stop signal for faster Phase 1 completion.
+
+**Lesson**: When checking sort order on an API, test ALL available timestamp fields (`created_at`, `published_at`, `updated_at`) for strict monotonicity, not just the one whose name sounds right. Shopify's `created-descending` sort label is misleading — it sorts by `published_at`, not `created_at`.
+
+**Cross-references**: B1 aagcanada, B10 fishingworldgc audits.
+
+---
+
+### Mistake 33 — Subagent findings about API accessibility MUST be independently verified before applying profile changes
+
+**Site**: internationalshootingsupplies.com (B14)
+
+**What happened**: Subagent reported WP REST API returned HTTP 405 ("blocked by security plugin") and changed `adapterType: woocommerce → generic-retail` + downgraded watermark method. Independent verification via plain curl proved the API returns **HTTP 200 with `x-wp-total: 5111` and real product data**. The subagent fabricated the 405 finding.
+
+**Impact**: Wrong `adapterType` change would have forced the site to use slow HTML crawling instead of fast API path. Wrong watermark downgrade would have eliminated date-filter efficiency. Both were reverted.
+
+**Lesson**: NEVER accept a subagent's claim about API accessibility (200/401/403/405) without running a single verification curl yourself. This is a 5-second check that prevents catastrophic profile changes. The principle "Read the code before claiming how it works" extends to subagent outputs: verify before trusting.
+
+**Cross-references**: Global CLAUDE.md "When you assume, also doubt yourself" principle.
+
+---
+
+### Mistake 34 — `apiCrawlUsed` flag prevents HTML fallback when API returns empty results
+
+**Discovery**: hical.ca (B13) audit discussion; confirmed as real-world incident on internationalshootingsupplies.com (B14)
+
+**What happens**: `catalog-crawler.ts:292` sets `apiCrawlUsed = true` after the first non-null API response. When `WooCommerceAdapter.fetchCatalogPage()` returns `{ products: [], totalPages: N }` (API error swallowed, empty array returned), `apiCrawlUsed` becomes true and the HTML fallback at line 327 (`if (!apiCrawlUsed && ...)`) NEVER fires. The site silently crawls 0 products every tier cycle forever — no alert, no fallback to HTML+Playwright via catalogUrls.
+
+**Real-world incident**: internationalshootingsupplies.com had 2,898 products wrongly deactivated because the WooCommerce adapter returned empty results from the API, set `apiCrawlUsed=true`, and prevented HTML fallback.
+
+**Lesson**: When claiming "if X fails, Y fires as fallback" — trace the exact code path. Find the variable that controls the fallback (`apiCrawlUsed`), enumerate ALL states it can be in, and verify the failure scenario actually sets it to the fallback state. Architecture says "API has HTML fallback"; code says "HTML fallback only fires when `fetchCatalogPage` returns `null`, not when it returns empty."
+
+**Proposed fix**: Add consecutive-empty-API-cycles counter; force `apiCrawlUsed = false` after N consecutive cycles with 0 products so HTML fallback fires.
+
+**Cross-references**: `catalog-crawler.ts:266-327`, `woocommerce.ts:377-384`, global CLAUDE.md "Trace flows, not layers" principle.
+
+---
+
+### Mistake 35 — 0/3 stored `wafType: 'sucuri'` in Batch B were actually Sucuri
+
+**Sites**: canadafirstammo.ca (B4 — actually Cloudflare passive), doubletapsports.com (B9 — actually Cloudflare passive), hical.ca (B13 — actually Imperva/Incapsula)
+
+**What happened**: All three sites had stored `wafType: 'sucuri'` with full Sucuri cookie-cache workaround documented in their profiles. All three turned out to be completely different WAF vendors when re-probed with the heavy 8-batch tool.
+
+**Impact**: Sucuri workaround code path was never needed on any of these sites. Two sites had `needsPlaywright: true` set unnecessarily (Cloudflare passive doesn't need Playwright). One site (hical) genuinely needs Playwright but for Incapsula, not Sucuri.
+
+**Fleet observation**: The pre-audit WAF classification was done by a bulk onboarding script that apparently misidentified multiple WAF vendors. ANY stored `wafType` from the pre-audit era should be treated as UNVERIFIED until re-probed with the heavy 8-batch tool.
+
+**Lesson**: Extends Mistake 23 (heavy probe mandatory). Specifically: if the stored `wafType` is `'sucuri'`, it's MORE likely to be wrong than right based on fleet data. Always verify with `x-sucuri-id` header (real Sucuri) vs `cf-ray` (Cloudflare) vs `visid_incap_*` cookies (Incapsula).
+
+**Cross-references**: Mistake 23 (heavy probe mandatory), B4/B9/B13 audit reports.
+
+---
+
 ## Adapter-side bugs discovered during site audits
 
 These are issues in `backend/src/services/scraper/adapters/generic-retail.ts` that were caught during site verification work. Listed so future agents can find them quickly when auditing similar sites.
