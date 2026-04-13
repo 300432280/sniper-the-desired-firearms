@@ -12,7 +12,7 @@ const VALID_ADAPTER_TYPES = [
 ] as const;
 
 const VALID_PAGINATION_TYPES = [
-  'query', 'path', 'offset-query', 'suffix-replace', 'api-offset', null,
+  'query', 'path', 'offset-query', 'suffix-replace', 'api-offset', 'api-page', null,
 ] as const;
 
 const VALID_WATERMARK_METHODS = [
@@ -90,8 +90,8 @@ const checks: Check[] = [
   {
     name: 'adapterType',
     severity: 'required',
-    run: (p) => (VALID_ADAPTER_TYPES as readonly string[]).includes(p.adapterType)
-      ? null : `adapterType must be one of: ${VALID_ADAPTER_TYPES.join(', ')}`,
+    run: (p) => (VALID_ADAPTER_TYPES as readonly string[]).includes(p.adapterType || p.adapter)
+      ? null : `adapterType (or adapter) must be one of: ${VALID_ADAPTER_TYPES.join(', ')}`,
   },
   {
     name: 'crawlers.watermark.method',

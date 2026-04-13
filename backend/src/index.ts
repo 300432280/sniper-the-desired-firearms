@@ -54,6 +54,7 @@ app.use(
       }
     },
     credentials: true,
+    exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
   })
 );
 
