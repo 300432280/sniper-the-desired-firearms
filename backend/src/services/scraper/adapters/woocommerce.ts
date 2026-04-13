@@ -454,6 +454,63 @@ export class WooCommerceAdapter extends AbstractAdapter {
         console.log(`[WooCommerce] Store API standalone fetch failed for ${origin} page ${page}: ${msg.substring(0, 100)}`);
       }
 
+      // Second pass: fetch out-of-stock products (Store API returns only in-stock by default)
+      const inStockCount = seen.size;
+      try {
+        const oosParams: Record<string, any> = {
+          per_page: perPage, page,
+          orderby: 'date', order,
+          stock_status: 'outofstock',
+        };
+        if (options?.dateAfter) oosParams.after = options.dateAfter;
+        if (options?.dateBefore) oosParams.before = options.dateBefore;
+
+        const oosResp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
+          params: oosParams,
+          headers,
+          timeout: options?.hasWaf ? 30000 : 15000,
+          validateStatus: (s) => s === 200,
+        });
+
+        if (Array.isArray(oosResp.data)) {
+          // Use OOS totalPages if larger (total = max of in-stock pages + OOS pages)
+          const oosTotalPages = parseInt(oosResp.headers['x-wp-totalpages'] || '0', 10) || undefined;
+          if (oosTotalPages && (!totalPages || oosTotalPages > totalPages)) {
+            totalPages = oosTotalPages;
+          }
+          for (const p of oosResp.data) {
+            const url = p.permalink || `${origin}/?p=${p.id}`;
+            if (this.isCategoryPageUrl(url)) continue;
+            if (seen.has(url)) continue; // dedupe against in-stock results
+            const storeThumb = p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined;
+            const storeCats = Array.isArray(p.categories)
+              ? p.categories.map((c: any) => c.name || c.slug).filter(Boolean).join(',')
+              : undefined;
+            const rawP = p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined;
+            seen.set(url, {
+              url,
+              sourceId: p.id ? String(p.id) : undefined,
+              title: this.decodeHtml(p.name || '').slice(0, 160),
+              price: rawP && rawP > 0 ? rawP : undefined,
+              stockStatus: 'out_of_stock' as const,
+              thumbnail: storeThumb,
+              tags: storeCats,
+              sourceCategory: storeCats,
+            });
+          }
+          const oosAdded = seen.size - inStockCount;
+          if (oosAdded > 0) {
+            console.log(`[WooCommerce] Store API standalone OOS pass added ${oosAdded} out-of-stock products for ${origin} page ${page}`);
+          }
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('timeout') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) {
+          throw err;
+        }
+        console.log(`[WooCommerce] Store API standalone OOS fetch failed for ${origin} page ${page}: ${msg.substring(0, 100)}`);
+      }
+
       // If standalone Store API produced results, skip the enrichment path and return early
       if (seen.size > 0) {
         return { products: [...seen.values()], totalPages };
