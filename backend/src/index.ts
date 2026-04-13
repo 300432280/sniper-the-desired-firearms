@@ -38,9 +38,21 @@ function isAdmin(req: express.Request): boolean {
 const app = express();
 
 // CORS — must allow credentials for httpOnly cookie to be sent
+// Supports CORS_ORIGIN env var with comma-separated origins, falls back to FRONTEND_URL
+const allowedOrigins: string[] = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
+  : [config.frontendUrl];
+
 app.use(
   cors({
-    origin: config.frontendUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (server-to-server, curl, health checks)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    },
     credentials: true,
   })
 );
@@ -537,7 +549,7 @@ scheduleDailyStaleCheck().catch((err) => {
 
 const server = app.listen(config.port, () => {
   console.log(`[Server] Running on port ${config.port} (${config.nodeEnv})`);
-  console.log(`[Server] CORS origin: ${config.frontendUrl}`);
+  console.log(`[Server] CORS origins: ${allowedOrigins.join(', ')}`);
 });
 
 // Graceful shutdown

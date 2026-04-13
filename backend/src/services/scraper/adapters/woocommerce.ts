@@ -310,11 +310,21 @@ export class WooCommerceAdapter extends AbstractAdapter {
     const wpIdToUrl = new Map<number, string>();     // WP product ID → URL (for Store API enrichment)
     let totalPages: number | undefined;
 
+    // Check site profile for storeApiOnly flag (explicit opt-in for 401-gated WP REST sites)
+    const isStoreApiOnly = (() => {
+      try {
+        const domain = new URL(origin).hostname.replace(/^www\./, '');
+        const { _getSiteCacheEntry } = require('../adapter-registry');
+        return _getSiteCacheEntry?.(domain)?.siteProfile?.storeApiOnly === true;
+      } catch { return false; }
+    })();
+
     // 1. WP REST API first — returns ALL published products (including out-of-stock)
     //    Uses `modified_after`/`modified_before` + `orderby=modified` to catch restocks,
     //    price changes, and any product modification — not just newly published products.
     //    Falls back to `after`/`before` + `orderby=date` when no date filter (page-aligned with Store API).
-    try {
+    let wpRestFailed = false;
+    if (!isStoreApiOnly) try {
       const params: Record<string, any> = {
         per_page: perPage, page,
         orderby: hasDateFilter ? 'modified' : 'date',
@@ -328,8 +338,14 @@ export class WooCommerceAdapter extends AbstractAdapter {
         params,
         headers,
         timeout: options?.hasWaf ? 30000 : 15000, // WAF sites need more time
-        validateStatus: (s) => s === 200 || s === 307 || s === 403,
+        validateStatus: (s) => s === 200 || s === 307 || s === 401 || s === 403,
       });
+
+      // WP REST API auth-gated (401) — fall through to standalone Store API path
+      if (resp.status === 401) {
+        wpRestFailed = true;
+        throw new Error('WP REST API returned 401 (auth-gated)');
+      }
 
       // Sucuri WAF blocked — cookie expired or invalid
       if (resp.status === 307 || resp.status === 403) {
@@ -370,6 +386,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
             thumbnail: thumb,
             tags: wpTermCats,
             sourceCategory: wpTermCats,
+            postDate: p.modified || p.date || undefined,
           });
           if (p.id) wpIdToUrl.set(p.id, url);
         }
@@ -381,10 +398,69 @@ export class WooCommerceAdapter extends AbstractAdapter {
       if (msg.includes('timeout') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('WAF_COOKIE_FAILED')) {
         throw err;
       }
+      // Track WP REST failure — enables standalone Store API path below
+      wpRestFailed = true;
       // Other errors (parse, malformed response) — fall through to Store API
     }
 
-    // 2. Store API — enrich with prices, thumbnails, stock, categories
+    // 2a. Store API standalone path — when WP REST is unavailable (401 auth-gated)
+    //     or site profile explicitly opts into storeApiOnly mode.
+    //     The Store API supports orderby=date, per_page, page, and after= date filter.
+    if ((isStoreApiOnly || wpRestFailed) && seen.size === 0) {
+      try {
+        const storeParams: Record<string, any> = {
+          per_page: perPage, page,
+          orderby: 'date', order,
+        };
+        // Store API supports ?after= for date-based filtering (ISO 8601)
+        if (options?.dateAfter) storeParams.after = options.dateAfter;
+        if (options?.dateBefore) storeParams.before = options.dateBefore;
+
+        const resp = await axios.get(`${origin}/wp-json/wc/store/v1/products`, {
+          params: storeParams,
+          headers,
+          timeout: options?.hasWaf ? 30000 : 15000,
+          validateStatus: (s) => s === 200,
+        });
+
+        if (Array.isArray(resp.data)) {
+          totalPages = parseInt(resp.headers['x-wp-totalpages'] || '0', 10) || undefined;
+          for (const p of resp.data) {
+            const url = p.permalink || `${origin}/?p=${p.id}`;
+            if (this.isCategoryPageUrl(url)) continue;
+            const storeThumb = p.images?.[0]?.src || p.images?.[0]?.thumbnail || undefined;
+            const storeCats = Array.isArray(p.categories)
+              ? p.categories.map((c: any) => c.name || c.slug).filter(Boolean).join(',')
+              : undefined;
+            const rawP = p.prices?.price ? parseInt(p.prices.price, 10) / 100 : undefined;
+            seen.set(url, {
+              url,
+              sourceId: p.id ? String(p.id) : undefined,
+              title: this.decodeHtml(p.name || '').slice(0, 160),
+              price: rawP && rawP > 0 ? rawP : undefined,
+              stockStatus: p.is_in_stock === true ? 'in_stock' as const : 'out_of_stock' as const,
+              thumbnail: storeThumb,
+              tags: storeCats,
+              sourceCategory: storeCats,
+              // Store API does not expose date fields — postDate unavailable
+            });
+          }
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('timeout') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) {
+          throw err;
+        }
+        console.log(`[WooCommerce] Store API standalone fetch failed for ${origin} page ${page}: ${msg.substring(0, 100)}`);
+      }
+
+      // If standalone Store API produced results, skip the enrichment path and return early
+      if (seen.size > 0) {
+        return { products: [...seen.values()], totalPages };
+      }
+    }
+
+    // 2b. Store API — enrich with prices, thumbnails, stock, categories
     //    Uses `include` param with WP REST product IDs + two stock_status passes
     //    (default=in-stock, then outofstock) to cover all products.
     //    When no date filter, also fetches the aligned page for totalPages header.

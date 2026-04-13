@@ -60,6 +60,10 @@ export function randomDelay(minMs = 1000, maxMs = 2000): Promise<void> {
 /** Per-domain rate limiter — enforces minimum gap between requests to the same domain */
 const domainLastRequest = new Map<string, number>();
 
+/** Per-domain cooldown — blocks requests to domains that triggered a security ban (e.g. MalCare) */
+const domainCooldown = new Map<string, number>(); // domain → cooldownUntil timestamp
+const MALCARE_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes
+
 /**
  * Enforce per-domain rate limit with difficulty-aware jitter.
  * Easy sites: 1.0-2.0s gap
@@ -68,6 +72,16 @@ const domainLastRequest = new Map<string, number>();
  */
 async function enforceDomainRateLimit(hostname: string, difficultyRating = 0): Promise<void> {
   const domain = normalizeDomain(hostname);
+
+  // Check domain cooldown (e.g. MalCare ban)
+  const cooldownUntil = domainCooldown.get(domain);
+  if (cooldownUntil) {
+    if (Date.now() < cooldownUntil) {
+      throw new Error(`Domain ${domain} is in cooldown until ${new Date(cooldownUntil).toISOString()} (security ban)`);
+    }
+    domainCooldown.delete(domain); // expired — clean up
+  }
+
   const last = domainLastRequest.get(domain);
 
   // Scale gap based on difficulty: 0 → 1.0-2.0s, 100 → 2.0-4.0s
@@ -400,6 +414,14 @@ async function fetchWithRedirects(
 
     // Detect difficulty signals from response
     const signals = detectDifficultySignals(response.status, response.headers, html);
+
+    // MalCare WordPress security ban → set domain cooldown
+    if (response.status === 403 && html.includes('MalCare')) {
+      const domain = normalizeDomain(hostname);
+      domainCooldown.set(domain, Date.now() + MALCARE_COOLDOWN_MS);
+      console.warn(`[HTTP] MalCare ban detected on ${domain} — cooldown ${MALCARE_COOLDOWN_MS / 60000}min`);
+      return { html, responseTimeMs, statusCode: 403, signals, headers: response.headers };
+    }
 
     // Sucuri WAF challenge → solve and retry same URL
     if (html.includes('sucuri_cloudproxy_js')) {

@@ -71,6 +71,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.product-items > .product-item', // Magento
       '.productborder',              // LightSpeed Classic theme (gagnonsports, etc.)
       '.product-grid[class*="col-"]', // LightSpeed Nova theme (solelyoutdoors, etc.)
+      '.product-element',            // LightSpeed Developer/custom theme (gobles.ca)
       '[class*="product-thumb"]',    // OpenCart (including product-thumb_ variants)
       '[class*="product-layout"]',   // OpenCart grid/list (including product-layout_ variants)
       'div.product',                 // Generic product div
@@ -85,6 +86,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.store_product_list_wrapper', // Activant/Epicor iNet (canadasgunstore)
       '.grid-product',               // Ecwid (triggersandbows)
       '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]', // GoDaddy OLS (liangjian.ca)
+      'a[href*="/marketplace/"]',    // TownPost classifieds (Next.js SPA, anchor-wrapped cards)
     ];
 
     for (const selector of SELECTORS) {
@@ -112,7 +114,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
           || element.closest('[data-product-id]').attr('data-product-id')
           || undefined;
         if (!sourceId && productUrl) {
-          const urlIdMatch = productUrl.match(/-(\d{4,})(?:[?#]|$)/);
+          const urlIdMatch = productUrl.match(/-(\d{4,})(?:[?#]|$)/) || productUrl.match(/\/(\d{5,})(?:[?#]|$)/);
           if (urlIdMatch) sourceId = urlIdMatch[1];
         }
 
@@ -944,6 +946,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.product-items > .product-item', // Magento
       '.productborder',              // LightSpeed Classic theme
       '.product-grid[class*="col-"]', // LightSpeed Nova theme (solelyoutdoors)
+      '.product-element',            // LightSpeed Developer/custom theme (gobles.ca)
       '.product-thumb',              // OpenCart
       '.product-layout',             // OpenCart
       'div.product',
@@ -958,6 +961,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.store_product_list_wrapper', // Activant/Epicor iNet (canadasgunstore)
       '.grid-product',               // Ecwid (triggersandbows)
       '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]', // GoDaddy OLS (liangjian.ca)
+      'a[href*="/marketplace/"]',    // TownPost classifieds (Next.js SPA, anchor-wrapped cards)
     ];
 
     // Sidebar blocks that Magento 2 (and similar platforms) render even on
@@ -1017,9 +1021,11 @@ export class GenericRetailAdapter extends AbstractAdapter {
           || element.closest('[data-product_id]').attr('data-product_id')
           || element.attr('class')?.match(/\bpost-(\d+)\b/)?.[1]  // WooCommerce post ID in class
           || undefined;
-        // Fallback: extract numeric product ID from URL (e.g. bullseyenorth /shop/slug-28443)
+        // Fallback: extract numeric product ID from URL
+        // Pattern 1: slug-embedded ID (e.g. bullseyenorth /shop/slug-28443)
+        // Pattern 2: trailing path segment ID (e.g. TownPost /marketplace/.../1139775)
         if (!sourceId && url) {
-          const urlIdMatch = url.match(/-(\d{4,})(?:[?#]|$)/);
+          const urlIdMatch = url.match(/-(\d{4,})(?:[?#]|$)/) || url.match(/\/(\d{5,})(?:[?#]|$)/);
           if (urlIdMatch) sourceId = urlIdMatch[1];
         }
 

@@ -200,6 +200,11 @@ export interface TierCycleState {
   cycleStartedAt?: string;
   /** When cooldown ends (cycle can restart) */
   cooldownEndsAt?: string;
+  /**
+   * Consecutive completed API cycles that returned 0 products.
+   * After 3 consecutive empty cycles, force HTML fallback (Mistake 34 fix).
+   */
+  consecutiveEmptyApiCycles?: number;
 }
 
 export interface TierState {
@@ -321,6 +326,27 @@ export async function crawlCatalogTier(params: {
         await randomDelay(300, 800);
       }
     }
+
+    // ── Mistake 34 fix: detect permanently broken API returning 0 products ──
+    // When an API returns { products: [], totalPages: undefined } (e.g. WooCommerce 401),
+    // apiCrawlUsed is true but productsFound is 0. After 3 consecutive such cycles,
+    // force the HTML fallback path so the site doesn't silently crawl 0 products forever.
+    if (apiCrawlUsed && productsFound === 0 && pagesScanned > 0) {
+      const prev = tierState.consecutiveEmptyApiCycles ?? 0;
+      tierState.consecutiveEmptyApiCycles = prev + 1;
+      console.log(`[CatalogCrawl] ${params.domain} T${tier}: API returned 0 products (consecutive empty cycles: ${tierState.consecutiveEmptyApiCycles}/3)`);
+      if (tierState.consecutiveEmptyApiCycles >= 3) {
+        console.warn(`[CatalogCrawl] ${params.domain} T${tier}: API has returned 0 products for 3 consecutive cycles — forcing HTML fallback`);
+        apiCrawlUsed = false;
+        cycleComplete = false;
+        pagesScanned = 0;
+        // Keep the counter so it persists; it resets when products are found
+      }
+    } else if (apiCrawlUsed && productsFound > 0) {
+      // API is healthy — reset the counter
+      tierState.consecutiveEmptyApiCycles = 0;
+    }
+
     // HTML-based catalog crawl — uses adapter's catalog URLs with pagination
     // (BigCommerce, Magento, custom PHP, etc.)
     // Also used when fetchCatalogPage returns null (API not supported for this site).
@@ -561,9 +587,12 @@ export function completeTierCycle(tier: 2 | 3 | 4, cycleState: TierCycleState, c
   const cycleStart = cycleState.cycleStartedAt ? new Date(cycleState.cycleStartedAt) : new Date();
   const cooldownEnd = new Date(cycleStart.getTime() + cooldownHours * 60 * 60 * 1000);
 
+  // Preserve consecutive empty API cycle counter across cycle boundaries (Mistake 34 fix)
+  const consecutiveEmptyApiCycles = cycleState.consecutiveEmptyApiCycles;
+
   // If cycle took longer than cooldown, start next cycle immediately
   if (cooldownEnd <= new Date()) {
-    return { ...DEFAULT_TIER_CYCLE, status: 'idle' };
+    return { ...DEFAULT_TIER_CYCLE, status: 'idle', consecutiveEmptyApiCycles };
   }
 
   return {
@@ -571,6 +600,7 @@ export function completeTierCycle(tier: 2 | 3 | 4, cycleState: TierCycleState, c
     currentPage: 0,
     cooldownEndsAt: cooldownEnd.toISOString(),
     cycleStartedAt: cycleState.cycleStartedAt,
+    consecutiveEmptyApiCycles,
   };
 }
 
