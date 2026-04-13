@@ -633,6 +633,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
         thumbnail: storeThumb || existing?.thumbnail,
         tags: storeCats || existing?.tags,
         sourceCategory: storeCats || existing?.sourceCategory,
+        postDate: existing?.postDate,
       });
     }
   }
