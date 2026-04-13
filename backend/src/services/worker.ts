@@ -110,7 +110,9 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
 
       let cycleState = updatedState[tierKey];
       if (cycleState.status === 'idle' || cycleState.status === 'cooldown') {
+        const prevEmptyApiCycles = cycleState.consecutiveEmptyApiCycles;
         cycleState = startTierCycle(tier);
+        if (prevEmptyApiCycles) cycleState.consecutiveEmptyApiCycles = prevEmptyApiCycles;
         updatedState[tierKey] = cycleState;
       }
 
