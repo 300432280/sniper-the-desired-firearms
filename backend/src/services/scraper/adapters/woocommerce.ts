@@ -211,7 +211,10 @@ export class WooCommerceAdapter extends AbstractAdapter {
 
         // WooCommerce price structure
         const priceEl = element.find('.price, .woocommerce-Price-amount, [class*="price"]').first();
-        const price = this.extractPrice(priceEl.text() || '');
+        const rawPrice = this.extractPrice(priceEl.text() || '');
+        // Treat $0.00 as "unknown price" — matches Store API enrichment semantics.
+        // Placeholder products (e.g. pre-release inventory) show $0.00 + out-of-stock.
+        const price = rawPrice && rawPrice > 0 ? rawPrice : undefined;
 
         const inStock = this.isInStock(element);
 
@@ -674,7 +677,9 @@ export class WooCommerceAdapter extends AbstractAdapter {
         seen.add(url);
 
         const priceEl = element.find('.price, .woocommerce-Price-amount, [class*="price"]').first();
-        const price = this.extractPrice(priceEl.text() || '');
+        const rawPrice = this.extractPrice(priceEl.text() || '');
+        // Treat $0.00 as "unknown price" — matches Store API enrichment semantics.
+        const price = rawPrice && rawPrice > 0 ? rawPrice : undefined;
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
