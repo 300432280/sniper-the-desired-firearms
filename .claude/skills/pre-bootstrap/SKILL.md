@@ -93,6 +93,35 @@ For **unknown or ambiguous platforms**, apply these judgment rules:
 - **Product URL forms**: Celerant exposes each product via TWO URL forms — canonical `/shop/<slug>-<id>` (from listings) AND `/<brand>/<slug>-<id>` (from sitemap). Both return the same detail page. The sourceId extractor handles both.
 - **Reference audit**: `bullseyenorth.com` profile (2026-04-14 manual audit, 3,117 active products, 87 pages walked via `/all-products/browse/orderby/new-arrivals/perpage/36`, zero overlap on page 2).
 
+#### Drupal classifieds (Mistake 37 — gunpost.ca canonical case)
+- **Detection signals** (ALL from probe output):
+  - `platformMarkers` contains `drupal` or `drupal-commerce` + headers `x-generator:Drupal <N>`, `x-drupal-cache`, `x-drupal-cache-tags`
+  - `adapter.suggestedAdapter.value === 'classifieds-gunpost'` (auto-set when probe finds `node--type-classified` / `gunpost-teaser` / `classified-teaser` selectors in homepage HTML)
+  - `sort.sortOptions` contains `{ selectName: 'sort', value: 'created&order=desc' | 'date_pub&sort_order=DESC', text: 'Posted Date' | similar }` — the Drupal Views exposed form anchor-pair capture at `pre-bootstrap-probe.ts:1130-1156` handles this
+  - `pagination.zeroIndexed.value === true` — Drupal Views is 0-indexed (`?page=0` = page 1). This is captured automatically.
+  - `pagination.firstPageHasParam.value === false` — Drupal doesn't include `?page=0` in the default URL; the bare URL IS page 1.
+- **Key profile fields to set**:
+  - `platform: 'drupal'` or `'drupal-commerce'` — use the probe's specific tag if available. `drupal-commerce` indicates `x-commerce-core` header present (gunpost has it, but the Commerce module isn't used for classifieds; the tag is informational).
+  - `adapterType: 'classifieds-gunpost'` — the adapter is domain-generic for any Drupal site using the standard classifieds content type + default teaser view mode. It is NOT gunpost-specific despite the name.
+  - `hasWaf: true` / `wafType: 'cloudflare-active'` — Cloudflare is common for Drupal classifieds; confirm via heavy probe.
+  - `needsPlaywright: false` — Drupal renders server-side; static HTML extraction works.
+- **Sort scheme**: `query` (NOT path). Drupal Views exposes sort via EITHER `?sort_by=<col>&sort_order=DESC` (exposed form on bare `/ads`) OR `?sort=<col>&order=desc` (anchor on facet-filtered `/ads?f[0]=c:N`). **These are two different URL forms of the SAME Drupal Views sort** — both produce identical ordering. Pick the one the probe detected on the canonical catalogUrl (bare `/ads`). If the probe's testUrl ended up facet-filtered (see below), re-read the bare `/ads` sort dropdown to get the exposed-form param names (`sort_by` / `sort_order`).
+- **Watermark**: `navigate-from-watermark` via the sorted URL. The `.node__pubdate` field on the listing index reflects the MODIFIED/BUMPED date, not the original post — which is what you want for watermark tracking (bumping a sold-but-relisted ad makes it appear "new" to the crawler, matching operator expectation).
+- **Facet URL trap (the critical gunpost-specific quirk)**: `robots.txt` typically Disallows `/ads`. Some Drupal sites serve a Cloudflare interactive challenge on the BARE `/ads` URL but allow any facet-filtered variant (e.g. `/ads?f[0]=c:1` = a single category facet) through without challenge. **The probe auto-detects this** and switches Phase 3 extraction testing to a facet URL — but this biases Phase 6 pagination toward counting ONE facet, not the global catalog. When `assembly.testUrlWasFacetFiltered.value === true` in the probe output, the skill MUST:
+  1. Use the GLOBAL sorted URL `/ads?sort_by=date_pub&sort_order=DESC` as the canonical catalogUrl (NOT a facet URL).
+  2. Run a manual pagination walk against the global URL to get the canonical `expectedProductCount` (probe's `totalPagesObserved` is a facet subset).
+  3. Re-read the bare `/ads` HTML to check for exposed-form sort param names (`sort_by` / `sort_order`) if the facet URL returned facet-form names (`sort` / `order`).
+- **Product count (classifieds quirk)**: For classifieds, **sitemap ALWAYS lags the live listing by 1-3 days** because expired/sold listings drop from sitemap faster than from the live `/ads` page (sold items remain visible for a grace window with a `sold` CSS class before removal). The probe's `sitemapProductCount` (gunpost: 22,739) is ~25-30% LOWER than the live pagination walk count (gunpost: 30,423 via `1691 * 18 + 3`). **Prefer `productCountMethod: 'pagination-walk'` for classifieds, NEVER sitemap alone.** The probe's new `assembly.expectedProductCountSource` field now flags this — `source: 'sitemap'` on a classifieds site emits a warning.
+- **Pagination**:
+  - `paginationPattern: { type: 'query', template: 'page', zeroIndexed: true, firstPageHasParam: false }`
+  - 0-indexed: `?page=0` is page 1, `?page=1` is page 2, `?page=N` is page N+1
+  - `firstPageHasParam: false` means the default URL (`/ads?sort_by=...`) IS page 1 — no `&page=0` needed
+  - The last listing page often has 1-10 items, NOT `perPage`. Example gunpost: `(1690 pages × 18) + 3 = 30,423`. The formula is `(totalPages - 1) * perPage + lastPageItems`, not `totalPages * perPage`.
+- **Sticky / promoted listings (classifieds quirk)**: First 3-5 listings on EVERY page are often merchant-promoted/sticky (paid placement), which means their `postDate` is OLDER than the date-sorted rows that follow. The `classifieds-gunpost` adapter handles this via the `.wanted` / `.sold` / `class="sticky"` CSS markers, but the operator must NOT rely on "first-product-on-page" as the newest-first signal — skip the sticky rows. The adapter already filters these in `extractCatalogProducts`.
+- **catalogUrls strategy**: ONE global sorted URL `/ads?sort_by=date_pub&sort_order=DESC` covers all listings. **Do NOT** use per-category facet URLs as catalogUrls — Drupal Views rewrites the pagination `<a>` hrefs when a facet is applied, so walking a facet catalogUrl works, but managing 15+ facet URLs defeats the "minimum overlap" goal.
+- **Wanted / Sold detection**: Handled by the `classifieds-gunpost` adapter at `classifieds-gunpost.ts:33-52` and `:150-167`. Profile should declare the rules in `classifiedRules.soldDetection` and `classifiedRules.wantedDetection` for documentation (not consumed by code).
+- **Reference audit**: `gunpost.ca` profile (2026-04-11 manual audit, 36,881 DB active products vs 30,423 expected / 22,739 sitemap — DB > expected because the maintain-phase verifies detail pages and keeps listings active longer than the catalog walk. Pagination walk: 1691 pages × 18 + 3 lastPage items. Sort verified: probe found `sort=created&order=desc` on facet URL; manual audit stores `sort_by=date_pub&sort_order=DESC` from bare `/ads` — both are Drupal Views sort forms of the same column).
+
 ### Step 3: CatalogUrl selection
 
 Use the probe's category tree + nav links output as starting material.
@@ -131,6 +160,7 @@ Use the probe's ID-jump results. Apply the **3-outcome decision tree** (Mistake 
 | Shopify | Sort uses `published_at`, not `created_at` | Test ALL timestamp fields for strict monotonicity | 32 |
 | BC Stencil | False negative on default=newest | Use `?sort=alphaasc` as counter-control. 3-outcome test, not 2 | 29 |
 | Celerant/ColdFusion | Sort is in URL PATH (`/orderby/<value>/`), not query param. Multiple newest-style options (`new-arrivals` vs `newest-rcvd`) produce different orderings. | `sortScheme: 'path'`. Use probe's `newestCandidates[0]` (highest ID-jump score) OR verify manually — canonical fleet sort is `new-arrivals`. | 36 |
+| Drupal Views (classifieds) | Two different URL forms expose the SAME sort: `?sort_by=<col>&sort_order=DESC` on bare catalog page, `?sort=<col>&order=desc` on facet-filtered page. Probe may detect either depending on which URL it could reach. | Re-read the bare catalog URL's `<select>` / `<form>` to get the canonical exposed-form names. Both forms work; prefer the exposed-form on the global URL for `sortParam`. | 37 |
 | SPA (any) | Sort controls are JS, not markup | Drive Playwright UI with `page.on('request', ...)`, don't scan static HTML | 19 |
 | Custom PHP | No sort UI != no sort possible | Cross-reference DOM order against independent signals | 15, 18 |
 
@@ -157,6 +187,7 @@ Use the probe's zero-overlap results. Verify the correct `paginationPattern` typ
 | LightSpeed eCom | `?page=N` silently ignored | Use `suffix-replace` with `page{N}.html`. If `sortParam` exists, bake it into both `match` and `template` | 26 |
 | Wix Stores | Sub-category pagination leaks to global `/shop` | Use ONLY `/shop` with `?page=N` | 27 |
 | Volusion | Needs `searching=Y` for pagination to work with sort | Include `searching=Y` in URL | 24 |
+| Drupal Views (classifieds) | Pagination is 0-indexed AND the last page has fewer items than `perPage`. `?page=0` = page 1. Sitemap lags live listing by 1-3 days. | `paginationPattern: { type: 'query', template: 'page', zeroIndexed: true, firstPageHasParam: false }`. Compute total via `(totalPages - 1) * perPage + lastPageItems`, NOT `totalPages * perPage`. Use pagination-walk as `productCountMethod`, NEVER sitemap alone. | 37 |
 
 **Verification**: pagination MUST work WITH sort param applied. Fetch page 1 + page 2 with sort, confirm zero product overlap.
 
@@ -337,6 +368,7 @@ These rules are encoded in priority order. When multiple rules apply, follow the
 | M32 | Shopify sorts by `published_at`, not `created_at` | Platform = Shopify |
 | M15 | Client-side paginated single-page: jPages/bootpag — set `paginationPattern: null` | Small catalog, JS pagination plugin detected |
 | M18 | "No sort UI" != "no sort possible" — cross-reference DOM order | No `<select>` for sort found |
+| M37 | Drupal Views exposes sort via two different URL forms (`sort_by=<col>&sort_order=DIR` on bare, `sort=<col>&order=dir` on facet). Pick the exposed-form on the global URL for `sortParam`. When probe testUrlWasFacetFiltered=true, re-read bare URL sort dropdown. | Platform = drupal or drupal-commerce, classifieds |
 
 ### Pagination (Mistakes 14, 15, 26, 27)
 
@@ -346,6 +378,7 @@ These rules are encoded in priority order. When multiple rules apply, follow the
 | M26 | LightSpeed eCom: `?page=N` silently ignored — use suffix-replace, bake sortParam into template | Platform = LightSpeed eCom hosted |
 | M27 | Wix Stores: sub-category pagination leaks — use only `/shop` | Platform = Wix Stores |
 | M15 | jPages/bootpag: full catalog in initial HTML, set `paginationPattern: null` | JS client-side pagination detected |
+| M37 | Drupal Views is 0-indexed (`?page=0`=page 1). Last page has partial items. Set `zeroIndexed: true`, `firstPageHasParam: false`. | Platform = drupal / drupal-commerce |
 
 ### Product Count (Mistakes 1, 13, 29)
 
@@ -354,6 +387,7 @@ These rules are encoded in priority order. When multiple rules apply, follow the
 | M1 | Filter sitemap `<loc>` to product URL pattern only, HEAD-test 5 random entries | Counting from sitemap |
 | M13 | Never trust stored `expectedProductCount` — re-verify via API/sitemap | Any existing site |
 | M29 | BC Stencil page-1 regex counts are ALWAYS inflated (double-render) — use `sort -u` or production dedup | Platform = BC Stencil |
+| M37 | Classifieds sitemaps LAG live listings by 1-3 days — prefer pagination-walk. Formula: `(totalPages - 1) * perPage + lastPageItems` | Adapter = classifieds-gunpost OR platform = drupal + adapter suggests classifieds |
 
 ### CatalogUrl Selection (Mistakes 4, 5, 9, 12)
 

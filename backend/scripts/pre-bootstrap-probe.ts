@@ -15,6 +15,20 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { execSync } from 'child_process';
 import path from 'path';
+import * as https from 'https';
+import * as http from 'http';
+import { Agent as UndiciAgent } from 'undici';
+
+// Custom HTTP(S) agents with generous maxHeaderSize so sites like Drupal that
+// emit enormous `x-drupal-cache-tags` (16KB+) headers don't trip Node's
+// default 16KB parser limit. Without this, axios throws HPE_HEADER_OVERFLOW
+// and the native-fetch fallback ALSO throws UND_ERR_HEADERS_OVERFLOW —
+// producing false "site unreachable" signals in Phase 3.
+const BIG_HEADER_HTTP_AGENT = new http.Agent({ keepAlive: true, maxHeaderSize: 131072 } as any);
+const BIG_HEADER_HTTPS_AGENT = new https.Agent({ keepAlive: true, maxHeaderSize: 131072 } as any);
+
+// Undici dispatcher with raised header size for the native-fetch fallback.
+const BIG_HEADER_UNDICI = new UndiciAgent({ maxResponseSize: -1, headersTimeout: 20000, bodyTimeout: 20000, connect: { timeout: 20000 }, maxHeaderSize: 131072 } as any);
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -89,6 +103,18 @@ interface PaginationPhase {
   page2Products: string[];
   zeroOverlap: Confidence;
   paginationLinks: string[];
+  // Drupal Views and some custom paginators use 0-indexed page numbers —
+  // `?page=0` = page 1, `?page=1` = page 2. Detected by scanning paginationLinks
+  // for a `page=0` reference. This signal feeds into profile.paginationPattern.zeroIndexed.
+  zeroIndexed: Confidence;
+  // Some sites render the first page with NO pagination param at all
+  // (`/catalog` is page 1, `/catalog?page=2` is page 2) while others
+  // always include the param (`?page=1` is page 1). Detected by checking
+  // whether the "current" pagination link has an explicit page value.
+  firstPageHasParam: Confidence;
+  // Total pages observed from last-page / highest-page pagination links.
+  // Useful for productCount estimation: totalPages * perPage ≈ total items.
+  totalPagesObserved: Confidence;
 }
 
 interface AssemblyPhase {
@@ -96,6 +122,18 @@ interface AssemblyPhase {
   completedPhases: string[];
   failedPhases: string[];
   warnings: string[];
+  // Derived expected product count — NULL when ingredients aren't all present.
+  // Combines Phase 6 totalPagesObserved + perPage. Falls back to sitemap count
+  // when no pagination was observed. Always record the `source` so the skill
+  // judgment layer knows whether to trust it or run a manual pagination walk.
+  expectedProductCount: Confidence;
+  expectedProductCountSource: string | null; // 'pagination-walk' | 'sitemap' | 'api' | null
+  // Flag set when Phase 5/6 had to test against a facet-filtered URL because
+  // the bare category URL failed (WAF challenge, robots.txt disallow, etc.).
+  // When true, totalPagesObserved is a FACET count, NOT the global count —
+  // the skill must re-verify the global count separately before writing the
+  // profile's expectedProductCount.
+  testUrlWasFacetFiltered: Confidence;
 }
 
 interface ProbeReport {
@@ -138,6 +176,10 @@ async function nativeFetchText(url: string, headers: Record<string, string>): Pr
       headers,
       redirect: 'follow',
       signal: AbortSignal.timeout(20000),
+      // Custom undici dispatcher with raised maxHeaderSize so Drupal-style
+      // cache-tags headers (16KB+) don't produce UND_ERR_HEADERS_OVERFLOW.
+      // @ts-ignore — undici dispatcher is a valid fetch option at runtime.
+      dispatcher: BIG_HEADER_UNDICI,
     });
     const text = await resp.text();
     return {
@@ -163,6 +205,8 @@ async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{
       maxRedirects: 10,
       validateStatus: () => true,
       responseType: 'text',
+      httpAgent: BIG_HEADER_HTTP_AGENT,
+      httpsAgent: BIG_HEADER_HTTPS_AGENT,
       ...opts,
       headers: mergedHeaders,
     });
@@ -196,6 +240,8 @@ async function safeFetchJson(url: string, opts: Record<string, any> = {}): Promi
       timeout: 20000,
       maxRedirects: 10,
       validateStatus: () => true,
+      httpAgent: BIG_HEADER_HTTP_AGENT,
+      httpsAgent: BIG_HEADER_HTTPS_AGENT,
       ...opts,
       headers: mergedHeaders,
     });
@@ -218,6 +264,9 @@ function extractFirstProducts($: cheerio.CheerioAPI, baseUrl: string, limit = 5)
   const seen = new Set<string>();
 
   // Selector priority order — same as GenericRetailAdapter.extractCatalogProducts
+  // PLUS Drupal-based listing selectors (node--type-classified / data-history-node-id)
+  // so classifieds-style Drupal sites (gunpost.ca, other Drupal Views listings) are
+  // extractable even though they don't use the word "product" anywhere.
   const SELECTORS = [
     '[data-product-id]', 'li.product', 'li[class*="product"]',
     '[class*="product-card"]', '[class*="product-item"]', '[class*="product-tile"]',
@@ -231,6 +280,12 @@ function extractFirstProducts($: cheerio.CheerioAPI, baseUrl: string, limit = 5)
     '[class*="product-index"]', '.listing-item', '[class*="ols-product"]',
     '.store_product_list_wrapper', '.grid-product',
     '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]',
+    // Drupal listings — classifieds, auction, commerce. Matches gunpost.ca's
+    // `<article data-history-node-id="N" class="node--type-classified gunpost-teaser">`.
+    'article[data-history-node-id]',
+    '[class*="node--type-classified"]',
+    '[class*="node--type-product"]',
+    '[class*="node--view-mode-teaser"]',
   ];
 
   for (const selector of SELECTORS) {
@@ -259,11 +314,16 @@ function extractProductTitles($: cheerio.CheerioAPI, limit = 3): string[] {
   const titles: string[] = [];
   // Extend selectors to match Celerant-style `a.product` + `article[class*=product]`
   // and also accept <span class="name"> which is the Celerant title container.
+  // Also handle Drupal classifieds articles where title is inside `.field--name-title`
+  // or a wrapping <h2>/<h3> anchor.
   const SELECTORS = [
     '[data-product-id]', 'li.product', '[class*="product-card"]',
     '[class*="product-item"]', '.card', '.products-list .item',
     '.product-thumb', 'div.product',
     'a.product', 'article[class*="product"]',
+    'article[data-history-node-id]',
+    '[class*="node--type-classified"]',
+    '[class*="node--type-product"]',
   ];
   for (const sel of SELECTORS) {
     $(sel).each((_, el) => {
@@ -294,6 +354,7 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
     const resp = await axios.head(inputUrl, {
       timeout: 15000, maxRedirects: 10, validateStatus: () => true,
       headers: { 'User-Agent': DESKTOP_UA },
+      httpAgent: BIG_HEADER_HTTP_AGENT, httpsAgent: BIG_HEADER_HTTPS_AGENT,
     });
     if (resp.request?.res?.responseUrl) {
       canonicalUrl = resp.request.res.responseUrl;
@@ -403,6 +464,7 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
     try {
       const r = await axios.get(origin, {
         timeout: 15000, maxRedirects: 10, validateStatus: () => true, headers,
+        httpAgent: BIG_HEADER_HTTP_AGENT, httpsAgent: BIG_HEADER_HTTPS_AGENT,
       });
       uaResults.push({ ua: t.ua, label: t.label, status: r.status, method: 'axios' });
     } catch (e: any) {
@@ -510,6 +572,20 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
       /__VIEWSTATE|__EVENTVALIDATION|\.aspx\b/i.test(h) ||
       /asp\.net/i.test(hd['x-powered-by'] || '') ||
       sawAspNetSession],
+    // Drupal signatures — header-first (most authoritative), then HTML markers.
+    // More specific (Drupal Commerce) checked BEFORE plain Drupal so
+    // first-match-wins lands on the more informative tag.
+    // `x-generator: Drupal 10` + `x-commerce-core: 2` → Drupal Commerce.
+    // Plain Drupal without Commerce is still Drupal (classifieds, news, etc.).
+    ['drupal-commerce', (_h, hd) =>
+      hd['x-commerce-core'] !== undefined &&
+      (/^Drupal\b/i.test(hd['x-generator'] || '') || hd['x-drupal-cache-tags'] !== undefined)],
+    ['drupal', (h, hd) =>
+      /^Drupal\b/i.test(hd['x-generator'] || '') ||
+      /data-drupal-selector|drupalSettings|data-history-node-id|\/sites\/default\/files\//i.test(h) ||
+      hd['x-drupal-cache'] !== undefined ||
+      hd['x-drupal-dynamic-cache'] !== undefined ||
+      hd['x-drupal-cache-tags'] !== undefined],
     ['wordpress', (h) => /wp-content/i.test(h)],
   ];
 
@@ -548,6 +624,17 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
   if (accessServerHeader && /adobe|coldfusion|lucee|openbd/i.test(accessServerHeader)) {
     markers.push(`server:${accessServerHeader}`);
   }
+
+  // Response-header markers — useful for downstream judgment even when the
+  // platform regex didn't promote them. These headers are the authoritative
+  // signal for Drupal / Drupal Commerce / WP and cannot be forged by theme
+  // customization the way HTML can.
+  const xGen = headers['x-generator'];
+  if (xGen) markers.push(`x-generator:${String(xGen).slice(0, 80)}`);
+  const xCommerce = headers['x-commerce-core'];
+  if (xCommerce) markers.push(`x-commerce-core:${xCommerce}`);
+  if (headers['x-drupal-cache'] || headers['x-drupal-dynamic-cache']) markers.push('header:x-drupal-cache');
+  if (headers['x-drupal-cache-tags']) markers.push('header:x-drupal-cache-tags');
 
   // JS overlay detection
   let jsOverlay: string | null = null;
@@ -607,7 +694,11 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
         const ecwidResp = await axios.post(
           `https://us-vir2-storefront-api.ecwid.com/storefront/api/v1/${storeId}/catalog/search`,
           { lang: 'en', pagination: { offset: 0, limit: 1 } },
-          { timeout: 15000, headers: { 'Content-Type': 'application/json', Origin: origin, Referer: `${origin}/` } },
+          {
+            timeout: 15000,
+            headers: { 'Content-Type': 'application/json', Origin: origin, Referer: `${origin}/` },
+            httpAgent: BIG_HEADER_HTTP_AGENT, httpsAgent: BIG_HEADER_HTTPS_AGENT,
+          },
         );
         if (ecwidResp.data?.totalProductsCount !== undefined) {
           apis.push({
@@ -652,6 +743,12 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
       /\/productdetails\.asp/i,            // Volusion
       /\/catalog\/product\/view\/id\/\d+/i, // Magento
       /route=product\/product/i,            // OpenCart
+      // Drupal classifieds 3-segment nested path — /<cat>/<subcat>/<location>/<slug>
+      // e.g. gunpost.ca /firearms/rifles/edmonton/mauser-sporter-243-win-24
+      // Match 4 or more slash-separated path segments after the domain, each
+      // non-empty. This is intentionally loose; categoryPatterns filter out
+      // obvious nav paths upstream.
+      /\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]{3,}\/?$/i,
     ];
     // Obvious category / navigation negative patterns
     const categoryPatterns = [
@@ -684,13 +781,21 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
       const rawLocs = smResp.data.match(/<loc>[^<]+<\/loc>/g) || [];
       // Detect sitemap index — count <sitemap> entries (not <url>)
       const isIndex = /<sitemap>/.test(smResp.data) && !/<url>/.test(smResp.data.slice(0, 2000));
-      if (isIndex && sitemapIndexFollowed < 3) {
-        // Follow the first product-looking sub-sitemap
-        const subSitemaps = rawLocs.filter(l => /product|item|shop/i.test(l));
-        const candidate = subSitemaps[0] || rawLocs[0];
-        if (candidate) {
+      if (isIndex) {
+        // Follow ALL sub-sitemaps — previous logic (product|item|shop filter,
+        // then pick [0]) missed sites whose index uses generic child URLs
+        // like `/sitemap.xml?page=1` (gunpost.ca's Drupal simple_sitemap).
+        // Cap total follows at 5 to avoid runaway work on pathological sites.
+        const MAX_FOLLOWS = 5;
+        // Prefer product-looking children first, then fall back to others
+        const prioritized = [
+          ...rawLocs.filter(l => /product|item|shop/i.test(l)),
+          ...rawLocs.filter(l => !/product|item|shop/i.test(l)),
+        ];
+        for (const child of prioritized) {
+          if (sitemapIndexFollowed >= MAX_FOLLOWS) break;
           sitemapIndexFollowed++;
-          const subUrl = candidate.replace(/^<loc>/, '').replace(/<\/loc>$/, '').trim();
+          const subUrl = child.replace(/^<loc>/, '').replace(/<\/loc>$/, '').trim();
           const sub = await safeFetch(subUrl);
           if (sub && sub.status === 200) {
             const subLocs = sub.data.match(/<loc>[^<]+<\/loc>/g) || [];
@@ -744,6 +849,20 @@ async function probeAdapter(origin: string, platformPhase: PlatformPhase): Promi
   let suggestedAdapter: string;
   let adapterConf: Confidence['confidence'] = 'medium';
 
+  // Drupal classifieds detection — look for node--type-classified / gunpost-teaser
+  // markers in the homepage/catalog HTML. If present alongside platform=drupal*,
+  // suggest the purpose-built `classifieds-gunpost` adapter (domain-generic
+  // for any Drupal-classified-node-type site using the same view mode and
+  // `data-history-node-id` convention). Callers can still override.
+  const isDrupalPlatform = platform === 'drupal' || platform === 'drupal-commerce';
+  let isDrupalClassifieds = false;
+  if (isDrupalPlatform) {
+    const homeResp = await safeFetch(origin);
+    if (homeResp && /node--type-classified|gunpost-teaser|classified-teaser/i.test(homeResp.data)) {
+      isDrupalClassifieds = true;
+    }
+  }
+
   if (platform === 'woocommerce' && wpRestApi) {
     suggestedAdapter = 'woocommerce';
     adapterConf = 'high';
@@ -752,6 +871,12 @@ async function probeAdapter(origin: string, platformPhase: PlatformPhase): Promi
     adapterConf = 'high';
   } else if (platform === 'ecwid-on-wordpress' && ecwidApi) {
     suggestedAdapter = 'generic-retail'; // Ecwid handled as apiAlternative in GenericRetail
+    adapterConf = 'high';
+  } else if (isDrupalClassifieds) {
+    // The classifieds-gunpost adapter's selectors (node--type-classified,
+    // gunpost-teaser, data-history-node-id) match any Drupal site using
+    // the standard classifieds content type + default teaser view mode.
+    suggestedAdapter = 'classifieds-gunpost';
     adapterConf = 'high';
   } else if (platform) {
     suggestedAdapter = 'generic-retail';
@@ -791,9 +916,18 @@ async function probeAdapter(origin: string, platformPhase: PlatformPhase): Promi
       // Must look like a category/collection — generic platform-native paths
       // + some common domain-agnostic markers. Domain-specific category names
       // (firearms/rifles/etc.) are NOT in this list to keep the probe generic.
-      if (/\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|all|products|catalog)\b/i.test(href)) {
+      // Added: classifieds-style listing paths (/ads, /listings, /classifieds)
+      // so Drupal / custom classifieds sites are detected (gunpost.ca uses /ads).
+      if (/\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|all|products|catalog|ads|listings|classifieds)\b/i.test(href)) {
         try {
-          categoryUrl = href.startsWith('http') ? href : new URL(href, origin).toString();
+          const abs = href.startsWith('http') ? href : new URL(href, origin).toString();
+          // Same-host only — never drift to a subdomain. gunpost.ca's nav
+          // links to `shop.gunpost.ca/` (a separate WooCommerce merch site);
+          // auditing that subdomain produces wrong platform/adapter output
+          // for the origin site being probed.
+          const abdOrigin = new URL(abs).origin;
+          if (abdOrigin !== origin) return;
+          categoryUrl = abs;
         } catch {}
       }
     });
@@ -899,7 +1033,7 @@ async function probeCatalog(origin: string, platformPhase: PlatformPhase): Promi
 
 // ── Phase 5: Sort Verification ─────────────────────────────────────────────────
 
-async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPhase: CatalogPhase): Promise<SortPhase> {
+async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPhase: CatalogPhase, adapterPhase?: AdapterPhase): Promise<SortPhase> {
   log('[Phase 5] Sort Verification...');
 
   const platform = platformPhase.platform.value as string | null;
@@ -913,8 +1047,8 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
       const url = new URL(u);
       // Strip path-based sort segments
       url.pathname = url.pathname.replace(/\/(orderby|sort_by|sort-by|sort|order)\/[A-Za-z][A-Za-z0-9_-]+/g, '');
-      // Strip query-based sort params
-      for (const key of ['sort', 'order', 'sortby', 'sortBy', 'product_list_order', 'product_list_dir', 'orderby']) {
+      // Strip query-based sort params — includes Drupal Views `sort_by` + `sort_order`
+      for (const key of ['sort', 'order', 'sortby', 'sortBy', 'product_list_order', 'product_list_dir', 'orderby', 'sort_by', 'sort_order']) {
         url.searchParams.delete(key);
       }
       return url.toString().replace(/\/+$/, '');
@@ -922,17 +1056,28 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
   }
 
   let testUrl: string | null = null;
+  // Prefer the URL Phase 3 already verified extracts products. This avoids
+  // false "sort not tested" verdicts on sites where the bare category URL
+  // returns a WAF challenge but a sub-category URL (CF rule-selective) works.
+  // Gunpost.ca is the canonical case: `/ads` returns 403 with cf-mitigated:challenge,
+  // but `/ads?f[0]=c:1` (facet-filtered) returns 200.
+  if (adapterPhase?.extractionTestResult?.url && adapterPhase.extractionTestResult.productsFound > 0) {
+    testUrl = adapterPhase.extractionTestResult.url;
+  }
   // Prefer a category from the tree
-  if (catalogPhase.categoryTree.length > 0) {
+  if (!testUrl && catalogPhase.categoryTree.length > 0) {
     const cat = catalogPhase.categoryTree.find(c => (c.count || 0) > 5) || catalogPhase.categoryTree[0];
     testUrl = cat.url.startsWith('http') ? cat.url : `${origin}${cat.url}`;
   }
   // Fallback: pick from nav links (generic platform-native paths only).
   // Prefer paths WITHOUT a pre-baked /orderby/... segment so the default-sort
   // baseline is unbiased.
+  // Classifieds-style /ads|/listings|/classifieds are included so Drupal-based
+  // classifieds (gunpost.ca) and custom classifieds sites get sort/pagination
+  // verified too.
   if (!testUrl && catalogPhase.navLinks.length > 0) {
     const candidates = catalogPhase.navLinks.filter(p =>
-      /\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|catalog|products)\b/i.test(p)
+      /\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|catalog|products|ads|listings|classifieds)\b/i.test(p)
     );
     // Bare URL (no /orderby|/sort path segment) is preferred
     const bare = candidates.find(p => !/\/(orderby|sort_by|sort-by|sort|order)\//i.test(p));
@@ -990,16 +1135,34 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
     }
   });
 
-  // Also check <a> based sort (Odoo style): href carries query params
-  $('a[href*="order="], a[href*="sort="], a[href*="sortby="]').each((_, el) => {
+  // Also check <a> based sort (Odoo + Drupal Views style): href carries
+  // query params. Drupal Views uses `sort_by=<column>&sort_order=ASC|DESC`;
+  // Odoo uses `order=<column>+<dir>`; some Drupal themes use a plain
+  // `sort=<column>&order=<dir>` pair on <a> tags instead of <select>.
+  $('a[href*="order="], a[href*="sort="], a[href*="sortby="], a[href*="sort_by="]').each((_, el) => {
     const href = $(el).attr('href') || '';
     const text = $(el).text().trim();
-    const paramMatch = href.match(/[?&](order|sort|sortby|product_list_order)=([^&#]+)/);
+    const paramMatch = href.match(/[?&](order|sort|sortby|sort_by|product_list_order)=([^&#]+)/);
     if (paramMatch && text) {
-      const key = `${paramMatch[1]}||${paramMatch[2]}`;
+      // Capture paired direction params (sort_order for Drupal Views,
+      // order for bare Drupal-sort anchors) so the option value reflects
+      // the full sort directive. Without this, ID-jump builds `?sort=created`
+      // (ASC default) instead of `?sort=created&order=desc` and misses the
+      // newest-first intent the link encodes.
+      let fullValue = paramMatch[2];
+      let paired: string | null = null;
+      if (paramMatch[1] === 'sort_by') {
+        const m = href.match(/[?&]sort_order=([^&#]+)/);
+        if (m) paired = `sort_order=${m[1]}`;
+      } else if (paramMatch[1] === 'sort') {
+        const m = href.match(/[?&]order=([^&#]+)/);
+        if (m) paired = `order=${m[1]}`;
+      }
+      if (paired) fullValue = `${paramMatch[2]}&${paired}`;
+      const key = `${paramMatch[1]}||${fullValue}`;
       if (!sortOptionsSeen.has(key)) {
         sortOptionsSeen.add(key);
-        sortOptions.push({ value: paramMatch[2], text, selectName: paramMatch[1], selectId: '' });
+        sortOptions.push({ value: fullValue, text, selectName: paramMatch[1], selectId: '' });
       }
     }
   });
@@ -1066,7 +1229,15 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
   // warehouse" — both match the newest regex but produce DIFFERENT orderings).
   // Probing all candidates and picking the one that produces the most distinct
   // ordering avoids silently choosing the wrong one.
-  const NEWEST_REGEX = /newest|new.to.old|most.recent|new[- ]?arrival|date.*desc|added.*desc|created.*desc|published.*desc|addedtimedesc|created-descending|published-descending|recent/i;
+  // NEWEST_REGEX matches both text labels ("Newest", "New Arrivals", "Posted Date")
+  // and machine values (`created`, `date_pub`, `addedTimeDesc`, etc.). The
+  // `created&order=desc` / `sort_by=date_pub&sort_order=DESC` full option
+  // values produced by the anchor-pair capture above are covered by the
+  // `created.*desc` and `date.*desc` fragments.
+  // The bare `posted` / `date_pub` / `created` words match the "newest by date"
+  // intent found on Drupal classifieds sites where the sort label is literally
+  // "Posted Date" rather than "Newest".
+  const NEWEST_REGEX = /newest|new.to.old|most.recent|new[- ]?arrival|date.*desc|added.*desc|created.*desc|published.*desc|addedtimedesc|created-descending|published-descending|recent|posted|\bcreated\b|\bdate_pub\b/i;
   const COUNTER_REGEX = /alpha.*asc|name.*asc|\ba.*z\b|title.*asc|nameasc|alphaasc/i;
 
   const newestCandidates = sortOptions.filter(o => NEWEST_REGEX.test(o.text + ' ' + o.value));
@@ -1077,22 +1248,38 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
 
   // Helper: build a URL applying a given sort option. Supports BOTH query-param
   // schemes (`?order=<value>`) and path schemes (`/orderby/<value>/`).
+  // Handles paired values like `created&order=desc` or `date_pub&sort_order=DESC`
+  // emitted by the anchor-pair capture — split on `&` and apply each sub-param.
   const buildSortUrl = (opt: SortOption): string => {
     if (sortScheme === 'path' && pathSortSegmentFound) {
-      // Path-based: insert `/<keyword>/<value>` before the trailing slash
+      // Path-based: insert `/<keyword>/<value>` before the trailing slash.
+      // If the value has paired query params (unlikely for path-scheme sites),
+      // strip them for the path insertion.
+      const pathValue = opt.value.split('&')[0];
       const base = testUrl!.replace(/\/+$/, '');
-      // If the URL already contains the sort segment, replace its value
       const re = new RegExp(`/${pathSortSegmentFound}/[A-Za-z][A-Za-z0-9_-]*`);
-      if (re.test(base)) return base.replace(re, `/${pathSortSegmentFound}/${opt.value}`);
-      return `${base}/${pathSortSegmentFound}/${opt.value}`;
+      if (re.test(base)) return base.replace(re, `/${pathSortSegmentFound}/${pathValue}`);
+      return `${base}/${pathSortSegmentFound}/${pathValue}`;
     }
     // Query-param scheme
     const base = new URL(testUrl!);
     if (opt.selectName) {
-      base.searchParams.set(opt.selectName, opt.value);
+      // Split paired values (e.g. `created&order=desc` → `sort=created` +
+      // `order=desc`). The primary value is the first sub-token; any
+      // `key=value` parts after `&` are applied as additional searchParams.
+      const parts = opt.value.split('&');
+      const primaryValue = parts[0];
+      base.searchParams.set(opt.selectName, primaryValue);
+      for (const extra of parts.slice(1)) {
+        const eq = extra.indexOf('=');
+        if (eq > 0) {
+          base.searchParams.set(extra.slice(0, eq), extra.slice(eq + 1));
+        }
+      }
       return base.toString();
     }
-    // <a>-based: assume the option value is a literal query param
+    // <a>-based without selectName: assume the option value is a literal
+    // query string fragment
     return testUrl + (testUrl!.includes('?') ? '&' : '?') + `${opt.selectName || 'sort'}=${opt.value}`;
   };
 
@@ -1187,18 +1374,23 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
 
 // ── Phase 6: Pagination Verification ───────────────────────────────────────────
 
-async function probePagination(origin: string, catalogPhase: CatalogPhase, platformPhase: PlatformPhase): Promise<PaginationPhase> {
+async function probePagination(origin: string, catalogPhase: CatalogPhase, platformPhase: PlatformPhase, adapterPhase?: AdapterPhase): Promise<PaginationPhase> {
   log('[Phase 6] Pagination Verification...');
 
   // Find a category page to test
   let testUrl: string | null = null;
-  if (catalogPhase.categoryTree.length > 0) {
+  // Prefer Phase 3's verified URL (see Phase 5 rationale) so CF-selective
+  // WAFs don't kill Phase 6 when the bare catalog URL is blocked.
+  if (adapterPhase?.extractionTestResult?.url && adapterPhase.extractionTestResult.productsFound > 0) {
+    testUrl = adapterPhase.extractionTestResult.url;
+  }
+  if (!testUrl && catalogPhase.categoryTree.length > 0) {
     const cat = catalogPhase.categoryTree.find(c => (c.count || 0) > 30) || catalogPhase.categoryTree[0];
     testUrl = cat.url.startsWith('http') ? cat.url : `${origin}${cat.url}`;
   }
   if (!testUrl && catalogPhase.navLinks.length > 0) {
     const candidate = catalogPhase.navLinks.find(p =>
-      /\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|catalog|products)\b/i.test(p)
+      /\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|catalog|products|ads|listings|classifieds)\b/i.test(p)
     );
     if (candidate) testUrl = `${origin}${candidate}`;
   }
@@ -1206,6 +1398,8 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
   const empty: PaginationPhase = {
     paginationPattern: conf(null, 'none'), perPage: conf(null, 'none'),
     page1Products: [], page2Products: [], zeroOverlap: conf(null, 'none'), paginationLinks: [],
+    zeroIndexed: conf(null, 'none'), firstPageHasParam: conf(null, 'none'),
+    totalPagesObserved: conf(null, 'none'),
   };
 
   if (!testUrl) return empty;
@@ -1342,6 +1536,34 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
   const overlap = page2Products.filter(u => page1Products.includes(u));
   const zeroOverlap = page2Products.length > 0 && overlap.length === 0;
 
+  // Detect 0-indexed pagination (Drupal Views convention).
+  // Signal: any pagination link with `?page=0` OR `&page=0` literal. Matches
+  // gunpost.ca (`<a href="?sort_by=...&page=0" title="Current page">`). This
+  // feeds profile.paginationPattern.zeroIndexed.
+  const zeroIndexed = paginationLinks.some(l => /[?&]page=0(&|$|#)/.test(l));
+
+  // Detect firstPageHasParam — if the page-0 or page-1 link is the
+  // "Current page" anchor, the param is explicit; otherwise the default
+  // URL (no page param) IS page 1.
+  const firstPageHasParam = !!paginationLinks.find(l =>
+    /title=("Current page"|'Current page')/i.test(l) ||
+    /aria-current=("page"|'page')/i.test(l)
+  );
+
+  // Max page observed across the page-link DOM. Useful for product-count
+  // estimation (totalPages * perPage ≈ total count). gunpost.ca advertises
+  // `page=1693` on the Rifles facet (1694 pages × 18 = 30,492 ≈ 30,423).
+  let totalPages: number | null = null;
+  for (const l of paginationLinks) {
+    const m = l.match(/[?&]page=(\d+)/);
+    if (m) {
+      const n = parseInt(m[1]);
+      if (!isNaN(n) && (totalPages === null || n > totalPages)) totalPages = n;
+    }
+  }
+  // If 0-indexed, totalPages is max-observed + 1 (since index 0 = page 1)
+  const totalPagesAdjusted = totalPages !== null ? (zeroIndexed ? totalPages + 1 : totalPages) : null;
+
   return {
     paginationPattern: conf(detectedPattern, detectedPattern && zeroOverlap ? 'high' : detectedPattern ? 'medium' : 'none'),
     perPage: conf(page1Products.length > 0 ? page1Products.length : null, page1Products.length > 0 ? 'medium' : 'none'),
@@ -1349,6 +1571,9 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
     page2Products: page2Products.slice(0, 5),
     zeroOverlap: conf(zeroOverlap, page2Products.length > 0 ? 'high' : 'none'),
     paginationLinks: paginationLinks.slice(0, 10),
+    zeroIndexed: conf(zeroIndexed, zeroIndexed ? 'high' : paginationLinks.length > 0 ? 'medium' : 'none'),
+    firstPageHasParam: conf(firstPageHasParam, firstPageHasParam ? 'high' : paginationLinks.length > 0 ? 'medium' : 'none'),
+    totalPagesObserved: conf(totalPagesAdjusted, totalPagesAdjusted !== null ? 'medium' : 'none'),
   };
 }
 
@@ -1440,7 +1665,70 @@ function assemble(
   const phaseErrors = errors.map(e => e.phase);
   const overallConfidence = failed.length === 0 ? 'high' : failed.length <= 2 ? 'medium' : 'low';
 
-  return { overallConfidence, completedPhases: completed, failedPhases: failed, warnings };
+  // Detect whether the pagination/sort test URL was facet-filtered. Common
+  // signals: URL contains `f[0]=` (Drupal Views facet), `category=` query
+  // param, etc. When true, totalPagesObserved is a SUBSET count, not the
+  // global count — the skill must warn the operator.
+  const probeTestUrl = adapter.extractionTestResult?.url || '';
+  const FACET_FILTERED_RE = /(?:[?&](?:f(?:\[|%5B)\d+(?:\]|%5D)=|category=|cat=|taxonomy=|filter=)|\/(?:category|department|brand)\/)/i;
+  const wasFacetFiltered = FACET_FILTERED_RE.test(probeTestUrl);
+
+  // Derive an expected product count from the probe ingredients. Priority:
+  //   1. API product count (WP REST, WC Store API, Ecwid totalProductsCount)
+  //   2. Pagination walk (totalPages * perPage) — only when NOT facet-filtered
+  //   3. Sitemap count (always a fallback — may lag for classifieds)
+  let expectedCount: number | null = null;
+  let expectedSource: string | null = null;
+  // 1. API count
+  const apiCount = platform.availableApis.find(a => a.accessible && a.productCount)?.productCount;
+  if (apiCount && apiCount > 0) {
+    expectedCount = apiCount;
+    expectedSource = 'api';
+  }
+  // 2. Pagination walk (only when we trust the scope)
+  if (!expectedCount) {
+    const totalPages = pagination.totalPagesObserved.value as number | null;
+    const perPage = pagination.perPage.value as number | null;
+    if (totalPages && perPage && !wasFacetFiltered) {
+      expectedCount = totalPages * perPage;
+      expectedSource = 'pagination-walk';
+    }
+  }
+  // 3. Sitemap fallback
+  if (!expectedCount) {
+    const smCount = platform.sitemapProductCount.value as number | null;
+    if (smCount && smCount > 0) {
+      expectedCount = smCount;
+      expectedSource = 'sitemap';
+    }
+  }
+
+  // Warning when we had to facet-filter — skill must re-verify global count
+  if (wasFacetFiltered) {
+    warnings.push(
+      `Probe test URL was facet-filtered (${probeTestUrl}). Phase 6 totalPagesObserved reflects the FACET subset, not the global catalog. Re-verify expectedProductCount by walking the global sorted URL before writing the profile.`,
+    );
+  }
+
+  // Warning when the best-count source is sitemap for a classifieds-style
+  // site (Drupal classifieds, etc.). Sitemap lags the live /ads listing
+  // because expired/sold listings drop from sitemap faster than from the
+  // live catalog.
+  if (expectedSource === 'sitemap' && adapter.suggestedAdapter.value === 'classifieds-gunpost') {
+    warnings.push(
+      `Sitemap product count (${expectedCount}) used for classifieds site. Sitemap typically LAGS the live /ads listing by 1-3 days because expired/sold listings drop from sitemap faster. Prefer a pagination walk of the global sorted catalogUrl for canonical count.`,
+    );
+  }
+
+  return {
+    overallConfidence,
+    completedPhases: completed,
+    failedPhases: failed,
+    warnings,
+    expectedProductCount: conf(expectedCount, expectedCount ? (expectedSource === 'api' ? 'high' : 'medium') : 'none'),
+    expectedProductCountSource: expectedSource,
+    testUrlWasFacetFiltered: conf(wasFacetFiltered, wasFacetFiltered ? 'high' : 'low'),
+  };
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────────
@@ -1516,7 +1804,7 @@ async function main() {
   // Phase 5: Sort
   let sortResult: SortPhase;
   try {
-    sortResult = await probeSort(canonical, platformResult, catalogResult);
+    sortResult = await probeSort(canonical, platformResult, catalogResult, adapterResult);
   } catch (e: any) {
     errors.push({ phase: 'sort', message: e.message, stack: e.stack?.slice(0, 500) });
     sortResult = {
@@ -1532,12 +1820,14 @@ async function main() {
   // Phase 6: Pagination
   let paginationResult: PaginationPhase;
   try {
-    paginationResult = await probePagination(canonical, catalogResult, platformResult);
+    paginationResult = await probePagination(canonical, catalogResult, platformResult, adapterResult);
   } catch (e: any) {
     errors.push({ phase: 'pagination', message: e.message, stack: e.stack?.slice(0, 500) });
     paginationResult = {
       paginationPattern: conf(null, 'none'), perPage: conf(null, 'none'),
       page1Products: [], page2Products: [], zeroOverlap: conf(null, 'none'), paginationLinks: [],
+      zeroIndexed: conf(null, 'none'), firstPageHasParam: conf(null, 'none'),
+      totalPagesObserved: conf(null, 'none'),
     };
   }
 
