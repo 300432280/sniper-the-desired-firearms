@@ -223,14 +223,22 @@ export class GenericRetailAdapter extends AbstractAdapter {
 
     const urls = [...sortedUrls, ...siteUrls];
 
-    // Generic fallback URLs with platform-aware sort params from profile
-    const platform = profile?.platform || '';
-    const platformSort = sortParam || ({
+    // Generic fallback URLs with platform-aware sort params from profile.
+    // Keys are engine families; actual stored tags may be more specific
+    // (e.g. 'bigcommerce-stencil', 'magento-2.x', 'celerant-coldfusion').
+    // Matched via prefix/substring lookup so vendor-specific tags resolve correctly.
+    const platform = (profile?.platform || '').toLowerCase();
+    const platformSortMap: Record<string, string> = {
       bigcommerce: 'sort=newest',
       magento: 'product_list_order=created_at&product_list_dir=desc',
       lightspeed: 'sort=newest',
-      coldfusion: 'sort=new-arrivals',
-    } as Record<string, string>)[platform] || '';
+      coldfusion: 'sort=new-arrivals', // Matches 'coldfusion' and 'celerant-coldfusion'
+    };
+    let resolvedPlatformSort = '';
+    for (const key of Object.keys(platformSortMap)) {
+      if (platform.includes(key)) { resolvedPlatformSort = platformSortMap[key]; break; }
+    }
+    const platformSort = sortParam || resolvedPlatformSort;
 
     urls.push(
       `${origin}/new-arrivals`,
