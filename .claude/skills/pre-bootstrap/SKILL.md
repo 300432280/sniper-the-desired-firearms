@@ -69,6 +69,30 @@ For **unknown or ambiguous platforms**, apply these judgment rules:
 #### Custom PHP / legacy sites (Mistakes 15, 18)
 - **Action**: Cross-reference DOM order against known signals (POST endpoint baseline, sitemap lastmod, RSS, known-recent product). "No sort UI" does NOT mean "no sort possible." Run ONE cross-reference test before concluding `navigate-from-watermark` is impossible.
 
+#### Celerant / ColdFusion storefronts (Mistake 36)
+- **Detection signals** (ALL from Phase 1 probe output):
+  - `platformMarkers` contains `celerant-coldfusion`, `coldfusion`
+  - `wafProbeEvidence.setCookieMarkers.cfid` and `.cftoken` = `true` (CFID + CFTOKEN session cookies on every response)
+  - `wafProbeEvidence.serverHeader` = `"Null"` (literal string — ColdFusion's default when the admin blanks the Server header)
+  - `access.malformedHeaders.value` = `true` (ColdFusion sends trailing-space headers like `X-Frame-Options : SAMEORIGIN` → axios fails with `HPE_INVALID_HEADER_TOKEN`)
+  - Homepage HTML contains `celerantwebservices.com/jquery/*` asset URLs (confirms Celerant vendor specifically; plain ColdFusion without Celerant will not have this)
+- **Key profile fields to set**:
+  - `platform: 'celerant-coldfusion'` (NOT generic `coldfusion` — the vendor-specific tag lets fleet-wide queries target Celerant-specific quirks)
+  - `adapterType: 'generic-retail'` (Celerant has no open API)
+  - `hasWaf: false` if probe shows all 200s with CFID/CFTOKEN and no cf-ray/x-sucuri/visid_incap
+  - **`wafWorkaround`**: MUST be set to `{ method: 'undici-fallback', notes: 'Celerant/ColdFusion sends malformed HTTP/1.1 headers (trailing whitespace before colons like "X-Frame-Options : SAMEORIGIN"). Node's llhttp parser throws HPE_INVALID_HEADER_TOKEN. Project http-client.ts catches "Parse Error" from axios and falls back to native fetch via nativeFetchFallback() at lines 277-302. Playwright NOT required.' }`. This field is INFORMATIONAL — the production code path at `http-client.ts:344-347` handles it automatically, but the workaround must be recorded so future auditors understand why every fetch log line contains "Parse Error".
+  - `needsPlaywright: false` (the native-fetch fallback is sufficient; do NOT set true)
+- **Sort scheme**: `sort.sortScheme.value === 'path'` — Celerant encodes sort in the URL PATH as `/orderby/<value>/`, NOT as a query parameter. Profile must have `sortParam: ""` (empty, because sort is already baked into the catalogUrl) and each `catalogUrl` must include `/orderby/<value>/perpage/<N>` segments.
+- **Sort option disambiguation**: Celerant sites typically expose BOTH `new-arrivals` (= newest added to storefront) AND `newest-rcvd` (= newest received by warehouse) as newest-style options. Both match the newest regex. The probe ranks candidates via ID-jump score — the canonical merchant-sort in the fleet (3 Celerant sites verified) is `new-arrivals`. If the probe's `sort.newestCandidates[0].value` differs from `new-arrivals`, re-run the ID-jump manually: compare `/orderby/new-arrivals/perpage/36` first-product vs `/orderby/newest-rcvd/perpage/36` first-product and see which one matches the merchant's expectation of "newest" (usually the one with the HIGHEST numeric ID in the product slug — Celerant item IDs are monotonically incrementing integers).
+- **Pagination**: `paginationPattern: { type: 'path', template: '/page/{N}' }` — and the `/page/{N}` segment attaches AFTER the `/orderby/<value>/perpage/<N>` segment (e.g. `/all-products/browse/orderby/new-arrivals/perpage/36/page/2`).
+- **Product count**: Celerant renders the `<select id="perpage">` with a dynamic final option `value="<N>" label="All"` where N is the total storefront-visible count. Extract via regex `/value="([0-9]+)"[^>]*>\s*All\s*<\/option>/`. This is MORE reliable than walking pagination or the sitemap:
+  - Sitemap over-counts by ~20-25% because it includes out-of-stock special-order items hidden from browse listings.
+  - Walking pagination gives a dedupe-noisy count (3,114-3,117 unique vs the "All" option's 3,117-3,153 — values fluctuate per request due to cache jitter).
+- **CatalogUrl strategy**: a single top-level URL `/all-products/browse/orderby/<canonical-newest>/perpage/36` usually covers 100% of storefront-visible products. Verify by: (a) reading the `<select id="perpage">` "All" option for ground truth, (b) walking pages until extraction returns 0 products, (c) confirming the deduped count matches "All" within ±3 (cache jitter tolerance).
+- **Watermark**: `navigate-from-watermark` via path-based sort `/orderby/<canonical-newest>/`. `api-date-since-watermark` NOT viable (no API). Source ID extraction: product URLs are `/shop/<slug>-<numericId>`; the numeric ID at the end is the stable Celerant item ID. The regex `/-(\d{4,})(?:[?#]|$)/` at `generic-retail.ts:1028` matches this.
+- **Product URL forms**: Celerant exposes each product via TWO URL forms — canonical `/shop/<slug>-<id>` (from listings) AND `/<brand>/<slug>-<id>` (from sitemap). Both return the same detail page. The sourceId extractor handles both.
+- **Reference audit**: `bullseyenorth.com` profile (2026-04-14 manual audit, 3,117 active products, 87 pages walked via `/all-products/browse/orderby/new-arrivals/perpage/36`, zero overlap on page 2).
+
 ### Step 3: CatalogUrl selection
 
 Use the probe's category tree + nav links output as starting material.
@@ -106,6 +130,7 @@ Use the probe's ID-jump results. Apply the **3-outcome decision tree** (Mistake 
 | Searchspring | Hash-fragment sort | Real sort is `#/sort:field:direction`, not query param | 25 |
 | Shopify | Sort uses `published_at`, not `created_at` | Test ALL timestamp fields for strict monotonicity | 32 |
 | BC Stencil | False negative on default=newest | Use `?sort=alphaasc` as counter-control. 3-outcome test, not 2 | 29 |
+| Celerant/ColdFusion | Sort is in URL PATH (`/orderby/<value>/`), not query param. Multiple newest-style options (`new-arrivals` vs `newest-rcvd`) produce different orderings. | `sortScheme: 'path'`. Use probe's `newestCandidates[0]` (highest ID-jump score) OR verify manually — canonical fleet sort is `new-arrivals`. | 36 |
 | SPA (any) | Sort controls are JS, not markup | Drive Playwright UI with `page.on('request', ...)`, don't scan static HTML | 19 |
 | Custom PHP | No sort UI != no sort possible | Cross-reference DOM order against independent signals | 15, 18 |
 

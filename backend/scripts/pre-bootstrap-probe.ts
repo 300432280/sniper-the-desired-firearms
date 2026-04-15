@@ -26,9 +26,11 @@ interface AccessPhase {
   hasWaf: Confidence;
   wafType: Confidence;
   wafProbeEvidence: Record<string, any>;
-  userAgentResults: { ua: string; label: string; status: number | null; error?: string }[];
+  userAgentResults: { ua: string; label: string; status: number | null; error?: string; method?: string }[];
   crawlDelay: Confidence;
   robotsDisallowed: string[];
+  malformedHeaders: Confidence; // NEW — Celerant/ColdFusion HPE indicator
+  serverHeader: Confidence;     // NEW — captured server header from real response
 }
 
 interface PlatformPhase {
@@ -64,6 +66,7 @@ interface SortOption { value: string; text: string; selectName: string; selectId
 
 interface SortPhase {
   sortOptions: SortOption[];
+  sortScheme: Confidence;     // 'query' | 'path' | 'hash' | 'js-only' | null
   idJumpTest: {
     defaultFirstProduct: string | null;
     newestFirstProduct: string | null;
@@ -72,6 +75,10 @@ interface SortPhase {
     counterControlParam: string | null;
     verdict: 'honored' | 'honored-default-is-newest' | 'noop' | 'not-tested' | 'no-sort-options';
   };
+  // Disambiguation: when multiple options match the newest-style regex
+  // (e.g. Celerant has both `new-arrivals` and `newest-rcvd`), run ID-jump
+  // against EACH candidate and report which one produces the distinct newest slug.
+  newestCandidates?: { value: string; text: string; firstProduct: string | null; score: number }[];
   openCartDateProbe?: { param: string; firstProduct: string | null; defaultFirstProduct: string | null; honored: boolean };
 }
 
@@ -119,33 +126,89 @@ function conf(value: any, confidence: Confidence['confidence']): Confidence {
   return { value, confidence };
 }
 
-async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: string } | null> {
+/**
+ * Native-fetch fallback for servers that send malformed HTTP/1.1 headers
+ * (e.g. Celerant/ColdFusion sends `X-Frame-Options : SAMEORIGIN` with trailing
+ * whitespace before the colon, which trips Node's llhttp parser
+ * HPE_INVALID_HEADER_TOKEN). Matches production http-client.ts:277-302.
+ */
+async function nativeFetchText(url: string, headers: Record<string, string>): Promise<{ status: number; headers: Record<string, any>; data: string } | null> {
+  try {
+    const resp = await fetch(url, {
+      headers,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20000),
+    });
+    const text = await resp.text();
+    return {
+      status: resp.status,
+      headers: Object.fromEntries(resp.headers.entries()),
+      data: text,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: string; method?: 'axios' | 'native-fetch' } | null> {
+  const defaultHeaders = {
+    'User-Agent': DESKTOP_UA,
+    Accept: 'text/html,application/xhtml+xml,*/*;q=0.8',
+    'Accept-Language': 'en-CA,en;q=0.9',
+  };
+  const mergedHeaders = { ...defaultHeaders, ...(opts.headers || {}) };
   try {
     const resp = await axios.get(url, {
       timeout: 20000,
       maxRedirects: 10,
       validateStatus: () => true,
       responseType: 'text',
-      headers: { 'User-Agent': DESKTOP_UA, 'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8', 'Accept-Language': 'en-CA,en;q=0.9' },
       ...opts,
+      headers: mergedHeaders,
     });
-    return { status: resp.status, headers: resp.headers, data: typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data) };
+    return {
+      status: resp.status,
+      headers: resp.headers,
+      data: typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data),
+      method: 'axios',
+    };
   } catch (e: any) {
+    // HPE_INVALID_HEADER_TOKEN / Parse Error — server sent malformed headers
+    // (Celerant ColdFusion, some legacy IIS configs). Fall back to undici's
+    // native fetch which is more lenient.
+    const msg = (e?.message || '').toLowerCase();
+    if (msg.includes('parse error') || msg.includes('hpe_invalid') || msg.includes('invalid header')) {
+      const r = await nativeFetchText(url, mergedHeaders);
+      if (r) return { ...r, method: 'native-fetch' };
+    }
     return null;
   }
 }
 
-async function safeFetchJson(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: any } | null> {
+async function safeFetchJson(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: any; method?: 'axios' | 'native-fetch' } | null> {
+  const defaultHeaders = {
+    'User-Agent': DESKTOP_UA,
+    Accept: 'application/json,*/*;q=0.8',
+  };
+  const mergedHeaders = { ...defaultHeaders, ...(opts.headers || {}) };
   try {
     const resp = await axios.get(url, {
       timeout: 20000,
       maxRedirects: 10,
       validateStatus: () => true,
-      headers: { 'User-Agent': DESKTOP_UA, 'Accept': 'application/json,*/*;q=0.8' },
       ...opts,
+      headers: mergedHeaders,
     });
-    return { status: resp.status, headers: resp.headers, data: resp.data };
-  } catch {
+    return { status: resp.status, headers: resp.headers, data: resp.data, method: 'axios' };
+  } catch (e: any) {
+    const msg = (e?.message || '').toLowerCase();
+    if (msg.includes('parse error') || msg.includes('hpe_invalid') || msg.includes('invalid header')) {
+      const r = await nativeFetchText(url, mergedHeaders);
+      if (r) {
+        try { return { ...r, data: JSON.parse(r.data), method: 'native-fetch' }; }
+        catch { return { ...r, data: null, method: 'native-fetch' }; }
+      }
+    }
     return null;
   }
 }
@@ -194,18 +257,22 @@ function extractFirstProducts($: cheerio.CheerioAPI, baseUrl: string, limit = 5)
 
 function extractProductTitles($: cheerio.CheerioAPI, limit = 3): string[] {
   const titles: string[] = [];
+  // Extend selectors to match Celerant-style `a.product` + `article[class*=product]`
+  // and also accept <span class="name"> which is the Celerant title container.
   const SELECTORS = [
     '[data-product-id]', 'li.product', '[class*="product-card"]',
     '[class*="product-item"]', '.card', '.products-list .item',
     '.product-thumb', 'div.product',
+    'a.product', 'article[class*="product"]',
   ];
   for (const sel of SELECTORS) {
     $(sel).each((_, el) => {
       if (titles.length >= limit) return;
       const element = $(el);
       if (element.closest('.sidebar, aside').length > 0) return;
-      const title = element.find('h2, h3, h4, .product-title, .card-title, [class*="product-name"], [class*="ProductName"]').first().text().trim()
-        || element.find('a').first().text().trim();
+      const title = element.find('h2, h3, h4, .product-title, .card-title, [class*="product-name"], [class*="ProductName"], span.name, .name').first().text().trim()
+        || element.find('a').first().text().trim()
+        || element.text().trim();
       if (title && title.length > 3 && title.length < 200 && !/^\$?\d[\d,.]*$/.test(title)) {
         titles.push(title.replace(/\s+/g, ' ').slice(0, 120));
       }
@@ -251,17 +318,29 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
     const probeOutput = execSync(`bash "${probeScript}" "${origin}"`, {
       timeout: 120000, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
     });
-    wafEvidence.rawOutput = probeOutput;
 
-    // Parse WAF indicators from output
-    const hasCfRay = /cf-ray:/i.test(probeOutput);
-    const hasSucuri = /x-sucuri/i.test(probeOutput);
-    const hasIncapsula = /visid_incap|incap_ses/i.test(probeOutput);
-    const hasSgCaptcha = /sg-captcha/i.test(probeOutput);
-    const hasCloudflareServer = /server:\s*cloudflare/i.test(probeOutput);
-    const has403 = /STATUS=403/.test(probeOutput);
-    const has429 = /STATUS=429/.test(probeOutput);
-    const has503 = /STATUS=503/.test(probeOutput);
+    // Parse WAF indicators ONLY from actual header lines (BATCH 1).
+    // Naive substring match against the whole probe output matches the
+    // INTERPRETATION GUIDE trailer ("no cf-ray/x-sucuri" etc.) and the
+    // "WAF INDICATORS IN HEADERS" legend, producing false positives.
+    const headerBatchMatch = probeOutput.match(/=== BATCH 1:[^=]*===([\s\S]*?)(?=\n=== BATCH)/);
+    const headerLines = (headerBatchMatch ? headerBatchMatch[1] : '').split('\n');
+    // Each header line from BATCH 1 starts with a lowercase header name followed by ':'
+    // e.g. "server: Null", "cf-ray: 123", "x-sucuri-id: abc"
+    const headerOnly = headerLines.filter(l => /^[a-z][a-z0-9-]+:/i.test(l.trim())).join('\n');
+
+    const hasCfRay = /^cf-ray:/im.test(headerOnly);
+    const hasSucuri = /^x-sucuri-(id|cache|block):/im.test(headerOnly);
+    const hasIncapsulaHeader = /^(x-iinfo|x-cdn:\s*incapsula):/im.test(headerOnly);
+    const hasSgCaptcha = /^sg-captcha:/im.test(headerOnly);
+    const hasCloudflareServer = /^server:\s*cloudflare/im.test(headerOnly);
+    // Cookie-based WAF markers (check set-cookie lines specifically)
+    const hasIncapsulaCookie = /^set-cookie:\s*(visid_incap|incap_ses|nlbi_)/im.test(headerOnly);
+
+    // Status-code signals from all batches (these are safe — STATUS= is probe-specific prefix)
+    const has403 = /\bSTATUS=403\b/.test(probeOutput);
+    const has429 = /\bSTATUS=429\b/.test(probeOutput);
+    const has503 = /\bSTATUS=503\b/.test(probeOutput);
 
     if (hasCfRay || hasCloudflareServer) {
       hasWaf = true;
@@ -269,7 +348,7 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
     } else if (hasSucuri) {
       hasWaf = true;
       wafType = 'sucuri';
-    } else if (hasIncapsula) {
+    } else if (hasIncapsulaHeader || hasIncapsulaCookie) {
       hasWaf = true;
       wafType = 'incapsula';
     } else if (hasSgCaptcha) {
@@ -282,20 +361,33 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
 
     wafEvidence.cfRay = hasCfRay;
     wafEvidence.sucuri = hasSucuri;
-    wafEvidence.incapsula = hasIncapsula;
+    wafEvidence.incapsulaHeader = hasIncapsulaHeader;
+    wafEvidence.incapsulaCookie = hasIncapsulaCookie;
     wafEvidence.sgCaptcha = hasSgCaptcha;
     wafEvidence.cloudflareServer = hasCloudflareServer;
     wafEvidence.saw403 = has403;
     wafEvidence.saw429 = has429;
     wafEvidence.saw503 = has503;
-    // Don't send the raw output in the JSON — it's huge
-    delete wafEvidence.rawOutput;
+    // Capture the actual server header(s) seen — useful for platform detection
+    const serverMatch = headerOnly.match(/^server:\s*(.+)$/im);
+    wafEvidence.serverHeader = serverMatch ? serverMatch[1].trim() : null;
+    // Capture set-cookie signatures (CFID/CFTOKEN = ColdFusion, ASP.NET_SessionId = IIS)
+    wafEvidence.setCookieMarkers = {
+      cfid: /^set-cookie:\s*CFID=/im.test(headerOnly),
+      cftoken: /^set-cookie:\s*CFTOKEN=/im.test(headerOnly),
+      aspNetSession: /^set-cookie:\s*ASP\.NET_SessionId=/im.test(headerOnly),
+      jSessionId: /^set-cookie:\s*JSESSIONID=/im.test(headerOnly),
+      phpSession: /^set-cookie:\s*PHPSESSID=/im.test(headerOnly),
+    };
+    wafEvidence.probeBatchesRun = (probeOutput.match(/=== BATCH/g) || []).length;
   } catch (e: any) {
     wafEvidence.error = e.message?.slice(0, 500);
     log('  WAF probe failed:', e.message?.slice(0, 200));
   }
 
-  // Test multiple UAs
+  // Test multiple UAs — with native-fetch fallback for malformed-header sites.
+  // We track whether axios saw HPE errors so the platform phase can flag
+  // Celerant/ColdFusion / legacy-IIS malformed-response-header quirks.
   const uaTests = [
     { label: 'desktop-chrome', ua: DESKTOP_UA },
     { label: 'iphone-safari', ua: IPHONE_UA },
@@ -304,15 +396,26 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
     { label: 'no-ua', ua: '' },
   ];
   const uaResults: AccessPhase['userAgentResults'] = [];
+  let anyHpeError = false;
   for (const t of uaTests) {
+    const headers: Record<string, string> = { Accept: 'text/html' };
+    if (t.ua) headers['User-Agent'] = t.ua;
     try {
       const r = await axios.get(origin, {
-        timeout: 15000, maxRedirects: 10, validateStatus: () => true,
-        headers: { 'User-Agent': t.ua, Accept: 'text/html' },
+        timeout: 15000, maxRedirects: 10, validateStatus: () => true, headers,
       });
-      uaResults.push({ ua: t.ua, label: t.label, status: r.status });
+      uaResults.push({ ua: t.ua, label: t.label, status: r.status, method: 'axios' });
     } catch (e: any) {
-      uaResults.push({ ua: t.ua, label: t.label, status: null, error: e.message?.slice(0, 200) });
+      const msg = e?.message || '';
+      const isHpe = /parse error|hpe_invalid|invalid header/i.test(msg);
+      if (isHpe) anyHpeError = true;
+      if (isHpe) {
+        const r = await nativeFetchText(origin, headers);
+        if (r) uaResults.push({ ua: t.ua, label: t.label, status: r.status, method: 'native-fetch', error: 'HPE_INVALID_HEADER_TOKEN (axios fallback ok)' });
+        else uaResults.push({ ua: t.ua, label: t.label, status: null, error: `${msg.slice(0, 200)} (native-fetch also failed)`, method: 'native-fetch' });
+      } else {
+        uaResults.push({ ua: t.ua, label: t.label, status: null, error: msg.slice(0, 200) });
+      }
     }
   }
 
@@ -340,13 +443,15 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
       userAgentResults: uaResults,
       crawlDelay: conf(crawlDelay, crawlDelay !== null ? 'high' : 'none'),
       robotsDisallowed,
+      malformedHeaders: conf(anyHpeError, anyHpeError ? 'high' : 'low'),
+      serverHeader: conf(wafEvidence.serverHeader, wafEvidence.serverHeader ? 'high' : 'none'),
     },
   };
 }
 
 // ── Phase 2: Platform & Rendering ──────────────────────────────────────────────
 
-async function probePlatform(origin: string): Promise<PlatformPhase> {
+async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise<PlatformPhase> {
   log('[Phase 2] Platform & Rendering...');
 
   const resp = await safeFetch(origin);
@@ -364,7 +469,17 @@ async function probePlatform(origin: string): Promise<PlatformPhase> {
   let platform: string | null = null;
   let platformConf: Confidence['confidence'] = 'low';
 
-  // Platform detection — ordered by specificity
+  // Phase 1 signals (may be undefined if accessPhase not passed)
+  const wafEvidence = accessPhase?.wafProbeEvidence || {};
+  const sawCfCookies = !!wafEvidence.setCookieMarkers?.cfid || !!wafEvidence.setCookieMarkers?.cftoken;
+  const sawAspNetSession = !!wafEvidence.setCookieMarkers?.aspNetSession;
+  const sawMalformedHeaders = accessPhase?.malformedHeaders?.value === true;
+  const accessServerHeader = accessPhase?.serverHeader?.value as string | null;
+
+  // Platform detection — ordered by specificity.
+  // Signature set also consults Phase 1 signals (set-cookie, server header,
+  // malformed-header presence) so vendors like Celerant/ColdFusion that
+  // otherwise look like plain HTML are correctly identified.
   const checks: [string, RegExp | ((h: string, hd: Record<string, any>) => boolean)][] = [
     ['woocommerce', (h) => /wp-content\/plugins\/woocommerce|wc-ajax|class="woocommerce/i.test(h)],
     ['shopify', (h) => /cdn\.shopify\.com|window\.Shopify|\/cdn\/shop\//i.test(h)],
@@ -379,6 +494,22 @@ async function probePlatform(origin: string): Promise<PlatformPhase> {
     ['volusion', (_h, hd) => /Volusion/i.test(hd['x-powered-by'] || '')],
     ['wix-stores', (h) => /wixBiSession|thunderbolt/i.test(h)],
     ['godaddy-ols', (h) => /mysimplestore|data-aid="PRODUCT_LIST_RENDERED"/i.test(h)],
+    // ColdFusion signatures (Mistake: Celerant/ColdFusion sites silently HPE
+    // axios due to trailing-space headers like `X-Frame-Options : SAMEORIGIN`).
+    // Celerant is the dominant ColdFusion eCommerce vendor in the Canadian
+    // firearms fleet — their storefront JS is served from celerantwebservices.com.
+    ['celerant-coldfusion', (h) =>
+      /celerantwebservices\.com/i.test(h) ||
+      (sawCfCookies && /all-products\/browse|\/orderby\/|\/perpage\//i.test(h)) ||
+      (sawCfCookies && sawMalformedHeaders && /\.cfm\b/i.test(h))],
+    ['coldfusion', (h) =>
+      /\.cfm\b/i.test(h) || sawCfCookies ||
+      /(?:jakarta|kotlin|webcharts|cfclient|cfform|cfinput|cfmodule)/i.test(h)],
+    // ASP.NET / IIS signatures
+    ['aspnet', (h, hd) =>
+      /__VIEWSTATE|__EVENTVALIDATION|\.aspx\b/i.test(h) ||
+      /asp\.net/i.test(hd['x-powered-by'] || '') ||
+      sawAspNetSession],
     ['wordpress', (h) => /wp-content/i.test(h)],
   ];
 
@@ -408,6 +539,15 @@ async function probePlatform(origin: string): Promise<PlatformPhase> {
   const $ = cheerio.load(html);
   const generator = $('meta[name="generator"]').attr('content') || '';
   if (generator) markers.push(`generator:${generator}`);
+
+  // Platform-diagnostic markers from Phase 1 signals
+  if (sawCfCookies) markers.push('cookie:CFID-CFTOKEN');
+  if (sawAspNetSession) markers.push('cookie:ASP.NET_SessionId');
+  if (sawMalformedHeaders) markers.push('malformed-headers:HPE_INVALID_HEADER_TOKEN');
+  if (accessServerHeader && /^null$/i.test(accessServerHeader.trim())) markers.push('server:Null');
+  if (accessServerHeader && /adobe|coldfusion|lucee|openbd/i.test(accessServerHeader)) {
+    markers.push(`server:${accessServerHeader}`);
+  }
 
   // JS overlay detection
   let jsOverlay: string | null = null;
@@ -483,27 +623,89 @@ async function probePlatform(origin: string): Promise<PlatformPhase> {
     }
   }
 
-  // Sitemaps
-  const sitemapCandidates = ['/sitemap.xml', '/product-sitemap.xml', '/sitemap_products.xml', '/sitemap_index.xml', '/store-products-sitemap.xml'];
+  // Sitemaps — try canonical, index, product-specific, and several vendor-specific forms.
+  // Platform-specific paths are checked first; fall back to generic.
+  const sitemapCandidates = [
+    '/sitemap.xml', '/sitemap_index.xml', '/sitemap-index.xml',
+    '/product-sitemap.xml', '/sitemap_products.xml', '/products-sitemap.xml',
+    '/store-products-sitemap.xml', // Wix
+    '/sitemap/products.xml',
+    '/sitemap_products_1.xml',     // Shopify
+  ];
   const sitemapUrls: string[] = [];
   let sitemapProductCount: number | null = null;
+  let sitemapIndexFollowed = 0;
 
-  for (const path of sitemapCandidates) {
-    const smResp = await safeFetch(`${origin}${path}`);
+  // Heuristics for classifying a <loc> as a product vs category
+  function classifyLocs(locs: string[]): { product: number; likelyProduct: string[] } {
+    // Product URL positive patterns — broaden to common vendor schemes.
+    // Celerant uses /shop/<slug>-<id>; Shopify /products/<handle>; BC /<slug>/;
+    // Magento uses .html suffix on product pages; OpenCart uses product_id=N in queries.
+    const productPatterns = [
+      /\/products?\/[^\/]+\/?$/i,          // /products/foo or /product/foo
+      /\/shop\/[^\/]+(?:\-\d{2,})?\/?$/i,   // /shop/foo-123 (Celerant) or /shop/foo
+      /\/product-page\/[^\/]+\/?$/i,       // Wix
+      /\/item\/[^\/]+\/?$/i,               // eBay-style
+      /\/p\/[^\/]+\/?$/i,                  // shortened
+      /[-_]p\d{3,}\.html/i,                 // legacy .html with id suffix
+      /\/[^\/]+-\d{4,}\/?$/i,              // /<slug>-NNNN (Celerant without /shop prefix)
+      /\/productdetails\.asp/i,            // Volusion
+      /\/catalog\/product\/view\/id\/\d+/i, // Magento
+      /route=product\/product/i,            // OpenCart
+    ];
+    // Obvious category / navigation negative patterns
+    const categoryPatterns = [
+      /\/product-category\//i,
+      /\/collections?\//i,
+      /\/category\//i,
+      /\/brand\//i,
+      /\/tag\//i,
+      /\/page\/\d+/i,
+      /\/browse\/?$/i,
+      /\/(cart|checkout|account|login|contact|about|faq|blog|news|privacy|terms|search)\b/i,
+    ];
+    const likelyProduct: string[] = [];
+    let product = 0;
+    for (const raw of locs) {
+      const loc = raw.replace(/^<loc>/, '').replace(/<\/loc>$/, '').trim();
+      if (categoryPatterns.some(p => p.test(loc))) continue;
+      if (productPatterns.some(p => p.test(loc))) {
+        product++;
+        if (likelyProduct.length < 5) likelyProduct.push(loc);
+      }
+    }
+    return { product, likelyProduct };
+  }
+
+  for (const smPath of sitemapCandidates) {
+    const smResp = await safeFetch(`${origin}${smPath}`);
     if (smResp && smResp.status === 200 && smResp.data.includes('<')) {
-      sitemapUrls.push(path);
-      // Count product URLs if this looks like a product sitemap
-      if (/product/i.test(path) || /product/i.test(smResp.data.slice(0, 2000))) {
-        const locMatches = smResp.data.match(/<loc>[^<]+<\/loc>/g);
-        if (locMatches) {
-          const productLocs = locMatches.filter((l: string) =>
-            /product|item|_p_|\/p\/|\/shop\//i.test(l) && !/category|collection|tag|brand/i.test(l)
-          );
-          if (productLocs.length > 0) {
-            sitemapProductCount = (sitemapProductCount || 0) + productLocs.length;
+      sitemapUrls.push(smPath);
+      const rawLocs = smResp.data.match(/<loc>[^<]+<\/loc>/g) || [];
+      // Detect sitemap index — count <sitemap> entries (not <url>)
+      const isIndex = /<sitemap>/.test(smResp.data) && !/<url>/.test(smResp.data.slice(0, 2000));
+      if (isIndex && sitemapIndexFollowed < 3) {
+        // Follow the first product-looking sub-sitemap
+        const subSitemaps = rawLocs.filter(l => /product|item|shop/i.test(l));
+        const candidate = subSitemaps[0] || rawLocs[0];
+        if (candidate) {
+          sitemapIndexFollowed++;
+          const subUrl = candidate.replace(/^<loc>/, '').replace(/<\/loc>$/, '').trim();
+          const sub = await safeFetch(subUrl);
+          if (sub && sub.status === 200) {
+            const subLocs = sub.data.match(/<loc>[^<]+<\/loc>/g) || [];
+            const { product } = classifyLocs(subLocs);
+            if (product > 0) sitemapProductCount = (sitemapProductCount || 0) + product;
           }
         }
+        continue;
       }
+      // Non-index sitemap: classify every <loc> regardless of path keyword.
+      // Previously we only counted if the path/contents had "product" — that
+      // missed legitimate product sitemaps like Celerant /sitemap.xml which
+      // doesn't use the "product" word anywhere.
+      const { product } = classifyLocs(rawLocs);
+      if (product > 0) sitemapProductCount = (sitemapProductCount || 0) + product;
     }
   }
 
@@ -584,10 +786,12 @@ async function probeAdapter(origin: string, platformPhase: PlatformPhase): Promi
       if (categoryUrl) return;
       const href = $(el).attr('href') || '';
       // Skip non-category links
-      if (/\/(cart|login|account|contact|about|faq|blog|news|privacy|terms)\b/i.test(href)) return;
+      if (/\/(cart|login|account|contact|about|faq|blog|news|privacy|terms|checkout|search|my-)\b/i.test(href)) return;
       if (href === '/' || href === '#' || href === origin) return;
-      // Must look like a category/collection
-      if (/\/(product-category|collections?|departments?|category|shop|store|firearms|rifles|ammunition|hunting|shooting)\b/i.test(href)) {
+      // Must look like a category/collection — generic platform-native paths
+      // + some common domain-agnostic markers. Domain-specific category names
+      // (firearms/rifles/etc.) are NOT in this list to keep the probe generic.
+      if (/\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|all|products|catalog)\b/i.test(href)) {
         try {
           categoryUrl = href.startsWith('http') ? href : new URL(href, origin).toString();
         } catch {}
@@ -700,24 +904,48 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
 
   const platform = platformPhase.platform.value as string | null;
 
-  // Find a category page to test sort on
+  // Find a category page to test sort on.
+  // For a clean ID-jump test, the "default" URL must have NO sort applied —
+  // any testUrl with `/orderby/<value>/`, `?sort=`, etc. biases the baseline
+  // toward whatever sort was baked into the URL.
+  function stripSortFromUrl(u: string): string {
+    try {
+      const url = new URL(u);
+      // Strip path-based sort segments
+      url.pathname = url.pathname.replace(/\/(orderby|sort_by|sort-by|sort|order)\/[A-Za-z][A-Za-z0-9_-]+/g, '');
+      // Strip query-based sort params
+      for (const key of ['sort', 'order', 'sortby', 'sortBy', 'product_list_order', 'product_list_dir', 'orderby']) {
+        url.searchParams.delete(key);
+      }
+      return url.toString().replace(/\/+$/, '');
+    } catch { return u; }
+  }
+
   let testUrl: string | null = null;
   // Prefer a category from the tree
   if (catalogPhase.categoryTree.length > 0) {
     const cat = catalogPhase.categoryTree.find(c => (c.count || 0) > 5) || catalogPhase.categoryTree[0];
     testUrl = cat.url.startsWith('http') ? cat.url : `${origin}${cat.url}`;
   }
-  // Fallback: pick from nav links
+  // Fallback: pick from nav links (generic platform-native paths only).
+  // Prefer paths WITHOUT a pre-baked /orderby/... segment so the default-sort
+  // baseline is unbiased.
   if (!testUrl && catalogPhase.navLinks.length > 0) {
-    const candidate = catalogPhase.navLinks.find(p =>
-      /\/(product-category|collections?|departments?|category|shop|firearms|rifles)\b/i.test(p)
+    const candidates = catalogPhase.navLinks.filter(p =>
+      /\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|catalog|products)\b/i.test(p)
     );
-    if (candidate) testUrl = `${origin}${candidate}`;
+    // Bare URL (no /orderby|/sort path segment) is preferred
+    const bare = candidates.find(p => !/\/(orderby|sort_by|sort-by|sort|order)\//i.test(p));
+    const chosen = bare || candidates[0];
+    if (chosen) testUrl = `${origin}${chosen}`;
   }
+  // Strip any lingering sort segment from the chosen testUrl
+  if (testUrl) testUrl = stripSortFromUrl(testUrl);
 
   if (!testUrl) {
     return {
       sortOptions: [],
+      sortScheme: conf(null, 'none'),
       idJumpTest: {
         defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
         newestParam: null, counterControlParam: null, verdict: 'not-tested',
@@ -730,6 +958,7 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
   if (!catResp || catResp.status !== 200) {
     return {
       sortOptions: [],
+      sortScheme: conf(null, 'none'),
       idJumpTest: {
         defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
         newestParam: null, counterControlParam: null, verdict: 'not-tested',
@@ -739,7 +968,9 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
 
   const $ = cheerio.load(catResp.data);
 
-  // Extract sort options from <select> elements
+  // Extract sort options from <select> elements. Dedupe by (name+value) —
+  // some sites render the <select> twice (top and bottom of the page).
+  const sortOptionsSeen = new Set<string>();
   const sortOptions: SortOption[] = [];
   $('select').each((_, sel) => {
     const selEl = $(sel);
@@ -750,27 +981,53 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
       selEl.find('option').each((_, opt) => {
         const value = $(opt).attr('value') || '';
         const text = $(opt).text().trim();
-        if (value || text) {
+        const key = `${name}|${id}|${value}`;
+        if ((value || text) && !sortOptionsSeen.has(key)) {
+          sortOptionsSeen.add(key);
           sortOptions.push({ value, text, selectName: name, selectId: id });
         }
       });
     }
   });
 
-  // Also check <a> based sort (Odoo style)
+  // Also check <a> based sort (Odoo style): href carries query params
   $('a[href*="order="], a[href*="sort="], a[href*="sortby="]').each((_, el) => {
     const href = $(el).attr('href') || '';
     const text = $(el).text().trim();
     const paramMatch = href.match(/[?&](order|sort|sortby|product_list_order)=([^&#]+)/);
     if (paramMatch && text) {
-      sortOptions.push({ value: paramMatch[2], text, selectName: paramMatch[1], selectId: '' });
+      const key = `${paramMatch[1]}||${paramMatch[2]}`;
+      if (!sortOptionsSeen.has(key)) {
+        sortOptionsSeen.add(key);
+        sortOptions.push({ value: paramMatch[2], text, selectName: paramMatch[1], selectId: '' });
+      }
     }
   });
+
+  // Detect path-based sort scheme. Some platforms (Celerant, some OpenCart
+  // themes, certain LightSpeed configurations) encode sort in the URL path
+  // as /orderby/<value>/ or /sort/<value>/ rather than as a query param.
+  // We scan all nav/pagination links for /orderby/|/sort_by/|/sort/|/o/|/order/ path
+  // segments followed by an identifier to detect this convention.
+  let sortScheme: 'query' | 'path' | 'hash' | 'js-only' | null = null;
+  const pathSortRegex = /\/(orderby|sort_by|sort-by|sort|order)\/([A-Za-z][A-Za-z0-9_-]+)\//;
+  let pathSortSegmentFound: string | null = null;
+  $('a[href]').each((_, el) => {
+    if (pathSortSegmentFound) return;
+    const href = $(el).attr('href') || '';
+    const m = href.match(pathSortRegex);
+    if (m) pathSortSegmentFound = m[1]; // the keyword, e.g. "orderby"
+  });
+  if (pathSortSegmentFound) sortScheme = 'path';
+  else if (sortOptions.some(o => o.selectName || o.selectId)) sortScheme = 'query';
+  // Hash sort scheme is Searchspring-detected in Phase 2 — not mechanical from DOM alone.
+  // JS-only sort scheme (Ecwid SPA, GoDaddy OLS) needs Playwright — probe can't detect from static HTML.
 
   if (sortOptions.length === 0) {
     // No sort UI found — check if OpenCart (hidden date sort probe)
     const result: SortPhase = {
       sortOptions: [],
+      sortScheme: conf(pathSortSegmentFound ? 'path' : null, pathSortSegmentFound ? 'medium' : 'none'),
       idJumpTest: {
         defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
         newestParam: null, counterControlParam: null, verdict: 'no-sort-options',
@@ -803,57 +1060,83 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
     return result;
   }
 
-  // Identify newest-sort and counter-control candidates
-  let newestOption: SortOption | null = null;
-  let counterOption: SortOption | null = null;
+  // Identify ALL newest-style candidates (not just the first). Different vendors
+  // expose multiple newest-style sorts with different semantics (e.g. Celerant's
+  // `new-arrivals` = "new to storefront" vs `newest-rcvd` = "newest received by
+  // warehouse" — both match the newest regex but produce DIFFERENT orderings).
+  // Probing all candidates and picking the one that produces the most distinct
+  // ordering avoids silently choosing the wrong one.
+  const NEWEST_REGEX = /newest|new.to.old|most.recent|new[- ]?arrival|date.*desc|added.*desc|created.*desc|published.*desc|addedtimedesc|created-descending|published-descending|recent/i;
+  const COUNTER_REGEX = /alpha.*asc|name.*asc|\ba.*z\b|title.*asc|nameasc|alphaasc/i;
 
-  for (const opt of sortOptions) {
-    const t = (opt.text + ' ' + opt.value).toLowerCase();
-    if (!newestOption && /newest|new.to.old|most.recent|date.*desc|added.*desc|created.*desc|addedtimedesc|created-descending/i.test(t)) {
-      newestOption = opt;
+  const newestCandidates = sortOptions.filter(o => NEWEST_REGEX.test(o.text + ' ' + o.value));
+  let counterOption: SortOption | null =
+    sortOptions.find(o => COUNTER_REGEX.test(o.text + ' ' + o.value)) ||
+    sortOptions.find(o => /price.*asc|priceasc|price-low/i.test(o.text + ' ' + o.value)) ||
+    null;
+
+  // Helper: build a URL applying a given sort option. Supports BOTH query-param
+  // schemes (`?order=<value>`) and path schemes (`/orderby/<value>/`).
+  const buildSortUrl = (opt: SortOption): string => {
+    if (sortScheme === 'path' && pathSortSegmentFound) {
+      // Path-based: insert `/<keyword>/<value>` before the trailing slash
+      const base = testUrl!.replace(/\/+$/, '');
+      // If the URL already contains the sort segment, replace its value
+      const re = new RegExp(`/${pathSortSegmentFound}/[A-Za-z][A-Za-z0-9_-]*`);
+      if (re.test(base)) return base.replace(re, `/${pathSortSegmentFound}/${opt.value}`);
+      return `${base}/${pathSortSegmentFound}/${opt.value}`;
     }
-    if (!counterOption && /alpha.*asc|name.*asc|a.*z|title|nameasc/i.test(t)) {
-      counterOption = opt;
-    }
-  }
-  // Fallback counter-control: price ascending
-  if (!counterOption) {
-    counterOption = sortOptions.find(o => /price.*asc|priceasc/i.test(o.text + ' ' + o.value)) || null;
-  }
-
-  // ID-jump test
-  const defaultProducts = extractFirstProducts($, testUrl, 1);
-
-  const buildSortUrl = (opt: SortOption) => {
+    // Query-param scheme
     const base = new URL(testUrl!);
-    // Use the select's name attribute as param name, value as param value
     if (opt.selectName) {
       base.searchParams.set(opt.selectName, opt.value);
-    } else {
-      // For <a>-based sorts, the value already has the param structure
-      return testUrl + (testUrl!.includes('?') ? '&' : '?') + `${opt.selectName || 'sort'}=${opt.value}`;
+      return base.toString();
     }
-    return base.toString();
+    // <a>-based: assume the option value is a literal query param
+    return testUrl + (testUrl!.includes('?') ? '&' : '?') + `${opt.selectName || 'sort'}=${opt.value}`;
   };
 
-  let newestProducts: string[] = [];
-  let counterProducts: string[] = [];
-  let newestParam: string | null = null;
-  let counterParam: string | null = null;
+  // Default (unsorted) first product
+  const defaultProducts = extractFirstProducts($, testUrl, 1);
 
-  if (newestOption) {
-    const sortUrl = buildSortUrl(newestOption);
-    newestParam = `${newestOption.selectName}=${newestOption.value}`;
+  // Run ID-jump for every newest candidate — collect { value, text, firstProduct, score }
+  const newestResults: { value: string; text: string; firstProduct: string | null; score: number }[] = [];
+  for (const cand of newestCandidates) {
+    const sortUrl = buildSortUrl(cand);
     const r = await safeFetch(sortUrl);
     if (r && r.status === 200) {
       const s$ = cheerio.load(r.data);
-      newestProducts = extractFirstProducts(s$, sortUrl, 1);
+      const firstProduct = extractFirstProducts(s$, sortUrl, 1)[0] || null;
+      // Score: distinct-from-default (+2) + distinct-from-other-candidates (+1 each)
+      let score = 0;
+      if (firstProduct && defaultProducts[0] && firstProduct !== defaultProducts[0]) score += 2;
+      newestResults.push({ value: cand.value, text: cand.text, firstProduct, score });
+    } else {
+      newestResults.push({ value: cand.value, text: cand.text, firstProduct: null, score: -1 });
     }
   }
+  // Award +1 for each other candidate with a different firstProduct
+  for (const r of newestResults) {
+    if (!r.firstProduct) continue;
+    for (const other of newestResults) {
+      if (other === r) continue;
+      if (other.firstProduct && other.firstProduct !== r.firstProduct) r.score += 1;
+    }
+  }
+  newestResults.sort((a, b) => b.score - a.score);
 
+  // The primary newest option is the highest-scoring one
+  const primaryNewest = newestResults.length > 0 && newestResults[0].score >= 0
+    ? newestCandidates.find(c => c.value === newestResults[0].value) || null
+    : null;
+
+  let counterProducts: string[] = [];
+  let counterParam: string | null = null;
   if (counterOption) {
     const sortUrl = buildSortUrl(counterOption);
-    counterParam = `${counterOption.selectName}=${counterOption.value}`;
+    counterParam = sortScheme === 'path'
+      ? `${pathSortSegmentFound}/${counterOption.value}`
+      : `${counterOption.selectName}=${counterOption.value}`;
     const r = await safeFetch(sortUrl);
     if (r && r.status === 200) {
       const s$ = cheerio.load(r.data);
@@ -861,23 +1144,36 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
     }
   }
 
-  // Determine verdict
+  const newestProducts: string[] = primaryNewest
+    ? [newestResults[0].firstProduct].filter(Boolean) as string[]
+    : [];
+  const newestParam = primaryNewest
+    ? (sortScheme === 'path'
+        ? `${pathSortSegmentFound}/${primaryNewest.value}`
+        : `${primaryNewest.selectName}=${primaryNewest.value}`)
+    : null;
+
+  // Determine verdict — 3-outcome decision tree (Mistake 29):
+  //   `honored`                  — newest != default
+  //   `honored-default-is-newest` — newest == default BUT counter-control differs
+  //   `noop`                     — everything identical
   let verdict: SortPhase['idJumpTest']['verdict'] = 'noop';
   if (newestProducts[0] && defaultProducts[0]) {
     if (newestProducts[0] !== defaultProducts[0]) {
       verdict = 'honored';
     } else if (counterProducts[0] && counterProducts[0] !== defaultProducts[0]) {
-      // Default same as newest but counter-control differs — default IS newest
       verdict = 'honored-default-is-newest';
     } else {
       verdict = 'noop';
     }
-  } else if (!newestOption) {
+  } else if (newestCandidates.length === 0) {
     verdict = 'no-sort-options';
   }
 
   return {
     sortOptions,
+    sortScheme: conf(sortScheme, sortScheme ? 'high' : 'none'),
+    newestCandidates: newestResults.length > 0 ? newestResults : undefined,
     idJumpTest: {
       defaultFirstProduct: defaultProducts[0] || null,
       newestFirstProduct: newestProducts[0] || null,
@@ -902,7 +1198,7 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
   }
   if (!testUrl && catalogPhase.navLinks.length > 0) {
     const candidate = catalogPhase.navLinks.find(p =>
-      /\/(product-category|collections?|departments?|category|shop|firearms)\b/i.test(p)
+      /\/(product-category|collections?|departments?|category|categories|shop|store|browse|all-products|catalog|products)\b/i.test(p)
     );
     if (candidate) testUrl = `${origin}${candidate}`;
   }
@@ -982,27 +1278,55 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
     }
   }
 
-  // If no page 2 link found, try common patterns
-  if (!page2Url) {
-    const candidates = [
-      { pattern: 'query:page', url: testUrl + (testUrl.includes('?') ? '&page=2' : '?page=2') },
-      { pattern: 'path:/page/{N}', url: testUrl.replace(/\/?$/, '/page/2/') },
-    ];
-    for (const c of candidates) {
-      const r = await safeFetch(c.url);
-      if (r && r.status === 200) {
-        const c$ = cheerio.load(r.data);
-        const p2 = extractFirstProducts(c$, c.url, 5);
-        if (p2.length > 0 && page1Products.length > 0) {
-          const overlap = p2.filter(u => page1Products.includes(u));
-          if (overlap.length === 0) {
-            detectedPattern = c.pattern;
-            page2Url = c.url;
-            break;
-          }
-        }
-      }
+  // VERIFY detected pattern against counter-candidate. Some platforms (LightSpeed
+  // eCom, certain Celerant configs) accept BOTH `?page=N` AND `/page/N` in URLs,
+  // but only one is actually honored — the other silently returns page 1. Run
+  // a cross-check: if we detected query:page, also try path:/page/{N} and take
+  // whichever produces page-1-distinct products (non-overlap with page 1).
+  async function verifyPattern(pattern: string, url: string): Promise<{ pattern: string; url: string; p2Products: string[]; overlap: number } | null> {
+    const r = await safeFetch(url);
+    if (!r || r.status !== 200) return null;
+    const c$ = cheerio.load(r.data);
+    const p2 = extractFirstProducts(c$, url, 20);
+    const overlap = p2.filter(u => page1Products.includes(u)).length;
+    return { pattern, url, p2Products: p2, overlap };
+  }
+
+  // If no page 2 link found from DOM, OR we want to cross-verify, try common
+  // patterns. Critically: candidates must PRESERVE any sort-path segment
+  // (e.g. /orderby/<value>/) that's already baked into testUrl.
+  const candidates: { pattern: string; url: string }[] = [];
+  const baseNoTrailing = testUrl.replace(/\/+$/, '');
+  candidates.push({ pattern: 'query:page', url: testUrl + (testUrl.includes('?') ? '&page=2' : '?page=2') });
+  candidates.push({ pattern: 'path:/page/{N}', url: `${baseNoTrailing}/page/2` });
+  candidates.push({ pattern: 'query:paged', url: testUrl + (testUrl.includes('?') ? '&paged=2' : '?paged=2') });
+  // Suffix-replace for LightSpeed eCom-style `page2.html`
+  if (/\.html(\?|$)/.test(testUrl)) {
+    candidates.push({ pattern: 'suffix-replace:page{N}.html', url: testUrl.replace(/\/([^/?#.]*?)(\.html)(\?.*)?$/, '/$1/page2.html$3') });
+  }
+
+  // If DOM already pointed to a specific pattern, test it FIRST but still
+  // verify against page-1 non-overlap
+  if (page2Url && detectedPattern) {
+    candidates.unshift({ pattern: detectedPattern, url: page2Url });
+  }
+
+  // Probe every candidate and keep the first with zero-overlap-to-page-1
+  let bestCandidate: { pattern: string; url: string; p2Products: string[]; overlap: number } | null = null;
+  for (const c of candidates) {
+    const result = await verifyPattern(c.pattern, c.url);
+    if (!result) continue;
+    // Keep the first pattern that produces fresh products
+    if (result.p2Products.length > 0 && result.overlap === 0) {
+      bestCandidate = result;
+      break;
     }
+    // Keep the "best" (lowest-overlap) as a fallback if none fully zero
+    if (!bestCandidate || result.overlap < bestCandidate.overlap) bestCandidate = result;
+  }
+  if (bestCandidate) {
+    detectedPattern = bestCandidate.pattern;
+    page2Url = bestCandidate.url;
   }
 
   // Fetch page 2 and compare
@@ -1084,6 +1408,14 @@ function assemble(
     warnings.push(`WAF detected: ${access.wafType.value}. May need cookie management or Playwright.`);
   }
 
+  // Malformed-header warning (Celerant / ColdFusion / legacy IIS). The production
+  // http-client.ts catches this via native-fetch fallback; the probe now also
+  // handles it, but any site that triggers this needs explicit `wafWorkaround`
+  // profile metadata.
+  if (access.malformedHeaders?.value === true) {
+    warnings.push('Server sends malformed HTTP/1.1 headers (HPE_INVALID_HEADER_TOKEN). Axios fails; native-fetch fallback in http-client.ts handles this. Profile must record wafWorkaround.method=undici-fallback.');
+  }
+
   // SPA warning
   if (platform.renderingMode.value === 'spa-likely') {
     warnings.push('Site appears to be a SPA. Static HTML extraction may return 0 products. Use Playwright.');
@@ -1092,6 +1424,17 @@ function assemble(
   // JS overlay warning
   if (platform.jsOverlay.value) {
     warnings.push(`JS overlay detected: ${platform.jsOverlay.value}. Sort/pagination may be hijacked (see Searchspring/Klevu lessons).`);
+  }
+
+  // Multiple-newest-sort disambiguation warning
+  if ((sort as any).newestCandidates && (sort as any).newestCandidates.length > 1) {
+    const chosen = (sort as any).newestCandidates[0];
+    warnings.push(`Multiple newest-style sort options found (${(sort as any).newestCandidates.length}). Selected "${chosen?.value}" via ID-jump score=${chosen?.score}. Verify manually — other candidates may be correct for different merchants (e.g. Celerant new-arrivals vs newest-rcvd).`);
+  }
+
+  // Path-based sort scheme warning — informs the skill to emit path-form sortParam
+  if (sort.sortScheme?.value === 'path') {
+    warnings.push('Sort uses URL PATH scheme (not query param). catalogUrls must bake sort segment into the URL (e.g. /orderby/<value>/). paginationPattern must preserve the sort segment in page URLs.');
   }
 
   const phaseErrors = errors.map(e => e.phase);
@@ -1133,13 +1476,14 @@ async function main() {
       canonicalUrl: conf(url, 'none'), hasWaf: conf(null, 'none'), wafType: conf(null, 'none'),
       wafProbeEvidence: { error: e.message }, userAgentResults: [],
       crawlDelay: conf(null, 'none'), robotsDisallowed: [],
+      malformedHeaders: conf(null, 'none'), serverHeader: conf(null, 'none'),
     };
   }
 
   // Phase 2: Platform
   let platformResult: PlatformPhase;
   try {
-    platformResult = await probePlatform(canonical);
+    platformResult = await probePlatform(canonical, accessResult);
   } catch (e: any) {
     errors.push({ phase: 'platform', message: e.message, stack: e.stack?.slice(0, 500) });
     platformResult = {
@@ -1177,6 +1521,7 @@ async function main() {
     errors.push({ phase: 'sort', message: e.message, stack: e.stack?.slice(0, 500) });
     sortResult = {
       sortOptions: [],
+      sortScheme: conf(null, 'none'),
       idJumpTest: {
         defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
         newestParam: null, counterControlParam: null, verdict: 'not-tested',
