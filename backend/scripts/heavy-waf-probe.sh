@@ -37,7 +37,18 @@ probe_headers() {
   local label="$1"; shift
   local url="$1"; shift
   echo "[$label] HEADERS FOR $url"
-  curl -sSLI --max-time 20 -A "$DESKTOP_UA" "$@" "$url" 2>&1 | grep -iE '^(HTTP|server|cf-ray|cf-cache|x-sucuri|x-amz|x-waf|x-cache|set-cookie|via|x-served|location)' | head -30
+  # Use GET (-sSL, not -I) because some WAFs only serve WAF-specific headers
+  # on GET, not HEAD. SiteGround sgcaptcha in particular: HEAD returns a plain
+  # 202 with no sg-captcha header, but GET returns 202 + `sg-captcha: challenge`
+  # + the meta-refresh challenge body. Discard body via -o /dev/null then pull
+  # headers from the -D dump. Also expanded the header filter to catch
+  # sg-captcha, cf-mitigated, x-iinfo (Incapsula), x-cdn, x-drupal-*,
+  # x-commerce-core, x-frame-options so the probe parser has more signals.
+  local tmphdr
+  tmphdr=$(mktemp)
+  curl -sSL --max-time 20 -A "$DESKTOP_UA" -D "$tmphdr" -o /dev/null "$@" "$url" 2>/dev/null
+  grep -iE '^(HTTP|server|cf-ray|cf-cache|cf-mitigated|x-sucuri|x-amz|x-waf|x-cache|set-cookie|via|x-served|location|sg-captcha|x-iinfo|x-cdn|x-varnish|x-akamai|x-bot|x-content|x-powered-by|x-generator|x-drupal|x-commerce-core|x-frame-options)' "$tmphdr" 2>/dev/null | head -30
+  rm -f "$tmphdr"
   echo
 }
 

@@ -48,6 +48,21 @@ let g_wafFallbackObserved = false;    // set at runtime when any axios response 
 let g_playwrightHits = 0;             // count of Playwright fallback invocations
 let g_playwrightClosed = false;
 
+// ── C3: iPhone-UA switch for WAF-blocked-on-desktop sites ─────────────────────
+// When Phase 1's UA sweep detects that desktop Chrome UA is WAF-blocked (challenge
+// body / tiny response / 403) but iPhone Safari UA gets real HTML, subsequent
+// axios fetches MUST use iPhone UA — Sucuri/sgcaptcha/Cloudflare-active serve
+// different cookie sets per UA class (Mistake 30 Fix B). Default = DESKTOP_UA
+// (current behavior). Phase 1 mutates after the UA sweep analysis.
+let g_recommendedUserAgent: string = '';   // '' = use DESKTOP_UA (default)
+
+// ── C2: Playwright-required flag for non-WAF SPAs ─────────────────────────────
+// GoDaddy OLS (liangjian.ca), Ecwid (triggersandbows.com), Shopify+Searchspring
+// (sail.ca) render products client-side — static axios returns 0. Phase 2 sets
+// this when `renderingMode: 'spa-likely'` OR `jsOverlay !== null`. Phase 3/5/6
+// auto-escalate static-0-products fetches to Playwright. See Mistake 19.
+let g_playwrightRequired = false;
+
 /**
  * Detect whether an axios response body is a WAF challenge page (and not real
  * content). Heuristics target Sucuri (sucuri_cloudproxy_js / "You are being
@@ -130,11 +145,17 @@ interface AccessPhase extends PhaseStatusFields {
   hasWaf: Confidence;
   wafType: Confidence;
   wafProbeEvidence: Record<string, any>;
-  userAgentResults: { ua: string; label: string; status: number | null; error?: string; method?: string }[];
+  userAgentResults: { ua: string; label: string; status: number | null; error?: string; method?: string; bodyLength?: number; looksLikeChallenge?: boolean; looksLikeRealContent?: boolean }[];
   crawlDelay: Confidence;
   robotsDisallowed: string[];
   malformedHeaders: Confidence; // NEW — Celerant/ColdFusion HPE indicator
   serverHeader: Confidence;     // NEW — captured server header from real response
+  // C3: recommended UA for subsequent phases. When Phase 1 detects that
+  // desktop Chrome UA is WAF-blocked (challenge body / tiny response / 403)
+  // but iPhone Safari UA gets real HTML, this is set to IPHONE_UA so
+  // safeFetch/safeFetchJson pick up the iPhone UA by default.
+  // Values: 'desktop-chrome' | 'iphone-safari' (only two options currently).
+  recommendedUserAgent: Confidence;
 }
 
 interface PlatformPhase extends PhaseStatusFields {
@@ -238,6 +259,11 @@ interface AssemblyPhase extends PhaseStatusFields {
   // URL — the site needs `needsPlaywright: true` pervasively, not just for
   // the initial cookie solve.
   playwrightFetchCount: number;
+  // C2: true when Phase 2 detected a non-WAF SPA (renderingMode=spa-likely OR
+  // jsOverlay detected) and Phase 3/5/6 had to re-fetch via Playwright. Skill
+  // layer must write `needsPlaywright: true` to the profile. This is a SEPARATE
+  // signal from wafFallbackUsed — SPA-required Playwright is NOT WAF-triggered.
+  playwrightRequired: Confidence;
 }
 
 interface ProbeReport {
@@ -289,6 +315,7 @@ function emptyAccessPhase(skipReason: string | null = null): AccessPhase {
     wafProbeEvidence: {}, userAgentResults: [],
     crawlDelay: conf(null, 'none'), robotsDisallowed: [],
     malformedHeaders: conf(null, 'none'), serverHeader: conf(null, 'none'),
+    recommendedUserAgent: conf(null, 'none'),
     status: skipReason ? 'skipped-upstream' : 'failed',
     dependencies: PHASE_DEPENDENCIES.access,
     skipReason,
@@ -506,7 +533,7 @@ async function retryOnce<T extends FetchResult | null>(
 // ─── safeFetch / safeFetchJson — single-attempt cores + retry wrappers ─────────
 async function safeFetchOnce(url: string, opts: Record<string, any> = {}): Promise<{ result: { status: number; headers: Record<string, any>; data: string; method?: 'axios' | 'native-fetch' | 'playwright' } | null; errMsg: string | null }> {
   const defaultHeaders = {
-    'User-Agent': DESKTOP_UA,
+    'User-Agent': g_recommendedUserAgent || DESKTOP_UA,
     Accept: 'text/html,application/xhtml+xml,*/*;q=0.8',
     'Accept-Language': 'en-CA,en;q=0.9',
   };
@@ -583,7 +610,7 @@ async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{
 
 async function safeFetchJsonOnce(url: string, opts: Record<string, any> = {}): Promise<{ result: { status: number; headers: Record<string, any>; data: any; method?: 'axios' | 'native-fetch' } | null; errMsg: string | null }> {
   const defaultHeaders = {
-    'User-Agent': DESKTOP_UA,
+    'User-Agent': g_recommendedUserAgent || DESKTOP_UA,
     Accept: 'application/json,*/*;q=0.8',
   };
   const mergedHeaders = { ...defaultHeaders, ...(opts.headers || {}) };
@@ -597,6 +624,14 @@ async function safeFetchJsonOnce(url: string, opts: Record<string, any> = {}): P
       ...opts,
       headers: mergedHeaders,
     });
+    // NOTE: JSON APIs behind a WAF (doctordeals.ca/wp-json/wp/v2/product returns
+    // 202 + HTML challenge body) can't be unblocked via Playwright — Playwright
+    // renders HTML, not JSON. The probe captures evidence via `apiGatedByWaf`
+    // in Phase 3 (which sets suggestedAdapter=woocommerce with medium confidence
+    // because production waf-cookie-manager.ts solves cookies at runtime).
+    // Adding an axios-replay-with-cookies path here would require mutating
+    // the probe into a waf-cookie-manager client, which is out of scope — the
+    // production crawler already handles that correctly.
     return { result: { status: resp.status, headers: resp.headers, data: resp.data, method: 'axios' }, errMsg: null };
   } catch (e: any) {
     const msg = e?.message || '';
@@ -817,10 +852,29 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
     g_wafFallbackRequired = true;
     log(`  [waf] Playwright fallback ARMED for wafType=${wafType} — Phase 2+ HTML fetches will auto-escalate on challenge body.`);
   }
+  // UA-CLASS REQUIREMENT (C3 / Mistake 30 Fix B). Fleet experience: sites
+  // behind Sucuri / SiteGround sgcaptcha / active Cloudflare / Incapsula
+  // serve different cookie sets per UA class (doctordeals.ca, thegundealer.ca,
+  // gagnonsports.com — all three proven). Desktop Chrome UA gets 1 cookie and
+  // 403 on replay; iPhone Safari UA gets 10 cookies and 200. We can't directly
+  // test this pre-solve (all UAs see the same challenge body), so we apply the
+  // fleet-learned rule: when ANY JS-challenge WAF is detected, default the
+  // post-solve UA to IPHONE_UA. Phase 2+ axios fetches go through safeFetch,
+  // which will (a) hit the challenge body, (b) escalate to Playwright
+  // (which solves with PLAYWRIGHT_UA), and (c) for any direct API replay
+  // after cookies exist, use g_recommendedUserAgent = IPHONE_UA.
+  const JS_CHALLENGE_REQUIRES_IPHONE = new Set(['sucuri', 'cloudflare-active', 'incapsula', 'siteground-sgcaptcha']);
+  if (wafType && JS_CHALLENGE_REQUIRES_IPHONE.has(wafType)) {
+    g_recommendedUserAgent = IPHONE_UA;
+    log(`  [UA] wafType=${wafType} — fleet rule: switching to IPHONE_UA for post-solve axios replays (Mistake 30 Fix B).`);
+  }
 
   // Test multiple UAs — with native-fetch fallback for malformed-header sites.
   // We track whether axios saw HPE errors so the platform phase can flag
   // Celerant/ColdFusion / legacy-IIS malformed-response-header quirks.
+  // Each UA result captures body length + heuristic flags so C3 (iPhone-UA
+  // switch) can detect "desktop blocked but iPhone works" (Sucuri/sgcaptcha
+  // Mistake 30 Fix B: WAF edge serves different cookie sets per UA class).
   const uaTests = [
     { label: 'desktop-chrome', ua: DESKTOP_UA },
     { label: 'iphone-safari', ua: IPHONE_UA },
@@ -830,6 +884,31 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
   ];
   const uaResults: AccessPhase['userAgentResults'] = [];
   let anyHpeError = false;
+  // Heuristic helpers — generic, NOT firearm-specific.
+  // Challenge marker regex: vendor-specific signatures + generic small-body
+  // access-denied indicators. Matches isWafChallengeBody() but applied post-hoc
+  // to the UA-sweep body rather than mid-fetch.
+  const CHALLENGE_MARKER_RE = /sucuri_cloudproxy_js|Access Denied|sg-?captcha|cf-browser-verification|Just a moment\.\.\.|Checking your browser|Verifying you are human|Attention Required|_Incapsula_Resource|Incapsula incident|challenge-platform|_cf_chl|Request unsuccessful|Bot Management/i;
+  // Real product-HTML markers: common cross-platform catalog indicators. One
+  // of these needs to appear in a >10KB body for us to call it "real content".
+  const REAL_HTML_MARKER_RE = /data-product-id=|class="product|product-card|product-item|product-tile|cdn\.shopify\.com|wp-content\/plugins\/woocommerce|class="woocommerce|add-to-cart|class="listing/i;
+  function classifyBody(body: string, status: number | null): { looksLikeChallenge: boolean; looksLikeRealContent: boolean } {
+    const len = body?.length || 0;
+    // Challenge signals: explicit marker OR tiny body with suspicious status
+    const looksLikeChallenge = Boolean(
+      body && (
+        CHALLENGE_MARKER_RE.test(body) ||
+        (len > 0 && len < 2000 && (status === 403 || status === 503)) ||
+        (len > 0 && len < 2000 && /<meta[^>]*refresh[^>]*0[^>]*["';][^>]*(captcha|challenge|verify)/i.test(body))
+      )
+    );
+    // Real content: decent-size body with product markers (threshold lowered
+    // to 8KB because some minimal homepages are small but valid)
+    const looksLikeRealContent = Boolean(
+      body && len > 8000 && REAL_HTML_MARKER_RE.test(body) && !looksLikeChallenge
+    );
+    return { looksLikeChallenge, looksLikeRealContent };
+  }
   for (const t of uaTests) {
     const headers: Record<string, string> = { Accept: 'text/html' };
     if (t.ua) headers['User-Agent'] = t.ua;
@@ -837,20 +916,90 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
       const r = await axios.get(origin, {
         timeout: 15000, maxRedirects: 10, validateStatus: () => true, headers,
         httpAgent: BIG_HEADER_HTTP_AGENT, httpsAgent: BIG_HEADER_HTTPS_AGENT,
+        responseType: 'text',
       });
-      uaResults.push({ ua: t.ua, label: t.label, status: r.status, method: 'axios' });
+      const body = typeof r.data === 'string' ? r.data : JSON.stringify(r.data ?? '');
+      const cls = classifyBody(body, r.status);
+      uaResults.push({ ua: t.ua, label: t.label, status: r.status, method: 'axios', bodyLength: body.length, ...cls });
     } catch (e: any) {
       const msg = e?.message || '';
       const isHpe = /parse error|hpe_invalid|invalid header/i.test(msg);
       if (isHpe) anyHpeError = true;
       if (isHpe) {
         const r = await nativeFetchText(origin, headers);
-        if (r) uaResults.push({ ua: t.ua, label: t.label, status: r.status, method: 'native-fetch', error: 'HPE_INVALID_HEADER_TOKEN (axios fallback ok)' });
-        else uaResults.push({ ua: t.ua, label: t.label, status: null, error: `${msg.slice(0, 200)} (native-fetch also failed)`, method: 'native-fetch' });
+        if (r) {
+          const cls = classifyBody(r.data, r.status);
+          uaResults.push({ ua: t.ua, label: t.label, status: r.status, method: 'native-fetch', error: 'HPE_INVALID_HEADER_TOKEN (axios fallback ok)', bodyLength: r.data.length, ...cls });
+        } else {
+          uaResults.push({ ua: t.ua, label: t.label, status: null, error: `${msg.slice(0, 200)} (native-fetch also failed)`, method: 'native-fetch' });
+        }
       } else {
         uaResults.push({ ua: t.ua, label: t.label, status: null, error: msg.slice(0, 200) });
       }
     }
+  }
+
+  // ── C3: UA-sweep analysis — pick the best UA for subsequent phases ──────────
+  // Detection heuristic (generic, NOT firearm-specific):
+  //   Desktop blocked, iPhone works  → switch to iPhone UA.
+  //   Desktop works                  → keep desktop (default — no change).
+  //   Both blocked + WAF-detected    → fleet rule already set IPHONE_UA above
+  //                                    (Mistake 30 Fix B). Confirm the label.
+  //   Both blocked + no WAF detected → leave default, try desktop.
+  // "Blocked" = status !== 200 OR body looks like a challenge.
+  // "Works"   = status === 200 AND body has real content markers (8KB+ with product signals).
+  const desktopResult = uaResults.find(r => r.label === 'desktop-chrome');
+  const iphoneResult = uaResults.find(r => r.label === 'iphone-safari');
+  const desktopWorks = desktopResult && desktopResult.status === 200 && desktopResult.looksLikeRealContent === true;
+  const desktopBlocked = desktopResult && (
+    desktopResult.status === null ||
+    desktopResult.status === 403 ||
+    desktopResult.status === 503 ||
+    desktopResult.looksLikeChallenge === true ||
+    (desktopResult.bodyLength !== undefined && desktopResult.bodyLength > 0 && desktopResult.bodyLength < 2000)
+  );
+  const iphoneWorks = iphoneResult && iphoneResult.status === 200 && iphoneResult.looksLikeRealContent === true;
+  const fleetRuleSetIphone = g_recommendedUserAgent === IPHONE_UA;
+  let recommendedUserAgentLabel: 'desktop-chrome' | 'iphone-safari' | null = null;
+  let recommendedUaConf: Confidence['confidence'] = 'low';
+  if (desktopWorks) {
+    // Desktop works → default. Only mark iPhone when desktop fails AND iPhone works.
+    // If fleet rule already set iPhone but desktop ALSO works with real content,
+    // trust the live evidence over the rule — keep desktop.
+    recommendedUserAgentLabel = 'desktop-chrome';
+    recommendedUaConf = 'high';
+    if (fleetRuleSetIphone) {
+      // Rare: fleet rule said iPhone but desktop produced real content anyway.
+      // Reset and log.
+      g_recommendedUserAgent = '';
+      log(`  [UA] Fleet rule armed IPHONE_UA but desktop UA returned real content — reverting to desktop (live evidence beats rule).`);
+    }
+  } else if (desktopBlocked && iphoneWorks) {
+    // Active evidence: iPhone works, desktop blocked. Strongest signal.
+    recommendedUserAgentLabel = 'iphone-safari';
+    recommendedUaConf = 'high';
+    g_recommendedUserAgent = IPHONE_UA;
+    log(`  [UA] Phase 1 detected WAF-desktop-blocked-iPhone-allowed → switching to IPHONE_UA for remaining phases`);
+    log(`  [UA]   desktop: status=${desktopResult?.status}, bodyLen=${desktopResult?.bodyLength}, challenge=${desktopResult?.looksLikeChallenge}`);
+    log(`  [UA]   iphone:  status=${iphoneResult?.status}, bodyLen=${iphoneResult?.bodyLength}, real=${iphoneResult?.looksLikeRealContent}`);
+  } else if (iphoneWorks) {
+    // Edge case: desktop ambiguous (no clear real-content match, but not clearly blocked
+    // either — e.g. small landing page with no product markers). iPhone clearly works.
+    recommendedUserAgentLabel = 'iphone-safari';
+    recommendedUaConf = 'medium';
+    g_recommendedUserAgent = IPHONE_UA;
+    log(`  [UA] Phase 1 preferring iPhone UA (desktop unclear, iPhone returned real content)`);
+  } else if (fleetRuleSetIphone) {
+    // Both UAs blocked by WAF at pre-solve stage — can't live-test which one
+    // works post-cookie-solve. Trust the fleet rule (Mistake 30 Fix B).
+    recommendedUserAgentLabel = 'iphone-safari';
+    recommendedUaConf = 'high';
+    log(`  [UA] Phase 1 UA sweep saw all UAs challenge-blocked (typical pre-solve state). Fleet rule already set IPHONE_UA for wafType — keeping iPhone as recommendedUA.`);
+  } else {
+    // Neither clearly works + no WAF fleet rule — leave default, subsequent
+    // phases can fall to Playwright.
+    recommendedUserAgentLabel = 'desktop-chrome';
+    recommendedUaConf = 'low';
   }
 
   // robots.txt
@@ -879,6 +1028,7 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
       robotsDisallowed,
       malformedHeaders: conf(anyHpeError, anyHpeError ? 'high' : 'low'),
       serverHeader: conf(wafEvidence.serverHeader, wafEvidence.serverHeader ? 'high' : 'none'),
+      recommendedUserAgent: conf(recommendedUserAgentLabel, recommendedUaConf),
       // M10 — populated by main() based on isPhaseCompleted; placeholder here
       status: 'completed' as PhaseStatus,
       dependencies: PHASE_DEPENDENCIES.access,
@@ -1221,18 +1371,38 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
   const hasLangPrefix = /\/(en|fr|es|de)\//i.test(html);
   const multilingual = hasHreflang || hasWpml || hasLangPrefix;
 
+  // C2: Known-SPA platforms (ecwid-on-wordpress, godaddy-ols) ALWAYS need
+  // Playwright for category listings, even when the homepage extracts a few
+  // products via static selectors. The Ecwid/OLS storefronts render products
+  // client-side via JS — any /shop/<category> URL returns a placeholder HTML
+  // shell without real product cards. See Mistake 19 (liangjian.ca,
+  // triggersandbows.com, sail.ca).
+  const KNOWN_SPA_PLATFORMS = new Set(['ecwid-on-wordpress', 'godaddy-ols']);
+  const isSpaPlatform = platform !== null && KNOWN_SPA_PLATFORMS.has(platform);
+
   // needsPlaywright=true when:
   //   (a) SPA detected (static HTML returns 0 products but site renders in browser), OR
   //   (b) JS overlay detected (Searchspring, Klevu, FastSimon) — sort/filter
   //       are JS-only, need Playwright to drive, OR
-  //   (c) WAF fallback was ARMED in Phase 1 — production adapter will need
+  //   (c) platform is a known-SPA type (ecwid-on-wordpress, godaddy-ols), OR
+  //   (d) WAF fallback was ARMED in Phase 1 — production adapter will need
   //       waf-cookie-manager + periodic Playwright solve. This is the authoritative
   //       signal for WooCommerce/Shopify sites behind Sucuri/CF-active/Incapsula.
-  const needsPlaywright = renderingMode === 'spa-likely' || jsOverlay !== null || g_wafFallbackRequired;
+  const needsPlaywright =
+    renderingMode === 'spa-likely' ||
+    jsOverlay !== null ||
+    isSpaPlatform ||
+    g_wafFallbackRequired;
   const needsPlaywrightConf: Confidence['confidence'] =
     g_wafFallbackRequired ? 'high' :        // WAF confirmed via heavy probe
-    (renderingMode === 'spa-likely' || jsOverlay !== null) ? 'medium' :
+    (renderingMode === 'spa-likely' || jsOverlay !== null || isSpaPlatform) ? 'medium' :
     'low';
+
+  // Arm the probe's Phase 3/5/6 SPA-Playwright fallback on the same conditions.
+  if (renderingMode === 'spa-likely' || jsOverlay !== null || isSpaPlatform) {
+    g_playwrightRequired = true;
+    log(`  [PW-SPA] Playwright fallback ARMED for non-WAF SPA — renderingMode=${renderingMode}, jsOverlay=${jsOverlay}, platform=${platform}${isSpaPlatform ? ' (known-SPA)' : ''}. Phase 3/5/6 will re-fetch via Playwright when static returns 0 products.`);
+  }
 
   return {
     platform: conf(platform, platformConf),
@@ -1368,11 +1538,34 @@ async function probeAdapter(origin: string, platformPhase: PlatformPhase): Promi
 
     if (categoryUrl) {
       log(`  Testing extraction on: ${categoryUrl}`);
-      const catResp = await safeFetch(categoryUrl);
+      let catResp = await safeFetch(categoryUrl);
+      let products: string[] = [];
+      let titles: string[] = [];
       if (catResp && catResp.status === 200) {
         const cat$ = cheerio.load(catResp.data);
-        const products = extractFirstProducts(cat$, categoryUrl, 10);
-        const titles = extractProductTitles(cat$, 5);
+        products = extractFirstProducts(cat$, categoryUrl, 10);
+        titles = extractProductTitles(cat$, 5);
+
+        // C2: SPA fallback. If static extraction returned 0 products AND
+        // Phase 2 armed g_playwrightRequired, re-fetch the same URL via
+        // Playwright and re-run extraction. This is the mechanical parallel
+        // of the production `fetchWithPlaywright` fallback in
+        // catalog-crawler.ts:403-413 / watermark-crawler.ts:143-159. See
+        // Mistake 19 (liangjian.ca, triggersandbows.com, sail.ca).
+        if (products.length === 0 && g_playwrightRequired && catResp.method !== 'playwright') {
+          log(`  [PW-SPA] Phase 3: static returned 0 products on SPA site — re-fetching via Playwright`);
+          const pw = await playwrightFetch(categoryUrl);
+          if (pw) {
+            const pw$ = cheerio.load(pw.data);
+            products = extractFirstProducts(pw$, categoryUrl, 10);
+            titles = extractProductTitles(pw$, 5);
+            log(`  [PW-SPA] Phase 3 Playwright re-fetch produced ${products.length} products, ${titles.length} titles`);
+            // Replace catResp so the downstream sub-category heuristic sees
+            // the rendered body (safer than leaving the stale 0-product HTML).
+            catResp = { status: 200, headers: {}, data: pw.data, method: 'playwright' };
+          }
+        }
+
         extractionResult = {
           url: categoryUrl,
           productsFound: products.length,
@@ -1597,7 +1790,7 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
   }
 
   log(`  Sort test URL: ${testUrl}`);
-  const catResp = await safeFetch(testUrl);
+  let catResp = await safeFetch(testUrl);
   if (!catResp || catResp.status !== 200) {
     return {
       sortOptions: [],
@@ -1612,7 +1805,33 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
     };
   }
 
-  const $ = cheerio.load(catResp.data);
+  let $ = cheerio.load(catResp.data);
+
+  // C2: SPA fallback. Sort dropdowns on SPA sites are typically client-rendered
+  // (Ecwid `<select id="ec-products-sort">`, GoDaddy OLS
+  // `[data-aid="PRODUCT_SORT_DROPDOWN"]`) — static HTML shows no sort UI.
+  // If page 1 static extraction returns 0 products AND the page has no sort
+  // selects, re-fetch via Playwright before giving up. Actually clicking the
+  // SPA sort dropdown to discover real param names is Wave 5 work.
+  const initialStaticProducts = extractFirstProducts($, testUrl, 1);
+  const initialStaticSortSelects = $('select').filter((_, sel) => {
+    const name = $(sel).attr('name') || '';
+    const id = $(sel).attr('id') || '';
+    return /sort|order/i.test(name + id);
+  }).length;
+  if (
+    g_playwrightRequired &&
+    catResp.method !== 'playwright' &&
+    (initialStaticProducts.length === 0 || initialStaticSortSelects === 0)
+  ) {
+    log(`  [PW-SPA] Phase 5: sort test URL static returned ${initialStaticProducts.length} products, ${initialStaticSortSelects} sort selects on SPA site — re-fetching via Playwright`);
+    const pw = await playwrightFetch(testUrl);
+    if (pw) {
+      catResp = { status: 200, headers: {}, data: pw.data, method: 'playwright' };
+      $ = cheerio.load(catResp.data);
+      log(`  [PW-SPA] Phase 5 Playwright re-fetch succeeded (body ${pw.data.length}b)`);
+    }
+  }
 
   // Extract sort options from <select> elements. Dedupe by (name+value) —
   // some sites render the <select> twice (top and bottom of the page).
@@ -1947,11 +2166,26 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
   if (!testUrl) return empty;
 
   log(`  Pagination test URL: ${testUrl}`);
-  const p1Resp = await safeFetch(testUrl);
+  let p1Resp = await safeFetch(testUrl);
   if (!p1Resp || p1Resp.status !== 200) return empty;
 
-  const p1$ = cheerio.load(p1Resp.data);
-  const page1Products = extractFirstProducts(p1$, testUrl, 20);
+  let p1$ = cheerio.load(p1Resp.data);
+  let page1Products = extractFirstProducts(p1$, testUrl, 20);
+
+  // C2: SPA fallback for page 1. If static returned 0 products AND Phase 2
+  // flagged the site as needing Playwright, re-fetch page 1 via Playwright
+  // before extracting pagination links. The pagination DOM is only present
+  // in the rendered document on SPA sites.
+  if (page1Products.length === 0 && g_playwrightRequired && p1Resp.method !== 'playwright') {
+    log(`  [PW-SPA] Phase 6: page 1 static returned 0 products on SPA site — re-fetching via Playwright`);
+    const pw = await playwrightFetch(testUrl);
+    if (pw) {
+      p1Resp = { status: 200, headers: {}, data: pw.data, method: 'playwright' };
+      p1$ = cheerio.load(p1Resp.data);
+      page1Products = extractFirstProducts(p1$, testUrl, 20);
+      log(`  [PW-SPA] Phase 6 Playwright page 1 produced ${page1Products.length} products`);
+    }
+  }
 
   // Extract pagination links from HTML
   const paginationLinks: string[] = [];
@@ -2068,10 +2302,24 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
   // Fetch page 2 and compare
   let page2Products: string[] = [];
   if (page2Url) {
-    const p2Resp = await safeFetch(page2Url);
+    let p2Resp = await safeFetch(page2Url);
     if (p2Resp && p2Resp.status === 200) {
       const p2$ = cheerio.load(p2Resp.data);
       page2Products = extractFirstProducts(p2$, page2Url, 20);
+      // C2: SPA fallback for page 2. Same rationale as page 1 — the rendered
+      // pagination pathway on SPA sites is only visible after client-side
+      // hydration. If static returned 0 products on page 2 AND Phase 2 armed
+      // the Playwright flag, re-fetch via Playwright.
+      if (page2Products.length === 0 && g_playwrightRequired && p2Resp.method !== 'playwright') {
+        log(`  [PW-SPA] Phase 6: page 2 static returned 0 products on SPA site — re-fetching via Playwright`);
+        const pw = await playwrightFetch(page2Url);
+        if (pw) {
+          p2Resp = { status: 200, headers: {}, data: pw.data, method: 'playwright' };
+          const rp2$ = cheerio.load(p2Resp.data);
+          page2Products = extractFirstProducts(rp2$, page2Url, 20);
+          log(`  [PW-SPA] Phase 6 Playwright page 2 produced ${page2Products.length} products`);
+        }
+      }
     }
   }
 
@@ -2280,6 +2528,27 @@ function assemble(
     );
   }
 
+  // C2: SPA-Playwright signal — the probe used Playwright for non-WAF reasons
+  // (SPA client-side rendering / JS overlay). Distinct from wafFallbackUsed.
+  // The skill must set `needsPlaywright: true` on these sites so production
+  // catalog-crawler.ts / watermark-crawler.ts auto-fire Playwright for the
+  // low-product-count case without waiting for the fallback threshold trip.
+  if (g_playwrightRequired && !g_wafFallbackObserved) {
+    warnings.push(
+      `Probe armed Playwright fallback for non-WAF SPA (renderingMode=${platform.renderingMode.value}, jsOverlay=${platform.jsOverlay.value}) and issued ${g_playwrightHits} Playwright fetch(es). Profile must set needsPlaywright=true. This is a SPA signal, NOT a WAF signal — no wafWorkaround needed.`,
+    );
+  }
+
+  // C3: iPhone-UA switch signal — subsequent phases had to use iPhone UA
+  // because desktop Chrome was WAF-blocked (Mistake 30 Fix B). Profile must
+  // set `userAgentOverride` to an iPhone UA string so the production crawler
+  // / waf-cookie-manager.ts use the same UA class that solves the challenge.
+  if (access.recommendedUserAgent?.value === 'iphone-safari') {
+    warnings.push(
+      `Phase 1 UA sweep determined iPhone UA is required (desktop Chrome was WAF-blocked but iPhone Safari returned real content). Profile must set userAgentOverride to an iPhone UA string so waf-cookie-manager.ts and all adapters use the same UA class. See Mistake 30 Fix B.`,
+    );
+  }
+
   return {
     overallConfidence,
     completedPhases: completed,
@@ -2291,6 +2560,7 @@ function assemble(
     testUrlWasFacetFiltered: conf(wasFacetFiltered, wasFacetFiltered ? 'high' : 'low'),
     wafFallbackUsed: conf(g_wafFallbackObserved, g_wafFallbackObserved ? 'high' : 'low'),
     playwrightFetchCount: g_playwrightHits,
+    playwrightRequired: conf(g_playwrightRequired, g_playwrightRequired ? 'high' : 'low'),
     // Assembly always runs to completion (it's pure aggregation, can't fail
     // unless a phase result is malformed). The dependencies array reflects
     // that it consumed all phase outputs.
