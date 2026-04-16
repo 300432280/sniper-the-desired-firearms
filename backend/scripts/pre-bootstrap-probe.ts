@@ -30,6 +30,85 @@ const BIG_HEADER_HTTPS_AGENT = new https.Agent({ keepAlive: true, maxHeaderSize:
 // Undici dispatcher with raised header size for the native-fetch fallback.
 const BIG_HEADER_UNDICI = new UndiciAgent({ maxResponseSize: -1, headersTimeout: 20000, bodyTimeout: 20000, connect: { timeout: 20000 }, maxHeaderSize: 131072 } as any);
 
+// Single logger used everywhere. Declared early so the WAF-fallback helpers
+// below (playwrightFetch, etc.) can reference it without TS complaining about
+// use-before-declaration.
+const log = (...args: any[]) => process.stderr.write(args.join(' ') + '\n');
+
+// When Phase 1 confirms a JS-challenge WAF (Sucuri, Cloudflare active, Incapsula,
+// SiteGround sgcaptcha), all subsequent axios HTML fetches receive the challenge
+// page (tiny ~1-2 KB body with JS that sets a cookie then reloads). Running Phase
+// 2+ against the challenge body produces cascading failures (0 products, null
+// platform, no sort UI, no pagination). The probe falls back to
+// `fetchWithPlaywright` — the same Playwright-driven fetcher used by
+// `catalog-crawler.ts` / `watermark-crawler.ts` / `waf-cookie-manager.ts` — to
+// obtain the real rendered HTML. See playbook Mistake 38 (2026-04-15).
+let g_wafFallbackRequired = false;    // set by Phase 1 when a JS-challenge WAF is confirmed
+let g_wafFallbackObserved = false;    // set at runtime when any axios response body looks like a challenge
+let g_playwrightHits = 0;             // count of Playwright fallback invocations
+let g_playwrightClosed = false;
+
+/**
+ * Detect whether an axios response body is a WAF challenge page (and not real
+ * content). Heuristics target Sucuri (sucuri_cloudproxy_js / "You are being
+ * redirected"), Cloudflare IUAM + Turnstile + managed challenge, Incapsula
+ * (_Incapsula_Resource / Imperva), SiteGround sgcaptcha meta-refresh. Also
+ * treat any <5KB body that passed heavy WAF detection as suspect.
+ */
+function isWafChallengeBody(body: string, status: number, hasWaf: boolean): boolean {
+  if (!body) return false;
+  // Explicit vendor signatures (authoritative — no size gate needed)
+  if (/sucuri_cloudproxy_js|Sucuri\b|Access Denied - Sucuri/i.test(body)) return true;
+  if (/_Incapsula_Resource|Incapsula incident|Imperva/i.test(body)) return true;
+  if (/sg-?captcha|\.well-known\/sgcaptcha/i.test(body)) return true;
+  if (/cf-browser-verification|cf-challenge|_cf_chl|cdn-cgi\/challenge-platform|Just a moment\.\.\.|Checking your browser|Verifying you are human|Attention Required!/i.test(body)) return true;
+  // Generic small-body-with-waf-context heuristic: when Phase 1 saw WAF
+  // indicators AND the body is tiny, assume a challenge even if the vendor
+  // signature rotated. Keeps the probe resilient to vendor UI changes.
+  if (hasWaf && body.length < 5000 && /<script[\s\S]*?(location\.reload|document\.cookie|eval\()/i.test(body)) return true;
+  if (hasWaf && (status === 307 || status === 403 || status === 503) && body.length < 3000) return true;
+  return false;
+}
+
+/**
+ * Playwright-backed HTML fetch. Uses the same `fetchWithPlaywright` module
+ * that production `catalog-crawler.ts` / `watermark-crawler.ts` already call
+ * for WAF bypass — the probe piggy-backs so it doesn't reinvent Sucuri/CF
+ * handling. Returns a normalized `{ status, headers, data, method }` tuple
+ * compatible with `safeFetch`'s return type.
+ */
+async function playwrightFetch(url: string): Promise<{ status: number; headers: Record<string, any>; data: string; method: 'playwright' } | null> {
+  try {
+    // Lazy import so non-WAF sites never touch Playwright (saves ~800ms + browser spawn)
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { fetchWithPlaywright } = await import('../src/services/scraper/playwright-fetcher');
+    const { html } = await fetchWithPlaywright(url, { timeout: 45000 });
+    g_playwrightHits++;
+    // Playwright-sourced fetches are synthetic 200 — the browser followed
+    // redirects and resolved any challenge. Headers are not exposed by
+    // `fetchWithPlaywright`, so we return an empty object; callers that need
+    // real headers (API probes) don't use this path.
+    return { status: 200, headers: {}, data: html, method: 'playwright' };
+  } catch (e: any) {
+    log(`  [playwright] fetch failed for ${url}: ${(e?.message || '').slice(0, 160)}`);
+    return null;
+  }
+}
+
+/**
+ * Ensure Playwright browser is closed at the end of the probe run. Safe to
+ * call even when Playwright was never used — the import is lazy.
+ */
+async function closePlaywrightIfNeeded(): Promise<void> {
+  if (g_playwrightClosed || g_playwrightHits === 0) return;
+  g_playwrightClosed = true;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { closeBrowser } = await import('../src/services/scraper/playwright-fetcher');
+    await closeBrowser();
+  } catch { /* ignore — process exit will clean up anyway */ }
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface Confidence { value: string | number | boolean | null; confidence: 'high' | 'medium' | 'low' | 'none' }
@@ -134,6 +213,16 @@ interface AssemblyPhase {
   // the skill must re-verify the global count separately before writing the
   // profile's expectedProductCount.
   testUrlWasFacetFiltered: Confidence;
+  // Flag set when Phase 1 detected a JS-challenge WAF (Sucuri / CF active /
+  // Incapsula / sgcaptcha) AND Phase 2+ had to fall through to Playwright to
+  // obtain real HTML. Informs the skill that `needsPlaywright: true` AND
+  // `wafWorkaround.method: 'cookie-cache'` belong in the profile. See Mistake 38.
+  wafFallbackUsed: Confidence;
+  // Number of Playwright-backed HTML fetches the probe issued. High numbers
+  // (>10) on a single probe run indicate the WAF challenge is served on every
+  // URL — the site needs `needsPlaywright: true` pervasively, not just for
+  // the initial cookie solve.
+  playwrightFetchCount: number;
 }
 
 interface ProbeReport {
@@ -154,8 +243,7 @@ interface ProbeReport {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-const log = (...args: any[]) => process.stderr.write(args.join(' ') + '\n');
+// (log() is declared at the top of the file so WAF-fallback helpers can use it.)
 
 const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1';
@@ -192,13 +280,17 @@ async function nativeFetchText(url: string, headers: Record<string, string>): Pr
   }
 }
 
-async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: string; method?: 'axios' | 'native-fetch' } | null> {
+async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: string; method?: 'axios' | 'native-fetch' | 'playwright' } | null> {
   const defaultHeaders = {
     'User-Agent': DESKTOP_UA,
     Accept: 'text/html,application/xhtml+xml,*/*;q=0.8',
     'Accept-Language': 'en-CA,en;q=0.9',
   };
   const mergedHeaders = { ...defaultHeaders, ...(opts.headers || {}) };
+  // allowPlaywright: caller opts out when they need to see the raw challenge
+  // body (e.g. the initial Phase 1 probe before WAF state is known). Default
+  // is to auto-fall-back when Phase 1 set g_wafFallbackRequired.
+  const allowPlaywright = opts.allowPlaywright !== false;
   try {
     const resp = await axios.get(url, {
       timeout: 20000,
@@ -210,10 +302,21 @@ async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{
       ...opts,
       headers: mergedHeaders,
     });
+    const body = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+    // If Phase 1 flagged a JS-challenge WAF AND the response body looks like
+    // a challenge page, fall through to Playwright. This is what makes the
+    // probe usable on Sucuri/Cloudflare-active/Incapsula/sgcaptcha sites
+    // where axios receives a 307/403 redirect-to-challenge HTML instead of
+    // the real page. See playbook Mistake 38.
+    if (allowPlaywright && g_wafFallbackRequired && isWafChallengeBody(body, resp.status, true)) {
+      g_wafFallbackObserved = true;
+      const pw = await playwrightFetch(url);
+      if (pw) return pw;
+    }
     return {
       status: resp.status,
       headers: resp.headers,
-      data: typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data),
+      data: body,
       method: 'axios',
     };
   } catch (e: any) {
@@ -223,7 +326,22 @@ async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{
     const msg = (e?.message || '').toLowerCase();
     if (msg.includes('parse error') || msg.includes('hpe_invalid') || msg.includes('invalid header')) {
       const r = await nativeFetchText(url, mergedHeaders);
-      if (r) return { ...r, method: 'native-fetch' };
+      if (r) {
+        // Even native-fetch can get a challenge body if the server is behind
+        // Sucuri+ColdFusion (rare but real — the Sucuri edge still serves
+        // challenge HTML regardless of origin-header quirks).
+        if (allowPlaywright && g_wafFallbackRequired && isWafChallengeBody(r.data, r.status, true)) {
+          g_wafFallbackObserved = true;
+          const pw = await playwrightFetch(url);
+          if (pw) return pw;
+        }
+        return { ...r, method: 'native-fetch' };
+      }
+    }
+    // Timeout / connection reset with WAF confirmed → try Playwright
+    if (allowPlaywright && g_wafFallbackRequired) {
+      const pw = await playwrightFetch(url);
+      if (pw) return pw;
     }
     return null;
   }
@@ -444,6 +562,20 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
   } catch (e: any) {
     wafEvidence.error = e.message?.slice(0, 500);
     log('  WAF probe failed:', e.message?.slice(0, 200));
+  }
+
+  // Arm the Playwright fallback for Phase 2+ when Phase 1 confirmed a
+  // JS-challenge WAF. Sucuri / Cloudflare active / Incapsula / SiteGround
+  // sgcaptcha all serve a tiny HTML shell with JS that sets a cookie then
+  // reloads — axios sees the shell, not the real page. Passive Cloudflare
+  // (no challenge, cf-ray only) does NOT need fallback. rate-limit/unknown
+  // are treated as fallback-eligible as a safety net — if it's not really
+  // a challenge, the body size heuristic inside isWafChallengeBody() will
+  // let the axios response through unchanged.
+  const JS_CHALLENGE_TYPES = new Set(['sucuri', 'cloudflare-active', 'incapsula', 'siteground-sgcaptcha', 'rate-limit', 'unknown']);
+  if (wafType && JS_CHALLENGE_TYPES.has(wafType)) {
+    g_wafFallbackRequired = true;
+    log(`  [waf] Playwright fallback ARMED for wafType=${wafType} — Phase 2+ HTML fetches will auto-escalate on challenge body.`);
   }
 
   // Test multiple UAs — with native-fetch fallback for malformed-header sites.
@@ -726,6 +858,10 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
   const sitemapUrls: string[] = [];
   let sitemapProductCount: number | null = null;
   let sitemapIndexFollowed = 0;
+  // Tracks which sitemap URLs (absolute) have already been counted — prevents
+  // double-counting when `/sitemap_index.xml` lists `/product-sitemap.xml`
+  // AND the candidate list ALSO probes `/product-sitemap.xml` directly.
+  const countedSitemaps = new Set<string>();
 
   // Heuristics for classifying a <loc> as a product vs category
   function classifyLocs(locs: string[]): { product: number; likelyProduct: string[] } {
@@ -775,27 +911,45 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
   }
 
   for (const smPath of sitemapCandidates) {
-    const smResp = await safeFetch(`${origin}${smPath}`);
+    const smAbs = `${origin}${smPath}`;
+    if (countedSitemaps.has(smAbs)) continue;
+    const smResp = await safeFetch(smAbs);
     if (smResp && smResp.status === 200 && smResp.data.includes('<')) {
       sitemapUrls.push(smPath);
+      countedSitemaps.add(smAbs);
       const rawLocs = smResp.data.match(/<loc>[^<]+<\/loc>/g) || [];
       // Detect sitemap index — count <sitemap> entries (not <url>)
       const isIndex = /<sitemap>/.test(smResp.data) && !/<url>/.test(smResp.data.slice(0, 2000));
       if (isIndex) {
-        // Follow ALL sub-sitemaps — previous logic (product|item|shop filter,
-        // then pick [0]) missed sites whose index uses generic child URLs
-        // like `/sitemap.xml?page=1` (gunpost.ca's Drupal simple_sitemap).
-        // Cap total follows at 5 to avoid runaway work on pathological sites.
-        const MAX_FOLLOWS = 5;
-        // Prefer product-looking children first, then fall back to others
-        const prioritized = [
-          ...rawLocs.filter(l => /product|item|shop/i.test(l)),
-          ...rawLocs.filter(l => !/product|item|shop/i.test(l)),
+        // Follow sub-sitemaps. WooCommerce Yoast/RankMath sites typically
+        // split their product catalog into /product-sitemap.xml,
+        // /product-sitemap2.xml, ... /product-sitemapN.xml (one per 5000
+        // products by default). 16k-product sites (gotenda.com) have 17
+        // sub-sitemaps — capping at 5 undercounts by ~70%.
+        //
+        // Strategy: identify PRODUCT sub-sitemaps via URL pattern AND follow
+        // all of them (up to 40, which covers 200k-product sites). Other
+        // child sitemaps (category, post, author, user) are followed with a
+        // smaller cap since they rarely add product counts but could on
+        // sites with non-standard sitemap naming (gunpost.ca simple_sitemap).
+        const PRODUCT_SM_RE = /product[-_]?sitemap(?:\d+|\.xml|_\d+|-\d+)?|sitemap_products?|products?-sitemap|store[-_]?products[-_]?sitemap|sitemap_products_\d+/i;
+        const productSubSitemaps: string[] = [];
+        const otherSubSitemaps: string[] = [];
+        for (const l of rawLocs) {
+          if (PRODUCT_SM_RE.test(l)) productSubSitemaps.push(l);
+          else otherSubSitemaps.push(l);
+        }
+        const MAX_PRODUCT_FOLLOWS = 40;
+        const MAX_OTHER_FOLLOWS = 5;
+        const planned: string[] = [
+          ...productSubSitemaps.slice(0, MAX_PRODUCT_FOLLOWS),
+          ...otherSubSitemaps.slice(0, MAX_OTHER_FOLLOWS),
         ];
-        for (const child of prioritized) {
-          if (sitemapIndexFollowed >= MAX_FOLLOWS) break;
-          sitemapIndexFollowed++;
+        for (const child of planned) {
           const subUrl = child.replace(/^<loc>/, '').replace(/<\/loc>$/, '').trim();
+          if (countedSitemaps.has(subUrl)) continue;
+          sitemapIndexFollowed++;
+          countedSitemaps.add(subUrl);
           const sub = await safeFetch(subUrl);
           if (sub && sub.status === 200) {
             const subLocs = sub.data.match(/<loc>[^<]+<\/loc>/g) || [];
@@ -820,7 +974,18 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
   const hasLangPrefix = /\/(en|fr|es|de)\//i.test(html);
   const multilingual = hasHreflang || hasWpml || hasLangPrefix;
 
-  const needsPlaywright = renderingMode === 'spa-likely' || jsOverlay !== null;
+  // needsPlaywright=true when:
+  //   (a) SPA detected (static HTML returns 0 products but site renders in browser), OR
+  //   (b) JS overlay detected (Searchspring, Klevu, FastSimon) — sort/filter
+  //       are JS-only, need Playwright to drive, OR
+  //   (c) WAF fallback was ARMED in Phase 1 — production adapter will need
+  //       waf-cookie-manager + periodic Playwright solve. This is the authoritative
+  //       signal for WooCommerce/Shopify sites behind Sucuri/CF-active/Incapsula.
+  const needsPlaywright = renderingMode === 'spa-likely' || jsOverlay !== null || g_wafFallbackRequired;
+  const needsPlaywrightConf: Confidence['confidence'] =
+    g_wafFallbackRequired ? 'high' :        // WAF confirmed via heavy probe
+    (renderingMode === 'spa-likely' || jsOverlay !== null) ? 'medium' :
+    'low';
 
   return {
     platform: conf(platform, platformConf),
@@ -828,7 +993,7 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
     jsOverlay: conf(jsOverlay, jsOverlay ? 'high' : 'none'),
     renderingMode: conf(renderingMode, renderingMode !== 'unknown' ? 'medium' : 'low'),
     availableApis: apis,
-    needsPlaywright: conf(needsPlaywright, needsPlaywright ? 'medium' : 'low'),
+    needsPlaywright: conf(needsPlaywright, needsPlaywrightConf),
     multilingual: conf(multilingual, multilingual ? 'medium' : 'low'),
     sitemapUrls,
     sitemapProductCount: conf(sitemapProductCount, sitemapProductCount ? 'medium' : 'none'),
@@ -863,12 +1028,31 @@ async function probeAdapter(origin: string, platformPhase: PlatformPhase): Promi
     }
   }
 
+  // When a JS-challenge WAF is in front of a known platform, the WP REST /
+  // Shopify JSON / Ecwid storefront probes return 307/403 because axios can't
+  // solve the challenge. BUT the production adapter has its own WAF cookie
+  // solve path (`ensureCookies` in WooCommerceAdapter.searchViaApi,
+  // waf-cookie-manager.ts), so the adapter WILL work at runtime once cookies
+  // are cached. Treat platform==='woocommerce' + wafFallbackRequired as
+  // sufficient evidence for adapter='woocommerce' — downgrading to
+  // generic-retail would silently disable API-date-since-watermark and break
+  // the 16k-product sites (gotenda.com is the canonical case — see Mistake 38).
+  const apiGatedByWaf = g_wafFallbackRequired && !wpRestApi && !shopifyApi && !ecwidApi;
+
   if (platform === 'woocommerce' && wpRestApi) {
     suggestedAdapter = 'woocommerce';
     adapterConf = 'high';
+  } else if (platform === 'woocommerce' && apiGatedByWaf) {
+    suggestedAdapter = 'woocommerce';
+    adapterConf = 'medium';
+    log('  [adapter] platform=woocommerce but WP REST blocked by WAF. Assuming API will work once waf-cookie-manager solves cookies at runtime. See Mistake 38.');
   } else if (platform === 'shopify' && shopifyApi) {
     suggestedAdapter = 'shopify';
     adapterConf = 'high';
+  } else if (platform === 'shopify' && apiGatedByWaf) {
+    suggestedAdapter = 'shopify';
+    adapterConf = 'medium';
+    log('  [adapter] platform=shopify but /products.json blocked by WAF. Assuming API will work once waf-cookie-manager solves cookies at runtime.');
   } else if (platform === 'ecwid-on-wordpress' && ecwidApi) {
     suggestedAdapter = 'generic-retail'; // Ecwid handled as apiAlternative in GenericRetail
     adapterConf = 'high';
@@ -944,6 +1128,61 @@ async function probeAdapter(origin: string, platformPhase: PlatformPhase): Promi
           productsFound: products.length,
           sampleTitles: titles,
         };
+
+        // Sub-category tile detection — WooCommerce/BC Stencil/Magento themes
+        // can be configured to show subcategory tiles on parent category pages
+        // instead of (or above) the product grid. The `extractFirstProducts`
+        // selector matches these tiles (they also use `.product` / `li.product`
+        // wrappers), so `productsFound` looks fine — but Phase 5 fails to find
+        // a sort `<select>` and Phase 6 fails to find product-level pagination
+        // because the tile page has neither.
+        //
+        // Heuristic: titles matching `^[A-Z][A-Z\s&\-\/]*\(\d+\)` (ALLCAPS
+        // NAME followed by a `(count)`) or pure ALLCAPS titles with no
+        // sentence-case content are category tiles, not product names.
+        // Real product titles mix casing and SKU-like fragments.
+        const TILE_RE = /^[A-Z0-9][A-Z0-9\s&\-\/]+(?:\s*\(\d+\))?$/;
+        const tileTitleCount = titles.filter(t => TILE_RE.test(t) && /\(\d+\)$/.test(t)).length;
+        const looksLikeTilePage = titles.length > 0 && tileTitleCount / titles.length >= 0.5;
+        if (looksLikeTilePage) {
+          log(`  [adapter] Parent category returned subcategory tiles (${tileTitleCount}/${titles.length} titles match tile pattern). Searching for a leaf category with real products...`);
+          // Find a child URL under the same category — nav links that start
+          // with the parent path + extra segment.
+          const parentPath = new URL(categoryUrl).pathname.replace(/\/+$/, '');
+          const childCandidates: string[] = [];
+          $('nav a[href], header a[href], .menu a[href], [class*="nav"] a[href]').each((_, el) => {
+            const href = $(el).attr('href') || '';
+            if (!href) return;
+            try {
+              const abs = href.startsWith('http') ? href : new URL(href, origin).toString();
+              if (new URL(abs).origin !== origin) return;
+              const p = new URL(abs).pathname.replace(/\/+$/, '');
+              if (p.startsWith(parentPath + '/') && p !== parentPath) {
+                if (!childCandidates.includes(abs)) childCandidates.push(abs);
+              }
+            } catch {}
+          });
+          // Try each child; take the first one that returns real products
+          // (i.e. titles that DON'T look like tiles).
+          for (const child of childCandidates.slice(0, 5)) {
+            const cResp = await safeFetch(child);
+            if (!cResp || cResp.status !== 200) continue;
+            const c$ = cheerio.load(cResp.data);
+            const cProducts = extractFirstProducts(c$, child, 10);
+            const cTitles = extractProductTitles(c$, 5);
+            if (cProducts.length === 0 || cTitles.length === 0) continue;
+            const cTileCount = cTitles.filter(t => TILE_RE.test(t) && /\(\d+\)$/.test(t)).length;
+            if (cTileCount / cTitles.length < 0.5) {
+              log(`  [adapter] Leaf category found: ${child} (${cProducts.length} products, ${cTitles.length} titles, tile ratio ${cTileCount}/${cTitles.length})`);
+              extractionResult = {
+                url: child,
+                productsFound: cProducts.length,
+                sampleTitles: cTitles,
+              };
+              break;
+            }
+          }
+        }
       }
     }
   }
@@ -1237,13 +1476,45 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
   // The bare `posted` / `date_pub` / `created` words match the "newest by date"
   // intent found on Drupal classifieds sites where the sort label is literally
   // "Posted Date" rather than "Newest".
-  const NEWEST_REGEX = /newest|new.to.old|most.recent|new[- ]?arrival|date.*desc|added.*desc|created.*desc|published.*desc|addedtimedesc|created-descending|published-descending|recent|posted|\bcreated\b|\bdate_pub\b/i;
+  // Vendor-specific newest-sort label variants:
+  //   WooCommerce default:    text="Sort by latest", value="date"
+  //   Shopify default:         text="Date, new to old", value="created-descending"
+  //   BC Stencil default:      text="Newest Items", value="newest"
+  //   Magento default:         text="Newest" or "Most Recent", value varies
+  //   Celerant default:        text="New Arrivals" or "Newest Received", value="new-arrivals"
+  //   Drupal Views classifieds: text="Posted Date" (with `&order=desc`),
+  //                             value="created&order=desc" or "date_pub&sort_order=DESC"
+  //   Ecwid storefront API:    value="addedTimeDesc" (no <select>, API only)
+  //   GoDaddy OLS SPA:         value="descend_by_created_at" (hash, not <select>)
+  // The regex must match EITHER the option's text OR its value — the text
+  // is the human label and the value is the machine token; different vendors
+  // use different fields as the sort signal.
+  const NEWEST_REGEX = /newest|new.to.old|most.recent|new[- ]?arrival|date.*desc|added.*desc|created.*desc|published.*desc|addedtimedesc|created-descending|published-descending|recent|posted|\bcreated\b|\bdate_pub\b|\blatest\b|\bdate$|^date\b|\bby date\b|\bsort by date\b/i;
+  // Counter-control selection is load-bearing for the 3-outcome sort test:
+  // when `newest == default`, we need ANOTHER sort option that demonstrably
+  // re-orders the results — only then can we distinguish "honored-default-
+  // is-newest" from true "noop". WooCommerce's default select exposes
+  // popularity / rating / date / price (low→high) / price-desc (high→low)
+  // and has NO alphaasc option, so the old regex matched nothing on 16k-
+  // product WooCommerce sites (gotenda.com canonical case, Mistake 38).
+  // Rank counter candidates by likely-to-differ-from-newest:
+  //   1. alpha/name/title ASC (classic counter — most likely to differ)
+  //   2. price ASC or DESC (price variance is almost always independent of date)
+  //   3. popularity / rating / bestsellers (default merchant-pushed order —
+  //      usually differs from strict date)
+  //   4. ANY remaining sort option that is NOT a newest candidate
   const COUNTER_REGEX = /alpha.*asc|name.*asc|\ba.*z\b|title.*asc|nameasc|alphaasc/i;
+  const PRICE_REGEX = /\bprice\b|priceasc|price-low|price.*low|low.*high|high.*low|price-desc|pricedesc/i;
+  const POPULARITY_REGEX = /popularity|popular|bestseller|best.sell|trending|featured|rating/i;
 
   const newestCandidates = sortOptions.filter(o => NEWEST_REGEX.test(o.text + ' ' + o.value));
+  const newestSet = new Set(newestCandidates.map(o => o.value));
+  const isNewest = (o: SortOption) => newestSet.has(o.value);
   let counterOption: SortOption | null =
-    sortOptions.find(o => COUNTER_REGEX.test(o.text + ' ' + o.value)) ||
-    sortOptions.find(o => /price.*asc|priceasc|price-low/i.test(o.text + ' ' + o.value)) ||
+    sortOptions.find(o => !isNewest(o) && COUNTER_REGEX.test(o.text + ' ' + o.value)) ||
+    sortOptions.find(o => !isNewest(o) && PRICE_REGEX.test(o.text + ' ' + o.value)) ||
+    sortOptions.find(o => !isNewest(o) && POPULARITY_REGEX.test(o.text + ' ' + o.value)) ||
+    sortOptions.find(o => !isNewest(o)) ||
     null;
 
   // Helper: build a URL applying a given sort option. Supports BOTH query-param
@@ -1720,6 +1991,15 @@ function assemble(
     );
   }
 
+  // WAF-fallback signal — the probe itself had to use Playwright to get past
+  // a JS-challenge WAF. Informs the skill to set `needsPlaywright: true` and
+  // (for WooCommerce sites) `wafWorkaround.method: 'cookie-cache'`.
+  if (g_wafFallbackObserved) {
+    warnings.push(
+      `Probe used Playwright fallback ${g_playwrightHits} time(s) to bypass JS-challenge WAF. Profile must set needsPlaywright=true. For WooCommerce/Shopify/Ecwid sites, also set wafWorkaround.method='cookie-cache' so waf-cookie-manager.ts pre-solves cookies once per 30-90min instead of re-running Playwright per request.`,
+    );
+  }
+
   return {
     overallConfidence,
     completedPhases: completed,
@@ -1728,6 +2008,8 @@ function assemble(
     expectedProductCount: conf(expectedCount, expectedCount ? (expectedSource === 'api' ? 'high' : 'medium') : 'none'),
     expectedProductCountSource: expectedSource,
     testUrlWasFacetFiltered: conf(wasFacetFiltered, wasFacetFiltered ? 'high' : 'low'),
+    wafFallbackUsed: conf(g_wafFallbackObserved, g_wafFallbackObserved ? 'high' : 'low'),
+    playwrightFetchCount: g_playwrightHits,
   };
 }
 
@@ -1862,9 +2144,18 @@ async function main() {
 
   // Output JSON to stdout
   console.log(JSON.stringify(report, null, 2));
+
+  // Close Playwright browser if we spun one up. No-op when probe never used
+  // the Playwright fallback. Without this, node hangs on exit.
+  await closePlaywrightIfNeeded();
 }
 
-main().catch(e => {
+main().catch(async e => {
   console.error('Fatal error:', e);
+  await closePlaywrightIfNeeded().catch(() => {});
   process.exit(1);
+}).finally(() => {
+  // Redis keepalive inside playwright-fetcher's require-chain can prevent
+  // process exit. Force it after a short grace period.
+  setTimeout(() => process.exit(0), 2000).unref();
 });

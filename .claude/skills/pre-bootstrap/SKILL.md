@@ -69,6 +69,22 @@ For **unknown or ambiguous platforms**, apply these judgment rules:
 #### Custom PHP / legacy sites (Mistakes 15, 18)
 - **Action**: Cross-reference DOM order against known signals (POST endpoint baseline, sitemap lastmod, RSS, known-recent product). "No sort UI" does NOT mean "no sort possible." Run ONE cross-reference test before concluding `navigate-from-watermark` is impossible.
 
+#### WooCommerce behind JS-challenge WAF (Mistake 38)
+- **Detection signals**: `platform.platform.value === 'woocommerce'` AND `access.hasWaf.value === true` AND `assembly.wafFallbackUsed.value === true` AND `adapter.apiAccessible.value === false` (API returns 307/403 challenge, not real data).
+- **Key profile fields to set**:
+  - `adapterType: 'woocommerce'` — NOT generic-retail. The WooCommerce adapter's `ensureCookies` path solves the WAF at runtime.
+  - `hasWaf: true` (BOTH DB column AND profile field — see Mistake 30)
+  - `wafType: '<from probe>' (sucuri/cloudflare-active/etc.)`
+  - `needsPlaywright: true` — the WAF cookie solve needs Playwright once per 30-90 min
+  - `wafWorkaround: { method: 'cookie-cache', storeApiAvailable: true, cookieTtlMinutes: 30, steps: [...] }` — document the cookie-cache flow
+  - `crawlers.watermark.method: 'api-date-since-watermark'` — WP REST's `?after=` filter works once cookies are cached
+  - `crawlers.bootstrap.apiEndpoints.productDiscovery: '/wp-json/wp/v2/product'`
+  - `crawlers.bootstrap.apiEndpoints.priceEnrichment: '/wp-json/wc/store/v1/products'`
+- **Sort verification**: The probe's `sortScheme: 'query'` + `verdict: 'honored-default-is-newest'` is the expected result for WooCommerce sites where the default listing is already date-desc. `sortParam: '?orderby=date&order=desc'` for explicit navigate-from-watermark safety.
+- **Product count**: Use `sitemapProductCount` from the probe. The WP REST `x-wp-total` is not accessible via the probe (WAF-gated), but will be verified at first bootstrap crawl. Sitemap typically matches within 1%.
+- **Sub-category tile trap**: The probe now auto-detects parent category pages that show sub-category tiles instead of products (ALLCAPS titles with `(count)` like "HANDGUNS (778)") and walks to a leaf category. If the probe's extraction test URL is a leaf category, the catalogUrls can still use parent categories — WooCommerce includes child products when browsing parent pages. The sort select absence on tile-only pages is the diagnostic issue, not the catalogUrl structure.
+- **Reference audit**: gotenda.com (2026-04-07 manual audit, 16,440 products, Sucuri WAF, cookie-cache flow).
+
 #### Celerant / ColdFusion storefronts (Mistake 36)
 - **Detection signals** (ALL from Phase 1 probe output):
   - `platformMarkers` contains `celerant-coldfusion`, `coldfusion`

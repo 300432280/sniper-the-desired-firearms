@@ -1146,6 +1146,24 @@ crawlers.watermark.method: 'navigate-from-watermark'  // walk /catalog/search pa
 
 **Cross-references**: Mistake 23 (heavy probe mandatory), B4/B9/B13 audit reports.
 
+### Mistake 36 — (covered in persona) Celerant / ColdFusion pre-bootstrap probe defects
+
+### Mistake 37 — (covered in persona) Drupal classifieds facet-URL trap + sitemap lag
+
+### Mistake 38 — JS-challenge WAF blocks all probe fetches; Playwright fallback required
+
+**Site**: gotenda.com (WooCommerce, 16K products, Sucuri WAF)
+
+**What happened**: Pre-bootstrap probe v3 detected Sucuri in Phase 1 but then ran Phase 2-6 against the 1.4KB challenge body. Every downstream phase cascaded to failure: platform=null, adapter=generic-retail, 0 products, 0 sort options, no pagination. The manual audit profile showed this as a fully-functional WooCommerce site with 16,440 products — the probe was completely blind.
+
+**Root causes**: Five compounding defects: (1) `safeFetch()` had no Playwright fallback for WAF challenge bodies. (2) Adapter selection logic required WP REST API to be accessible (which it can't be through Sucuri without cookies). (3) Parent category pages on WooCommerce can show sub-category tiles instead of products — the probe found ALLCAPS titles like "HANDGUNS (778)" and treated them as products; the tile-only pages have NO sort `<select>`. (4) NEWEST_REGEX didn't include WooCommerce's "Sort by latest" (`\blatest\b` missing). (5) Counter-control chain didn't match WooCommerce's price sort labels. (6) Sitemap follow-through capped at 5, but gotenda has 17 sub-sitemaps.
+
+**Fixes**: (a) `safeFetch()` auto-escalates to `fetchWithPlaywright()` when Phase 1 flagged a JS-challenge WAF AND the response body matches `isWafChallengeBody()`. (b) Adapter suggestion uses `woocommerce` at medium confidence when platform is WooCommerce AND WAF fallback is armed. (c) Tile detection walks nav tree to find a leaf category with real products. (d) Added `\blatest\b` to newest regex. (e) Broadened counter-control to 4-tier cascade (alpha-asc → price → popularity → any non-newest). (f) Raised sitemap follow cap to 40 for product-looking sub-sitemaps with dedup.
+
+**Result**: v8 probe output: high confidence, 0 failed phases, platform=woocommerce, adapter=woocommerce, sortScheme=query, verdict=`honored-default-is-newest`, paginationPattern=`path:/page/{N}`, sitemapProductCount=16,382 (vs manual 16,440 — 0.35% delta).
+
+**Cross-references**: Mistake 29 (3-outcome sort test), Mistake 30 (hasWaf is DB column), gotenda.com profile.
+
 ---
 
 ## Adapter-side bugs discovered during site audits
