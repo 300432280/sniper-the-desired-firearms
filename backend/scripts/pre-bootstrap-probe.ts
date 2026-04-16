@@ -114,7 +114,18 @@ async function closePlaywrightIfNeeded(): Promise<void> {
 interface Confidence { value: string | number | boolean | null; confidence: 'high' | 'medium' | 'low' | 'none' }
 interface ProbeError { phase: string; message: string; stack?: string }
 
-interface AccessPhase {
+// M10: Phase status / dependency tracking. Every phase output has these three
+// fields so the assembly layer can differentiate "ran but produced no useful
+// output" (failed) from "didn't run because an upstream phase failed"
+// (skipped-upstream). Confidence calculation only penalizes failed phases.
+type PhaseStatus = 'completed' | 'failed' | 'skipped-upstream';
+interface PhaseStatusFields {
+  status: PhaseStatus;
+  dependencies: string[];
+  skipReason: string | null;
+}
+
+interface AccessPhase extends PhaseStatusFields {
   canonicalUrl: Confidence;
   hasWaf: Confidence;
   wafType: Confidence;
@@ -126,7 +137,7 @@ interface AccessPhase {
   serverHeader: Confidence;     // NEW — captured server header from real response
 }
 
-interface PlatformPhase {
+interface PlatformPhase extends PhaseStatusFields {
   platform: Confidence;
   platformMarkers: string[];
   jsOverlay: Confidence;
@@ -138,7 +149,7 @@ interface PlatformPhase {
   sitemapProductCount: Confidence;
 }
 
-interface AdapterPhase {
+interface AdapterPhase extends PhaseStatusFields {
   suggestedAdapter: Confidence;
   apiAccessible: Confidence;
   extractionTestResult: {
@@ -148,7 +159,7 @@ interface AdapterPhase {
   } | null;
 }
 
-interface CatalogPhase {
+interface CatalogPhase extends PhaseStatusFields {
   categoryTree: { name: string; url: string; count?: number; parentId?: number }[];
   navLinks: string[];
   sitemapProductCount: Confidence;
@@ -157,7 +168,7 @@ interface CatalogPhase {
 
 interface SortOption { value: string; text: string; selectName: string; selectId: string }
 
-interface SortPhase {
+interface SortPhase extends PhaseStatusFields {
   sortOptions: SortOption[];
   sortScheme: Confidence;     // 'query' | 'path' | 'hash' | 'js-only' | null
   idJumpTest: {
@@ -175,7 +186,7 @@ interface SortPhase {
   openCartDateProbe?: { param: string; firstProduct: string | null; defaultFirstProduct: string | null; honored: boolean };
 }
 
-interface PaginationPhase {
+interface PaginationPhase extends PhaseStatusFields {
   paginationPattern: Confidence;
   perPage: Confidence;
   page1Products: string[];
@@ -196,8 +207,12 @@ interface PaginationPhase {
   totalPagesObserved: Confidence;
 }
 
-interface AssemblyPhase {
+interface AssemblyPhase extends PhaseStatusFields {
   overallConfidence: 'high' | 'medium' | 'low';
+  // M10: skipped phases tracked separately from failed phases. Skipped =
+  // didn't run because an upstream dep failed; failed = ran but produced
+  // no useful output. Confidence calculation only penalizes failures.
+  skippedPhases: string[];
   completedPhases: string[];
   failedPhases: string[];
   warnings: string[];
@@ -252,6 +267,136 @@ function conf(value: any, confidence: Confidence['confidence']): Confidence {
   return { value, confidence };
 }
 
+// M10: phase dependency map. Each entry lists which other phases must have
+// status==='completed' before this phase is allowed to run. Assembly depends
+// on ALL phases (it reads their results, but tolerates skipped/failed deps).
+const PHASE_DEPENDENCIES: Record<string, string[]> = {
+  access: [],
+  platform: ['access'],
+  adapter: ['platform'],
+  catalog: ['platform'],
+  sort: ['access', 'platform'],
+  pagination: ['access', 'platform'],
+  assembly: ['access', 'platform', 'adapter', 'catalog', 'sort', 'pagination'],
+};
+
+// Build empty/null-shaped phase results for the skipped-upstream case. Each
+// helper preserves the contract of the corresponding phase function so
+// downstream consumers (assembly, type-check) are unchanged.
+function emptyAccessPhase(skipReason: string | null = null): AccessPhase {
+  return {
+    canonicalUrl: conf(null, 'none'), hasWaf: conf(null, 'none'), wafType: conf(null, 'none'),
+    wafProbeEvidence: {}, userAgentResults: [],
+    crawlDelay: conf(null, 'none'), robotsDisallowed: [],
+    malformedHeaders: conf(null, 'none'), serverHeader: conf(null, 'none'),
+    status: skipReason ? 'skipped-upstream' : 'failed',
+    dependencies: PHASE_DEPENDENCIES.access,
+    skipReason,
+  };
+}
+function emptyPlatformPhase(skipReason: string | null = null): PlatformPhase {
+  return {
+    platform: conf(null, 'none'), platformMarkers: [], jsOverlay: conf(null, 'none'),
+    renderingMode: conf(null, 'none'), availableApis: [], needsPlaywright: conf(null, 'none'),
+    multilingual: conf(false, 'none'), sitemapUrls: [], sitemapProductCount: conf(null, 'none'),
+    status: skipReason ? 'skipped-upstream' : 'failed',
+    dependencies: PHASE_DEPENDENCIES.platform,
+    skipReason,
+  };
+}
+function emptyAdapterPhase(skipReason: string | null = null): AdapterPhase {
+  return {
+    suggestedAdapter: conf(null, 'none'), apiAccessible: conf(false, 'none'), extractionTestResult: null,
+    status: skipReason ? 'skipped-upstream' : 'failed',
+    dependencies: PHASE_DEPENDENCIES.adapter,
+    skipReason,
+  };
+}
+function emptyCatalogPhase(skipReason: string | null = null): CatalogPhase {
+  return {
+    categoryTree: [], navLinks: [],
+    sitemapProductCount: conf(null, 'none'), apiProductCount: conf(null, 'none'),
+    status: skipReason ? 'skipped-upstream' : 'failed',
+    dependencies: PHASE_DEPENDENCIES.catalog,
+    skipReason,
+  };
+}
+function emptySortPhase(skipReason: string | null = null): SortPhase {
+  return {
+    sortOptions: [],
+    sortScheme: conf(null, 'none'),
+    idJumpTest: {
+      defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
+      newestParam: null, counterControlParam: null, verdict: 'not-tested',
+    },
+    status: skipReason ? 'skipped-upstream' : 'failed',
+    dependencies: PHASE_DEPENDENCIES.sort,
+    skipReason,
+  };
+}
+function emptyPaginationPhase(skipReason: string | null = null): PaginationPhase {
+  return {
+    paginationPattern: conf(null, 'none'), perPage: conf(null, 'none'),
+    page1Products: [], page2Products: [], zeroOverlap: conf(null, 'none'), paginationLinks: [],
+    zeroIndexed: conf(null, 'none'), firstPageHasParam: conf(null, 'none'),
+    totalPagesObserved: conf(null, 'none'),
+    status: skipReason ? 'skipped-upstream' : 'failed',
+    dependencies: PHASE_DEPENDENCIES.pagination,
+    skipReason,
+  };
+}
+
+// Decide a phase's status from its primary-output presence. Used to mark
+// `completed` vs `failed` after the phase returns. The exact "did it produce
+// useful output?" rule lives in the per-phase assembly logic; this is the
+// authoritative judgement used by downstream dependency checks.
+function isPhaseCompleted(phaseName: string, phase: any): boolean {
+  switch (phaseName) {
+    case 'access':
+      // canonical URL resolved, OR we got headers from the WAF probe (origin reachable somehow)
+      return (phase as AccessPhase).canonicalUrl?.confidence !== 'none' ||
+             Boolean((phase as AccessPhase).wafProbeEvidence?.probeBatchesRun);
+    case 'platform':
+      // Platform identified OR sitemap/api count present (still useful downstream)
+      return Boolean((phase as PlatformPhase).platform?.value) ||
+             ((phase as PlatformPhase).availableApis || []).some(a => a.accessible) ||
+             Boolean((phase as PlatformPhase).sitemapProductCount?.value);
+    case 'adapter':
+      // Suggested adapter known AND extraction worked (or API accessible)
+      return Boolean((phase as AdapterPhase).suggestedAdapter?.value);
+    case 'catalog':
+      return ((phase as CatalogPhase).categoryTree?.length || 0) > 0 ||
+             ((phase as CatalogPhase).navLinks?.length || 0) > 0;
+    case 'sort':
+      return (phase as SortPhase).idJumpTest?.verdict !== 'not-tested';
+    case 'pagination':
+      return Boolean((phase as PaginationPhase).paginationPattern?.value) ||
+             ((phase as PaginationPhase).page1Products?.length || 0) > 0;
+    default:
+      return true;
+  }
+}
+
+// Check whether all of a phase's deps are completed. Returns the first
+// failing dep name (or null when all are satisfied).
+function findFailingDependency(phaseName: string, phaseStatuses: Record<string, PhaseStatus>): string | null {
+  const deps = PHASE_DEPENDENCIES[phaseName] || [];
+  for (const dep of deps) {
+    if (phaseStatuses[dep] !== 'completed') return dep;
+  }
+  return null;
+}
+
+// Finalize a phase's status from its actual output — the per-phase probe
+// functions always return status:'completed' optimistically, but a phase that
+// ran WITHOUT throwing can still produce unusable output (e.g. 0 products, no
+// platform markers). `isPhaseCompleted` is the authoritative check. Called by
+// main() after each phase returns.
+function finalizePhaseStatus<T extends PhaseStatusFields>(name: string, phase: T): T {
+  phase.status = isPhaseCompleted(name, phase) ? 'completed' : 'failed';
+  return phase;
+}
+
 /**
  * Native-fetch fallback for servers that send malformed HTTP/1.1 headers
  * (e.g. Celerant/ColdFusion sends `X-Frame-Options : SAMEORIGIN` with trailing
@@ -280,7 +425,86 @@ async function nativeFetchText(url: string, headers: Record<string, string>): Pr
   }
 }
 
-async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: string; method?: 'axios' | 'native-fetch' | 'playwright' } | null> {
+// ─── M1: Retry-once wrapper ────────────────────────────────────────────────────
+// Wraps every safeFetch/safeFetchJson call with one automatic retry on
+// transient failure (network error / 5xx status / empty body). Does NOT retry
+// on 4xx (deliberate blocks), HPE parse errors (their own native-fetch path
+// already handles them), or WAF challenge bodies (separate Playwright path).
+//
+// Retry signal classifications:
+//   - retryable: result === null (network error/timeout w/o HPE), 5xx status,
+//                or empty body on a 2xx response (CDN truncation / partial)
+//   - non-retryable: 4xx (deliberate block, retry won't help), 2xx with body,
+//                    'playwright' / 'native-fetch' methods (those have their
+//                    own fallback semantics already; an HPE error already ran
+//                    native-fetch as a recovery — re-running axios first
+//                    would just hit HPE again).
+//
+// Retryable network error patterns. Matches Mistake 6 (durhamoutdoors.ca).
+const RETRYABLE_NET_ERR_RE = /econnreset|etimedout|enotfound|socket hang up|epipe|eai_again|network|fetch failed|aborterror|abort/i;
+const RETRY_DELAY_MS = 2000;
+
+interface FetchResult {
+  status: number;
+  headers: Record<string, any>;
+  data: any;
+  method?: 'axios' | 'native-fetch' | 'playwright';
+}
+
+function classifyRetry(result: FetchResult | null, lastErrMsg: string | null, isJson: boolean): { retry: boolean; reason: string } {
+  // Null result with HPE/parse error → DON'T retry (native-fetch already tried)
+  if (result === null) {
+    if (lastErrMsg && /parse error|hpe_invalid|invalid header/i.test(lastErrMsg)) {
+      return { retry: false, reason: 'HPE-parse-error (native-fetch fallback handles this)' };
+    }
+    if (lastErrMsg && RETRYABLE_NET_ERR_RE.test(lastErrMsg)) {
+      return { retry: true, reason: `network error: ${lastErrMsg.slice(0, 80)}` };
+    }
+    if (lastErrMsg) {
+      return { retry: true, reason: `unknown error: ${lastErrMsg.slice(0, 80)}` };
+    }
+    return { retry: true, reason: 'null result (no error captured)' };
+  }
+  // Playwright resolves to synthetic 200 — never retry that
+  if (result.method === 'playwright') return { retry: false, reason: 'playwright fallback succeeded' };
+  // 5xx → retry
+  if (result.status >= 500 && result.status < 600) {
+    return { retry: true, reason: `${result.status} server error` };
+  }
+  // Empty body on a 2xx → retry (CDN truncation, partial response)
+  if (result.status >= 200 && result.status < 300) {
+    if (isJson) {
+      // For JSON, treat null/undefined data as empty
+      if (result.data === null || result.data === undefined) {
+        return { retry: true, reason: `${result.status} but body is null` };
+      }
+    } else {
+      const body = typeof result.data === 'string' ? result.data : '';
+      if (body.length === 0) {
+        return { retry: true, reason: `${result.status} but body is empty` };
+      }
+    }
+  }
+  // Everything else (4xx, 2xx with body) → no retry
+  return { retry: false, reason: 'no retry needed' };
+}
+
+async function retryOnce<T extends FetchResult | null>(
+  url: string,
+  attempt: () => Promise<{ result: T; errMsg: string | null }>,
+  isJson: boolean,
+): Promise<T> {
+  const first = await attempt();
+  const { retry, reason } = classifyRetry(first.result, first.errMsg, isJson);
+  if (!retry) return first.result;
+  log(`[RETRY] ${url} failed (${reason}), retrying in 2s...`);
+  await new Promise<void>(r => setTimeout(r, RETRY_DELAY_MS));
+  const second = await attempt();
+  return second.result;
+}
+
+// ─── safeFetch / safeFetchJson — single-attempt cores + retry wrappers ─────────
+async function safeFetchOnce(url: string, opts: Record<string, any> = {}): Promise<{ result: { status: number; headers: Record<string, any>; data: string; method?: 'axios' | 'native-fetch' | 'playwright' } | null; errMsg: string | null }> {
   const defaultHeaders = {
     'User-Agent': DESKTOP_UA,
     Accept: 'text/html,application/xhtml+xml,*/*;q=0.8',
@@ -311,20 +535,24 @@ async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{
     if (allowPlaywright && g_wafFallbackRequired && isWafChallengeBody(body, resp.status, true)) {
       g_wafFallbackObserved = true;
       const pw = await playwrightFetch(url);
-      if (pw) return pw;
+      if (pw) return { result: pw, errMsg: null };
     }
     return {
-      status: resp.status,
-      headers: resp.headers,
-      data: body,
-      method: 'axios',
+      result: {
+        status: resp.status,
+        headers: resp.headers,
+        data: body,
+        method: 'axios',
+      },
+      errMsg: null,
     };
   } catch (e: any) {
+    const msg = e?.message || '';
     // HPE_INVALID_HEADER_TOKEN / Parse Error — server sent malformed headers
     // (Celerant ColdFusion, some legacy IIS configs). Fall back to undici's
     // native fetch which is more lenient.
-    const msg = (e?.message || '').toLowerCase();
-    if (msg.includes('parse error') || msg.includes('hpe_invalid') || msg.includes('invalid header')) {
+    const lowered = msg.toLowerCase();
+    if (lowered.includes('parse error') || lowered.includes('hpe_invalid') || lowered.includes('invalid header')) {
       const r = await nativeFetchText(url, mergedHeaders);
       if (r) {
         // Even native-fetch can get a challenge body if the server is behind
@@ -333,21 +561,27 @@ async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{
         if (allowPlaywright && g_wafFallbackRequired && isWafChallengeBody(r.data, r.status, true)) {
           g_wafFallbackObserved = true;
           const pw = await playwrightFetch(url);
-          if (pw) return pw;
+          if (pw) return { result: pw, errMsg: null };
         }
-        return { ...r, method: 'native-fetch' };
+        return { result: { ...r, method: 'native-fetch' }, errMsg: null };
       }
+      // native-fetch also failed — preserve HPE message so retry skips
+      return { result: null, errMsg: msg || 'HPE parse error and native-fetch failed' };
     }
     // Timeout / connection reset with WAF confirmed → try Playwright
     if (allowPlaywright && g_wafFallbackRequired) {
       const pw = await playwrightFetch(url);
-      if (pw) return pw;
+      if (pw) return { result: pw, errMsg: null };
     }
-    return null;
+    return { result: null, errMsg: msg };
   }
 }
 
-async function safeFetchJson(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: any; method?: 'axios' | 'native-fetch' } | null> {
+async function safeFetch(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: string; method?: 'axios' | 'native-fetch' | 'playwright' } | null> {
+  return retryOnce(url, () => safeFetchOnce(url, opts), false);
+}
+
+async function safeFetchJsonOnce(url: string, opts: Record<string, any> = {}): Promise<{ result: { status: number; headers: Record<string, any>; data: any; method?: 'axios' | 'native-fetch' } | null; errMsg: string | null }> {
   const defaultHeaders = {
     'User-Agent': DESKTOP_UA,
     Accept: 'application/json,*/*;q=0.8',
@@ -363,18 +597,24 @@ async function safeFetchJson(url: string, opts: Record<string, any> = {}): Promi
       ...opts,
       headers: mergedHeaders,
     });
-    return { status: resp.status, headers: resp.headers, data: resp.data, method: 'axios' };
+    return { result: { status: resp.status, headers: resp.headers, data: resp.data, method: 'axios' }, errMsg: null };
   } catch (e: any) {
-    const msg = (e?.message || '').toLowerCase();
-    if (msg.includes('parse error') || msg.includes('hpe_invalid') || msg.includes('invalid header')) {
+    const msg = e?.message || '';
+    const lowered = msg.toLowerCase();
+    if (lowered.includes('parse error') || lowered.includes('hpe_invalid') || lowered.includes('invalid header')) {
       const r = await nativeFetchText(url, mergedHeaders);
       if (r) {
-        try { return { ...r, data: JSON.parse(r.data), method: 'native-fetch' }; }
-        catch { return { ...r, data: null, method: 'native-fetch' }; }
+        try { return { result: { ...r, data: JSON.parse(r.data), method: 'native-fetch' }, errMsg: null }; }
+        catch { return { result: { ...r, data: null, method: 'native-fetch' }, errMsg: null }; }
       }
+      return { result: null, errMsg: msg || 'HPE parse error and native-fetch failed' };
     }
-    return null;
+    return { result: null, errMsg: msg };
   }
+}
+
+async function safeFetchJson(url: string, opts: Record<string, any> = {}): Promise<{ status: number; headers: Record<string, any>; data: any; method?: 'axios' | 'native-fetch' } | null> {
+  return retryOnce(url, () => safeFetchJsonOnce(url, opts), true);
 }
 
 function extractFirstProducts($: cheerio.CheerioAPI, baseUrl: string, limit = 5): string[] {
@@ -639,6 +879,10 @@ async function probeAccess(inputUrl: string): Promise<{ result: AccessPhase; can
       robotsDisallowed,
       malformedHeaders: conf(anyHpeError, anyHpeError ? 'high' : 'low'),
       serverHeader: conf(wafEvidence.serverHeader, wafEvidence.serverHeader ? 'high' : 'none'),
+      // M10 — populated by main() based on isPhaseCompleted; placeholder here
+      status: 'completed' as PhaseStatus,
+      dependencies: PHASE_DEPENDENCIES.access,
+      skipReason: null,
     },
   };
 }
@@ -654,6 +898,9 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
       platform: conf(null, 'none'), platformMarkers: [], jsOverlay: conf(null, 'none'),
       renderingMode: conf(null, 'none'), availableApis: [], needsPlaywright: conf(null, 'none'),
       multilingual: conf(false, 'none'), sitemapUrls: [], sitemapProductCount: conf(null, 'none'),
+      status: 'failed' as PhaseStatus,
+      dependencies: PHASE_DEPENDENCIES.platform,
+      skipReason: null,
     };
   }
 
@@ -997,6 +1244,9 @@ async function probePlatform(origin: string, accessPhase?: AccessPhase): Promise
     multilingual: conf(multilingual, multilingual ? 'medium' : 'low'),
     sitemapUrls,
     sitemapProductCount: conf(sitemapProductCount, sitemapProductCount ? 'medium' : 'none'),
+    status: 'completed' as PhaseStatus,
+    dependencies: PHASE_DEPENDENCIES.platform,
+    skipReason: null,
   };
 }
 
@@ -1191,6 +1441,9 @@ async function probeAdapter(origin: string, platformPhase: PlatformPhase): Promi
     suggestedAdapter: conf(suggestedAdapter, adapterConf),
     apiAccessible: conf(apiAccessible, apiAccessible ? 'high' : 'low'),
     extractionTestResult: extractionResult,
+    status: 'completed' as PhaseStatus,
+    dependencies: PHASE_DEPENDENCIES.adapter,
+    skipReason: null,
   };
 }
 
@@ -1267,6 +1520,9 @@ async function probeCatalog(origin: string, platformPhase: PlatformPhase): Promi
     navLinks,
     sitemapProductCount: conf(smCount, smCount ? 'medium' : 'none'),
     apiProductCount: conf(apiProductCount, apiProductCount ? 'high' : 'none'),
+    status: 'completed' as PhaseStatus,
+    dependencies: PHASE_DEPENDENCIES.catalog,
+    skipReason: null,
   };
 }
 
@@ -1334,6 +1590,9 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
         defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
         newestParam: null, counterControlParam: null, verdict: 'not-tested',
       },
+      status: 'failed' as PhaseStatus,
+      dependencies: PHASE_DEPENDENCIES.sort,
+      skipReason: null,
     };
   }
 
@@ -1347,6 +1606,9 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
         defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
         newestParam: null, counterControlParam: null, verdict: 'not-tested',
       },
+      status: 'failed' as PhaseStatus,
+      dependencies: PHASE_DEPENDENCIES.sort,
+      skipReason: null,
     };
   }
 
@@ -1434,6 +1696,9 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
         defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
         newestParam: null, counterControlParam: null, verdict: 'no-sort-options',
       },
+      status: 'completed' as PhaseStatus,
+      dependencies: PHASE_DEPENDENCIES.sort,
+      skipReason: null,
     };
 
     if (platform === 'opencart') {
@@ -1640,6 +1905,9 @@ async function probeSort(origin: string, platformPhase: PlatformPhase, catalogPh
       counterControlParam: counterParam,
       verdict,
     },
+    status: 'completed' as PhaseStatus,
+    dependencies: PHASE_DEPENDENCIES.sort,
+    skipReason: null,
   };
 }
 
@@ -1671,6 +1939,9 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
     page1Products: [], page2Products: [], zeroOverlap: conf(null, 'none'), paginationLinks: [],
     zeroIndexed: conf(null, 'none'), firstPageHasParam: conf(null, 'none'),
     totalPagesObserved: conf(null, 'none'),
+    status: 'failed' as PhaseStatus,
+    dependencies: PHASE_DEPENDENCIES.pagination,
+    skipReason: null,
   };
 
   if (!testUrl) return empty;
@@ -1845,6 +2116,9 @@ async function probePagination(origin: string, catalogPhase: CatalogPhase, platf
     zeroIndexed: conf(zeroIndexed, zeroIndexed ? 'high' : paginationLinks.length > 0 ? 'medium' : 'none'),
     firstPageHasParam: conf(firstPageHasParam, firstPageHasParam ? 'high' : paginationLinks.length > 0 ? 'medium' : 'none'),
     totalPagesObserved: conf(totalPagesAdjusted, totalPagesAdjusted !== null ? 'medium' : 'none'),
+    status: 'completed' as PhaseStatus,
+    dependencies: PHASE_DEPENDENCIES.pagination,
+    skipReason: null,
   };
 }
 
@@ -1861,42 +2135,44 @@ function assemble(
 ): AssemblyPhase {
   const completed: string[] = [];
   const failed: string[] = [];
+  const skipped: string[] = [];
   const warnings: string[] = [];
 
-  // Access
-  if (access.canonicalUrl.confidence !== 'none') completed.push('access'); else failed.push('access');
+  // M10: classify each phase by its status field. `skipped-upstream` =
+  // didn't run because dep failed. `failed` = ran but produced no useful
+  // output. `completed` = ran successfully. The lists are mutually exclusive.
+  const phasesArr: { name: string; phase: PhaseStatusFields }[] = [
+    { name: 'access', phase: access },
+    { name: 'platform', phase: platform },
+    { name: 'adapter', phase: adapter },
+    { name: 'catalog', phase: catalog },
+    { name: 'sort', phase: sort },
+    { name: 'pagination', phase: pagination },
+  ];
+  for (const { name, phase } of phasesArr) {
+    if (phase.status === 'completed') completed.push(name);
+    else if (phase.status === 'skipped-upstream') skipped.push(name);
+    else failed.push(name);
+  }
 
-  // Platform
-  if (platform.platform.value) completed.push('platform'); else failed.push('platform');
-
-  // Adapter
-  if (adapter.extractionTestResult && adapter.extractionTestResult.productsFound > 0) {
-    completed.push('adapter');
-  } else {
-    failed.push('adapter');
+  // Per-phase warnings (only fire on failures, not skips — a skipped phase's
+  // failure was already announced by the dep that caused the skip).
+  if (failed.includes('adapter') && (!adapter.extractionTestResult || adapter.extractionTestResult.productsFound === 0)) {
     warnings.push('Product extraction returned 0 products — may need Playwright or different selectors');
   }
-
-  // Catalog
-  if (catalog.categoryTree.length > 0 || catalog.navLinks.length > 0) completed.push('catalog'); else failed.push('catalog');
-
-  // Sort
-  if (sort.idJumpTest.verdict === 'honored' || sort.idJumpTest.verdict === 'honored-default-is-newest') {
-    completed.push('sort');
-  } else if (sort.idJumpTest.verdict === 'no-sort-options') {
-    failed.push('sort');
-    warnings.push('No sort UI found in HTML. If this is a SPA, drive Playwright to discover sort controls (Mistake 19).');
-  } else {
-    completed.push('sort'); // noop is still a completed probe
+  if (failed.includes('sort') || skipped.includes('sort')) {
+    if (sort.idJumpTest.verdict === 'no-sort-options') {
+      warnings.push('No sort UI found in HTML. If this is a SPA, drive Playwright to discover sort controls (Mistake 19).');
+    }
+  } else if (sort.idJumpTest.verdict !== 'honored' && sort.idJumpTest.verdict !== 'honored-default-is-newest') {
+    // Sort completed but didn't show clear newest-first honoring
     warnings.push('Sort options found but none honored newest-first ordering. Verify manually.');
   }
-
-  // Pagination
-  if (pagination.zeroOverlap.value === true) {
-    completed.push('pagination');
-  } else {
-    failed.push('pagination');
+  if (failed.includes('pagination')) {
     warnings.push('Pagination not verified — page 2 overlap test failed or no page 2 found.');
+  }
+  if (skipped.length > 0) {
+    warnings.push(`Phases skipped due to upstream dep failure: ${skipped.join(', ')}. Each skipped phase has skipReason set.`);
   }
 
   // WAF warnings
@@ -1934,6 +2210,10 @@ function assemble(
   }
 
   const phaseErrors = errors.map(e => e.phase);
+  // M10: overallConfidence only penalizes FAILED phases — phases that ran but
+  // produced no useful output. Skipped-upstream phases didn't run at all
+  // (their parent dep failed), so the user already lost confidence at the
+  // upstream failure; double-counting via a skipped child would mis-weight.
   const overallConfidence = failed.length === 0 ? 'high' : failed.length <= 2 ? 'medium' : 'low';
 
   // Detect whether the pagination/sort test URL was facet-filtered. Common
@@ -2004,12 +2284,19 @@ function assemble(
     overallConfidence,
     completedPhases: completed,
     failedPhases: failed,
+    skippedPhases: skipped,
     warnings,
     expectedProductCount: conf(expectedCount, expectedCount ? (expectedSource === 'api' ? 'high' : 'medium') : 'none'),
     expectedProductCountSource: expectedSource,
     testUrlWasFacetFiltered: conf(wasFacetFiltered, wasFacetFiltered ? 'high' : 'low'),
     wafFallbackUsed: conf(g_wafFallbackObserved, g_wafFallbackObserved ? 'high' : 'low'),
     playwrightFetchCount: g_playwrightHits,
+    // Assembly always runs to completion (it's pure aggregation, can't fail
+    // unless a phase result is malformed). The dependencies array reflects
+    // that it consumed all phase outputs.
+    status: 'completed' as PhaseStatus,
+    dependencies: PHASE_DEPENDENCIES.assembly,
+    skipReason: null,
   };
 }
 
@@ -2032,7 +2319,12 @@ async function main() {
   log(`\nPre-bootstrap probe: ${url}`);
   log('=' .repeat(60));
 
-  // Phase 1: Access
+  // M10: track each phase's status so downstream phases can check deps before
+  // running. The map is the single source of truth for "did this phase
+  // complete?" — both the dep gate and the assembly classifier read from it.
+  const phaseStatuses: Record<string, PhaseStatus> = {};
+
+  // Phase 1: Access (no deps)
   let accessResult: AccessPhase;
   let canonical: string;
   try {
@@ -2042,78 +2334,98 @@ async function main() {
   } catch (e: any) {
     errors.push({ phase: 'access', message: e.message, stack: e.stack?.slice(0, 500) });
     canonical = new URL(url).origin;
-    accessResult = {
-      canonicalUrl: conf(url, 'none'), hasWaf: conf(null, 'none'), wafType: conf(null, 'none'),
-      wafProbeEvidence: { error: e.message }, userAgentResults: [],
-      crawlDelay: conf(null, 'none'), robotsDisallowed: [],
-      malformedHeaders: conf(null, 'none'), serverHeader: conf(null, 'none'),
-    };
+    accessResult = emptyAccessPhase();
+    accessResult.wafProbeEvidence = { error: e.message };
   }
+  phaseStatuses.access = finalizePhaseStatus('access', accessResult).status;
 
-  // Phase 2: Platform
+  // Phase 2: Platform (deps: access)
   let platformResult: PlatformPhase;
-  try {
-    platformResult = await probePlatform(canonical, accessResult);
-  } catch (e: any) {
-    errors.push({ phase: 'platform', message: e.message, stack: e.stack?.slice(0, 500) });
-    platformResult = {
-      platform: conf(null, 'none'), platformMarkers: [], jsOverlay: conf(null, 'none'),
-      renderingMode: conf(null, 'none'), availableApis: [], needsPlaywright: conf(null, 'none'),
-      multilingual: conf(false, 'none'), sitemapUrls: [], sitemapProductCount: conf(null, 'none'),
-    };
+  let failingDep = findFailingDependency('platform', phaseStatuses);
+  if (failingDep) {
+    log(`[Phase 2] SKIPPED — upstream dep "${failingDep}" failed`);
+    platformResult = emptyPlatformPhase(`Phase ${failingDep} failed`);
+  } else {
+    try {
+      platformResult = await probePlatform(canonical, accessResult);
+    } catch (e: any) {
+      errors.push({ phase: 'platform', message: e.message, stack: e.stack?.slice(0, 500) });
+      platformResult = emptyPlatformPhase();
+    }
+    finalizePhaseStatus('platform', platformResult);
   }
+  phaseStatuses.platform = platformResult.status;
 
-  // Phase 3: Adapter
+  // Phase 3: Adapter (deps: platform)
   let adapterResult: AdapterPhase;
-  try {
-    adapterResult = await probeAdapter(canonical, platformResult);
-  } catch (e: any) {
-    errors.push({ phase: 'adapter', message: e.message, stack: e.stack?.slice(0, 500) });
-    adapterResult = {
-      suggestedAdapter: conf(null, 'none'), apiAccessible: conf(false, 'none'), extractionTestResult: null,
-    };
+  failingDep = findFailingDependency('adapter', phaseStatuses);
+  if (failingDep) {
+    log(`[Phase 3] SKIPPED — upstream dep "${failingDep}" failed`);
+    adapterResult = emptyAdapterPhase(`Phase ${failingDep} failed`);
+  } else {
+    try {
+      adapterResult = await probeAdapter(canonical, platformResult);
+    } catch (e: any) {
+      errors.push({ phase: 'adapter', message: e.message, stack: e.stack?.slice(0, 500) });
+      adapterResult = emptyAdapterPhase();
+    }
+    finalizePhaseStatus('adapter', adapterResult);
   }
+  phaseStatuses.adapter = adapterResult.status;
 
-  // Phase 4: Catalog
+  // Phase 4: Catalog (deps: platform)
   let catalogResult: CatalogPhase;
-  try {
-    catalogResult = await probeCatalog(canonical, platformResult);
-  } catch (e: any) {
-    errors.push({ phase: 'catalog', message: e.message, stack: e.stack?.slice(0, 500) });
-    catalogResult = { categoryTree: [], navLinks: [], sitemapProductCount: conf(null, 'none'), apiProductCount: conf(null, 'none') };
+  failingDep = findFailingDependency('catalog', phaseStatuses);
+  if (failingDep) {
+    log(`[Phase 4] SKIPPED — upstream dep "${failingDep}" failed`);
+    catalogResult = emptyCatalogPhase(`Phase ${failingDep} failed`);
+  } else {
+    try {
+      catalogResult = await probeCatalog(canonical, platformResult);
+    } catch (e: any) {
+      errors.push({ phase: 'catalog', message: e.message, stack: e.stack?.slice(0, 500) });
+      catalogResult = emptyCatalogPhase();
+    }
+    finalizePhaseStatus('catalog', catalogResult);
   }
+  phaseStatuses.catalog = catalogResult.status;
 
-  // Phase 5: Sort
+  // Phase 5: Sort (deps: access, platform)
   let sortResult: SortPhase;
-  try {
-    sortResult = await probeSort(canonical, platformResult, catalogResult, adapterResult);
-  } catch (e: any) {
-    errors.push({ phase: 'sort', message: e.message, stack: e.stack?.slice(0, 500) });
-    sortResult = {
-      sortOptions: [],
-      sortScheme: conf(null, 'none'),
-      idJumpTest: {
-        defaultFirstProduct: null, newestFirstProduct: null, counterControlFirstProduct: null,
-        newestParam: null, counterControlParam: null, verdict: 'not-tested',
-      },
-    };
+  failingDep = findFailingDependency('sort', phaseStatuses);
+  if (failingDep) {
+    log(`[Phase 5] SKIPPED — upstream dep "${failingDep}" failed`);
+    sortResult = emptySortPhase(`Phase ${failingDep} failed`);
+  } else {
+    try {
+      sortResult = await probeSort(canonical, platformResult, catalogResult, adapterResult);
+    } catch (e: any) {
+      errors.push({ phase: 'sort', message: e.message, stack: e.stack?.slice(0, 500) });
+      sortResult = emptySortPhase();
+    }
+    finalizePhaseStatus('sort', sortResult);
   }
+  phaseStatuses.sort = sortResult.status;
 
-  // Phase 6: Pagination
+  // Phase 6: Pagination (deps: access, platform)
   let paginationResult: PaginationPhase;
-  try {
-    paginationResult = await probePagination(canonical, catalogResult, platformResult, adapterResult);
-  } catch (e: any) {
-    errors.push({ phase: 'pagination', message: e.message, stack: e.stack?.slice(0, 500) });
-    paginationResult = {
-      paginationPattern: conf(null, 'none'), perPage: conf(null, 'none'),
-      page1Products: [], page2Products: [], zeroOverlap: conf(null, 'none'), paginationLinks: [],
-      zeroIndexed: conf(null, 'none'), firstPageHasParam: conf(null, 'none'),
-      totalPagesObserved: conf(null, 'none'),
-    };
+  failingDep = findFailingDependency('pagination', phaseStatuses);
+  if (failingDep) {
+    log(`[Phase 6] SKIPPED — upstream dep "${failingDep}" failed`);
+    paginationResult = emptyPaginationPhase(`Phase ${failingDep} failed`);
+  } else {
+    try {
+      paginationResult = await probePagination(canonical, catalogResult, platformResult, adapterResult);
+    } catch (e: any) {
+      errors.push({ phase: 'pagination', message: e.message, stack: e.stack?.slice(0, 500) });
+      paginationResult = emptyPaginationPhase();
+    }
+    finalizePhaseStatus('pagination', paginationResult);
   }
+  phaseStatuses.pagination = paginationResult.status;
 
-  // Phase 7: Assembly
+  // Phase 7: Assembly (deps: ALL — but tolerates skipped/failed deps;
+  // assembly is pure aggregation, never gets skipped itself)
   const assemblyResult = assemble(errors, accessResult, platformResult, adapterResult, catalogResult, sortResult, paginationResult);
 
   const report: ProbeReport = {
@@ -2137,6 +2449,7 @@ async function main() {
   log(`Probe complete in ${report.duration}ms — ${assemblyResult.overallConfidence} confidence`);
   log(`  Completed: ${assemblyResult.completedPhases.join(', ') || 'none'}`);
   log(`  Failed: ${assemblyResult.failedPhases.join(', ') || 'none'}`);
+  log(`  Skipped: ${assemblyResult.skippedPhases.join(', ') || 'none'}`);
   if (assemblyResult.warnings.length > 0) {
     log('  Warnings:');
     for (const w of assemblyResult.warnings) log(`    - ${w}`);
@@ -2150,12 +2463,19 @@ async function main() {
   await closePlaywrightIfNeeded();
 }
 
-main().catch(async e => {
-  console.error('Fatal error:', e);
-  await closePlaywrightIfNeeded().catch(() => {});
-  process.exit(1);
-}).finally(() => {
-  // Redis keepalive inside playwright-fetcher's require-chain can prevent
-  // process exit. Force it after a short grace period.
-  setTimeout(() => process.exit(0), 2000).unref();
-});
+// Test-only exports — let regression harnesses import the retry helpers and
+// fetch primitives without spawning the full probe. Gated by `require.main`
+// check below so this is a no-op when run directly via `npx tsx`.
+export { safeFetch, safeFetchJson, safeFetchOnce, safeFetchJsonOnce, retryOnce, classifyRetry, RETRY_DELAY_MS, PHASE_DEPENDENCIES, isPhaseCompleted, findFailingDependency, finalizePhaseStatus };
+
+if (require.main === module) {
+  main().catch(async e => {
+    console.error('Fatal error:', e);
+    await closePlaywrightIfNeeded().catch(() => {});
+    process.exit(1);
+  }).finally(() => {
+    // Redis keepalive inside playwright-fetcher's require-chain can prevent
+    // process exit. Force it after a short grace period.
+    setTimeout(() => process.exit(0), 2000).unref();
+  });
+}
