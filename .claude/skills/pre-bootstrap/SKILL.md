@@ -27,7 +27,7 @@ Takes a site URL, runs the mechanical probe script, applies judgment from 35 pla
 ### Step 1: Run the probe script
 
 ```bash
-cd backend && npx tsx scripts/pre-bootstrap-probe.ts <url> 2>/dev/null
+cd backend && npx tsx scripts/pre-bootstrap.ts <url> 2>/dev/null
 ```
 
 Parse the JSON output from stdout. The probe runs 7 mechanical phases:
@@ -41,7 +41,7 @@ Parse the JSON output from stdout. The probe runs 7 mechanical phases:
 
 If any phase failed or returned low-confidence results, note it for manual investigation in subsequent steps.
 
-**File**: `backend/scripts/pre-bootstrap-probe.ts`
+**File**: `backend/scripts/pre-bootstrap.ts` (thin orchestrator; composes 9 probe modules under `backend/scripts/probe-modules/`)
 
 ### Step 2: Platform-specific judgment
 
@@ -113,7 +113,7 @@ For **unknown or ambiguous platforms**, apply these judgment rules:
 - **Detection signals** (ALL from probe output):
   - `platformMarkers` contains `drupal` or `drupal-commerce` + headers `x-generator:Drupal <N>`, `x-drupal-cache`, `x-drupal-cache-tags`
   - `adapter.suggestedAdapter.value === 'classifieds-gunpost'` (auto-set when probe finds `node--type-classified` / `gunpost-teaser` / `classified-teaser` selectors in homepage HTML)
-  - `sort.sortOptions` contains `{ selectName: 'sort', value: 'created&order=desc' | 'date_pub&sort_order=DESC', text: 'Posted Date' | similar }` — the Drupal Views exposed form anchor-pair capture at `pre-bootstrap-probe.ts:1130-1156` handles this
+  - `sort.sortOptions` contains `{ selectName: 'sort', value: 'created&order=desc' | 'date_pub&sort_order=DESC', text: 'Posted Date' | similar }` — the Drupal Views exposed form anchor-pair capture now lives in `backend/scripts/probe-modules/probe-sort.ts`
   - `pagination.zeroIndexed.value === true` — Drupal Views is 0-indexed (`?page=0` = page 1). This is captured automatically.
   - `pagination.firstPageHasParam.value === false` — Drupal doesn't include `?page=0` in the default URL; the bare URL IS page 1.
 - **Key profile fields to set**:
@@ -471,7 +471,8 @@ Before declaring a site profile complete, all of these must be true:
 
 | File | Purpose |
 |------|---------|
-| `backend/scripts/pre-bootstrap-probe.ts` | Mechanical 7-phase probe script |
+| `backend/scripts/pre-bootstrap.ts` | Thin orchestrator — composes 9 probe modules, emits one evidence blob |
+| `backend/scripts/probe-modules/` | 9 focused probe modules: probe-fetch, probe-access, probe-platform, probe-sitemap, probe-catalog-urls, probe-rendering, probe-extraction, probe-sort, probe-pagination |
 | `backend/src/services/profile-validator.ts` | Validation gate (16 checks) |
 | `backend/src/services/crawl-scheduler.ts` | Reads `site.hasWaf` DB column (lines 209, 282, 576) |
 | `backend/src/services/catalog-crawler.ts` | `buildPaginatedUrl` (lines 118-166), HTML fallback (lines 327, 403-421) |
