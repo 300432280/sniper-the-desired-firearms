@@ -443,7 +443,22 @@ export async function fetchForProbe(
     } else if (pw.errMsg) {
       errors.push({ attempt: 1, message: pw.errMsg, classification: 'fatal' });
     }
-    return buildResult(url, finalRaw, method, ua, start, retries, escalations, errors);
+    // NOTE: must forward `opts.fullBody` — otherwise mode='playwright' callers
+    // (e.g. probe-extraction walking an SPA) receive an 8KB-truncated bodySample
+    // and extraction returns 0 products. The `mode='auto'` + static paths
+    // correctly forward `fullBody` via the end-of-function buildResult call;
+    // this early-return branch was the only one missing it.
+    return buildResult(
+      url,
+      finalRaw,
+      method,
+      ua,
+      start,
+      retries,
+      escalations,
+      errors,
+      opts.fullBody === true,
+    );
   }
 
   // ── Mode: static or auto ───────────────────────────────────────────────────
