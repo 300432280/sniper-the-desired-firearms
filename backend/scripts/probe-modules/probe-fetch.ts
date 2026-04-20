@@ -121,6 +121,14 @@ export interface FetchOpts {
    * Default false — module is safe to call without any prior knowledge.
    */
   wafSuspected?: boolean;
+  /**
+   * Return the full response body in `bodySample` instead of the default 8KB
+   * truncation. Required by probe-platform (marker scanning needs the whole
+   * HTML — WooCommerce/Ecwid/platform script tags routinely live beyond 8KB
+   * on modern theme-heavy homepages, e.g. canadafirstammo.ca's 465KB body).
+   * Default false — module 1's default output is still capped for efficiency.
+   */
+  fullBody?: boolean;
 }
 
 export interface FetchError {
@@ -567,7 +575,7 @@ export async function fetchForProbe(
     }
   }
 
-  return buildResult(url, finalRaw, method, ua, start, retries, escalations, errors);
+  return buildResult(url, finalRaw, method, ua, start, retries, escalations, errors, opts.fullBody === true);
 }
 
 function buildResult(
@@ -579,6 +587,7 @@ function buildResult(
   retries: number,
   escalations: EscalationReason[],
   errors: FetchError[],
+  fullBody: boolean,
 ): ProbeFetchResult {
   const wall_ms = Date.now() - start;
   if (!raw) {
@@ -599,7 +608,11 @@ function buildResult(
   }
   const body = raw.data || '';
   const bodyBytes = Buffer.byteLength(body, 'utf8');
-  const bodySample = body.length > BODY_SAMPLE_BYTES ? body.slice(0, BODY_SAMPLE_BYTES) : body;
+  const bodySample = fullBody
+    ? body
+    : body.length > BODY_SAMPLE_BYTES
+      ? body.slice(0, BODY_SAMPLE_BYTES)
+      : body;
   return {
     url: raw.finalUrl || requestedUrl,
     requestedUrl,
