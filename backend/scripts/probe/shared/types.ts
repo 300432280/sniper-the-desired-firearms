@@ -71,7 +71,7 @@ export type AccessIdentityState = IntakeState & {
   userAgentOverride: string | null;
   accessMethod: AccessMethod;
   platform: PlatformTag;
-  platformMarkers: PlatformMarkerEvidence;
+  platformMarker: PlatformMarkerEvidence;  // single winner from detector registry (highest confidence)
 };
 
 // ─── Room 3: Geography & Count ──────────────────────────────────────────────
@@ -173,7 +173,7 @@ export type BootstrapState = NavigationState & {
     price?: number;
   };
   finalDriftPct: number;
-  duration: number;
+  durationMs: number;
   dbWrites: {
     productIndexRows: number;
     monitoredSiteCreated: boolean;

@@ -352,7 +352,7 @@ export type AccessIdentityState = IntakeState & {
   userAgentOverride: string | null;
   accessMethod: AccessMethod;
   platform: PlatformTag;
-  platformMarkers: PlatformMarkerEvidence;
+  platformMarker: PlatformMarkerEvidence;
 };
 
 // ─── Room 3: Geography & Count ──────────────────────────────────────────────
@@ -454,7 +454,7 @@ export type BootstrapState = NavigationState & {
     price?: number;
   };
   finalDriftPct: number;
-  duration: number;
+  durationMs: number;
   dbWrites: {
     productIndexRows: number;
     monitoredSiteCreated: boolean;
@@ -1998,7 +1998,7 @@ export async function runRoom2(prev: IntakeState): Promise<AccessIdentityState |
     userAgentOverride: accessUa === UA_DESKTOP ? null : accessUa,
     accessMethod,
     platform: platform.detectorId,
-    platformMarkers: platform,
+    platformMarker: platform,
   };
 
   function fail(reason: string, evidence: Record<string, unknown>): RoomFailure {
@@ -2298,7 +2298,7 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
   const ctx = { hasWaf: state.hasWaf, wafType: state.wafType, ua };
 
   // 1. WP REST x-wp-total
-  if (/woocommerce|wp-rest/.test(state.platform) || (state.platformMarkers.signals as any).wpRestReachable) {
+  if (/woocommerce|wp-rest/.test(state.platform) || (state.platformMarker.signals as any).wpRestReachable) {
     const r = await safeFetch(`${origin}/wp-json/wp/v2/product?per_page=1`, ctx);
     if (r && r.headers['x-wp-total']) {
       return { count: parseInt(r.headers['x-wp-total'], 10), method: 'wp-rest-header',
@@ -2324,7 +2324,7 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
   }
   // 4. Ecwid POST /catalog/search (no parentCategoryId)
   if (/ecwid/.test(state.platform)) {
-    const storeId = (state.platformMarkers.signals as any).ecwidStoreId;
+    const storeId = (state.platformMarker.signals as any).ecwidStoreId;
     if (storeId) {
       const url = `https://us-vir2-storefront-api.ecwid.com/storefront/api/v1/${storeId}/catalog/search`;
       const body = JSON.stringify({ lang: 'en', pagination: { offset: 0, limit: 1 }, urlParams: { baseUrl: '/store/', isCleanUrls: true }});

@@ -246,16 +246,17 @@ type AccessIdentityState = IntakeState & {
   platform: PlatformTag;              // bigcommerce-stencil | magento-2.x | lightspeed-ecom
                                      // | ecwid-on-wordpress | celerant-coldfusion
                                      // | drupal-commerce | woocommerce | shopify | etc.
-  platformMarkers: PlatformMarkerEvidence;     // structured evidence — see Detector Registry below
+  platformMarker: PlatformMarkerEvidence;      // single winner from detector registry (highest confidence)
 };
 ```
 
 **Detector Registry pattern (extensibility):**
 
-`platformMarkers` is NOT a hard-coded type listing every platform. It is the
-evidence object produced by the detector that fired, in the shape that detector
-defines. Adding a new platform requires only registering a new detector — no edit
-to `AccessIdentityState`, no edit to other detectors, no edit to consumers.
+`platformMarker` is NOT a hard-coded type listing every platform. It is the
+evidence object produced by the detector that fired (single winner — highest
+confidence), in the shape that detector defines. Adding a new platform requires
+only registering a new detector — no edit to `AccessIdentityState`, no edit to
+other detectors, no edit to consumers.
 
 ```ts
 // shared/types.ts
@@ -544,7 +545,7 @@ type BootstrapState = NavigationState & {
     price?: number;
   };
   finalDriftPct: number;
-  duration: number;
+  durationMs: number;
   dbWrites: {
     productIndexRows: number;
     monitoredSiteCreated: boolean;
