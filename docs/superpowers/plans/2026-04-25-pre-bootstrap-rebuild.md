@@ -788,9 +788,11 @@ export const UA_LADDER: UaLadderStep[] = [
 
 // For WAF-suspected fetches, pick the UA most likely to succeed.
 // Mistake 30 Fix B: sgcaptcha + Sucuri (with UA filter) require iPhone post-challenge.
+// Incapsula treated equivalently — challenge-cookie path matches sgcaptcha pattern.
 export function pickUaForWaf(wafType: WafType): string {
   if (wafType === 'sgcaptcha') return UA_IPHONE;
-  if (wafType === 'sucuri') return UA_IPHONE;  // doctordeals precedent
+  if (wafType === 'sucuri') return UA_IPHONE;     // doctordeals precedent
+  if (wafType === 'incapsula') return UA_IPHONE;  // matches Room 2 orchestrator policy
   return UA_DESKTOP;
 }
 ```
