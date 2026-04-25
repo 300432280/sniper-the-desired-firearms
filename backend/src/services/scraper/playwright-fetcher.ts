@@ -107,12 +107,34 @@ async function safeGetContent(page: Page, maxRetries = 3): Promise<string> {
 }
 
 /**
+ * Parse a cookie header string ("name=val; name2=val2") into Playwright's
+ * cookie format, scoped to the URL's domain + path. Used to inject pre-solved
+ * WAF cookies from Redis cache.
+ */
+function parseCookieHeader(cookieHeader: string, url: string): Array<{
+  name: string; value: string; domain: string; path: string;
+}> {
+  let host: string;
+  try { host = new URL(url).hostname; } catch { return []; }
+  const out: Array<{ name: string; value: string; domain: string; path: string }> = [];
+  for (const pair of cookieHeader.split(/;\s*/)) {
+    const eq = pair.indexOf('=');
+    if (eq <= 0) continue;
+    const name = pair.slice(0, eq).trim();
+    const value = pair.slice(eq + 1).trim();
+    if (!name) continue;
+    out.push({ name, value, domain: host, path: '/' });
+  }
+  return out;
+}
+
+/**
  * Fetch a page using a headless browser.
  * Waits for network idle (no requests for 500ms) then returns the rendered HTML.
  */
 export async function fetchWithPlaywright(
   url: string,
-  options: { timeout?: number; waitForSelector?: string; userAgent?: string } = {}
+  options: { timeout?: number; waitForSelector?: string; userAgent?: string; cookies?: string } = {}
 ): Promise<PlaywrightFetchResult> {
   const timeout = options.timeout ?? 30000;
   const startTime = Date.now();
@@ -134,6 +156,12 @@ export async function fetchWithPlaywright(
       }),
     },
   });
+
+  // Inject pre-solved WAF cookies if provided (skips re-solving sgcaptcha/Sucuri/Incapsula PoW)
+  if (options.cookies) {
+    const parsed = parseCookieHeader(options.cookies, url);
+    if (parsed.length > 0) await context.addCookies(parsed);
+  }
 
   const page = await context.newPage();
 
