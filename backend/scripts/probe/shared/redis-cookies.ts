@@ -13,10 +13,14 @@ import { getCookies as prodGetCookies } from '../../../src/services/scraper/waf-
 export type CachedWafCookies = { cookies: string; userAgent: string };
 
 export async function getCachedCookies(domain: string): Promise<CachedWafCookies | null> {
+  // Normalize: strip www. to match the canonical key form used by production
+  // waf-cookie-manager.ts:27 (resolveWafUa). Without this, www-prefixed lookups
+  // miss cookies stored under the apex domain.
+  const bare = domain.replace(/^www\./, '');
   try {
-    return await prodGetCookies(domain);
+    return await prodGetCookies(bare);
   } catch (err) {
-    console.warn(`[probe/redis-cookies] getCookies(${domain}) failed:`, (err as Error).message);
+    console.warn(`[probe/redis-cookies] getCookies(${bare}) failed:`, (err as Error).message);
     return null;
   }
 }

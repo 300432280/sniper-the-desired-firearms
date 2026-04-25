@@ -922,34 +922,50 @@ async function axiosFetch(url: string, opts: FetchOptions): Promise<FetchResult>
   }
 }
 
-async function playwrightFetch(url: string, opts: FetchOptions): Promise<FetchResult> {
+type PlaywrightFetchExtra = { cookies?: string; injectedCookies?: string };
+
+async function playwrightFetch(url: string, opts: FetchOptions & PlaywrightFetchExtra): Promise<FetchResult> {
   const start = Date.now();
+  // production fetchWithPlaywright signature (playwright-fetcher.ts:113):
+  //   { timeout?: number; waitForSelector?: string; userAgent?: string; cookies?: string }
   const ua = opts.ua ?? (opts.wafType ? pickUaForWaf(opts.wafType) : UA_DESKTOP);
-  const isIphone = ua === UA_IPHONE;
   const result = await fetchWithPlaywright(url, {
     timeout: opts.timeoutMs ?? 45000,
-    userAgentOverride: isIphone ? UA_IPHONE : undefined,
+    userAgent: ua,
+    cookies: opts.cookies,
   });
   return {
-    status: 200,  // playwright-fetcher returns rendered HTML or throws
+    // NOTE: production fetchWithPlaywright doesn't expose HTTP status — returns 200 if it
+    // didn't throw. Callers MUST inspect body for challenge markers (e.g. via
+    // hasChallengeMarkers in canonical-host) — a rendered 403 challenge page returns 200 here.
+    status: 200,
     headers: {},
     body: result.html,
     bodyBytes: result.html.length,
     durationMs: Date.now() - start,
-    method: 'playwright',
+    method: opts.injectedCookies ? 'playwright-cookies' : 'playwright',
+    ...(opts.injectedCookies ? { cookiesUsed: opts.injectedCookies } : {}),
   };
 }
 
 export async function fetchUrl(url: string, opts: FetchOptions = {}): Promise<FetchResult> {
-  // If WAF-suspected and we have cached cookies, prefer Playwright with cookies
-  if (opts.forcePlaywright || (opts.hasWaf && opts.wafType)) {
-    const domain = new URL(url).hostname;
+  // Use Playwright when forced OR any WAF flag is set (vendor may still be unclassified).
+  // Earlier dispatch required (hasWaf && wafType !== null) — that silently sent
+  // hasWaf=true sites through axios when vendor classification was still in progress.
+  if (opts.forcePlaywright || opts.hasWaf) {
+    const host = new URL(url).hostname;
+    // Production waf-cookie-manager.ts:27 strips www. before lookup — match that.
+    const domain = host.replace(/^www\./, '');
     const cached = await getCachedCookies(domain);
     if (cached) {
-      // Production playwright-fetcher honors injected cookies via context.addCookies — pass via headers fallback
-      // cached.userAgent is the UA used to acquire the cookies; production validates UA match
-      const r = await playwrightFetch(url, { ...opts, ua: cached.userAgent });
-      return { ...r, method: 'playwright-cookies', cookiesUsed: cached.cookies };
+      // Inject cookies into the Playwright context (via production parameter added in this commit)
+      // and use the UA that acquired them (production validates UA match — Mistake 30 Fix B).
+      return playwrightFetch(url, {
+        ...opts,
+        ua: cached.userAgent,
+        cookies: cached.cookies,
+        injectedCookies: cached.cookies,
+      });
     }
     return playwrightFetch(url, opts);
   }
@@ -957,6 +973,12 @@ export async function fetchUrl(url: string, opts: FetchOptions = {}): Promise<Fe
   return axiosFetch(url, opts);
 }
 ```
+
+NOTE: This task added a `cookies` parameter to production `fetchWithPlaywright`
+(see commit modifying `backend/src/services/scraper/playwright-fetcher.ts`).
+Without that production change, cookie injection from Redis would be a no-op.
+Cookie reuse (the entire purpose of the spec §9 cherry-pick) requires both
+the wrapper and the production parameter to land together.
 
 - [ ] **Step 3:** Type-check.
 
