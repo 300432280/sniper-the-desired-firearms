@@ -82,4 +82,33 @@ describe('classifyWaf', () => {
     expect(r.wafType).toBe('sucuri');
     expect(r.hasWaf).toBe(true);
   });
+
+  it('classifies CF active when batch 1 returns 4xx + cf-mitigated:challenge', () => {
+    const batches = [
+      batch(1, 'header fingerprint', 403, { 'cf-ray': 'a', 'cf-mitigated': 'challenge', server: 'cloudflare' }),
+    ];
+    const r = classifyWaf(batches);
+    expect(r.wafType).toBe('cloudflare-active');
+    expect(r.hasWaf).toBe(true);
+  });
+
+  it('upgrades CF passive to cloudflare-passive-with-owasp when SQLi/XSS rules fire (precisionoptics precedent)', () => {
+    const batches = [
+      batch(1, 'header fingerprint', 200, { 'cf-ray': 'a', server: 'cloudflare' }),
+      batch(6, 'sqli query',         403, { 'cf-ray': 'b' }),
+      batch(7, 'xss query',          403, { 'cf-ray': 'c' }),
+    ];
+    const r = classifyWaf(batches);
+    expect(r.wafType).toBe('cloudflare-passive-with-owasp');
+    expect(r.hasWaf).toBe(true);
+  });
+
+  it('Sucuri body-only detection records "body-marker" instead of pushing undefined', () => {
+    const batches = [
+      batch(1, 'header fingerprint', 200, {}, '<html>... sucuri_cloudproxy_js ...</html>'),
+    ];
+    const r = classifyWaf(batches);
+    expect(r.wafType).toBe('sucuri');
+    expect(r.evidenceFlags.sucuriHeaders).toEqual(['body-marker']);
+  });
 });
