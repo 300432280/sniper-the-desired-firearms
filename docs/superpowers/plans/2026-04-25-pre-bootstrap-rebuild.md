@@ -573,7 +573,9 @@ cd backend && npx vitest run scripts/probe/shared/__test__/url-utils.test.ts
 
 ```typescript
 // backend/scripts/probe/shared/url-utils.ts
-const NAV_PATTERNS = /\/(wishlist|cart|checkout|account|login|register|registration|giftcert|contact|about|faq|privacy|terms|shipping|returns|blog|news|pages?\/|sitemap|robots|search\/?$)/i;
+// NAV_KEYWORDS must match a full path segment (followed by /, ?, or end-of-path)
+// to avoid false positives like /products/about-our-company-shotgun matching /about.
+const NAV_KEYWORDS = /\/(wishlist|cart|checkout|account|login|register|registration|giftcert|contact|about|faq|privacy|terms|shipping|returns|blog|news|pages?|sitemap|robots|search)(\/|\?|$)/i;
 const NAV_FRAGMENTS = /^(mailto:|javascript:|tel:|sms:|#)/i;
 
 export function canonicalizeUrl(input: string): string {
@@ -600,7 +602,7 @@ export function isLikelyNavUrl(url: string): boolean {
   if (NAV_FRAGMENTS.test(url)) return true;
   let path: string;
   try { path = new URL(url).pathname; } catch { return false; }
-  return NAV_PATTERNS.test(path);
+  return NAV_KEYWORDS.test(path);
 }
 
 export function stripTrailingSlash(url: string): string {
@@ -612,13 +614,11 @@ export function stripTrailingSlash(url: string): string {
   }
   return url;
 }
-
-export function preserveFragment(url: string): string {
-  // URL class already preserves fragments through searchParams.set, this is a no-op pass-through
-  // but exists for future cases where we need to manipulate the URL string directly
-  return url;
-}
 ```
+
+NOTE: `preserveFragment` was originally listed here but removed during code-quality
+review of Task 1.2 — Node's URL class already preserves fragments natively through
+`searchParams.set()`, so the function was dead code. Use `URL` directly.
 
 - [ ] **Step 4:** Run test to verify pass.
 

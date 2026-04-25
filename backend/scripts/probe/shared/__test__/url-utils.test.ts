@@ -1,6 +1,6 @@
 // backend/scripts/probe/shared/__test__/url-utils.test.ts
 import { describe, it, expect } from 'vitest';
-import { canonicalizeUrl, isLikelyNavUrl, stripTrailingSlash, preserveFragment } from '../url-utils';
+import { canonicalizeUrl, isLikelyNavUrl, stripTrailingSlash } from '../url-utils';
 
 describe('canonicalizeUrl', () => {
   it('lowercases scheme + host, preserves path case + query + fragment', () => {
@@ -12,6 +12,12 @@ describe('canonicalizeUrl', () => {
   });
   it('rejects malformed', () => {
     expect(() => canonicalizeUrl('not a url')).toThrow();
+  });
+  it('rejects localhost', () => {
+    expect(() => canonicalizeUrl('https://localhost/foo')).toThrow(/localhost/);
+  });
+  it('rejects 127.0.0.1', () => {
+    expect(() => canonicalizeUrl('http://127.0.0.1:8080')).toThrow(/127\.0\.0\.1/);
   });
 });
 
@@ -26,11 +32,29 @@ describe('isLikelyNavUrl', () => {
       expect(isLikelyNavUrl(`https://example.com${path}`)).toBe(true);
     }
   });
+  it('flags mailto/javascript/tel/anchor fragments as nav', () => {
+    expect(isLikelyNavUrl('mailto:foo@bar.com')).toBe(true);
+    expect(isLikelyNavUrl('javascript:void(0)')).toBe(true);
+    expect(isLikelyNavUrl('tel:555-1234')).toBe(true);
+    expect(isLikelyNavUrl('#anchor')).toBe(true);
+  });
   it('does NOT flag product/category URLs', () => {
     for (const url of [
       'https://example.com/product/awesome-rifle',
       'https://example.com/firearms/rifles',
       'https://example.com/product-category/handguns',
+    ]) {
+      expect(isLikelyNavUrl(url)).toBe(false);
+    }
+  });
+  it('does NOT match nav keywords as substrings within product slugs (false-positive guard)', () => {
+    // Real-world false-positive cases — prior regex incorrectly flagged these
+    for (const url of [
+      'https://example.com/products/about-our-company-shotgun',
+      'https://example.com/firearms/news-from-the-range',
+      'https://example.com/accessories/cartridge-holder',
+      'https://example.com/products/registration-papers-included',
+      'https://example.com/category/blog-style-target',
     ]) {
       expect(isLikelyNavUrl(url)).toBe(false);
     }
@@ -43,13 +67,5 @@ describe('stripTrailingSlash', () => {
   });
   it('keeps trailing slash on root', () => {
     expect(stripTrailingSlash('https://example.com/')).toBe('https://example.com/');
-  });
-});
-
-describe('preserveFragment', () => {
-  it('preserves #fragment when adding query params (Searchspring case)', () => {
-    const u = new URL('https://example.com/cat#/sort:created_at:desc');
-    u.searchParams.set('page', '3');
-    expect(preserveFragment(u.toString())).toBe('https://example.com/cat?page=3#/sort:created_at:desc');
   });
 });
