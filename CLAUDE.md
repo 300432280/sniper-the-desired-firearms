@@ -43,7 +43,7 @@ Frontend proxies `/api/*` to backend via next.config.mjs rewrites.
 ### Backend Services (`backend/src/services/`)
 - `crawl-scheduler.ts` — ticks every 2 min, queues crawl jobs
 - `worker.ts` — BullMQ workers: `crawl-site`, `crawl-watermark`, `crawl-catalog`
-- `watermark-crawler.ts` — Tier 1: paginate from newest until hitting last-known product
+- `watermark-crawler.ts` — Tier 1 new-items crawl. Walks **from the watermark toward newest**, indexing new products. Two methods: (A) `api-date-since-watermark` filters API by `dateAfter=watermark_date` order=asc and walks forward; (B) `navigate-from-watermark` paginates page 1 (newest) backward only to FIND the watermark, then walks BACK toward page 1 to INDEX new products (the find phase is locator-only; indexing direction is watermark→newest). (C) `full-catalog-sweep` when no sort works.
 - `catalog-crawler.ts` — Tiers 2-4: full catalog refresh on cooldown cycles
 - `scraper/index.ts` — keyword search scraper (has Playwright fallback for WAF)
 - `scraper/playwright-fetcher.ts` — headless browser for WAF/SPA sites
