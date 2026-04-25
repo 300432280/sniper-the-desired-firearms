@@ -12,6 +12,12 @@ describe('hasChallengeMarkers', () => {
   it('detects Sucuri body marker', () => {
     expect(hasChallengeMarkers('sucuri_cloudproxy_js')).toBe(true);
   });
+  it('detects Incapsula incident ID', () => {
+    expect(hasChallengeMarkers('<html>Incapsula incident ID: 123456-7890</html>')).toBe(true);
+  });
+  it('detects MalCare WordPress block', () => {
+    expect(hasChallengeMarkers('<title>Blocked</title>MalCare WordPress Security Plugin - Malware Scanner')).toBe(true);
+  });
   it('does NOT match real product page that mentions cdn-cgi/challenge-platform in JS bundle', () => {
     expect(hasChallengeMarkers('<html>...</html>'.padEnd(60000, ' ') + 'cdn-cgi/challenge-platform')).toBe(false);
     // Body too large to be a real challenge page

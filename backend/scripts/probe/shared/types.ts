@@ -44,10 +44,10 @@ export type PlatformMarkerEvidence = {
 export type AccessIdentityState = IntakeState & {
   canonicalOrigin: string;
   canonicalOriginResolution: {
-    apexResponded: boolean;
-    apexWasChallenged: boolean;
+    primaryResponded: boolean;        // primary = the input host (may be apex OR www)
+    primaryWasChallenged: boolean;
     wwwFallbackUsed: boolean;
-    serverHeaders: { apex?: string; canonical?: string };
+    serverHeaders: { primary?: string; canonical?: string };
   };
   hasWaf: boolean;
   wafType: WafType;

@@ -215,10 +215,10 @@ localhost / private IP ranges.
 type AccessIdentityState = IntakeState & {
   canonicalOrigin: string;       // apex vs www resolved (e.g., https://www.site.com)
   canonicalOriginResolution: {
-    apexResponded: boolean;
-    apexWasChallenged: boolean;  // true if apex body had CF/Sucuri/sgcaptcha markers
+    primaryResponded: boolean;        // primary = the input host (may be apex OR www)
+    primaryWasChallenged: boolean;    // true if primary body had CF/Sucuri/sgcaptcha/MalCare markers (any status)
     wwwFallbackUsed: boolean;
-    serverHeaders: { apex?: string; canonical?: string };
+    serverHeaders: { primary?: string; canonical?: string };
   };
   hasWaf: boolean;               // authoritative (column + evidence-backed)
   wafType: WafType | null;       // cloudflare-passive | cloudflare-active | sucuri

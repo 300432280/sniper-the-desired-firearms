@@ -1,6 +1,7 @@
 // backend/scripts/probe/room2-access-identity/canonical-host.ts
 // Resolve apex vs www. Per spec §4.2 + Mistake (lockharttactical).
-// Apex may serve a CF Managed Challenge while www is clean.
+// Apex may serve a CF Managed Challenge while www is clean (or vice versa for
+// reliablegun.com, where apex runs IIS but www is Cloudflare-fronted).
 
 import { fetchUrl } from '../shared/fetch';
 
@@ -11,6 +12,7 @@ const CHALLENGE_BODY_MARKERS = [
   /<meta\s+http-equiv="refresh"\s+content="\d+;\s*\/\.well-known\/sgcaptcha\//i,
   /Incapsula incident ID/i,
   /cf-mitigated:\s*challenge/i,
+  /MalCare WordPress Security Plugin/i,
 ];
 
 export function hasChallengeMarkers(body: string): boolean {
@@ -21,10 +23,10 @@ export function hasChallengeMarkers(body: string): boolean {
 
 export type CanonicalHostResult = {
   canonicalOrigin: string;
-  apexResponded: boolean;
-  apexWasChallenged: boolean;
+  primaryResponded: boolean;        // primary = the input host (may be apex OR www)
+  primaryWasChallenged: boolean;
   wwwFallbackUsed: boolean;
-  serverHeaders: { apex?: string; canonical?: string };
+  serverHeaders: { primary?: string; canonical?: string };
 };
 
 export async function resolveCanonicalHost(canonicalUrl: string): Promise<CanonicalHostResult> {
@@ -34,8 +36,8 @@ export async function resolveCanonicalHost(canonicalUrl: string): Promise<Canoni
   const wwwHost = host.startsWith('www.') ? host : `www.${host}`;
   const result: CanonicalHostResult = {
     canonicalOrigin: `${u.protocol}//${host}`,
-    apexResponded: false,
-    apexWasChallenged: false,
+    primaryResponded: false,
+    primaryWasChallenged: false,
     wwwFallbackUsed: false,
     serverHeaders: {},
   };
@@ -44,17 +46,21 @@ export async function resolveCanonicalHost(canonicalUrl: string): Promise<Canoni
   let primary;
   try {
     primary = await fetchUrl(`${u.protocol}//${host}/`);
-    result.apexResponded = true;
-    result.serverHeaders.apex = primary.headers['server'];
-    if (primary.status >= 400 && hasChallengeMarkers(primary.body)) {
-      result.apexWasChallenged = true;
-    } else if (primary.status >= 200 && primary.status < 400 && !hasChallengeMarkers(primary.body)) {
-      // Primary works, no www-fallback needed
+    result.primaryResponded = true;
+    result.serverHeaders.primary = primary.headers['server'];
+    const challenged = hasChallengeMarkers(primary.body);
+    if (primary.status >= 400 && challenged) {
+      result.primaryWasChallenged = true;
+    } else if (primary.status >= 200 && primary.status < 400 && challenged) {
+      // Sucuri / Incapsula often return 200 + challenge body (no HTTP-level rejection)
+      result.primaryWasChallenged = true;
+    } else if (primary.status >= 200 && primary.status < 400) {
+      // Primary works cleanly — no www-fallback needed
       result.serverHeaders.canonical = primary.headers['server'];
       return result;
     }
   } catch {
-    result.apexResponded = false;
+    result.primaryResponded = false;
   }
 
   // www-fallback: try the OTHER form (apex → www, or www → apex)
