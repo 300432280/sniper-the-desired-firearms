@@ -1846,7 +1846,9 @@ export const bigcommerceStencilDetector: PlatformDetector = {
     const signals: Record<string, unknown> = {};
     let confidence: 'high' | 'medium' | 'low' = 'low';
     let matched = false;
-    if (/<meta\s+name="platform"\s+content="bigcommerce\.stencil"/i.test(html)) {
+    // Stencil emits the meta tag with EITHER single or double quotes depending on
+    // theme/version (e.g. theammosource.com uses single quotes).
+    if (/<meta\s+name=["']platform["']\s+content=["']bigcommerce\.stencil["']/i.test(html)) {
       signals.platformMeta = 'bigcommerce.stencil';
       matched = true;
       confidence = 'high';
