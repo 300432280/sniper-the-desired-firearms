@@ -587,9 +587,13 @@ export function canonicalizeUrl(input: string): string {
   let u: URL;
   try { u = new URL(s); }
   catch (err) { throw new Error(`Malformed URL: ${input}`); }
-  // Reject localhost/private
+  // Reject localhost + RFC 1918 private + link-local + IPv6 loopback
   const host = u.hostname.toLowerCase();
-  if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.endsWith('.local')) {
+  if (host === 'localhost' || host === '0.0.0.0' || host === '[::1]' || host === '::1' || host.endsWith('.local')) {
+    throw new Error(`Private/localhost not allowed: ${host}`);
+  }
+  // IPv4 private ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, 169.254.0.0/16
+  if (/^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) {
     throw new Error(`Private/localhost not allowed: ${host}`);
   }
   u.protocol = u.protocol.toLowerCase();
@@ -1026,31 +1030,24 @@ grep -n "export.*extractCatalogProducts\|export function extractCatalogProducts"
 // backend/scripts/probe/shared/extract.ts
 // Thin wrapper around the production catalog extractor.
 // All rooms must extract via this — never write probe-specific selectors.
+//
+// Re-exports CatalogProduct as ExtractedProduct so consumers (Room 3 walk-verify,
+// Room 5 indexing) get every field the production extractor populates: url, title,
+// price, regularPrice, stockStatus, thumbnail, sourceId, postDate, tags,
+// productType, sourceCategory, category, closingAt.
 
 import * as cheerio from 'cheerio';
 import { GenericRetailAdapter } from '../../../src/services/scraper/adapters/generic-retail';
+import type { CatalogProduct } from '../../../src/services/scraper/types';
 
 const adapter = new GenericRetailAdapter();
 
-export type ExtractedProduct = {
-  url: string;
-  title: string;
-  price?: number;
-  imageUrl?: string;
-  sourceId?: string;
-};
+export type ExtractedProduct = CatalogProduct;
 
 export function extractProducts(html: string, pageUrl: string): ExtractedProduct[] {
   const $ = cheerio.load(html);
   // GenericRetailAdapter.extractCatalogProducts is the production canonical extractor
-  const products = adapter.extractCatalogProducts($, pageUrl);
-  return products.map(p => ({
-    url: p.url,
-    title: p.title,
-    price: p.price ?? undefined,
-    imageUrl: p.imageUrl ?? undefined,
-    sourceId: p.sourceId ?? undefined,
-  }));
+  return adapter.extractCatalogProducts($, pageUrl);
 }
 ```
 

@@ -19,6 +19,20 @@ describe('canonicalizeUrl', () => {
   it('rejects 127.0.0.1', () => {
     expect(() => canonicalizeUrl('http://127.0.0.1:8080')).toThrow(/127\.0\.0\.1/);
   });
+  it('rejects RFC 1918 private ranges (10.x, 172.16-31.x, 192.168.x)', () => {
+    expect(() => canonicalizeUrl('http://10.0.0.1/')).toThrow(/private|localhost/i);
+    expect(() => canonicalizeUrl('http://192.168.1.1/')).toThrow(/private|localhost/i);
+    expect(() => canonicalizeUrl('http://172.16.0.1/')).toThrow(/private|localhost/i);
+    expect(() => canonicalizeUrl('http://172.31.255.255/')).toThrow(/private|localhost/i);
+    // 172.32.0.0 is NOT private — public IP, should NOT throw
+    expect(canonicalizeUrl('http://172.32.0.1/')).toBe('http://172.32.0.1/');
+  });
+  it('rejects link-local 169.254.x', () => {
+    expect(() => canonicalizeUrl('http://169.254.169.254/')).toThrow(/private|localhost/i);
+  });
+  it('rejects IPv6 loopback', () => {
+    expect(() => canonicalizeUrl('http://[::1]/')).toThrow(/private|localhost/i);
+  });
 });
 
 describe('isLikelyNavUrl', () => {

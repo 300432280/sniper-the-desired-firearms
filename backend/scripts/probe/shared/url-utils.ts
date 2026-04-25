@@ -13,9 +13,13 @@ export function canonicalizeUrl(input: string): string {
   let u: URL;
   try { u = new URL(s); }
   catch (err) { throw new Error(`Malformed URL: ${input}`); }
-  // Reject localhost/private
+  // Reject localhost + RFC 1918 private + link-local + IPv6 loopback
   const host = u.hostname.toLowerCase();
-  if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.endsWith('.local')) {
+  if (host === 'localhost' || host === '0.0.0.0' || host === '[::1]' || host === '::1' || host.endsWith('.local')) {
+    throw new Error(`Private/localhost not allowed: ${host}`);
+  }
+  // IPv4 private ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, 169.254.0.0/16
+  if (/^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) {
     throw new Error(`Private/localhost not allowed: ${host}`);
   }
   u.protocol = u.protocol.toLowerCase();
