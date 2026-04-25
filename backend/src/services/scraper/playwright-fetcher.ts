@@ -82,6 +82,8 @@ function resetIdleTimer(): void {
 export interface PlaywrightFetchResult {
   html: string;
   responseTimeMs: number;
+  /** Solved WAF cookies as a Cookie header string, if any were captured. */
+  cookies?: string;
 }
 
 /** Safely get page content, retrying if the page is mid-navigation */
@@ -110,23 +112,26 @@ async function safeGetContent(page: Page, maxRetries = 3): Promise<string> {
  */
 export async function fetchWithPlaywright(
   url: string,
-  options: { timeout?: number; waitForSelector?: string } = {}
+  options: { timeout?: number; waitForSelector?: string; userAgent?: string } = {}
 ): Promise<PlaywrightFetchResult> {
   const timeout = options.timeout ?? 30000;
   const startTime = Date.now();
+  const ua = options.userAgent || resolvePlaywrightUa(url);
+  const isIphone = /iPhone/i.test(ua);
 
   const b = await getBrowser();
   const context = await b.newContext({
-    // Use a recent, realistic Chrome user agent (or site-profile override)
-    userAgent: resolvePlaywrightUa(url),
+    userAgent: ua,
     locale: 'en-CA',
-    viewport: { width: 1366, height: 768 },
+    viewport: isIphone ? { width: 390, height: 844 } : { width: 1366, height: 768 },
     // Stealth: set common browser properties
     extraHTTPHeaders: {
       'Accept-Language': 'en-CA,en;q=0.9',
-      'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24"',
-      'sec-ch-ua-mobile': '?0',
-      'sec-ch-ua-platform': '"Windows"',
+      ...(isIphone ? {} : {
+        'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+      }),
     },
   });
 
@@ -233,6 +238,25 @@ export async function fetchWithPlaywright(
       }
     }
 
+    // ── SiteGround sgcaptcha PoW ─────────────────────────────────────────
+    // sgcaptcha does a meta-refresh to /.well-known/sgcaptcha/ which runs
+    // SHA1 PoW in web workers (~3s), then POSTs solution and redirects back.
+    // The page URL stays on /.well-known/sgcaptcha/ during PoW; we poll
+    // page.url() until it leaves that path (same pattern as production
+    // waf-cookie-manager.ts:120-126, Mistake 30).
+    if (initialContent.includes('sgcaptcha') || initialContent.includes('.well-known/sgcaptcha')) {
+      console.log('[Playwright] Detected sgcaptcha challenge, waiting for PoW resolution...');
+      const sgStart = Date.now();
+      while (Date.now() - sgStart < 20000) {
+        const curUrl = page.url();
+        if (!curUrl.includes('/.well-known/sgcaptcha/')) break;
+        await page.waitForTimeout(500);
+      }
+      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+      initialContent = await safeGetContent(page);
+    }
+
     // ── Sucuri WAF ──────────────────────────────────────────────────────────
     if (initialContent.includes('sucuri.net') || initialContent.includes('Access Denied - Sucuri')) {
       console.log('[Playwright] Detected Sucuri WAF, waiting for resolution...');
@@ -258,7 +282,19 @@ export async function fetchWithPlaywright(
     const html = await safeGetContent(page);
     const responseTimeMs = Date.now() - startTime;
 
-    return { html, responseTimeMs };
+    // Capture cookies from the browser context before closing. These are the
+    // WAF-solved session cookies (Sucuri, sgcaptcha, CF clearance, etc.) that
+    // can be replayed in subsequent axios calls to the same domain.
+    let cookies: string | undefined;
+    try {
+      const origin = new URL(url).origin;
+      const browserCookies = await context.cookies(origin);
+      if (browserCookies.length > 0) {
+        cookies = browserCookies.map(c => `${c.name}=${c.value}`).join('; ');
+      }
+    } catch { /* cookie extraction is best-effort */ }
+
+    return { html, responseTimeMs, cookies };
   } finally {
     await page.close().catch(() => {});
     await context.close().catch(() => {});
