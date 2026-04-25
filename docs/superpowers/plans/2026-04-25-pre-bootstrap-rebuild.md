@@ -663,29 +663,20 @@ grep -n "^export" backend/src/services/scraper/waf-cookie-manager.ts
 // backend/scripts/probe/shared/redis-cookies.ts
 // Thin wrapper around production waf-cookie-manager Redis cache.
 // Probe shares the same cookie cache as production crawlers — solving once benefits both.
+//
+// Production getCookies signature (verified by reading waf-cookie-manager.ts):
+//   getCookies(domain: string): Promise<{ cookies: string; userAgent: string } | null>
+//
+// It internally try/catches Redis errors and returns null on failure, so the wrapper
+// does not need a separate Redis availability probe.
 
 import { getCookies as prodGetCookies } from '../../../src/services/scraper/waf-cookie-manager';
 
-let redisAvailable: boolean | null = null;
+export type CachedWafCookies = { cookies: string; userAgent: string };
 
-async function probeRedis(): Promise<boolean> {
-  if (redisAvailable !== null) return redisAvailable;
+export async function getCachedCookies(domain: string): Promise<CachedWafCookies | null> {
   try {
-    // Try a no-op fetch with a dummy domain — if Redis is up we get null cookies; if down we throw
-    await prodGetCookies('__redis_probe__.invalid');
-    redisAvailable = true;
-  } catch (err) {
-    console.warn('[probe/redis-cookies] Redis unreachable, cookie cache disabled:', (err as Error).message);
-    redisAvailable = false;
-  }
-  return redisAvailable;
-}
-
-export async function getCachedCookies(domain: string): Promise<string | null> {
-  if (!(await probeRedis())) return null;
-  try {
-    const cookies = await prodGetCookies(domain);
-    return cookies && cookies.length > 0 ? cookies : null;
+    return await prodGetCookies(domain);
   } catch (err) {
     console.warn(`[probe/redis-cookies] getCookies(${domain}) failed:`, (err as Error).message);
     return null;
@@ -951,11 +942,12 @@ export async function fetchUrl(url: string, opts: FetchOptions = {}): Promise<Fe
   // If WAF-suspected and we have cached cookies, prefer Playwright with cookies
   if (opts.forcePlaywright || (opts.hasWaf && opts.wafType)) {
     const domain = new URL(url).hostname;
-    const cookies = await getCachedCookies(domain);
-    if (cookies) {
+    const cached = await getCachedCookies(domain);
+    if (cached) {
       // Production playwright-fetcher honors injected cookies via context.addCookies — pass via headers fallback
-      const r = await playwrightFetch(url, { ...opts, ua: opts.wafType ? pickUaForWaf(opts.wafType) : UA_IPHONE });
-      return { ...r, method: 'playwright-cookies', cookiesUsed: cookies };
+      // cached.userAgent is the UA used to acquire the cookies; production validates UA match
+      const r = await playwrightFetch(url, { ...opts, ua: cached.userAgent });
+      return { ...r, method: 'playwright-cookies', cookiesUsed: cached.cookies };
     }
     return playwrightFetch(url, opts);
   }
