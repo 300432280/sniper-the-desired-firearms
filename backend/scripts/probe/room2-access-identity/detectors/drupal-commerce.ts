@@ -96,7 +96,7 @@ export const drupalCommerceDetector: PlatformDetector = {
       /\bnode--type-(?:classified|product|simpleads|ad)\b/i.test(html) ||
       /\bcommerce[_-](?:product|cart|checkout|order)\b/i.test(html) ||
       /\bview-(?:classifieds|simpleads|commerce-[a-z-]+)\b/i.test(html) ||
-      /\b(?:gunpost|classified)-teaser\b/i.test(html) ||
+      /\b(?:classified|product|listing|ad)-teaser\b/i.test(html) ||
       /\bsimpleads_(?:list|view|homepage)\b/i.test(html);
     if (hasClassifiedsOrCommerceBody) signals.classifiedsOrCommerceBody = true;
 
