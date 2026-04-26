@@ -9,6 +9,9 @@ import { magento1xDetector } from './magento-1x';
 import { lightspeedEcomDetector } from './lightspeed-ecom';
 import { lightspeedClassicDetector } from './lightspeed-classic';
 import { opencartDetector } from './opencart';
+import { volusionDetector } from './volusion';
+import { nopcommerceDetector } from './nopcommerce';
+import { odooDetector } from './odoo';
 
 // Append-only registry. Adding a platform = 1 new file + 1 entry here.
 // Order: most-specific markers first; tied confidences resolve to first registered.
@@ -22,6 +25,9 @@ export const detectors: PlatformDetector[] = [
   lightspeedEcomDetector,        // hosted Shoplightspeed (modern eCom platform)
   lightspeedClassicDetector,     // legacy SEOshop / Lightspeed Retail (webshopapp themes)
   opencartDetector,              // OpenCart 2.x/3.x — catalog/view/theme + index.php?route=
+  volusionDetector,              // Volusion — `x-powered-by: Volusion` + `/v/vspfiles/`
+  nopcommerceDetector,           // nopCommerce — `<meta generator="nopCommerce">` + `Nop.customer` cookie
+  odooDetector,                  // Odoo Website+eCommerce — `<meta generator="Odoo">` + `var odoo = {`
   shopifyDetector,
   woocommerceDetector,
 ];
