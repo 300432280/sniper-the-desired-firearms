@@ -15,6 +15,9 @@ import { odooDetector } from './odoo';
 import { hikashopJoomlaDetector } from './hikashop-joomla';
 import { godaddyOlsDetector } from './godaddy-ols';
 import { wixThunderboltDetector } from './wix-thunderbolt';
+import { ecwidOnWordpressDetector } from './ecwid-on-wordpress';
+import { celerantColdfusionDetector } from './celerant-coldfusion';
+import { drupalCommerceDetector } from './drupal-commerce';
 
 // Append-only registry. Adding a platform = 1 new file + 1 entry here.
 // Order: most-specific markers first; tied confidences resolve to first registered.
@@ -34,6 +37,9 @@ export const detectors: PlatformDetector[] = [
   hikashopJoomlaDetector,        // composite: HikaShop component path + Joomla generator/template
   godaddyOlsDetector,            // GoDaddy OLS — `Server: DPS/`, `dps_site_id` cookie, Starfield generator
   wixThunderboltDetector,        // Wix Thunderbolt SSR — `Server: Pepyaka`, `wixBiSession`, parastorage CDN
+  ecwidOnWordpressDetector,      // composite: Ecwid widget (app.ecwid.com/script.js?<storeId>) + WordPress
+  celerantColdfusionDetector,    // composite: Celerant CDN/wc.cfm + ColdFusion CFID/CFTOKEN cookies
+  drupalCommerceDetector,        // composite: Drupal x-generator/meta + Commerce/classifieds (x-commerce-core)
   shopifyDetector,
   woocommerceDetector,
 ];
