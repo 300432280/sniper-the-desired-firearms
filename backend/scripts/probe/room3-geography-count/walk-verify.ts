@@ -24,7 +24,9 @@ export async function walkAndDedupe(
       try {
         const r = await fetchUrl(nextUrl, { ...ctx, timeoutMs: 15000 });
         if (r.status >= 400) break;
-        const products = extractProducts(r.body, nextUrl);
+        // Pass platform so extract.ts dispatches to the right adapter
+        // (drupal-commerce → GunpostAdapter for classifieds markup).
+        const products = extractProducts(r.body, nextUrl, state.platform);
         if (products.length === 0) break;
         let added = 0;
         for (const p of products) {
