@@ -35,8 +35,11 @@ async function main() {
         sortParam: s.sortParam,
         selectHtml: s.evidence.selectHtml.slice(0, 300),
         candidateParams: s.evidence.candidateParams,
-        idJumpBefore: s.evidence.idJumpBefore?.split('/').pop(),
-        idJumpAfter: s.evidence.idJumpAfter?.split('/').pop(),
+        // Display the URL slug — strip trailing slash first since many platforms
+        // (WC, BC Stencil) emit `/product/<slug>/` and `.split('/').pop()` on
+        // a trailing-slash URL returns '' which looks like extraction failed.
+        idJumpBefore: s.evidence.idJumpBefore?.replace(/\/$/, '').split('/').pop(),
+        idJumpAfter: s.evidence.idJumpAfter?.replace(/\/$/, '').split('/').pop(),
         dateVerification: s.evidence.dateVerification,
         ms: Date.now() - t0,
       }, null, 2));
