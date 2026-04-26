@@ -29,8 +29,16 @@ export async function runRoom2(prev: IntakeState): Promise<AccessIdentityState |
   }
   const origin = ch.canonicalOrigin;
 
-  // 2. Heavy WAF probe + classification
-  const probe = await runHeavyWafProbe(`${origin}/`);
+  // 2. Heavy WAF probe + classification.
+  // The bash script can fail (missing bash/curl, network errors, target unreachable).
+  // On hard failure, return a structured RoomFailure rather than letting an
+  // unhandled rejection escape and crash the orchestrator.
+  let probe;
+  try {
+    probe = await runHeavyWafProbe(`${origin}/`);
+  } catch (err) {
+    return fail(`Heavy WAF probe failed: ${(err as Error).message}`, { origin, error: (err as Error).message });
+  }
   const waf = classifyWaf(probe.batches);
 
   // 3. Platform detection — fetch homepage with WAF-aware fetch (auto-escalates to
