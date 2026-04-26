@@ -82,10 +82,13 @@ export const godaddyOlsDetector: PlatformDetector = {
     }
 
     // Corroborating: wsimg.com CDN references.
+    // NOTE: wsimg.com is GoDaddy-WIDE (parked domains, GoDaddy WordPress, email pages),
+    // not OLS-specific. Do NOT set matched=true on this marker alone — only promote
+    // confidence when a definitive marker has already fired. Prevents false-positives
+    // on non-OLS GoDaddy properties.
     if (/(?:img\d*\.)?wsimg\.com/i.test(html)) {
       signals.wsimgCdn = true;
-      matched = true;
-      if (confidence === 'low') confidence = 'medium';
+      if (matched && confidence === 'medium') confidence = 'high';
     }
 
     // Corroborating: data-aid="..._RENDERED" / "..._REND" attributes.
