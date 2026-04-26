@@ -6,6 +6,9 @@ import { bigcommerceStencilDetector } from './bigcommerce-stencil';
 import { bigcommerceBlueprintDetector } from './bigcommerce-blueprint';
 import { magento2xDetector } from './magento-2x';
 import { magento1xDetector } from './magento-1x';
+import { lightspeedEcomDetector } from './lightspeed-ecom';
+import { lightspeedClassicDetector } from './lightspeed-classic';
+import { opencartDetector } from './opencart';
 
 // Append-only registry. Adding a platform = 1 new file + 1 entry here.
 // Order: most-specific markers first; tied confidences resolve to first registered.
@@ -16,6 +19,9 @@ export const detectors: PlatformDetector[] = [
   bigcommerceBlueprintDetector,  // BC Blueprint — BC markers WITHOUT Stencil signature
   magento2xDetector,             // M2 — modern static/version + requirejs + Magento_* modules
   magento1xDetector,             // M1 — /skin/frontend + /js/mage + /catalog/product/view/id/N
+  lightspeedEcomDetector,        // hosted Shoplightspeed (modern eCom platform)
+  lightspeedClassicDetector,     // legacy SEOshop / Lightspeed Retail (webshopapp themes)
+  opencartDetector,              // OpenCart 2.x/3.x — catalog/view/theme + index.php?route=
   shopifyDetector,
   woocommerceDetector,
 ];
