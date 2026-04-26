@@ -25,11 +25,14 @@ export async function discoverCatalogUrls(state: AccessIdentityState): Promise<C
     const r = await fetchUrl(`${origin}/wp-json/wp/v2/product_cat?per_page=100&hide_empty=false`, apiCtx);
     if (r.status === 200) {
       try {
-        const cats = JSON.parse(r.body) as Array<{ slug: string; count: number; parent: number }>;
-        // Top-level non-empty categories
-        const tops = cats.filter(c => c.parent === 0 && c.count > 0);
+        const cats = JSON.parse(r.body) as Array<{ slug: string; count: number; parent: number; link: string }>;
+        // Top-level non-empty categories. Use the API-provided `link` field
+        // — WooCommerce permalink base is configurable (Settings > Permalinks);
+        // hardcoding `/product-category/<slug>/` breaks any site using `/shop/`,
+        // `/categories/`, or a custom base. The link field is authoritative.
+        const tops = cats.filter(c => c.parent === 0 && c.count > 0 && c.link);
         return {
-          catalogUrls: tops.map(c => `${origin}/product-category/${c.slug}/`),
+          catalogUrls: tops.map(c => c.link),
           source: 'taxonomy-api',
         };
       } catch { /* fall through */ }
@@ -59,7 +62,16 @@ export async function discoverCatalogUrls(state: AccessIdentityState): Promise<C
       try { return new URL(h, origin).toString(); } catch { return null; }
     })
     .filter((u): u is string => Boolean(u))
-    .filter(u => new URL(u).hostname === new URL(origin).hostname)
+    .filter(u => {
+      const p = new URL(u);
+      return p.hostname === new URL(origin).hostname
+          // Reject homepage and fragment-only URLs — empirical filter passes
+          // them when the homepage has a "featured products" section, but
+          // walking the homepage as a "catalog" produces duplicates with no
+          // pagination. Same for `/#` (fragment routes).
+          && !(p.pathname === '/' && p.search === '')
+          && !p.hash;
+    })
     .filter(u => !isLikelyNavUrl(u));
 
   const unique = [...new Set(candidates)];
