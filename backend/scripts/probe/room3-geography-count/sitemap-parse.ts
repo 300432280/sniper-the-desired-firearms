@@ -57,10 +57,16 @@ export type SitemapDiscoveryResult = {
 const SITEMAP_CANDIDATES = [
   '/sitemap.xml',
   '/sitemap_index.xml',
+  '/sitemap-index.xml',
   '/product-sitemap.xml',
+  '/products-sitemap.xml',
   '/sitemap_products.xml',
-  '/xmlsitemap.php?type=products',  // BigCommerce
-  '/store-products-sitemap.xml',     // Wix
+  '/sitemap/products.xml',
+  '/sitemap_products_1.xml',          // Shopify shard-1
+  '/xmlsitemap.php',                  // BigCommerce sitemap-index (follow-children unlocks ?type=products&page=N)
+  '/xmlsitemap.php?type=products',    // BigCommerce direct product sub-sitemap (some installs)
+  '/store-products-sitemap.xml',      // Wix
+  '/ecstore-1-sitemap.xml',           // Ecwid Yoast shard-1
 ];
 
 export async function discoverProductSitemap(origin: string): Promise<SitemapDiscoveryResult> {
@@ -80,11 +86,16 @@ export async function discoverProductSitemap(origin: string): Promise<SitemapDis
     try {
       // Static-mode: XML doesn't need Playwright, even on WAF sites
       const r = await fetchUrl(url, { timeoutMs: 15000 });
-      if (hasChallengeMarkers(r.body) || r.status >= 400) {
+      // Bail counter ONLY counts true WAF challenge bodies (detected via markers).
+      // A 404 is "this candidate path doesn't exist" — normal, not a WAF event —
+      // and must NOT count toward bail (otherwise BC sites whose first 3 generic
+      // candidates 404 never reach /xmlsitemap.php; same for Wix /store-products-sitemap.xml).
+      if (hasChallengeMarkers(r.body)) {
         consecutiveWafFails++;
         if (consecutiveWafFails >= 3) { result.wafBailedOut = true; return result; }
         continue;
       }
+      if (r.status >= 400) continue;  // legitimate 404 — try next candidate
       body = r.body;
     } catch { continue; }
     consecutiveWafFails = 0;
