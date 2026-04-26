@@ -8,7 +8,10 @@ import { runRoom4 } from './probe/room4-navigation';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-const OUTPUT_DIR = path.join(process.cwd(), '..', 'docs', 'pre-bootstrap-output');
+// Resolve relative to this script's location, NOT process.cwd() — so the
+// orchestrator works whether invoked from project root, backend/, or anywhere.
+// __dirname here is backend/scripts/ at runtime under tsx (CJS).
+const OUTPUT_DIR = path.resolve(__dirname, '..', '..', 'docs', 'pre-bootstrap-output');
 
 async function main() {
   const url = process.argv[2];
