@@ -12,6 +12,9 @@ import { opencartDetector } from './opencart';
 import { volusionDetector } from './volusion';
 import { nopcommerceDetector } from './nopcommerce';
 import { odooDetector } from './odoo';
+import { hikashopJoomlaDetector } from './hikashop-joomla';
+import { godaddyOlsDetector } from './godaddy-ols';
+import { wixThunderboltDetector } from './wix-thunderbolt';
 
 // Append-only registry. Adding a platform = 1 new file + 1 entry here.
 // Order: most-specific markers first; tied confidences resolve to first registered.
@@ -28,6 +31,9 @@ export const detectors: PlatformDetector[] = [
   volusionDetector,              // Volusion — `x-powered-by: Volusion` + `/v/vspfiles/`
   nopcommerceDetector,           // nopCommerce — `<meta generator="nopCommerce">` + `Nop.customer` cookie
   odooDetector,                  // Odoo Website+eCommerce — `<meta generator="Odoo">` + `var odoo = {`
+  hikashopJoomlaDetector,        // composite: HikaShop component path + Joomla generator/template
+  godaddyOlsDetector,            // GoDaddy OLS — `Server: DPS/`, `dps_site_id` cookie, Starfield generator
+  wixThunderboltDetector,        // Wix Thunderbolt SSR — `Server: Pepyaka`, `wixBiSession`, parastorage CDN
   shopifyDetector,
   woocommerceDetector,
 ];
