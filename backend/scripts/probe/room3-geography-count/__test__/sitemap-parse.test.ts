@@ -17,6 +17,31 @@ describe('isLikelyProductUrl', () => {
   });
   it('rejects nav URL', () => {
     expect(isLikelyProductUrl('https://example.com/about-us/')).toBe(false);
+    expect(isLikelyProductUrl('https://example.com/contact/')).toBe(false);
+    expect(isLikelyProductUrl('https://example.com/blog/post-1/')).toBe(false);
+    expect(isLikelyProductUrl('https://example.com/feed/')).toBe(false);
+    expect(isLikelyProductUrl('https://example.com/wp-content/uploads/foo')).toBe(false);
+  });
+  it('rejects category .html (Magento 1.x style — was a false-positive of the dropped /\\.html$/ pattern)', () => {
+    expect(isLikelyProductUrl('https://ellwoodepps.com/firearms.html')).toBe(false);
+    expect(isLikelyProductUrl('https://example.com/about.html')).toBe(false);
+  });
+  it('matches BC Stencil bare descriptive slug (30+ chars, ≥3 hyphens)', () => {
+    // Real example from nordicmarksman.com: a long descriptive product slug
+    // at site root with no numeric ID — the only signal is slug length+hyphens.
+    expect(isLikelyProductUrl('https://example.com/sellier-bellot-7-62x54r-soft-point-180-grain')).toBeTruthy();
+    expect(isLikelyProductUrl('https://example.com/winchester-30-30win-model-1894-sporter-rifle')).toBeTruthy();
+  });
+  it('rejects long single-word slug (no hyphens — fails segmentHyphenCount guard)', () => {
+    // 30+ chars but only 0-2 hyphens — likely a category landing page, not a product.
+    expect(isLikelyProductUrl('https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toBe(false);
+    expect(isLikelyProductUrl('https://example.com/foo-bar-baz-quux-quuux-quuuux-x')).toBeTruthy();  // 6 hyphens, OK
+  });
+  it('matches Drupal classifieds 4-segment URL (gunpost: /<cat>/<sub>/<city>/<slug>)', () => {
+    expect(isLikelyProductUrl('https://www.gunpost.ca/firearms/rifles/toronto/winchester-94-classic')).toBeTruthy();
+  });
+  it('matches marketplace 4+ segment with trailing 4-digit id', () => {
+    expect(isLikelyProductUrl('https://www.gunpost.ca/firearms/rifles/edmonton/mauser-1450')).toBeTruthy();
   });
 });
 

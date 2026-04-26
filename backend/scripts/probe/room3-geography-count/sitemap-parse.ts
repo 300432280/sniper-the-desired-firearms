@@ -7,29 +7,69 @@ import { createHash } from 'crypto';
 import { fetchUrl } from '../shared/fetch';
 import { hasChallengeMarkers } from '../room2-access-identity/canonical-host';
 
-const PRODUCT_URL_POSITIVE = [
+const PRODUCT_URL_POSITIVE: RegExp[] = [
   /\/products?\//i,
   /\/product-page\//i,
   /\/catalog\/product\/view\/id\/\d+/i,
   /\/shop\/[^/]+(?:-\d{2,})?$/i,
-  /[-_]p[-_]?\d{2,}\.html$/i,
-  /\/[a-z0-9-]+-\d{4,}\/?$/i,    // slug-NNNN
-  /\.html$/i,                      // generic
+  /[-_]p[-_]?\d{2,}\.html?$/i,
+  /\/[a-z0-9-]+-\d{4,}\/?$/i,                // single-segment slug-NNNN
+  /\/\d{3,}\.html?$/i,                       // pure numeric .html (legacy CMS)
+  /\/product\.php\?/i,                       // custom-PHP product detail (irunguns precedent)
+  /\/detail\/[^/?#]+\/?$/i,                  // generic /detail/<slug>
+  /(?:\/[a-z][a-z0-9-]*){3,}\/\d{4,}\/?$/i,  // marketplace/classifieds: 4+ segments + trailing 4-digit id
+  /\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]{3,}\/?$/i,
+  // ↑ Drupal classifieds 4-segment without trailing digits (gunpost: /firearms/rifles/<city>/<slug>)
+  // BC Stencil bare-slug products: single-segment path, 30+ chars, ≥3 hyphens
+  // (the hyphen-count guard is applied in isLikelyProductUrl below to avoid
+  //  matching long single-word category slugs).
+  /^https?:\/\/[^/]+\/[a-z0-9][a-z0-9-]{29,}\/?$/i,
 ];
 
-const PRODUCT_URL_NEGATIVE = [
+// Index of the BC-Stencil-bare-slug pattern — used by the segmentHyphenCount
+// guard in isLikelyProductUrl so the pattern only matches descriptive product
+// slugs (≥3 hyphens) and not long single-word category slugs.
+const BARE_SLUG_PATTERN_IDX = PRODUCT_URL_POSITIVE.length - 1;
+
+const PRODUCT_URL_NEGATIVE: RegExp[] = [
   /\/(product-)?category\//i,
+  /\/(product_)?categories?\//i,
   /\/collections\//i,
   /\/brand\//i,
+  /\/brands\//i,
   /\/tag\//i,
+  /\/tags\//i,
+  /\/author\//i,
   /\/page\/\d+/i,
-  /\/(cart|login|checkout|account|search|sitemap|wp-admin|wp-login|robots)/i,
+  /\/(cart|login|checkout|account|search|sitemap|wp-admin|wp-login|wp-content|wp-includes|robots)/i,
   /\/sitemap[^/]*\.xml/i,
+  /\/(about|about-us|contact|contact-us|faq|help|support|blog|news|press|privacy|terms|policy|policies|shipping|returns|warranty|store-locator|locations|careers|jobs)\b/i,
+  /\/feed\/?$/i,
+  /\/rss\/?$/i,
+  /\/(en|fr|es|de|cn|zh)\/?$/i,              // language-root only (no path after)
 ];
+
+function segmentHyphenCount(url: string): number {
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.replace(/\/$/, '').split('/').pop() || '';
+    return (seg.match(/-/g) || []).length;
+  } catch {
+    return 0;
+  }
+}
 
 export function isLikelyProductUrl(url: string): boolean {
   if (PRODUCT_URL_NEGATIVE.some(re => re.test(url))) return false;
-  return PRODUCT_URL_POSITIVE.some(re => re.test(url));
+  for (let i = 0; i < PRODUCT_URL_POSITIVE.length; i++) {
+    if (!PRODUCT_URL_POSITIVE[i].test(url)) continue;
+    // BC Stencil bare-slug pattern: also require ≥3 hyphens in the slug
+    // to avoid matching very long single-word category slugs (which would be
+    // rare but could be category landing pages on long-named categories).
+    if (i === BARE_SLUG_PATTERN_IDX && segmentHyphenCount(url) < 3) continue;
+    return true;
+  }
+  return false;
 }
 
 export function parseSitemapXml(xml: string): string[] {
