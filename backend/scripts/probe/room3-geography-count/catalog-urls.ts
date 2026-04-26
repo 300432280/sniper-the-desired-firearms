@@ -51,6 +51,18 @@ export async function discoverCatalogUrls(state: AccessIdentityState): Promise<C
       } catch { /* fall through */ }
     }
   }
+  // Wix Stores (Thunderbolt): use ONLY the top-level /shop URL.
+  // Per playbook Mistake 27: Wix sub-category URLs (e.g. /fishing, /hardware)
+  // render a filtered page-1 correctly but their pagination hrefs (?page=N)
+  // SILENTLY LEAK to the global /shop ordering server-side. Walking sub-cat
+  // URLs with pagination produces hybrid junk (page 1 filtered + subsequent
+  // pages global). The only safe walk is the top-level /shop with global
+  // pagination — Wix product URLs (/product-page/<slug>) are globally unique
+  // so no category partitioning is needed for dedupe. Generic for any Wix
+  // site, not site-specific.
+  if (/wix/.test(state.platform)) {
+    return { catalogUrls: [`${origin}/shop`], source: 'taxonomy-api' };
+  }
 
   // 2. Nav-link discovery from homepage HTML
   const home = await fetchUrl(`${origin}/`, ctx);
