@@ -133,8 +133,9 @@ function candidatePatterns(perPage: number): PaginationPattern[] {
     { type: 'query',          template: 'page',  ...base },
     { type: 'query',          template: 'p',     ...base },
     { type: 'path',           template: '/page/{N}', ...base },
-    { type: 'offset-query',   template: 'top',   ...base },
-    { type: 'offset-query',   template: 'start', ...base },
+    { type: 'offset-query',   template: 'offset', ...base },  // production buildPaginatedUrl default param
+    { type: 'offset-query',   template: 'top',    ...base },
+    { type: 'offset-query',   template: 'start',  ...base },
     { type: 'suffix-replace', match: '.html', template: '-{N}.html', ...base },
     { type: 'suffix-replace', match: '.html', template: 'page{N}.html', ...base },
   ];
