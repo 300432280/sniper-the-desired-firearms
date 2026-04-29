@@ -1,9 +1,14 @@
+/**
+ * @deprecated 2026-04-27 — Generic discovery superseded by AI-driven per-site audit.
+ * See `_DEPRECATED.md` in this folder and `docs/superpowers/plans/2026-04-27-pivot-to-ai-audit.md`.
+ * Do not import from this file in new code.
+ */
 // backend/scripts/probe/room5-bootstrap/detail-enrich.ts
 // Per spec §6.4: enrich products missing price (in-stock) or postDate (all)
 // by fetching detail pages. Batch by catalogUrl, concurrency ≤ 3, token-budget gated.
 
 import { safeFetch } from '../shared/fetch';
-import { canRequest, consumeToken, getBudget } from '../../../src/services/token-budget';
+import { canRequest, consumeToken } from '../../../src/services/token-budget';
 import type { NavigationState, WafType } from '../shared/types';
 import type { CatalogProduct } from '../../../src/services/scraper/types';
 
@@ -169,8 +174,8 @@ export async function enrichProducts(
     return { productsEnriched: 0, avgDetailFetchMs: 0, detailFetchFailures: 0, enrichedProducts: products };
   }
 
-  // Determine concurrency: 3 normally, 1 for WAF/rate-limited sites
-  const maxConcurrency = (state.hasWaf && state.wafType !== 'cloudflare-passive') || state.hasWaf ? 1 : 3;
+  // Concurrency: serialize only for WAF types needing cookie-solve (spec §6.4)
+  const maxConcurrency = state.wafType === 'sucuri' || state.wafType === 'sgcaptcha' ? 1 : 3;
 
   const baseBudget = 60; // default per token-budget.ts
   const capacity = 1.0;  // bootstrap uses full capacity
@@ -178,6 +183,7 @@ export async function enrichProducts(
   let totalFetchMs = 0;
   let fetchCount = 0;
   let failures = 0;
+  let actuallyEnriched = 0;
 
   // Group by catalogUrl to amortize WAF cookie reuse
   const byCatalogUrl = new Map<string, CatalogProduct[]>();
@@ -203,7 +209,7 @@ export async function enrichProducts(
       }
 
       try {
-        consumeToken(siteId, 1);
+        consumeToken(siteId, 2);
         const fetchResult = await safeFetch(product.url, {
           timeoutMs: 20000,
           hasWaf: state.hasWaf,
@@ -224,8 +230,10 @@ export async function enrichProducts(
         };
 
         const fields = extractDetailFields(fetchResult.body, needs);
-        if (fields.price != null) product.price = fields.price;
-        if (fields.postDate) product.postDate = fields.postDate;
+        let didEnrich = false;
+        if (fields.price != null) { product.price = fields.price; didEnrich = true; }
+        if (fields.postDate) { product.postDate = fields.postDate; didEnrich = true; }
+        if (didEnrich) actuallyEnriched++;
       } catch {
         failures++;
       }
@@ -233,7 +241,7 @@ export async function enrichProducts(
   }
 
   return {
-    productsEnriched: fetchCount - failures,
+    productsEnriched: actuallyEnriched, // Fix #14: only count products where fields were actually populated
     avgDetailFetchMs: fetchCount > 0 ? Math.round(totalFetchMs / fetchCount) : 0,
     detailFetchFailures: failures,
     enrichedProducts: products, // mutated in-place

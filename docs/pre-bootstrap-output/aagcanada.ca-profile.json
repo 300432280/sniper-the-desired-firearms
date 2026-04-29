@@ -1,0 +1,285 @@
+{
+  "inputUrl": "https://aagcanada.ca/",
+  "canonicalUrl": "https://aagcanada.ca/",
+  "timestamp": "2026-04-27T06:28:23.259Z",
+  "runId": "a6c30a91-6359-4432-beab-21323527f49d",
+  "canonicalOrigin": "https://aagcanada.ca",
+  "canonicalOriginResolution": {
+    "canonicalOrigin": "https://aagcanada.ca",
+    "primaryResponded": true,
+    "primaryWasChallenged": false,
+    "wwwFallbackUsed": false,
+    "serverHeaders": {
+      "primary": "cloudflare",
+      "canonical": "cloudflare"
+    }
+  },
+  "hasWaf": true,
+  "wafType": "cloudflare-passive-with-owasp",
+  "wafProbeEvidence": {
+    "method": "heavy-8-batch",
+    "timestamp": "2026-04-27T06:28:48.716Z",
+    "batches": [
+      {
+        "batchId": 1,
+        "description": "header fingerprint (single GET per path)",
+        "status": 200,
+        "headers": {
+          "cf-ray": "9f2bc4615851aaee-YYZ",
+          "set-cookie": "_shopify_marketing=:AZ3Nn_k5AAEAzii709_FXlfRXEpCXba41eWqn4tJz6S5Awpna-mpgh8BdQ6B6aeRNnN5q-NLJx7OJFEwxaAjImJ0TjY:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax",
+          "x-frame-options": "DENY",
+          "server-timing": "cfRequestDuration;dur=114.000082",
+          "cf-cache-status": "DYNAMIC",
+          "x-content-type-options": "nosniff",
+          "server": "cloudflare"
+        },
+        "bodySnippet": "\n[1a] HEADERS FOR https://aagcanada.ca/\nHTTP/2 103 \r\nHTTP/2 200 \r\ncf-ray: 9f2bc45cbe5fac15-YYZ\r\nset-cookie: localization=CA; path=/; expires=Tue, 27 Apr 2027 06:28:25 GMT\r\nset-cookie: _shopify_y=a319d1af-e797-45b7-806a-cdaef4370da8; domain=aagcanada.ca; path=/; expires=Tue, 27 Apr 2027 12:28:25 GMT; SameSite=Lax\r\nset-cookie: _shopify_s=c812ddab-1e5f-48b6-abf9-0d6bb3727af4; domain=aagcanada.ca; path=/; expires=Mon, 27 Apr 2026 06:58:25 GMT; SameSite=Lax\r\nset-cookie: _shopify_essential=:AZ3Nn_YjAAEAbdOyDuksAXnGo_ulPLZ_bNWPBYDWQryScu7mYiCYD0KSkqC3fS9eHu8kh4I1ecMOtofwVnqRk_i8WHIc35Tcb37_M8EMnlUXgavzfBP37owGl85uwxn2yGxDUiGZVZKjHaWRSU8Jd21_KpkR2X5lUeqr445KI-XNs9bsPkqLRdH_V4qPr8zUeTQh05mU0-pTj41qnZJYoaCSfeuR2U85NCS310Yv8jIK5qRRpv8uc2WG2Mx7dGeXQRRgTkHFSUdnwWRE5rHow7C4Hc-GR8eG15W5BdAztZ_Elo7KsPhT1LxQ1hA7N9GaDPZ3CWSHxfem0shHlwpmFF2ogYGWIpiykYgQR_b-9kElyymcNMbdPtj8qWmMnR7yw1h6RRDD5O6-iPY:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax\r\nset-cookie: _shopify_analytics=:AZ3Nn_Y0AAEAWp-RTpsUrcUFlx4bPPWR-DneI6KfHklo6zqLLIdDmpmb2KiBUftg57v2SJEYyaaQpz5S81j11qR6LroVrCudulLFtss:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax\r\nset-cookie: _shopify_marketing=:AZ3Nn_Y0AAEA4fPK0BiaYhhdkyKRITdvhADOb1_W0bgp7E-aEahywk8zbJz1WG-7W6VXzC1-nThqn94GwNlIYi7K6qc:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax\r\nx-frame-options: DENY\r\nserver-timing: processing;dur=30;desc=\"gc:1\", db;dur=11, asn;desc=\"812\", edge;desc=\"YYZ\", country;desc=\"CA\", theme;desc=\"140889522287\", pageType;desc=\"index\", servedBy;desc=\"vhtf\", requestID;desc=\"d9fe2daf-1604-4d2a-95e9-b7fff605a4d9-1777271305\", _y;desc=\"a319d1af-e797-45b7-806a-cdaef4370da8\", _s;desc=\"c812ddab-1e5f-48b6-abf9-0d6bb3727af4\", _cmp;desc=\"3.AMPS_CAON_f_f_5QnPisqzTguqfv2A*bj9Vg\", compressionLevel;desc=\"5\"\r\ncf-cache-status: DYNAMIC\r\nx-content-type-options: nosniff\r\nserver: cloudflare\r\nserver-timing: cfRequestDuration;dur=85.000038, earlyhints\r\n\n[1b] HEADERS FOR https://aagcanada.ca/robots.txt\nHTTP/2 200 \r\ncf-ray: 9f2bc45f2d23982f-Y",
+        "durationMs": 13758
+      },
+      {
+        "batchId": 2,
+        "description": "multi-UA probe (3 different UAs on same path)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[2a-desktop] https://aagcanada.ca/\n   STATUS=200 BYTES=1360 TIME=0.173788 REDIRECTS=0 FINAL=https://aagcanada.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=330\n[2b-mobile] https://aagcanada.ca/\n   STATUS=200 BYTES=1360 TIME=0.279984 REDIRECTS=0 FINAL=https://aagcanada.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=455\n[2c-bot] https://aagcanada.ca/\n   STATUS=200 BYTES=1360 TIME=0.339559 REDIRECTS=0 FINAL=https://aagcanada.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=497\n[2d-curl] https://aagcanada.ca/\n   STATUS=200 BYTES=1360 TIME=0.189990 REDIRECTS=0 FINAL=https://aagcanada.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=351\n",
+        "durationMs": 6879
+      },
+      {
+        "batchId": 3,
+        "description": "rapid burst (10 sequential GETs in ~2s)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[3-burst-1] https://aagcanada.ca/?cache_bust=11777271307690434100\n   STATUS=200 BYTES=1360 TIME=0.195335 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=11777271307690434100curl: (23) Failed writing body (0 != 1360)\n   wall_ms=737\n[3-burst-2] https://aagcanada.ca/?cache_bust=21777271308462947600\n   STATUS=200 BYTES=1360 TIME=0.199564 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=21777271308462947600curl: (23) Failed writing body (0 != 1360)\n   wall_ms=494\n[3-burst-3] https://aagcanada.ca/?cache_bust=31777271308994713400\n   STATUS=200 BYTES=1360 TIME=0.166730 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=31777271308994713400curl: (23) Failed writing body (0 != 1360)\n   wall_ms=488\n[3-burst-4] https://aagcanada.ca/?cache_bust=41777271309521132400\n   STATUS=200 BYTES=1360 TIME=0.190084 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=41777271309521132400curl: (23) Failed writing body (0 != 1360)\n   wall_ms=492\n[3-burst-5] https://aagcanada.ca/?cache_bust=51777271310049912800\n   STATUS=200 BYTES=1360 TIME=0.186064 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=51777271310049912800curl: (23) Failed writing body (0 != 1360)\n   wall_ms=488\n[3-burst-6] https://aagcanada.ca/?cache_bust=61777271310573484200\n   STATUS=200 BYTES=1360 TIME=0.200738 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=61777271310573484200curl: (23) Failed writing body (0 != 1360)\n   wall_ms=507\n[3-burst-7] https://aagcanada.ca/?cache_bust=71777271311118027200\n   STATUS=200 BYTES=1360 TIME=0.189294 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=71777271311118027200curl: (23) Failed writing body (0 != 1360)\n   wall_ms=479\n[3-burst-8] https://aagcanada.ca/?cache_bust=81777271311637106300\n   STATUS=200 BYTES=1360 TIME=0.157942 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=81777271311637106300curl: (23) Failed writing body (0 != 1360)\n   wall_ms=513\n[3-burst-9] https://aagcanada.ca/?cache_bust=91777271312188748400\n   STATUS=200 BYTES=1360 TIME=0.176785 REDIRECTS=0 FINAL=https://aagcanada.ca/?cache_bust=9177727131218874840",
+        "durationMs": 4586
+      },
+      {
+        "batchId": 4,
+        "description": "honeypot/admin path probe (common WAF trigger paths)",
+        "status": 404,
+        "headers": {},
+        "bodySnippet": "\n[4a-wp-admin] https://aagcanada.ca/wp-admin/\n   STATUS=404 BYTES=1360 TIME=0.240772 REDIRECTS=0 FINAL=https://aagcanada.ca/wp-admin/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=404\n[4b-wp-login] https://aagcanada.ca/wp-login.php\n   STATUS=404 BYTES=1360 TIME=0.354051 REDIRECTS=0 FINAL=https://aagcanada.ca/wp-login.phpcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=513\n[4c-xmlrpc] https://aagcanada.ca/xmlrpc.php\n   STATUS=404 BYTES=1360 TIME=0.199500 REDIRECTS=0 FINAL=https://aagcanada.ca/xmlrpc.phpcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=356\n[4d-dotenv] https://aagcanada.ca/.env\n   STATUS=200 BYTES=1360 TIME=0.342232 REDIRECTS=0 FINAL=https://aagcanada.ca/.envcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=500\n[4e-dotgit] https://aagcanada.ca/.git/config\n   STATUS=404 BYTES=1360 TIME=0.174264 REDIRECTS=0 FINAL=https://aagcanada.ca/.git/configcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=333\n[4f-phpinfo] https://aagcanada.ca/phpinfo.php\n   STATUS=404 BYTES=1360 TIME=0.197130 REDIRECTS=0 FINAL=https://aagcanada.ca/phpinfo.phpcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=353\n",
+        "durationMs": 3440
+      },
+      {
+        "batchId": 5,
+        "description": "suspicious-fingerprint GET (no Accept-Language, no Accept-Encoding)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[5a-barebones] https://aagcanada.ca/\n   STATUS=200 BYTES=1360 TIME=0.173958 REDIRECTS=0 FINAL=https://aagcanada.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=340\n",
+        "durationMs": 2752
+      },
+      {
+        "batchId": 6,
+        "description": "SQL-injection-shaped query string (fires SQLi WAF rules if any)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[6a-sqli] https://aagcanada.ca/?id=1'%20OR%20'1'='1\n   STATUS=200 BYTES=1360 TIME=0.246250 REDIRECTS=0 FINAL=https://aagcanada.ca/?id=1'%20OR%20'1'='1curl: (23) Failed writing body (0 != 1360)\n   wall_ms=412\n[6b-union] https://aagcanada.ca/?id=1%20UNION%20SELECT%201,2,3\n   STATUS=200 BYTES=1360 TIME=0.180282 REDIRECTS=0 FINAL=https://aagcanada.ca/?id=1%20UNION%20SELECT%201,2,3curl: (23) Failed writing body (0 != 1360)\n   wall_ms=244\n",
+        "durationMs": 2293
+      },
+      {
+        "batchId": 7,
+        "description": "XSS-shaped query string (fires XSS WAF rules)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[7a-xss] https://aagcanada.ca/?q=<script>alert(1)</script>\n   STATUS=200 BYTES=1360 TIME=0.171477 REDIRECTS=0 FINAL=https://aagcanada.ca/?q=<script>alert(1)</script>curl: (23) Failed writing body (0 != 1360)\n   wall_ms=333\n",
+        "durationMs": 1965
+      },
+      {
+        "batchId": 8,
+        "description": "User-Agent absent (many WAFs require UA)",
+        "status": 403,
+        "headers": {},
+        "bodySnippet": "\n[8a-noUA] https://aagcanada.ca/\n   STATUS=403 BYTES=1360 TIME=0.096297 REDIRECTS=0 FINAL=https://aagcanada.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=254\n\n========================================\nPROBE COMPLETE\n========================================\n\nINTERPRETATION GUIDE:\n  - All probes 200 + consistent timing + no cf-ray/x-sucuri → hasWaf: false (HIGH confidence)\n  - Any batch returns 403/503/challenge body → hasWaf: true, wafType = vendor\n  - Honeypot paths 403 but category 200 → hasWaf: true, wafType: 'path-selective'\n  - SQLi/XSS 403 but normal 200 → hasWaf: true, wafType: 'rule-selective'\n  - Rapid burst triggers 429/503 → hasWaf: true, wafType: 'rate-limit'\n  - cf-ray header present but all 200 → hasWaf: true, wafType: 'cloudflare-passive'",
+        "durationMs": 1720
+      }
+    ],
+    "cfHeaders": [
+      "9f2bc4615851aaee-YYZ"
+    ],
+    "sucuriHeaders": [],
+    "sgCaptchaDetected": false,
+    "incapsulaCookies": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "botUaBlocked": false,
+    "honeypotPathsBlocked": true
+  },
+  "needsPlaywright": false,
+  "userAgentOverride": null,
+  "accessMethod": "axios-desktop",
+  "platform": "shopify",
+  "platformMarker": {
+    "detectorId": "shopify",
+    "confidence": "medium",
+    "signals": {
+      "cdnAsset": true
+    }
+  },
+  "catalogUrls": [
+    "https://aagcanada.ca/collections/antique-blank",
+    "https://aagcanada.ca/collections/bayonet",
+    "https://aagcanada.ca/collections/boutique-display-sold",
+    "https://aagcanada.ca/collections/deactivated",
+    "https://aagcanada.ca/collections/firearms",
+    "https://aagcanada.ca/collections/fun-stuff",
+    "https://aagcanada.ca/collections/garment",
+    "https://aagcanada.ca/collections/frontpage",
+    "https://aagcanada.ca/collections/magazine-clips",
+    "https://aagcanada.ca/collections/new-arrival",
+    "https://aagcanada.ca/collections/popular-items",
+    "https://aagcanada.ca/collections/public-notice",
+    "https://aagcanada.ca/collections/sale",
+    "https://aagcanada.ca/collections/scope-sights",
+    "https://aagcanada.ca/collections/tactical-gear",
+    "https://aagcanada.ca/collections/all",
+    "https://aagcanada.ca/shop"
+  ],
+  "catalogUrlSource": "taxonomy-api",
+  "catalogUrlWalkCounts": [
+    {
+      "url": "https://aagcanada.ca/collections/all",
+      "uniqueProducts": 567,
+      "pages": 48
+    },
+    {
+      "url": "https://aagcanada.ca/shop",
+      "uniqueProducts": 0,
+      "pages": 8
+    },
+    {
+      "url": "https://aagcanada.ca/collections/antique-blank",
+      "uniqueProducts": 0,
+      "pages": 2
+    },
+    {
+      "url": "https://aagcanada.ca/collections/bayonet",
+      "uniqueProducts": 0,
+      "pages": 2
+    },
+    {
+      "url": "https://aagcanada.ca/collections/boutique-display-sold",
+      "uniqueProducts": 0,
+      "pages": 3
+    },
+    {
+      "url": "https://aagcanada.ca/collections/deactivated",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://aagcanada.ca/collections/firearms",
+      "uniqueProducts": 0,
+      "pages": 3
+    },
+    {
+      "url": "https://aagcanada.ca/collections/fun-stuff",
+      "uniqueProducts": 0,
+      "pages": 3
+    },
+    {
+      "url": "https://aagcanada.ca/collections/garment",
+      "uniqueProducts": 0,
+      "pages": 3
+    },
+    {
+      "url": "https://aagcanada.ca/collections/frontpage",
+      "uniqueProducts": 0,
+      "pages": 3
+    },
+    {
+      "url": "https://aagcanada.ca/collections/magazine-clips",
+      "uniqueProducts": 0,
+      "pages": 2
+    },
+    {
+      "url": "https://aagcanada.ca/collections/new-arrival",
+      "uniqueProducts": 0,
+      "pages": 3
+    },
+    {
+      "url": "https://aagcanada.ca/collections/popular-items",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://aagcanada.ca/collections/public-notice",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://aagcanada.ca/collections/sale",
+      "uniqueProducts": 0,
+      "pages": 2
+    },
+    {
+      "url": "https://aagcanada.ca/collections/scope-sights",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://aagcanada.ca/collections/tactical-gear",
+      "uniqueProducts": 0,
+      "pages": 3
+    }
+  ],
+  "walkedUniqueCount": 567,
+  "globalProductCount": 570,
+  "globalProductCountMethod": "shopify-products-walk",
+  "globalProductCountEvidence": {
+    "endpoint": "/products.json?limit=250",
+    "responseSample": "3 pages, 570 products"
+  },
+  "driftPct": 0.5263157894736842,
+  "coverageStrategy": "api-walk",
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": true
+  },
+  "paginationEvidence": {
+    "testA_page1_vs_page2": {
+      "passed": true,
+      "sample": [
+        "https://aagcanada.ca/products/g-g-armament-arp9-style-6mm-airsoft-carbine-with-g-g-stp45-pro-gas-blowback-pistol-matching-color-kit",
+        "https://aagcanada.ca/products/taurus-pt92-style-tan-finish-6mm-bb-airsoft-pistol",
+        "https://aagcanada.ca/products/norwich-sentinel-pocket-revolver-38-rimfire-no-pal-required"
+      ]
+    },
+    "testB_pageN_vs_pageN_1": {
+      "passed": false,
+      "sample": []
+    },
+    "testC_overflow_vs_page1": {
+      "passed": false,
+      "sample": []
+    },
+    "testD_perPage_sanity": {
+      "passed": false,
+      "observedPerPage": 12,
+      "expectedPerPage": 12
+    },
+    "totalPagesEstimate": 2,
+    "totalPagesSource": "widget-markup"
+  },
+  "sortParam": "?sort_by=created-ascending",
+  "sortEvidence": {
+    "selectHtml": "<select name=\"sort_by\" id=\"SortBy\"> [manual=\"Featured\"] [most-relevant=\"Most relevant\"] [best-selling=\"Best selling\"] [title-ascending=\"Alphabetically, A-Z\"] [title-descending=\"Alphabetically, Z-A\"] [price-ascending=\"Price, low to high\"] [price-descending=\"Price, high to low\"] [created-ascending=\"Date, old to new\"] [created-descending=\"Date, new to old\"]",
+    "candidateParams": [
+      "?sort_by=created-ascending"
+    ],
+    "dateVerification": null,
+    "idJumpBefore": "https://aagcanada.ca/products/replica-boots-1",
+    "idJumpAfter": "https://aagcanada.ca/products/12ga-arm-stock-pouch-blk"
+  },
+  "watermarkMethod": "full-catalog-sweep",
+  "watermarkMethodSelection": {
+    "reason": "No API date filter and no date source on listing → full-catalog-sweep",
+    "fallbackToMethodCReason": "sort param ?sort_by=created-ascending found but no per-product dates extractable from listing"
+  }
+}

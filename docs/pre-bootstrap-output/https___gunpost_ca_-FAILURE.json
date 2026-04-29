@@ -1,0 +1,20 @@
+{
+  "roomFailed": true,
+  "roomNumber": 3,
+  "reason": "Drift 28.15% exceeds 5% hard-fail threshold (walked=16250, expected=22618)",
+  "evidence": {
+    "walkCounts": [
+      {
+        "url": "https://gunpost.ca/ads?sort_by=date_pub&sort_order=DESC",
+        "uniqueProducts": 16250,
+        "pages": 1083
+      }
+    ],
+    "globalCount": 22618,
+    "walkedCount": 16250,
+    "method": "generic-product-sitemap",
+    "setCoverCoverage": 0,
+    "sitemapTotal": 22618
+  },
+  "timestamp": "2026-04-27T08:07:45.137Z"
+}

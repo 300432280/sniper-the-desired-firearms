@@ -1,3 +1,8 @@
+/**
+ * @deprecated 2026-04-27 — Generic discovery superseded by AI-driven per-site audit.
+ * See `_DEPRECATED.md` in this folder and `docs/superpowers/plans/2026-04-27-pivot-to-ai-audit.md`.
+ * Do not import from this file in new code.
+ */
 // backend/scripts/probe/room4-navigation/sort-detect.ts
 // Room 4 Task 5.2: Detect sort param by reading <select> HTML, filtering newest-style
 // candidates, and verifying via 3-outcome ID-jump + counter-control (Mistake 29).

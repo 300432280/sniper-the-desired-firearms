@@ -1,0 +1,18 @@
+{
+  "roomFailed": true,
+  "roomNumber": 3,
+  "reason": "Drift 20.03% exceeds 5% hard-fail threshold (walked=3278, expected=2731)",
+  "evidence": {
+    "walkCounts": [
+      {
+        "url": "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36",
+        "uniqueProducts": 3278,
+        "pages": 92
+      }
+    ],
+    "globalCount": 2731,
+    "walkedCount": 3278,
+    "method": "celerant-perpage-all"
+  },
+  "timestamp": "2026-04-26T21:21:24.210Z"
+}

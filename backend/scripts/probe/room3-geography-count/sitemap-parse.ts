@@ -1,3 +1,8 @@
+/**
+ * @deprecated 2026-04-27 — Generic discovery superseded by AI-driven per-site audit.
+ * See `_DEPRECATED.md` in this folder and `docs/superpowers/plans/2026-04-27-pivot-to-ai-audit.md`.
+ * Do not import from this file in new code.
+ */
 // backend/scripts/probe/room3-geography-count/sitemap-parse.ts
 // Sitemap discovery + parsing + product-URL classification.
 // Cherry-pick: static-mode XML fetch, broadened WAF bail-out, expanded URL patterns,

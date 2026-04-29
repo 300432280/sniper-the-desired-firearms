@@ -1,0 +1,315 @@
+{
+  "roomFailed": true,
+  "roomNumber": 3,
+  "reason": "Drift 86.69% exceeds 5% hard-fail threshold (walked=128, expected=962)",
+  "evidence": {
+    "walkCounts": [
+      {
+        "url": "https://canadafirstammo.ca/shop-2/",
+        "uniqueProducts": 117,
+        "pages": 11
+      },
+      {
+        "url": "https://canadafirstammo.ca/shop",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/clearance/",
+        "uniqueProducts": 1,
+        "pages": 4
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/ammunition/",
+        "uniqueProducts": 2,
+        "pages": 2
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/",
+        "uniqueProducts": 6,
+        "pages": 3
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/firearms/",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/around-the-house/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/around-the-house/accessoriescleaning-supplies/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/polymer-knuckles/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/self-defence/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/gun-stuff/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffbipods/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffparts/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffrail-accessories/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/accessorieshunting/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/pistol-mags/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/rifle-mags/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/prepping/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/prepping/preppingrations/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/accessoriescases/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/eyes-ears/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/eyes-ears/night-vision-rangefinders-eyes-ears/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionpistol/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionpistol/ammunitionpistolnew/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionrifle/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionrifle/ammunitionriflehunting/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionrimfire/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionshotgun/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/firearms/firearmsrifles/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/firearms/firearmsrifles/firearmsriflesnew/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/accessoriesoptics/night-vision-rangefinders/",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/apparel/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/apparel/apparelbody-armour/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/plates-apparel/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/plates-apparel/body-armour/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/plates-apparel/button-up-shirts/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/plates-apparel/hats/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/plates-apparel/hoodies/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/plates-apparel/mugs-and-more/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/reloading/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/reloading/reloadingequipment/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/reloading/reloadingprimers/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/shop-all/",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/shop-all/shop-allbroke-student-deals/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/shop-all/canadian-made/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/shop-all/gently-used-boomsticks/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/shop-all/hunters-hangout/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/shop-all/shop-allpyrotechnics/",
+        "uniqueProducts": 0,
+        "pages": 0
+      },
+      {
+        "url": "https://canadafirstammo.ca/?s=",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/index.php/product-category/firearms/firearmsshotguns/firearmsshotgunsnew",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/index.php/product-category/firearms/firearmsrifles/firearmsriflesnew",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionpistol/ammunitionpistolnew",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionrifle/ammunitionriflehunting/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionrimfire/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/firearms/firearmsshotguns/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://canadafirstammo.ca/product-category/firearms/firearmsshotguns/firearmsshotgunsnew/",
+        "uniqueProducts": 0,
+        "pages": 1
+      }
+    ],
+    "globalCount": 962,
+    "walkedCount": 128,
+    "method": "wp-rest-header",
+    "setCoverCoverage": 12.876427829698859,
+    "sitemapTotal": 963
+  },
+  "timestamp": "2026-04-27T05:03:21.265Z"
+}

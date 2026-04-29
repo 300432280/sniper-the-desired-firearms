@@ -1,0 +1,548 @@
+{
+  "inputUrl": "https://canadafirstammo.ca/",
+  "canonicalUrl": "https://canadafirstammo.ca/",
+  "timestamp": "2026-04-27T06:51:37.024Z",
+  "runId": "5d94adea-b4b3-42f4-92b8-57373c62e054",
+  "canonicalOrigin": "https://canadafirstammo.ca",
+  "canonicalOriginResolution": {
+    "canonicalOrigin": "https://canadafirstammo.ca",
+    "primaryResponded": true,
+    "primaryWasChallenged": false,
+    "wwwFallbackUsed": false,
+    "serverHeaders": {
+      "primary": "cloudflare",
+      "canonical": "cloudflare"
+    }
+  },
+  "hasWaf": true,
+  "wafType": "cloudflare-passive-with-owasp",
+  "wafProbeEvidence": {
+    "method": "heavy-8-batch",
+    "timestamp": "2026-04-27T06:52:19.612Z",
+    "batches": [
+      {
+        "batchId": 1,
+        "description": "header fingerprint (single GET per path)",
+        "status": 301,
+        "headers": {
+          "server": "cloudflare",
+          "x-powered-by": "PHP/8.2.30",
+          "set-cookie": "zinrelo_cookie=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZW1iZXJfaWQiOmZhbHNlLCJlbWFpbF9hZGRyZXNzIjpmYWxzZSwiZmlyc3RfbmFtZSI6ZmFsc2UsImxhc3RfbmFtZSI6ZmFsc2UsInBob25lX251bWJlciI6IiIsInByZWZlcnJlZF9sYW5ndWFnZSI6ImVuZ2xpc2giLCJhZGRyZXNzIjp7ImxpbmUxIjpmYWxzZSwibGluZTIiOmZhbHNlLCJjaXR5IjpmYWxzZSwic3RhdGUiOmZhbHNlLCJjb3VudHJ5IjpmYWxzZSwicG9zdGFsX2NvZGUiOmZhbHNlfSwiY3VzdG9tX2F0dHJpYnV0ZXMiOnsiTGFzdCB3ZWJzaXRlIHZpc2l0IHRpbWVzdGFtcCI6IjA0LzI3LzIwMjYiLCJFeHRlcm5hbCBtZW1iZXIgaWQiOjB9LCJleHAiOjE3NzcyNzIwNzYxMDZ9.j9GZreZtq32O13u-VbrEdKDRh9PNp0j_lE3yuPdXhrM; expires=Mon, 27 Apr 2026 06:46:16 GMT; Max-Age=300; path=/",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "9f2be6695fbaac46-YYZ",
+          "location": "https://canadafirstammo.ca/wp-sitemap.xml"
+        },
+        "bodySnippet": "\n[1a] HEADERS FOR https://canadafirstammo.ca/\nHTTP/2 200 \r\nserver: cloudflare\r\nx-powered-by: PHP/8.2.30\r\nset-cookie: zinrelo_cookie=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZW1iZXJfaWQiOmZhbHNlLCJlbWFpbF9hZGRyZXNzIjpmYWxzZSwiZmlyc3RfbmFtZSI6ZmFsc2UsImxhc3RfbmFtZSI6ZmFsc2UsInBob25lX251bWJlciI6IiIsInByZWZlcnJlZF9sYW5ndWFnZSI6ImVuZ2xpc2giLCJhZGRyZXNzIjp7ImxpbmUxIjpmYWxzZSwibGluZTIiOmZhbHNlLCJjaXR5IjpmYWxzZSwic3RhdGUiOmZhbHNlLCJjb3VudHJ5IjpmYWxzZSwicG9zdGFsX2NvZGUiOmZhbHNlfSwiY3VzdG9tX2F0dHJpYnV0ZXMiOnsiTGFzdCB3ZWJzaXRlIHZpc2l0IHRpbWVzdGFtcCI6IjA0LzI3LzIwMjYiLCJFeHRlcm5hbCBtZW1iZXIgaWQiOjB9LCJleHAiOjE3NzcyNzIwNzYxMDZ9.j9GZreZtq32O13u-VbrEdKDRh9PNp0j_lE3yuPdXhrM; expires=Mon, 27 Apr 2026 06:46:16 GMT; Max-Age=300; path=/\r\ncf-cache-status: DYNAMIC\r\ncf-ray: 9f2be6615b24b634-YYZ\r\n\n[1b] HEADERS FOR https://canadafirstammo.ca/robots.txt\nHTTP/2 200 \r\nserver: cloudflare\r\nx-powered-by: PHP/8.2.30\r\ncf-cache-status: EXPIRED\r\ncf-ray: 9f2be6633a108eb6-YYZ\r\n\n[1c] HEADERS FOR https://canadafirstammo.ca/sitemap.xml\nHTTP/2 301 \r\nlocation: https://canadafirstammo.ca/wp-sitemap.xml\r\nserver: cloudflare\r\nx-powered-by: PHP/8.2.30\r\ncf-cache-status: DYNAMIC\r\ncf-ray: 9f2be668ff99ac46-YYZ\r\nHTTP/2 200 \r\nserver: cloudflare\r\nx-powered-by: PHP/8.2.30\r\ncf-cache-status: DYNAMIC\r\ncf-ray: 9f2be6695fbaac46-YYZ\r\n\n",
+        "durationMs": 30589
+      },
+      {
+        "batchId": 2,
+        "description": "multi-UA probe (3 different UAs on same path)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[2a-desktop] https://canadafirstammo.ca/\n   STATUS=200 BYTES=1360 TIME=0.122054 REDIRECTS=0 FINAL=https://canadafirstammo.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=286\n[2b-mobile] https://canadafirstammo.ca/\n   STATUS=200 BYTES=1360 TIME=0.133156 REDIRECTS=0 FINAL=https://canadafirstammo.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=292\n[2c-bot] https://canadafirstammo.ca/\n   STATUS=200 BYTES=1360 TIME=0.176291 REDIRECTS=0 FINAL=https://canadafirstammo.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=340\n[2d-curl] https://canadafirstammo.ca/\n   STATUS=200 BYTES=1360 TIME=0.147817 REDIRECTS=0 FINAL=https://canadafirstammo.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=329\n",
+        "durationMs": 15295
+      },
+      {
+        "batchId": 3,
+        "description": "rapid burst (10 sequential GETs in ~2s)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[3-burst-1] https://canadafirstammo.ca/?cache_bust=11777272701109118800\n   STATUS=200 BYTES=1360 TIME=0.971534 REDIRECTS=0 FINAL=https://canadafirstammo.ca/?cache_bust=11777272701109118800curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1214\n[3-burst-2] https://canadafirstammo.ca/?cache_bust=21777272702361937600\n   STATUS=200 BYTES=1360 TIME=0.944199 REDIRECTS=0 FINAL=https://canadafirstammo.ca/?cache_bust=21777272702361937600curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1189\n[3-burst-3] https://canadafirstammo.ca/?cache_bust=31777272703592639000\n   STATUS=200 BYTES=1360 TIME=1.163905 REDIRECTS=0 FINAL=https://canadafirstammo.ca/?cache_bust=31777272703592639000curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1427\n[3-burst-4] https://canadafirstammo.ca/?cache_bust=41777272705060156400\n   STATUS=200 BYTES=1360 TIME=1.083967 REDIRECTS=0 FINAL=https://canadafirstammo.ca/?cache_bust=41777272705060156400curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1348\n[3-burst-5] https://canadafirstammo.ca/?cache_bust=51777272706452667100\n   STATUS=200 BYTES=1360 TIME=0.936824 REDIRECTS=0 FINAL=https://canadafirstammo.ca/?cache_bust=51777272706452667100curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1205\n[3-burst-6] https://canadafirstammo.ca/?cache_bust=61777272707696102500\n   STATUS=200 BYTES=1360 TIME=1.118597 REDIRECTS=0 FINAL=https://canadafirstammo.ca/?cache_bust=61777272707696102500curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1365\n[3-burst-7] https://canadafirstammo.ca/?cache_bust=71777272709097569000\n   STATUS=200 BYTES=1360 TIME=1.130394 REDIRECTS=0 FINAL=https://canadafirstammo.ca/?cache_bust=71777272709097569000curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1406\n[3-burst-8] https://canadafirstammo.ca/?cache_bust=81777272710547102600\n   STATUS=200 BYTES=1360 TIME=1.286626 REDIRECTS=0 FINAL=https://canadafirstammo.ca/?cache_bust=81777272710547102600curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1550\n[3-burst-9] https://canadafirstammo.ca/?cache_bust=91777272712139740800",
+        "durationMs": 10196
+      },
+      {
+        "batchId": 4,
+        "description": "honeypot/admin path probe (common WAF trigger paths)",
+        "status": 405,
+        "headers": {},
+        "bodySnippet": "\n[4a-wp-admin] https://canadafirstammo.ca/wp-admin/\n   STATUS=200 BYTES=1360 TIME=1.653225 REDIRECTS=1 FINAL=https://canadafirstammo.ca/wp-login.php?redirect_to=https%3A%2F%2Fcanadafirstammo.ca%2Fwp-admin%2F&reauth=1curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1821\n[4b-wp-login] https://canadafirstammo.ca/wp-login.php\n   STATUS=200 BYTES=1360 TIME=0.652855 REDIRECTS=0 FINAL=https://canadafirstammo.ca/wp-login.phpcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=823\n[4c-xmlrpc] https://canadafirstammo.ca/xmlrpc.php\n   STATUS=405 BYTES=42 TIME=0.638989 REDIRECTS=0 FINAL=https://canadafirstammo.ca/xmlrpc.phpcurl: (23) Failed writing body (0 != 42)\n   wall_ms=804\n[4d-dotenv] https://canadafirstammo.ca/.env\n   STATUS=404 BYTES=1360 TIME=1.031541 REDIRECTS=0 FINAL=https://canadafirstammo.ca/.envcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=1204\n[4e-dotgit] https://canadafirstammo.ca/.git/config\n   STATUS=404 BYTES=1360 TIME=1.048442 REDIRECTS=0 FINAL=https://canadafirstammo.ca/.git/configcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=1213\n[4f-phpinfo] https://canadafirstammo.ca/phpinfo.php\n   STATUS=404 BYTES=1360 TIME=1.008733 REDIRECTS=0 FINAL=https://canadafirstammo.ca/phpinfo.phpcurl: (23) Failed writing body (0 != 1360)\n   wall_ms=1186\n",
+        "durationMs": 7647
+      },
+      {
+        "batchId": 5,
+        "description": "suspicious-fingerprint GET (no Accept-Language, no Accept-Encoding)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[5a-barebones] https://canadafirstammo.ca/\n   STATUS=200 BYTES=1360 TIME=0.154179 REDIRECTS=0 FINAL=https://canadafirstammo.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=337\n",
+        "durationMs": 6118
+      },
+      {
+        "batchId": 6,
+        "description": "SQL-injection-shaped query string (fires SQLi WAF rules if any)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[6a-sqli] https://canadafirstammo.ca/?id=1'%20OR%20'1'='1\n   STATUS=200 BYTES=1360 TIME=1.504013 REDIRECTS=1 FINAL=https://canadafirstammo.ca/?id=1%5C%27%20OR%20%5C%271%5C%27%3D%5C%271curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1682\n[6b-union] https://canadafirstammo.ca/?id=1%20UNION%20SELECT%201,2,3\n   STATUS=200 BYTES=1360 TIME=1.713218 REDIRECTS=1 FINAL=https://canadafirstammo.ca/?id=1%20UNION%20SELECT%201%2C2%2C3curl: (23) Failed writing body (0 != 1360)\n   wall_ms=1779\n",
+        "durationMs": 5098
+      },
+      {
+        "batchId": 7,
+        "description": "XSS-shaped query string (fires XSS WAF rules)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[7a-xss] https://canadafirstammo.ca/?q=<script>alert(1)</script>\n   STATUS=200 BYTES=1360 TIME=1.484200 REDIRECTS=1 FINAL=https://canadafirstammo.ca/?q=%3Cscript%3Ealert%281%29%3C%2Fscript%3Ecurl: (23) Failed writing body (0 != 1360)\n   wall_ms=1653\n",
+        "durationMs": 4370
+      },
+      {
+        "batchId": 8,
+        "description": "User-Agent absent (many WAFs require UA)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[8a-noUA] https://canadafirstammo.ca/\n   STATUS=200 BYTES=1360 TIME=0.129858 REDIRECTS=0 FINAL=https://canadafirstammo.ca/curl: (23) Failed writing body (0 != 1360)\n   wall_ms=290\n\n========================================\nPROBE COMPLETE\n========================================\n\nINTERPRETATION GUIDE:\n  - All probes 200 + consistent timing + no cf-ray/x-sucuri → hasWaf: false (HIGH confidence)\n  - Any batch returns 403/503/challenge body → hasWaf: true, wafType = vendor\n  - Honeypot paths 403 but category 200 → hasWaf: true, wafType: 'path-selective'\n  - SQLi/XSS 403 but normal 200 → hasWaf: true, wafType: 'rule-selective'\n  - Rapid burst triggers 429/503 → hasWaf: true, wafType: 'rate-limit'\n  - cf-ray header present but all 200 → hasWaf: true, wafType: 'cloudflare-passive'",
+        "durationMs": 3824
+      }
+    ],
+    "cfHeaders": [
+      "9f2be6695fbaac46-YYZ"
+    ],
+    "sucuriHeaders": [],
+    "sgCaptchaDetected": false,
+    "incapsulaCookies": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "botUaBlocked": false,
+    "honeypotPathsBlocked": true
+  },
+  "needsPlaywright": false,
+  "userAgentOverride": null,
+  "accessMethod": "axios-desktop",
+  "platform": "woocommerce",
+  "platformMarker": {
+    "detectorId": "woocommerce",
+    "confidence": "high",
+    "signals": {
+      "metaGenerator": true,
+      "pluginAsset": true,
+      "wpRestReachable": true,
+      "xWpTotal": "962"
+    }
+  },
+  "catalogUrls": [
+    "https://canadafirstammo.ca/product-category/accessories/",
+    "https://canadafirstammo.ca/product-category/accessories/around-the-house/",
+    "https://canadafirstammo.ca/product-category/accessories/around-the-house/accessoriescleaning-supplies/",
+    "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/",
+    "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/polymer-knuckles/",
+    "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/self-defence/",
+    "https://canadafirstammo.ca/product-category/accessories/gun-stuff/",
+    "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffbipods/",
+    "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffparts/",
+    "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffrail-accessories/",
+    "https://canadafirstammo.ca/product-category/accessories/accessorieshunting/",
+    "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/",
+    "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/pistol-mags/",
+    "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/rifle-mags/",
+    "https://canadafirstammo.ca/product-category/accessories/prepping/",
+    "https://canadafirstammo.ca/product-category/accessories/prepping/preppingrations/",
+    "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/",
+    "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/accessoriescases/",
+    "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/eyes-ears/",
+    "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/eyes-ears/night-vision-rangefinders-eyes-ears/",
+    "https://canadafirstammo.ca/product-category/ammunition/",
+    "https://canadafirstammo.ca/product-category/ammunition/ammunitionpistol/",
+    "https://canadafirstammo.ca/product-category/ammunition/ammunitionpistol/ammunitionpistolnew/",
+    "https://canadafirstammo.ca/product-category/ammunition/ammunitionrifle/",
+    "https://canadafirstammo.ca/product-category/ammunition/ammunitionrifle/ammunitionriflehunting/",
+    "https://canadafirstammo.ca/product-category/ammunition/ammunitionrimfire/",
+    "https://canadafirstammo.ca/product-category/ammunition/ammunitionshotgun/",
+    "https://canadafirstammo.ca/product-category/clearance/",
+    "https://canadafirstammo.ca/product-category/firearms/",
+    "https://canadafirstammo.ca/product-category/firearms/firearmsrifles/",
+    "https://canadafirstammo.ca/product-category/firearms/firearmsrifles/firearmsriflesnew/",
+    "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+    "https://canadafirstammo.ca/product-category/accessoriesoptics/night-vision-rangefinders/",
+    "https://canadafirstammo.ca/product-category/apparel/",
+    "https://canadafirstammo.ca/product-category/apparel/apparelbody-armour/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/body-armour/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/button-up-shirts/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/hats/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/hoodies/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/mugs-and-more/",
+    "https://canadafirstammo.ca/product-category/reloading/",
+    "https://canadafirstammo.ca/product-category/reloading/reloadingequipment/",
+    "https://canadafirstammo.ca/product-category/reloading/reloadingprimers/",
+    "https://canadafirstammo.ca/product-category/shop-all/",
+    "https://canadafirstammo.ca/product-category/shop-all/shop-allbroke-student-deals/",
+    "https://canadafirstammo.ca/product-category/shop-all/canadian-made/",
+    "https://canadafirstammo.ca/product-category/shop-all/gently-used-boomsticks/",
+    "https://canadafirstammo.ca/product-category/shop-all/hunters-hangout/",
+    "https://canadafirstammo.ca/product-category/shop-all/shop-allpyrotechnics/",
+    "https://canadafirstammo.ca/?s=",
+    "https://canadafirstammo.ca/shop-2/",
+    "https://canadafirstammo.ca/index.php/product-category/firearms/firearmsshotguns/firearmsshotgunsnew",
+    "https://canadafirstammo.ca/index.php/product-category/firearms/firearmsrifles/firearmsriflesnew",
+    "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionpistol/ammunitionpistolnew",
+    "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionrifle/ammunitionriflehunting/",
+    "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionrimfire/",
+    "https://canadafirstammo.ca/shop"
+  ],
+  "catalogUrlSource": "taxonomy-api",
+  "catalogUrlWalkCounts": [
+    {
+      "url": "https://canadafirstammo.ca/shop-2/",
+      "uniqueProducts": 117,
+      "pages": 11
+    },
+    {
+      "url": "https://canadafirstammo.ca/shop",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/",
+      "uniqueProducts": 8,
+      "pages": 3
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/around-the-house/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/around-the-house/accessoriescleaning-supplies/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/polymer-knuckles/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/bows-knives-self-defence/self-defence/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/gun-stuff/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffbipods/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffparts/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/gun-stuff/accessoriesgun-stuffrail-accessories/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/accessorieshunting/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/pistol-mags/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/mags-speed-loaders/rifle-mags/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/prepping/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/prepping/preppingrations/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/accessoriescases/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/eyes-ears/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessories/accessoriesrange-gear/eyes-ears/night-vision-rangefinders-eyes-ears/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/ammunition/",
+      "uniqueProducts": 1,
+      "pages": 2
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionpistol/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionpistol/ammunitionpistolnew/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionrifle/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionrifle/ammunitionriflehunting/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionrimfire/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/ammunition/ammunitionshotgun/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/clearance/",
+      "uniqueProducts": 0,
+      "pages": 3
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/firearms/",
+      "uniqueProducts": 2,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/firearms/firearmsrifles/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/firearms/firearmsrifles/firearmsriflesnew/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+      "uniqueProducts": 0,
+      "pages": 2
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/accessoriesoptics/night-vision-rangefinders/",
+      "uniqueProducts": 0,
+      "pages": 2
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/apparel/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/apparel/apparelbody-armour/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/plates-apparel/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/plates-apparel/body-armour/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/plates-apparel/button-up-shirts/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/plates-apparel/hats/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/plates-apparel/hoodies/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/plates-apparel/mugs-and-more/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/reloading/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/reloading/reloadingequipment/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/reloading/reloadingprimers/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/shop-all/",
+      "uniqueProducts": 0,
+      "pages": 3
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/shop-all/shop-allbroke-student-deals/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/shop-all/canadian-made/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/shop-all/gently-used-boomsticks/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/shop-all/hunters-hangout/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/product-category/shop-all/shop-allpyrotechnics/",
+      "uniqueProducts": 0,
+      "pages": 0
+    },
+    {
+      "url": "https://canadafirstammo.ca/?s=",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/index.php/product-category/firearms/firearmsshotguns/firearmsshotgunsnew",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/index.php/product-category/firearms/firearmsrifles/firearmsriflesnew",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionpistol/ammunitionpistolnew",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionrifle/ammunitionriflehunting/",
+      "uniqueProducts": 0,
+      "pages": 1
+    },
+    {
+      "url": "https://canadafirstammo.ca/index.php/product-category/ammunition/ammunitionrimfire/",
+      "uniqueProducts": 0,
+      "pages": 1
+    }
+  ],
+  "walkedUniqueCount": 128,
+  "globalProductCount": 132,
+  "globalProductCountMethod": "wc-store-api-header",
+  "globalProductCountEvidence": {
+    "endpoint": "wc/store/v1/products",
+    "headerValue": "132"
+  },
+  "driftPct": 3.0303030303030303,
+  "coverageStrategy": "api-walk",
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "paginationEvidence": {
+    "testA_page1_vs_page2": {
+      "passed": true,
+      "sample": [
+        "https://canadafirstammo.ca/product/canadian-handmade-bow-slings/",
+        "https://canadafirstammo.ca/product/canadian-handmade-hunting-totes-lanyards/",
+        "https://canadafirstammo.ca/product/canadian-handmade-paracord-slings/"
+      ]
+    },
+    "testB_pageN_vs_pageN_1": {
+      "passed": true,
+      "sample": [
+        "https://canadafirstammo.ca/product/gsci-hmd-800-mod-ultra-portable-head-mounted-display/",
+        "https://canadafirstammo.ca/product/gsci-mtar-sds-universal-digital-sight/",
+        "https://canadafirstammo.ca/product/gsci-mvp-240-universal-battery-pack/"
+      ]
+    },
+    "testC_overflow_vs_page1": {
+      "passed": true,
+      "sample": [
+        "https://canadafirstammo.ca/product/low-stock-adapter/",
+        "https://canadafirstammo.ca/product/low-profile-plate-carrier/",
+        "https://canadafirstammo.ca/product/magpul-afg-2-angled-foregrip/"
+      ]
+    },
+    "testD_perPage_sanity": {
+      "passed": false,
+      "observedPerPage": 11,
+      "expectedPerPage": 12
+    },
+    "totalPagesEstimate": 5,
+    "totalPagesSource": "walk-to-empty"
+  },
+  "sortParam": "?orderby=date",
+  "sortEvidence": {
+    "selectHtml": "<select name=\"orderby\" id=\"\"> [menu_order=\"Default sorting\"] [popularity=\"Popularity\"] [rating=\"Average rating\"] [date=\"Latest\"] [price=\"Price: low to high\"] [price-desc=\"Price: high to low\"]",
+    "candidateParams": [
+      "?orderby=date"
+    ],
+    "dateVerification": {
+      "method": "sourceId-autoincrement",
+      "page1FirstDate": "30620",
+      "page1SecondDate": "30569",
+      "page1ThirdDate": "30267",
+      "survivesPagination": true,
+      "monotonicallyDecreasing": true
+    },
+    "idJumpBefore": "https://canadafirstammo.ca/product/atrs-custom-338-lapua-ackley-improved/",
+    "idJumpAfter": "https://canadafirstammo.ca/product/used-tag-fde-plate-carrier-l-xl/"
+  },
+  "watermarkMethod": "navigate-from-watermark",
+  "watermarkMethodSelection": {
+    "reason": "Newest-first sort (?orderby=date) verified with sourceId-autoincrement: first 3 dates strictly decreasing",
+    "urlSortVerifiedForMethodB": true
+  }
+}

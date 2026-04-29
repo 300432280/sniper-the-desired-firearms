@@ -22,7 +22,8 @@ async function main() {
       const r2 = await runRoom2(r1);
       if ('roomFailed' in r2) { console.log(JSON.stringify({ site: url, fail: 'R2 ' + r2.reason })); await sleep(2500); continue; }
       const c = await discoverCatalogUrls(r2);
-      console.log(JSON.stringify({ site: url, platform: r2.platform, source: c.source, count: c.catalogUrls.length, sample: c.catalogUrls.slice(0, 5), ms: Date.now() - t0 }, null, 2));
+      const urls = c.candidates.map(cc => cc.url);
+      console.log(JSON.stringify({ site: url, platform: r2.platform, source: c.source, count: urls.length, sample: urls.slice(0, 5), ms: Date.now() - t0 }, null, 2));
     } catch (e) {
       console.error(`ERR on ${url}:`, (e as Error).message);
     }

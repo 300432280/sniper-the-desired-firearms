@@ -7,7 +7,7 @@
 import { runRoom1 } from '../../room1-intake';
 import { runRoom2 } from '../../room2-access-identity';
 import { runRoom3 } from '../../room3-geography-count';
-import { detectPagination } from '../pagination-detect';
+import { detectPagination } from '../../room3-geography-count/pagination-detect';
 
 const SITES = [
   'https://canadafirstammo.ca/',

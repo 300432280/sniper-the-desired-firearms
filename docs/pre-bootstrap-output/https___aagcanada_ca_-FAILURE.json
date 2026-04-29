@@ -1,0 +1,100 @@
+{
+  "roomFailed": true,
+  "roomNumber": 3,
+  "reason": "Drift 67.08% exceeds 5% hard-fail threshold (walked=560, expected=1701)",
+  "evidence": {
+    "walkCounts": [
+      {
+        "url": "https://aagcanada.ca/collections/all",
+        "uniqueProducts": 555,
+        "pages": 47
+      },
+      {
+        "url": "https://aagcanada.ca/shop",
+        "uniqueProducts": 3,
+        "pages": 7
+      },
+      {
+        "url": "https://aagcanada.ca/collections/antique-blank",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://aagcanada.ca/collections/bayonet",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://aagcanada.ca/collections/boutique-display-sold",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://aagcanada.ca/collections/deactivated",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://aagcanada.ca/collections/firearms",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://aagcanada.ca/collections/fun-stuff",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://aagcanada.ca/collections/garment",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://aagcanada.ca/collections/frontpage",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://aagcanada.ca/collections/magazine-clips",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://aagcanada.ca/collections/new-arrival",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://aagcanada.ca/collections/popular-items",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://aagcanada.ca/collections/public-notice",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://aagcanada.ca/collections/sale",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://aagcanada.ca/collections/scope-sights",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://aagcanada.ca/collections/tactical-gear",
+        "uniqueProducts": 0,
+        "pages": 3
+      }
+    ],
+    "globalCount": 1701,
+    "walkedCount": 560,
+    "method": "generic-product-sitemap",
+    "setCoverCoverage": 0,
+    "sitemapTotal": 1701
+  },
+  "timestamp": "2026-04-27T05:19:01.273Z"
+}

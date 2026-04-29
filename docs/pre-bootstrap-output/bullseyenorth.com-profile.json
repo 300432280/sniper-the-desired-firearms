@@ -1,0 +1,197 @@
+{
+  "inputUrl": "https://bullseyenorth.com/",
+  "canonicalUrl": "https://bullseyenorth.com/",
+  "timestamp": "2026-04-27T06:51:39.553Z",
+  "runId": "b2dfda11-9773-4c90-adca-5d79e07ebe18",
+  "canonicalOrigin": "https://bullseyenorth.com",
+  "canonicalOriginResolution": {
+    "canonicalOrigin": "https://bullseyenorth.com",
+    "primaryResponded": true,
+    "primaryWasChallenged": false,
+    "wwwFallbackUsed": false,
+    "serverHeaders": {
+      "primary": "Null",
+      "canonical": "Null"
+    }
+  },
+  "hasWaf": false,
+  "wafType": null,
+  "wafProbeEvidence": {
+    "method": "heavy-8-batch",
+    "timestamp": "2026-04-27T06:52:07.232Z",
+    "batches": [
+      {
+        "batchId": 1,
+        "description": "header fingerprint (single GET per path)",
+        "status": 200,
+        "headers": {
+          "server": "Null",
+          "set-cookie": "CFTOKEN=a6341bf068dcfab1-0914888C-A491-EE96-7B76DBDB5B9E3D77; Expires=Tue, 28 Apr 2026 06:51:44 GMT; Path=/; Secure; HttpOnly",
+          "x-frame-options": "SAMEORIGIN",
+          "x-content-type-options": "nosniff"
+        },
+        "bodySnippet": "\n[1a] HEADERS FOR https://www.bullseyenorth.com/\nHTTP/2 200 \r\nserver: Null\r\nset-cookie: CFID=96116101; Expires=Tue, 28 Apr 2026 06:51:44 GMT; Path=/; Secure; HttpOnly\r\nset-cookie: CFTOKEN=a6341bf068dcfab1-0914888C-A491-EE96-7B76DBDB5B9E3D77; Expires=Tue, 28 Apr 2026 06:51:44 GMT; Path=/; Secure; HttpOnly\r\nx-frame-options: SAMEORIGIN\r\nx-content-type-options: nosniff\r\n\n[1b] HEADERS FOR https://www.bullseyenorth.com/robots.txt\nHTTP/2 200 \r\nserver: Null\r\nx-frame-options: SAMEORIGIN\r\nx-content-type-options: nosniff\r\n\n[1c] HEADERS FOR https://www.bullseyenorth.com/sitemap.xml\nHTTP/2 200 \r\nserver: Null\r\nx-frame-options: SAMEORIGIN\r\nx-content-type-options: nosniff\r\n\n",
+        "durationMs": 24388
+      },
+      {
+        "batchId": 2,
+        "description": "multi-UA probe (3 different UAs on same path)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[2a-desktop] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=16375 TIME=0.629653 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/curl: (23) Failed writing body (0 != 16375)\n   wall_ms=810\n[2b-mobile] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=16375 TIME=0.671447 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/curl: (23) Failed writing body (0 != 16375)\n   wall_ms=839\n[2c-bot] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=16375 TIME=0.600420 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/curl: (23) Failed writing body (0 != 16375)\n   wall_ms=793\n[2d-curl] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=16375 TIME=0.656010 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/curl: (23) Failed writing body (0 != 16375)\n   wall_ms=821\n",
+        "durationMs": 12194
+      },
+      {
+        "batchId": 3,
+        "description": "rapid burst (10 sequential GETs in ~2s)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[3-burst-1] https://www.bullseyenorth.com/?cache_bust=11777272708357205500\n   STATUS=200 BYTES=16375 TIME=0.700029 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=11777272708357205500curl: (23) Failed writing body (0 != 16375)\n   wall_ms=990\n[3-burst-2] https://www.bullseyenorth.com/?cache_bust=21777272709385153900\n   STATUS=200 BYTES=16375 TIME=0.651201 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=21777272709385153900curl: (23) Failed writing body (0 != 16375)\n   wall_ms=1189\n[3-burst-3] https://www.bullseyenorth.com/?cache_bust=31777272710620776100\n   STATUS=200 BYTES=16375 TIME=0.644163 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=31777272710620776100curl: (23) Failed writing body (0 != 16375)\n   wall_ms=1042\n[3-burst-4] https://www.bullseyenorth.com/?cache_bust=41777272711705077200\n   STATUS=200 BYTES=16375 TIME=0.651381 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=41777272711705077200curl: (23) Failed writing body (0 != 16375)\n   wall_ms=898\n[3-burst-5] https://www.bullseyenorth.com/?cache_bust=51777272712644344500\n   STATUS=200 BYTES=16375 TIME=0.651619 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=51777272712644344500curl: (23) Failed writing body (0 != 16375)\n   wall_ms=898\n[3-burst-6] https://www.bullseyenorth.com/?cache_bust=61777272713579249300\n   STATUS=200 BYTES=16375 TIME=0.615027 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=61777272713579249300curl: (23) Failed writing body (0 != 16375)\n   wall_ms=852\n[3-burst-7] https://www.bullseyenorth.com/?cache_bust=71777272714470437500\n   STATUS=200 BYTES=16375 TIME=0.622206 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=71777272714470437500curl: (23) Failed writing body (0 != 16375)\n   wall_ms=873\n[3-burst-8] https://www.bullseyenorth.com/?cache_bust=81777272715380473700\n   STATUS=200 BYTES=16375 TIME=0.683422 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=81777272715380473700curl: (23) Failed writing body (0 != 16375)\n   wall_ms=933\n[3-burst-9] h",
+        "durationMs": 8129
+      },
+      {
+        "batchId": 4,
+        "description": "honeypot/admin path probe (common WAF trigger paths)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[4a-wp-admin] https://www.bullseyenorth.com/wp-admin/\n   STATUS=200 BYTES=16061 TIME=0.291974 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/wp-admin/curl: (23) Failed writing body (0 != 16061)\n   wall_ms=490\n[4b-wp-login] https://www.bullseyenorth.com/wp-login.php\n   STATUS=200 BYTES=16375 TIME=0.310215 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/wp-login.phpcurl: (23) Failed writing body (0 != 16375)\n   wall_ms=480\n[4c-xmlrpc] https://www.bullseyenorth.com/xmlrpc.php\n   STATUS=200 BYTES=16375 TIME=0.295824 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/xmlrpc.phpcurl: (23) Failed writing body (0 != 16375)\n   wall_ms=468\n[4d-dotenv] https://www.bullseyenorth.com/.env\n   STATUS=200 BYTES=16375 TIME=0.306049 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/.envcurl: (23) Failed writing body (0 != 16375)\n   wall_ms=476\n[4e-dotgit] https://www.bullseyenorth.com/.git/config\n   STATUS=200 BYTES=16375 TIME=0.283490 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/.git/configcurl: (23) Failed writing body (0 != 16375)\n   wall_ms=462\n[4f-phpinfo] https://www.bullseyenorth.com/phpinfo.php\n   STATUS=200 BYTES=16375 TIME=0.296682 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/phpinfo.phpcurl: (23) Failed writing body (0 != 16375)\n   wall_ms=468\n",
+        "durationMs": 6097
+      },
+      {
+        "batchId": 5,
+        "description": "suspicious-fingerprint GET (no Accept-Language, no Accept-Encoding)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[5a-barebones] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=16375 TIME=0.621641 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/curl: (23) Failed writing body (0 != 16375)\n   wall_ms=791\n",
+        "durationMs": 4878
+      },
+      {
+        "batchId": 6,
+        "description": "SQL-injection-shaped query string (fires SQLi WAF rules if any)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[6a-sqli] https://www.bullseyenorth.com/?id=1'%20OR%20'1'='1\n   STATUS=200 BYTES=16375 TIME=0.616708 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?id=1'%20OR%20'1'='1curl: (23) Failed writing body (0 != 16375)\n   wall_ms=801\n[6b-union] https://www.bullseyenorth.com/?id=1%20UNION%20SELECT%201,2,3\n   STATUS=200 BYTES=16375 TIME=0.646475 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?id=1%20UNION%20SELECT%201,2,3curl: (23) Failed writing body (0 != 16375)\n   wall_ms=717\n",
+        "durationMs": 4065
+      },
+      {
+        "batchId": 7,
+        "description": "XSS-shaped query string (fires XSS WAF rules)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[7a-xss] https://www.bullseyenorth.com/?q=<script>alert(1)</script>\n   STATUS=200 BYTES=16375 TIME=0.666016 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?q=<script>alert(1)</script>curl: (23) Failed writing body (0 != 16375)\n   wall_ms=847\n",
+        "durationMs": 3484
+      },
+      {
+        "batchId": 8,
+        "description": "User-Agent absent (many WAFs require UA)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[8a-noUA] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=16375 TIME=0.642148 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/curl: (23) Failed writing body (0 != 16375)\n   wall_ms=823\n\n========================================\nPROBE COMPLETE\n========================================\n\nINTERPRETATION GUIDE:\n  - All probes 200 + consistent timing + no cf-ray/x-sucuri → hasWaf: false (HIGH confidence)\n  - Any batch returns 403/503/challenge body → hasWaf: true, wafType = vendor\n  - Honeypot paths 403 but category 200 → hasWaf: true, wafType: 'path-selective'\n  - SQLi/XSS 403 but normal 200 → hasWaf: true, wafType: 'rule-selective'\n  - Rapid burst triggers 429/503 → hasWaf: true, wafType: 'rate-limit'\n  - cf-ray header present but all 200 → hasWaf: true, wafType: 'cloudflare-passive'",
+        "durationMs": 3049
+      }
+    ],
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "sgCaptchaDetected": false,
+    "incapsulaCookies": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "botUaBlocked": false,
+    "honeypotPathsBlocked": false
+  },
+  "needsPlaywright": false,
+  "userAgentOverride": null,
+  "accessMethod": "axios-desktop",
+  "platform": "celerant-coldfusion",
+  "platformMarker": {
+    "detectorId": "celerant-coldfusion",
+    "confidence": "high",
+    "signals": {
+      "celerantCdn": true,
+      "celerantWcEndpoint": true,
+      "celerantServerNull": true,
+      "cfTokenCookie": true,
+      "cfmUrl": true
+    }
+  },
+  "catalogUrls": [
+    "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36"
+  ],
+  "catalogUrlSource": "nav",
+  "catalogUrlWalkCounts": [
+    {
+      "url": "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36",
+      "uniqueProducts": 3240,
+      "pages": 90
+    }
+  ],
+  "walkedUniqueCount": 3240,
+  "globalProductCount": 3276,
+  "globalProductCountMethod": "celerant-perpage-all",
+  "globalProductCountEvidence": {
+    "endpoint": "https://bullseyenorth.com/all-products/browse/perpage/9999",
+    "responseSample": "extracted 3276 unique products from /perpage/9999 dump"
+  },
+  "driftPct": 1.098901098901099,
+  "coverageStrategy": "hybrid",
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "paginationEvidence": {
+    "testA_page1_vs_page2": {
+      "passed": true,
+      "sample": [
+        "https://www.bullseyenorth.com/shop/morakniv-garberg-utility-knife-fixed-43-black-carbon-steel-blade-black-polyamide-handle-and-sheath-m13716-27459",
+        "https://www.bullseyenorth.com/shop/ruger-american-gen-ii-predator-rifle-223-rem-22-barrel-56909-37394",
+        "https://www.bullseyenorth.com/shop/schrade-delta-class-tough-tool-multitool-2cr-stainless-steel-construction-silver-1680d-polyester-sheath-1182534-28166"
+      ]
+    },
+    "testB_pageN_vs_pageN_1": {
+      "passed": true,
+      "sample": [
+        "https://www.bullseyenorth.com/shop/glenfield-model-a-bolt-action-rifle-moss-green-270-win-20-barrel-4-rounds-52003-36951",
+        "https://www.bullseyenorth.com/shop/glenfield-model-a-bolt-action-rifle-moss-green-308-win-20-barrel-4-rounds-52001-36950",
+        "https://www.bullseyenorth.com/shop/glenfield-model-a-bolt-action-rifle-moss-green-65-creedmoor-20-barrel-4-rounds-52005-36952"
+      ]
+    },
+    "testC_overflow_vs_page1": {
+      "passed": true,
+      "sample": [
+        "https://www.bullseyenorth.com/shop/ruger-american-predator-rifle-gen-ii-green-splatter--bronze-270-win-22-barrel-4-rounds-46944-36957",
+        "https://www.bullseyenorth.com/shop/ruger-american-predator-rifle-gen-ii-green-splatter--bronze-3006-22-barrel-4-rounds-46943-36956",
+        "https://www.bullseyenorth.com/shop/chiappa-1892-skinner-lever-action-carbine-44-rem-mag-16-barrel-matte-blue-920340-36997"
+      ]
+    },
+    "testD_perPage_sanity": {
+      "passed": true,
+      "observedPerPage": 36,
+      "expectedPerPage": 36
+    },
+    "totalPagesEstimate": 5,
+    "totalPagesSource": "walk-to-empty"
+  },
+  "sortParam": null,
+  "sortEvidence": {
+    "selectHtml": "<select name=\"ordering\" id=\"ordering\"> [new-arrivals=\"New Arrivals\"] [price-low-to-high=\"Price: Low to High\"] [price-high-to-low=\"Price: High to Low\"] [name-a-to-z=\"Name (A-Z)\"] [name-z-to-a=\"Name (Z-A)\"] [newest-rcvd=\"Newest received\"] [oldest-rcvd=\"Oldest received\"]",
+    "candidateParams": [
+      "?ordering=new-arrivals",
+      "?ordering=newest-rcvd"
+    ],
+    "dateVerification": null,
+    "idJumpBefore": "https://www.bullseyenorth.com/shop/federation-firearms-sa2-semiautomatic-20ga-grey-with-mossy-oak-26-37389",
+    "idJumpAfter": ""
+  },
+  "watermarkMethod": "full-catalog-sweep",
+  "watermarkMethodSelection": {
+    "reason": "No API date filter and no date source on listing → full-catalog-sweep",
+    "fallbackToMethodCReason": "no working newest-first sort param found"
+  }
+}

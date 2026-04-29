@@ -1,3 +1,8 @@
+/**
+ * @deprecated 2026-04-27 — Generic discovery superseded by AI-driven per-site audit.
+ * See `_DEPRECATED.md` in this folder and `docs/superpowers/plans/2026-04-27-pivot-to-ai-audit.md`.
+ * Do not import from this file in new code.
+ */
 // backend/scripts/probe/room5-bootstrap/strategy-dispatch.ts
 // Pure decision: picks indexing strategy from NavigationState.
 // No I/O — just reads state fields and returns the dispatch result.
@@ -5,7 +10,7 @@
 import type { NavigationState } from '../shared/types';
 
 export type IndexingStrategy = 'api-walk' | 'html-walk' | 'hybrid';
-export type AdapterEntry = 'shopify' | 'woocommerce' | 'generic-retail' | 'classifieds-gunpost';
+export type AdapterEntry = 'shopify' | 'woocommerce' | 'ecwid-storefront' | 'generic-retail' | 'classifieds-gunpost';
 
 export type StrategyDispatchResult = {
   strategy: IndexingStrategy;
@@ -55,7 +60,7 @@ export function strategyDispatch(state: NavigationState): StrategyDispatchResult
   if (platform === 'ecwid-on-wordpress') {
     return {
       strategy: 'api-walk',
-      adapterEntry: 'generic-retail',
+      adapterEntry: 'ecwid-storefront',
       reason: 'Ecwid storefront API POST /catalog/search with sortBy:addedTimeDesc (Mistake 31)',
     };
   }

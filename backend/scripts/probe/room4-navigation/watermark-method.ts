@@ -1,3 +1,8 @@
+/**
+ * @deprecated 2026-04-27 — Generic discovery superseded by AI-driven per-site audit.
+ * See `_DEPRECATED.md` in this folder and `docs/superpowers/plans/2026-04-27-pivot-to-ai-audit.md`.
+ * Do not import from this file in new code.
+ */
 // backend/scripts/probe/room4-navigation/watermark-method.ts
 // Room 4 Task 5.3: Select watermark method (A/B/C) per spec §6.3.
 //
@@ -50,29 +55,41 @@ async function probeMethodA(state: GeographyCountState): Promise<WatermarkSelect
     return null;
   }
 
-  // WooCommerce: probe WP REST ?after= filter
+  // WooCommerce: two-probe verification of WP REST ?after= filter (Bug #2 fix).
+  // Single-probe was too strict: if all products were created after the test date,
+  // x-wp-total equals globalProductCount and the code concludes "filter not honored."
+  // Two-probe: future date (impossible) must return 0, very old date must return ~global.
   if (platform.includes('woocommerce')) {
     try {
-      // A date ~2 years ago should return fewer products than total if filter works
-      const afterDate = '2024-01-01T00:00:00';
-      const probeUrl = `${origin}/wp-json/wp/v2/product?after=${afterDate}&per_page=1`;
-      process.stderr.write(`  [watermark-method] Method A probe (WP REST): ${probeUrl}\n`);
-      const r = await fetchUrl(probeUrl, {
+      const futureDate = '2099-01-01T00:00:00';
+      const veryOldDate = '1999-01-01T00:00:00';
+      const fetchCtx = {
         hasWaf: state.hasWaf,
         wafType: state.wafType,
         ua: state.userAgentOverride ?? undefined,
         timeoutMs: 15000,
-      });
-      if (r.status < 400) {
-        const xWpTotal = parseInt(r.headers['x-wp-total'] || '0', 10);
-        if (xWpTotal > 0 && xWpTotal < state.globalProductCount) {
-          process.stderr.write(`  [watermark-method] Method A: WP REST ?after= filter works (${xWpTotal} < ${state.globalProductCount})\n`);
+      };
+      const futureUrl = `${origin}/wp-json/wp/v2/product?after=${futureDate}&per_page=1`;
+      const oldUrl = `${origin}/wp-json/wp/v2/product?after=${veryOldDate}&per_page=1`;
+      process.stderr.write(`  [watermark-method] Method A two-probe (WP REST): future=${futureUrl}\n`);
+      const [futureProbe, oldProbe] = await Promise.all([
+        fetchUrl(futureUrl, fetchCtx),
+        fetchUrl(oldUrl, fetchCtx),
+      ]);
+      if (futureProbe.status < 400 && oldProbe.status < 400) {
+        const futureTotal = parseInt(futureProbe.headers['x-wp-total'] || '-1', 10);
+        const oldTotal = parseInt(oldProbe.headers['x-wp-total'] || '-1', 10);
+        // Filter is honored if: future returns 0 (no products after impossible date)
+        // AND old returns close to global (most products created after 1999)
+        const filterHonored = futureTotal === 0 && oldTotal > 0 && oldTotal >= state.globalProductCount * 0.9;
+        process.stderr.write(`  [watermark-method] Method A: future=${futureTotal}, old=${oldTotal}, global=${state.globalProductCount}, honored=${filterHonored}\n`);
+        if (filterHonored) {
           return {
             method: 'api-date-since-watermark',
-            reason: `WP REST API ?after= filter honored (returned ${xWpTotal} products vs ${state.globalProductCount} total)`,
+            reason: `WP REST ?after= filter honored (probe future=${futureTotal}, probe old=${oldTotal}, global=${state.globalProductCount})`,
             dateVerification: {
               method: 'api-date-field',
-              page1FirstDate: afterDate,
+              page1FirstDate: veryOldDate,
               page1SecondDate: '',
               page1ThirdDate: '',
               survivesPagination: true,
@@ -81,8 +98,6 @@ async function probeMethodA(state: GeographyCountState): Promise<WatermarkSelect
             dateSourceForMethodA: 'wp-rest-after-filter',
           };
         }
-        // Filter might not work (returns same count as total) — fall through
-        process.stderr.write(`  [watermark-method] Method A: WP REST ?after= not honored (xWpTotal=${xWpTotal}, global=${state.globalProductCount})\n`);
       }
     } catch (e) {
       process.stderr.write(`  [watermark-method] Method A probe failed: ${(e as Error).message}\n`);

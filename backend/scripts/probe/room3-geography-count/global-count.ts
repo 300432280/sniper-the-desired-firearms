@@ -1,6 +1,15 @@
+/**
+ * @deprecated 2026-04-27 — Generic discovery superseded by AI-driven per-site audit.
+ * See `_DEPRECATED.md` in this folder and `docs/superpowers/plans/2026-04-27-pivot-to-ai-audit.md`.
+ * Do not import from this file in new code.
+ */
 // backend/scripts/probe/room3-geography-count/global-count.ts
 // Per spec §4.3 step 2. API-first, sitemap-fallback.
 // Cherry-pick: x-wp-total, /products/count.json, ecwid totalProductsCount.
+//
+// Updated for new Room 3 sequence:
+// - Can consume pre-computed sitemap product URL set (from sitemap-products.ts)
+// - Bug B6: Celerant cap detection — if walked count > probe count, trust walk
 
 import { fetchUrl } from '../shared/fetch';
 import { pickUaForWaf } from '../shared/ua';
@@ -9,7 +18,7 @@ import { discoverProductSitemap } from './sitemap-parse';
 import * as cheerio from 'cheerio';
 import type { AccessIdentityState, GeographyCountState, CountMethod } from '../shared/types';
 
-type CountResult = {
+export type CountResult = {
   count: number;
   method: CountMethod;
   evidence: GeographyCountState['globalProductCountEvidence'];
@@ -17,31 +26,21 @@ type CountResult = {
 
 const ECWID_TIMEOUT_MS = 15000;
 
-export async function getGlobalCount(state: AccessIdentityState): Promise<CountResult | null> {
+export async function getGlobalCount(
+  state: AccessIdentityState,
+  /** Pre-computed sitemap product count from sitemap-products.ts */
+  sitemapProductCount?: number,
+  sitemapEvidence?: { shards: string[]; totalLocs: number },
+): Promise<CountResult | null> {
   const origin = state.canonicalOrigin;
-  // API endpoints (/wp-json, /products/count.json, /new-products.html toolbar) are
-  // JSON or page-fragment endpoints that WAFs typically don't challenge — they
-  // protect HTML. Forcing axios (hasWaf:false) preserves response headers
-  // (x-wp-total) which Playwright's `page.content()` strips. The state's WAF UA
-  // override is still applied for vendor-specific rules (Sucuri/sgcaptcha/iPhone).
-  // Per audit history Site 4 doctordeals: plain axios with iPhone UA gets
-  // x-wp-total: 965 cleanly on a Sucuri-WAF site — same pattern applies here.
   const apiUa = state.userAgentOverride ?? pickUaForWaf(state.wafType);
   const apiCtx = { hasWaf: false, ua: apiUa };
-  // HTML-page-fragment endpoints (Celerant ?perpage=All catalog dump) need
-  // the WAF-aware ctx so CF/Sucuri/Incapsula sites route through Playwright
-  // — the page can be ~2MB of products, not a JSON header response.
   const htmlCtx = { hasWaf: state.hasWaf, wafType: state.wafType, ua: state.userAgentOverride ?? undefined };
 
-  // 1. WP REST x-wp-total
-  if (/woocommerce|wp-rest/.test(state.platform) || (state.platformMarker.signals as any).wpRestReachable) {
-    const r = await safeFetch(`${origin}/wp-json/wp/v2/product?per_page=1`, apiCtx);
-    if (r && r.headers['x-wp-total']) {
-      return { count: parseInt(r.headers['x-wp-total'], 10), method: 'wp-rest-header',
-        evidence: { endpoint: 'wp/v2/product', headerValue: r.headers['x-wp-total'] }};
-    }
-  }
-  // 2. WC Store API x-wp-total
+  // 1. WC Store API x-wp-total — try FIRST for WooCommerce.
+  // The Store API returns only customer-visible, in-stock products.
+  // WP REST x-wp-total includes draft/hidden/out-of-stock which inflates
+  // the count vs what HTML walking can find (canadafirstammo: Store=132, REST=962).
   if (/woocommerce/.test(state.platform)) {
     const r = await safeFetch(`${origin}/wp-json/wc/store/v1/products?per_page=1`, apiCtx);
     if (r && r.headers['x-wp-total']) {
@@ -49,8 +48,39 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
         evidence: { endpoint: 'wc/store/v1/products', headerValue: r.headers['x-wp-total'] }};
     }
   }
-  // 3. Shopify /products/count.json
+  // 2. WP REST x-wp-total — fallback when Store API unavailable.
+  // Note: WP REST counts ALL products including draft/hidden/out-of-stock.
+  if (/woocommerce|wp-rest/.test(state.platform) || (state.platformMarker.signals as any).wpRestReachable) {
+    const r = await safeFetch(`${origin}/wp-json/wp/v2/product?per_page=1`, apiCtx);
+    if (r && r.headers['x-wp-total']) {
+      return { count: parseInt(r.headers['x-wp-total'], 10), method: 'wp-rest-header',
+        evidence: { endpoint: 'wp/v2/product', headerValue: r.headers['x-wp-total'] }};
+    }
+  }
+  // 3. Shopify /products.json walk — most accurate for Shopify (counts customer-visible only).
+  // Walk pages until empty, sum product counts. Preferred over /products/count.json (Admin API,
+  // often 401) and sitemap (includes redirects/hidden). Per Mistake 32: uses published_at.
   if (/shopify/.test(state.platform)) {
+    let shopifyTotal = 0;
+    let shopifyPages = 0;
+    const PER_PAGE = 250;
+    for (let page = 1; page <= 200; page++) {
+      const r = await safeFetch(`${origin}/products.json?limit=${PER_PAGE}&page=${page}`, apiCtx);
+      if (!r || r.status !== 200) break;
+      try {
+        const json = JSON.parse(r.body);
+        const products = json.products;
+        if (!Array.isArray(products) || products.length === 0) break;
+        shopifyTotal += products.length;
+        shopifyPages++;
+        if (products.length < PER_PAGE) break;
+      } catch { break; }
+    }
+    if (shopifyTotal > 0) {
+      return { count: shopifyTotal, method: 'shopify-products-walk',
+        evidence: { endpoint: `/products.json?limit=${PER_PAGE}`, responseSample: `${shopifyPages} pages, ${shopifyTotal} products` }};
+    }
+    // Fallback: try /products/count.json (Admin API — often 401)
     const r = await safeFetch(`${origin}/products/count.json`, apiCtx);
     if (r && r.status === 200) {
       const m = /"count"\s*:\s*(\d+)/.exec(r.body);
@@ -58,12 +88,7 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
         evidence: { endpoint: '/products/count.json', responseSample: r.body.slice(0, 200) }};
     }
   }
-  // 4. Ecwid POST /catalog/search (no parentCategoryId).
-  // Ecwid API is a 3rd-party endpoint (us-vir2-storefront-api.ecwid.com) that
-  // doesn't share the merchant's WAF, so raw fetch is correct here — but it
-  // needs an explicit timeout (raw fetch has none, would hang forever on
-  // network issues). Project standard fetchUrl uses 30s; 15s here matches
-  // sitemap-parse (XML/JSON endpoints should be fast).
+  // 4. Ecwid POST /catalog/search (no parentCategoryId)
   if (/ecwid/.test(state.platform)) {
     const storeId = (state.platformMarker.signals as any).ecwidStoreId;
     if (storeId) {
@@ -78,22 +103,23 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
           return { count: json.totalProductsCount, method: 'ecwid-storefront-search',
             evidence: { endpoint: url, responseSample: JSON.stringify(json).slice(0, 200) }};
         }
-      } catch { /* skip — timeout, network, or parse error */ }
+      } catch { /* skip */ }
       finally { clearTimeout(timer); }
     }
   }
-  // 5. BigCommerce sitemap (Task 4.1 discoverProductSitemap discovers and dedupes shards).
+  // 5. BigCommerce sitemap — use pre-computed if available
   if (/bigcommerce/.test(state.platform)) {
+    if (sitemapProductCount && sitemapProductCount > 0) {
+      return { count: sitemapProductCount, method: 'bc-xmlsitemap',
+        evidence: { sitemapShards: sitemapEvidence?.shards, sitemapTotalLocs: sitemapEvidence?.totalLocs, sitemapProductLocs: sitemapProductCount }};
+    }
     const sitemap = await discoverProductSitemap(origin);
     if (sitemap.productUrls.length > 0) {
       return { count: sitemap.productUrls.length, method: 'bc-xmlsitemap',
         evidence: { sitemapShards: sitemap.shardsCounted, sitemapTotalLocs: sitemap.totalLocs, sitemapProductLocs: sitemap.productUrls.length }};
     }
   }
-  // 6. Magento toolbar amount on /new-products.html.
-  // Page-fragment endpoint — Magento renders .toolbar-number 3× per page (top
-  // header, top pagination, bottom pagination); the 3rd occurrence is the total.
-  // Per audit history Site 23 rdsc.ca: this method gives 9,089 vs sitemap 9,020.
+  // 6. Magento toolbar
   if (/magento/.test(state.platform)) {
     const r = await safeFetch(`${origin}/new-products.html`, apiCtx);
     if (r && r.status === 200) {
@@ -103,23 +129,8 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
         evidence: { endpoint: '/new-products.html', responseSample: nums.join(',') }};
     }
   }
-  // 7. Celerant path-style /perpage/N (per spec §4.3 priority 8).
-  // Celerant's stock catalog browser at /all-products/browse/ uses PATH-style
-  // params, not query-style: `/orderby/<value>/perpage/<n>`. The spec's
-  // `?perpage=All` description is misleading — Celerant ignores query params
-  // here. Per audit Site 2 bullseyenorth: canonical catalog URL is
-  // `/all-products/browse/orderby/new-arrivals/perpage/36` walked across
-  // 85 pages = ~3,059 products. For COUNT (one fetch), try `/perpage/9999`
-  // (path-style) which returns the entire inventory if the site allows it,
-  // OR walk-to-empty if perpage caps. Run production extractor via
-  // shared/extract.ts (a.product selector matches Celerant cards).
-  // Generic — /all-products/browse/ is the stock Celerant catalog URL.
-  // Note: Celerant servers send malformed headers (X-Frame-Options trailing
-  // space — Mistake 36); shared/fetch.ts's HPE_INVALID_HEADER_TOKEN catch
-  // falls back to native fetch which is lenient.
+  // 7. Celerant /perpage/9999
   if (/celerant/.test(state.platform)) {
-    // Try path-style with a very large perpage first — works on most Celerant
-    // installs that don't cap perpage. Falls back to /orderby/new-arrivals/perpage/9999.
     const candidates = [
       `${origin}/all-products/browse/perpage/9999`,
       `${origin}/all-products/browse/orderby/new-arrivals/perpage/9999`,
@@ -132,8 +143,6 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
       if (products.length > 0 && (!best || products.length > best.count)) {
         best = { url, count: products.length };
       }
-      // Early-exit if we got a substantial inventory dump (>50 products
-      // strongly suggests perpage worked — featured-only pages return ~10).
       if (best && best.count >= 50) break;
     }
     if (best) {
@@ -141,8 +150,11 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
         evidence: { endpoint: best.url, responseSample: `extracted ${best.count} unique products from /perpage/9999 dump` }};
     }
   }
-  // 8. Generic product sitemap (last sitemap-based attempt — covers Drupal,
-  // Wix, custom platforms; Klevu sites currently fall here too — Phase 8 task).
+  // 8. Generic product sitemap — use pre-computed if available
+  if (sitemapProductCount && sitemapProductCount > 0) {
+    return { count: sitemapProductCount, method: 'generic-product-sitemap',
+      evidence: { sitemapShards: sitemapEvidence?.shards, sitemapTotalLocs: sitemapEvidence?.totalLocs, sitemapProductLocs: sitemapProductCount }};
+  }
   {
     const sitemap = await discoverProductSitemap(origin);
     if (sitemap.productUrls.length > 0) {
@@ -151,6 +163,37 @@ export async function getGlobalCount(state: AccessIdentityState): Promise<CountR
     }
   }
   return null;
+}
+
+/**
+ * Bug B6: Reconcile count after walk completes.
+ * If walked count > probe count × 1.05 (e.g. Celerant /perpage/9999 caps,
+ * Drupal classifieds where sitemap lags live by ~25%), replace global count
+ * with walked count and update method to catalog-walk-only.
+ *
+ * Also handles the reverse case for Shopify: if walk < probe count but close
+ * (within 5%), trust the walk — it's counting real customer-visible products.
+ */
+export function reconcileCountAfterWalk(
+  countResult: CountResult | null,
+  walkedCount: number,
+): CountResult | null {
+  if (!countResult) return countResult;
+  // If walk exceeds probe count by >5%, the probe count was wrong (capped/stale)
+  if (walkedCount > countResult.count * 1.05) {
+    process.stderr.write(
+      `  [global-count] B6 reconcile: walked ${walkedCount} > probe ${countResult.count} × 1.05 → trusting walk\n`
+    );
+    return {
+      count: walkedCount,
+      method: 'catalog-walk-only',
+      evidence: {
+        ...countResult.evidence,
+        responseSample: `original ${countResult.method} reported ${countResult.count}; walk found ${walkedCount} (${((walkedCount - countResult.count) / countResult.count * 100).toFixed(1)}% more) → trusting walk`,
+      },
+    };
+  }
+  return countResult;
 }
 
 async function safeFetch(url: string, ctx: { hasWaf?: boolean; wafType?: any; ua?: string }) {

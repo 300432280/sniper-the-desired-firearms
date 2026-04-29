@@ -1,0 +1,780 @@
+{
+  "roomFailed": true,
+  "roomNumber": 3,
+  "reason": "Drift 77.34% exceeds 5% hard-fail threshold (walked=10785, expected=47595)",
+  "evidence": {
+    "walkCounts": [
+      {
+        "url": "https://theammosource.com/ammunition/",
+        "uniqueProducts": 816,
+        "pages": 16
+      },
+      {
+        "url": "https://theammosource.com/archery/",
+        "uniqueProducts": 161,
+        "pages": 4
+      },
+      {
+        "url": "https://theammosource.com/firearms/",
+        "uniqueProducts": 789,
+        "pages": 16
+      },
+      {
+        "url": "https://theammosource.com/fishing/",
+        "uniqueProducts": 4279,
+        "pages": 83
+      },
+      {
+        "url": "https://theammosource.com/holsters/",
+        "uniqueProducts": 8,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/magazines/",
+        "uniqueProducts": 142,
+        "pages": 3
+      },
+      {
+        "url": "https://theammosource.com/scopes/",
+        "uniqueProducts": 33,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/accessories-ar15/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/air-guns/",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://theammosource.com/american-eagle/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/ammunition-by-calibre/",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://theammosource.com/animal-protection/",
+        "uniqueProducts": 11,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/ar15-mags-couplers-etc/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/ard-s-flip-caps-sun-shades-etc/",
+        "uniqueProducts": 26,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/bear-bangers-flares/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/bear-dog-spray/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/belts-belt-extenders/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/bipods-sticks/",
+        "uniqueProducts": 3,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/black-powder-accessories/",
+        "uniqueProducts": 50,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/black-powder/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/blue-force-gear/",
+        "uniqueProducts": 5,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/body-armour/",
+        "uniqueProducts": 6,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/buck-bomb/",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/bull-it/",
+        "uniqueProducts": 197,
+        "pages": 17
+      },
+      {
+        "url": "https://theammosource.com/bullet-pullers/",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/bumper-stickers-promo-stuff/",
+        "uniqueProducts": 9,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/bungees-lanyards/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/butler-creek-1/",
+        "uniqueProducts": 30,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/butler-creek-2/",
+        "uniqueProducts": 9,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/butler-creek/",
+        "uniqueProducts": 11,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/cadex-defence-1/",
+        "uniqueProducts": 4,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/cadex-defence/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/calipers-scales/",
+        "uniqueProducts": 5,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/calls-decoys/",
+        "uniqueProducts": 112,
+        "pages": 3
+      },
+      {
+        "url": "https://theammosource.com/camping-outdoors/",
+        "uniqueProducts": 72,
+        "pages": 2
+      },
+      {
+        "url": "https://theammosource.com/case-lube-polish/",
+        "uniqueProducts": 5,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/center-point/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/chairs-pods-sticks/",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/chairs-stands/",
+        "uniqueProducts": 14,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/choke-tubes-breachers/",
+        "uniqueProducts": 42,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/chronographs-wind-meters/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/cleaning-supplies-lubricants/",
+        "uniqueProducts": 366,
+        "pages": 8
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/",
+        "uniqueProducts": 207,
+        "pages": 5
+      },
+      {
+        "url": "https://theammosource.com/cooking-food/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/dead-ringer/",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/dog-training-products/",
+        "uniqueProducts": 7,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/drc-zeta-unit/",
+        "uniqueProducts": 1195,
+        "pages": 100
+      },
+      {
+        "url": "https://theammosource.com/drt-motorsports/",
+        "uniqueProducts": 93,
+        "pages": 8
+      },
+      {
+        "url": "https://theammosource.com/e-bike/",
+        "uniqueProducts": 12,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/eo-tech/",
+        "uniqueProducts": 36,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/equipment-supplies/",
+        "uniqueProducts": 387,
+        "pages": 8
+      },
+      {
+        "url": "https://theammosource.com/excalibur-crossbows/",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://theammosource.com/federal-american-eagle-1/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/federal-american-eagle/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/firearms-accessories/",
+        "uniqueProducts": 747,
+        "pages": 28
+      },
+      {
+        "url": "https://theammosource.com/firearms-cases-mats/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/first-aid/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/flashlights-batteries-illumination/",
+        "uniqueProducts": 82,
+        "pages": 2
+      },
+      {
+        "url": "https://theammosource.com/frontier-cartridge/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/g5-outdoors/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/game-preparation/",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/gps-and-compasses/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/gps-chartplotters/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/gun-cases-boxes-socks/",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://theammosource.com/gunsmithing-tools/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/headspace-and-oal-gauges/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/hearing-eye-protection/",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://theammosource.com/hearing-protection/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/hevi-shot/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/hiviz-shooting-systems/",
+        "uniqueProducts": 17,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/hogue-grips-stocks/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/hoppe-s/",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://theammosource.com/horns-bells/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/hunting-supplies/",
+        "uniqueProducts": 120,
+        "pages": 6
+      },
+      {
+        "url": "https://theammosource.com/knives-multi-tools-slingshots/",
+        "uniqueProducts": 265,
+        "pages": 6
+      },
+      {
+        "url": "https://theammosource.com/lucas-oil/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/m14-m305-m1a-accessories/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/mag-pump/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/magazine-adapters/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/magazine-pouches-hard/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/magazine-pouches-holders/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/maple-ridge-armoury/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/mesa-tactical/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/military-surplus-not-firearms/",
+        "uniqueProducts": 14,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/misc-items-1/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/misc-parts-equipment/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/modern-sporting-rifles/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/modified-cases/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/molds-dies-lead-pots/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/mre-s/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/muzzle-loading/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/night-vision/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/novelty-and-toys/",
+        "uniqueProducts": 48,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/",
+        "uniqueProducts": 133,
+        "pages": 3
+      },
+      {
+        "url": "https://theammosource.com/oil-stabilizer-etc/",
+        "uniqueProducts": 19,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/orange-clothing/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/other-brands-4/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/other-brands-6/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/other-brands-7/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/other-manufacturers/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/pistol-ammunition/",
+        "uniqueProducts": 0,
+        "pages": 3
+      },
+      {
+        "url": "https://theammosource.com/pistol-magazines/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/pouches-soft/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/power-sports-engines/",
+        "uniqueProducts": 154,
+        "pages": 4
+      },
+      {
+        "url": "https://theammosource.com/ppe-and-first-aid/",
+        "uniqueProducts": 25,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/priming-tools/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/pro-shot-1/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/pro-shot/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/prvi-partizan-ppu-1/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/prvi-partizan-ppu/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/quaker-boy/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/range-finders-2/",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/ammunition/pellets-bbs-airsoft-rubber-ball-co2/",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://theammosource.com/e-bike/riding-gear/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/charles-daly/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/derya/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/1911/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/ar-15-ar-10/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/browning/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/canuck/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/csa/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/glock/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/marlin/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/mossberg/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/remington/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/traditions/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/oem-replacement-parts/winchester/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/allen/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/archery-targets/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/axe/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/bear-archery/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/carbon-express/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/cases/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/gold-tip/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/nocks/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/other/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/archery/release-aids/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/cooking-food/camp-chef/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/cooking-food/storage-and-transport/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/glasses-and-eyewear/",
+        "uniqueProducts": 0,
+        "pages": 2
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/berkley/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/hats/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/footwear/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/packs/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/sweaters/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/beretta/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/browning/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/hq-outfitters/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/meateater/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/muddy/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/rothco/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/clothing-glasses-and-footwear/vortex/",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://theammosource.com/firearms-accessories/ammo-crates-and-cans/",
+        "uniqueProducts": 0,
+        "pages": 1
+      }
+    ],
+    "globalCount": 47595,
+    "walkedCount": 10785,
+    "method": "bc-xmlsitemap",
+    "setCoverCoverage": 0,
+    "sitemapTotal": 47595
+  },
+  "timestamp": "2026-04-27T08:00:05.074Z"
+}
