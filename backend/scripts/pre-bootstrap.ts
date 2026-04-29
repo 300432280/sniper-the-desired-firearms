@@ -1,10 +1,13 @@
 // backend/scripts/pre-bootstrap.ts
 // Orchestrator. Composes Rooms 1-4. Writes profile JSON + human report. No detection logic.
+// Bug R2-3 fix: explicit cleanup (Playwright browser + Redis) before exit.
 
 import { runRoom1 } from './probe/room1-intake';
 import { runRoom2 } from './probe/room2-access-identity';
 import { runRoom3 } from './probe/room3-geography-count';
 import { runRoom4 } from './probe/room4-navigation';
+import { closeBrowser } from '../src/services/scraper/playwright-fetcher';
+import { redisConnection } from '../src/services/queue';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -39,6 +42,8 @@ async function main() {
   console.log(`✓ ${domain}: probe complete`);
   console.log(`  profile: ${profilePath}`);
   console.log(`  report:  ${reportPath}`);
+
+  await cleanup();
 }
 
 async function halt(failure: any, url: string) {
@@ -48,7 +53,24 @@ async function halt(failure: any, url: string) {
   await fs.writeFile(failPath, JSON.stringify(failure, null, 2));
   console.error(`✗ Room ${failure.roomNumber} HARD FAIL: ${failure.reason}`);
   console.error(`  evidence: ${failPath}`);
+  await cleanup();
   process.exit(1);
+}
+
+/** Bug R2-3: Close Playwright browser + disconnect Redis so the process can exit cleanly. */
+async function cleanup() {
+  const CLEANUP_TIMEOUT = 5000; // 5s max for cleanup
+  try {
+    await Promise.race([
+      Promise.allSettled([
+        closeBrowser().catch(() => {}),
+        redisConnection.quit().catch(() => {}),
+      ]),
+      new Promise(resolve => setTimeout(resolve, CLEANUP_TIMEOUT)),
+    ]);
+  } catch {
+    // Best-effort cleanup — don't let cleanup failures block exit
+  }
 }
 
 function renderReport(s: any): string {
@@ -83,4 +105,4 @@ npx tsx backend/scripts/bootstrap.ts ${new URL(s.canonicalOrigin).hostname}
 `;
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(async err => { console.error(err); await cleanup(); process.exit(1); });

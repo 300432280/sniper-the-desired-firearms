@@ -10,3 +10,5 @@ npm-debug.log*
 .vercel
 prisma/migrations/
 backend/scripts/pre-bootstrap-output/
+.claude/scheduled_tasks.lock
+frontend/tsconfig.tsbuildinfo

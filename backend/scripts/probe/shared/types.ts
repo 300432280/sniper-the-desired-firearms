@@ -75,6 +75,16 @@ export type AccessIdentityState = IntakeState & {
 };
 
 // ─── Room 3: Geography & Count ──────────────────────────────────────────────
+export type PaginationPattern = {
+  type: 'query' | 'path' | 'offset-query' | 'suffix-replace' | null;
+  template?: string;
+  match?: string;
+  perPage: number;
+  firstPageHasParam: boolean;
+  startPage: number;
+  zeroIndexed?: boolean;
+};
+
 export type CountMethod =
   | 'wp-rest-header' | 'wc-store-api-header'
   | 'shopify-count-json' | 'shopify-products-walk'
@@ -85,7 +95,7 @@ export type CountMethod =
 
 export type GeographyCountState = AccessIdentityState & {
   catalogUrls: string[];
-  catalogUrlSource: 'nav' | 'taxonomy-api' | 'category-tree-walk' | 'manual';
+  catalogUrlSource: 'nav' | 'taxonomy-api' | 'taxonomy-api+nav-merge' | 'category-tree-walk' | 'multi-source' | 'manual';
   catalogUrlWalkCounts: Array<{ url: string; uniqueProducts: number; pages: number }>;
   walkedUniqueCount: number;
   globalProductCount: number;
@@ -101,17 +111,18 @@ export type GeographyCountState = AccessIdentityState & {
   };
   driftPct: number;
   coverageStrategy: 'api-walk' | 'html-walk' | 'hybrid';
+  paginationPattern: PaginationPattern;
+  paginationEvidence: {
+    testA_page1_vs_page2: { passed: boolean; sample: string[] };
+    testB_pageN_vs_pageN_1: { passed: boolean; sample: string[] };
+    testC_overflow_vs_page1: { passed: boolean; sample: string[] };
+    testD_perPage_sanity: { passed: boolean; observedPerPage: number; expectedPerPage: number };
+    totalPagesEstimate: number;
+    totalPagesSource: 'widget-markup' | 'api-total' | 'sitemap-math' | 'walk-to-empty';
+  };
 };
 
 // ─── Room 4: Navigation ─────────────────────────────────────────────────────
-export type PaginationPattern = {
-  type: 'query' | 'path' | 'offset-query' | 'suffix-replace' | null;
-  template?: string;
-  match?: string;
-  perPage: number;
-  firstPageHasParam: boolean;
-  startPage: number;
-};
 
 export type WatermarkMethod =
   | 'api-date-since-watermark'
@@ -123,15 +134,6 @@ export type DateVerificationMethod =
   | 'sitemap-lastmod' | 'rss-feed' | 'sourceId-autoincrement';
 
 export type NavigationState = GeographyCountState & {
-  paginationPattern: PaginationPattern;
-  paginationEvidence: {
-    testA_page1_vs_page2: { passed: boolean; sample: string[] };
-    testB_pageN_vs_pageN_1: { passed: boolean; sample: string[] };
-    testC_overflow_vs_page1: { passed: boolean; sample: string[] };
-    testD_perPage_sanity: { passed: boolean; observedPerPage: number; expectedPerPage: number };
-    totalPagesEstimate: number;
-    totalPagesSource: 'widget-markup' | 'api-total' | 'sitemap-math' | 'walk-to-empty';
-  };
   sortParam: string | null;
   sortEvidence: {
     selectHtml: string;
@@ -168,7 +170,7 @@ export type BootstrapState = NavigationState & {
   newestProduct: {
     url: string;
     sourceId?: string;
-    postDate: string;
+    postDate: string | null;
     title: string;
     price?: number;
   };
