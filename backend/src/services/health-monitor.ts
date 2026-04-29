@@ -1,11 +1,15 @@
 /**
- * Health Monitor — daily connectivity + light scrape test for all monitored sites.
+ * Health Monitor — daily connectivity + siteProfile verification for all monitored sites.
  *
- * For each enabled MonitoredSite:
- *   1. Fetch the homepage (connectivity test, measures response time)
- *   2. Verify the page contains expected structure (scrape test)
- *   3. Record results in SiteHealthCheck table
- *   4. Alert admin if a site is unreachable or structure changed
+ * Two complementary daily checks (both run in the HealthWorker cron):
+ *
+ * 1. runHealthChecks() — connectivity + light scrape test
+ *    - Fetch homepage, verify page structure, record SiteHealthCheck
+ *
+ * 2. verifyAllSiteProfiles() — siteProfile watchdog
+ *    - Verify catalogUrls, pagination, sort, count, WAF against live site
+ *    - Record SiteHealthCheck, detect 3-consecutive-fail drift
+ *    - Read-only on MonitoredSite; only writes to SiteHealthCheck
  */
 
 import { prisma } from '../lib/prisma';
@@ -171,6 +175,7 @@ export async function runHealthChecks(): Promise<{
     await prisma.siteHealthCheck.create({
       data: {
         siteId: result.siteId,
+        checkType: 'connectivity',
         isReachable: result.isReachable,
         canScrape: result.canScrape,
         responseTimeMs: result.responseTimeMs,
@@ -251,4 +256,137 @@ export async function pruneOldHealthChecks(): Promise<number> {
     where: { checkedAt: { lt: cutoff } },
   });
   return result.count;
+}
+
+// ─── Site Profile Watchdog ──────────────────────────────────────────────────
+
+// Types mirrored from scripts/verify-site-profile.ts to avoid rootDir import issues
+type Verdict = 'PASS' | 'WARN' | 'FAIL';
+
+interface ParameterCheck {
+  name: string;
+  verdict: Verdict;
+  expected: unknown;
+  actual: unknown;
+  evidence: Record<string, unknown>;
+  reason?: string;
+}
+
+interface VerificationResult {
+  siteId: string;
+  domain: string;
+  timestamp: string;
+  durationMs: number;
+  overallVerdict: Verdict;
+  checks: ParameterCheck[];
+  rawSiteProfile: unknown;
+}
+
+export interface WatchdogResult {
+  siteId: string;
+  domain: string;
+  verification: VerificationResult;
+  consecutiveFailCount: number;
+  shouldAlert: boolean;
+}
+
+/**
+ * Watchdog: verify all enabled site profiles against live sites.
+ *
+ * For each enabled site with a siteProfile:
+ *   1. Run verifySiteProfile() to test catalogUrls, pagination, sort, count, WAF
+ *   2. Persist result as a SiteHealthCheck row
+ *   3. Check last 3 SiteHealthCheck rows for consecutive failures
+ *   4. If 3+ consecutive failures: surface alert via DismissedIssue mechanism
+ *
+ * This is READ-ONLY on MonitoredSite — only writes to SiteHealthCheck.
+ * Sequential with 2s anti-ban delay between sites.
+ */
+export async function verifyAllSiteProfiles(): Promise<WatchdogResult[]> {
+  // Dynamic require to avoid rootDir issues (scripts/ is outside src/)
+  const { verifySiteProfile } = require('../../scripts/verify-site-profile') as {
+    verifySiteProfile: (site: { id: string; domain: string; url: string; siteProfile: unknown }) => Promise<VerificationResult>;
+  };
+
+  const sites = await prisma.monitoredSite.findMany({
+    where: { isEnabled: true },
+    select: { id: true, domain: true, url: true, siteProfile: true },
+  });
+
+  console.log(`[Watchdog] Starting siteProfile verification for ${sites.length} enabled sites...`);
+
+  const results: WatchdogResult[] = [];
+
+  for (const site of sites) {
+    if (!site.siteProfile) continue; // sites without profile: skip (handled by onboarding flow)
+
+    let verification: VerificationResult;
+    try {
+      verification = await verifySiteProfile({
+        id: site.id,
+        domain: site.domain,
+        url: site.url,
+        siteProfile: site.siteProfile,
+      });
+    } catch (err) {
+      // Hard error — record as failure
+      verification = {
+        siteId: site.id,
+        domain: site.domain,
+        timestamp: new Date().toISOString(),
+        durationMs: 0,
+        overallVerdict: 'FAIL',
+        checks: [],
+        rawSiteProfile: site.siteProfile,
+      };
+      console.error(`[Watchdog] Error verifying ${site.domain}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    // Persist to SiteHealthCheck
+    await prisma.siteHealthCheck.create({
+      data: {
+        siteId: site.id,
+        checkType: 'watchdog',
+        isReachable: verification.overallVerdict !== 'FAIL',
+        canScrape: verification.overallVerdict === 'PASS',
+        responseTimeMs: verification.durationMs,
+        errorMessage: verification.overallVerdict === 'PASS'
+          ? null
+          : JSON.stringify(verification.checks.filter(c => c.verdict !== 'PASS').map(c => ({ name: c.name, verdict: c.verdict, reason: c.reason }))),
+      },
+    });
+
+    // Count consecutive failures from the last 3 watchdog checks (ignoring connectivity rows)
+    const recent = await prisma.siteHealthCheck.findMany({
+      where: { siteId: site.id, checkType: 'watchdog' },
+      orderBy: { checkedAt: 'desc' },
+      take: 3,
+    });
+    const firstPassIdx = recent.findIndex(r => r.canScrape);
+    const consecutiveFailCount = firstPassIdx === -1
+      ? recent.length
+      : firstPassIdx;
+
+    const shouldAlert = consecutiveFailCount >= 3;
+
+    if (shouldAlert) {
+      // Alert logged here; surfaces in admin UI via /api/admin/site-issues
+      // endpoint which detects siteprofile_drift_3strikes from SiteHealthCheck data.
+      // DismissedIssue table handles user dismissals with conditionSnapshot re-surface.
+      console.warn(`[Watchdog] ALERT: ${site.domain} — 3 consecutive siteProfile verification failures. Suggest: re-run /pre-bootstrap on ${site.domain} (or load skill via Skill tool: pre-bootstrap)`);
+    }
+
+    const icon = verification.overallVerdict === 'PASS' ? 'PASS' : verification.overallVerdict === 'WARN' ? 'WARN' : 'FAIL';
+    console.log(`[Watchdog] ${icon}: ${site.domain} (${verification.durationMs}ms, consecutive fails: ${consecutiveFailCount})`);
+
+    results.push({ siteId: site.id, domain: site.domain, verification, consecutiveFailCount, shouldAlert });
+
+    // Anti-ban delay between sites
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
+  const alertCount = results.filter(r => r.shouldAlert).length;
+  console.log(`[Watchdog] Complete: ${results.length} sites verified, ${alertCount} alerts triggered`);
+
+  return results;
 }

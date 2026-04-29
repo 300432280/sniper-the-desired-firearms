@@ -1,0 +1,320 @@
+{
+  "siteId": "cmm3v7sen0002o7a363n0zs3m",
+  "domain": "aagcanada.ca",
+  "timestamp": "2026-04-28T06:28:48.641Z",
+  "durationMs": 62789,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "13 URLs, each returning ≥1 product",
+      "actual": "13/13 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/collections/firearms",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "savage-rascal-22-lr-bolt-action-rifle-accutrigger-synthetic-stock-3-9x-ao-scope-excellent-bore",
+              "wwi-british-smle-mk-iii-rifle-1915-bsa-303-british-force-matched-original-finish-excellent-bore",
+              "preview-1943-mosin-nagant-91-30-pu-sniper-rifle-7-62-54r"
+            ]
+          },
+          {
+            "url": "/collections/antique-blank",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "rohm-rg-300-6mm-flobert-blank-signal-pistol-made-in-germany-complete-in-case",
+              "no-pal-antique-1881-enfield-martini-henry-mk-ii",
+              "pedersoli-derringer-rider-gold-finish-4-5mm-percussion-pistol-11-cap"
+            ]
+          },
+          {
+            "url": "/collections/deactivated",
+            "status": 200,
+            "productCount": 11,
+            "sampleSlugs": [
+              "deactivated-sten-mk-ii-historic-wwii-collectible",
+              "u-s-military-style-practice-grenade-inert-cast-steel-black-painted-marked-korea",
+              "u-s-pineapple-grenade-dummy-inert-cast-steel-marked-rfx"
+            ]
+          },
+          {
+            "url": "/collections/bayonet",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "wwii-australian-1907-pattern-bayonet-fits-303-caliber-lee-enfield-no-1-mk-iii-smle-rifles-1943-dated-with-scabbard",
+              "german-k98k-bayonet-s84-98-iii-1940-coppel-waa253-steel-scabbard",
+              "lee-enfield-no-4-mk-ii-bayonet-with-original-scabbard-british-military-issue"
+            ]
+          },
+          {
+            "url": "/collections/scope-sights",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "t-eagle-1-6x-scope-pink-blue",
+              "swamp-deer-tomahawk-micro-red-dot-sight-3-moa-purple-anodized-picatinny-mount-complete-kit",
+              "swarovski-z5-3-5-18x44-p-l-brh-rifle-scope-z5-series-like-new-in-box"
+            ]
+          },
+          {
+            "url": "/collections/magazine-clips",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "ruger-10-22-rotary-magazine-extension-sleeves-drop-in-magazine-body-kit-multiple-style-options",
+              "tm22-magazine-sleeve-pmag-style-metal-10-round-magazine-black-copy",
+              "tommy-enterprises-tm22-quick-loader-magazine-speed-loader-for-derya-tm22"
+            ]
+          },
+          {
+            "url": "/collections/tactical-gear",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "ruger-10-22-rotary-magazine-extension-sleeves-drop-in-magazine-body-kit-multiple-style-options",
+              "tommy-enterprises-tm22-quick-loader-magazine-speed-loader-for-derya-tm22",
+              "ldag-mil-hand-stop-picatinny-rail-compatible-cage-7ral1"
+            ]
+          },
+          {
+            "url": "/collections/garment",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "aag-logo-shirt",
+              "aag-coach-jacket",
+              "coach-jacket-novelty-item"
+            ]
+          },
+          {
+            "url": "/collections/fun-stuff",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "wwii-canadian-brodie-steel-helmet-shell-csw-1941-1942-marked-original-paint-no-liner",
+              "m1-garand-30-06-single-shot-loading-insert-single-round-sled-en-bloc-style",
+              "heritage-rough-rider-rancher-22-wmr-6-shot-conversion-cylinder-factory-oem-made-in-usa"
+            ]
+          },
+          {
+            "url": "/collections/new-arrival",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "savage-rascal-22-lr-bolt-action-rifle-accutrigger-synthetic-stock-3-9x-ao-scope-excellent-bore",
+              "wwi-british-smle-mk-iii-rifle-1915-bsa-303-british-force-matched-original-finish-excellent-bore",
+              "preview-1943-mosin-nagant-91-30-pu-sniper-rifle-7-62-54r"
+            ]
+          },
+          {
+            "url": "/collections/sale",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "lee-enfield-no-5-mk-i-jungle-carbine-rof-1946",
+              "yugoslav-m24-mauser-kingdom-of-yugoslavia-marked-8mm-mauser",
+              "spanish-mauser-model-1943-short-rifle-8x57mm-mauser"
+            ]
+          },
+          {
+            "url": "/collections/boutique-display-sold",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "antique-japanese-samurai-armour",
+              "wwii-german-g43-sniper-rifle-8mm-complete-set-on-hold",
+              "preview-oberndorf-portuguese-contract-kar98k-1941-exceptional-original-condition"
+            ]
+          },
+          {
+            "url": "/collections/public-notice",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "winchester-model-1892-lever-action-rifle-44-wcf-manufactured-1903",
+              "aag-canada-tattoo-studio-looking-for-guest-tattoo-artists"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://aagcanada.ca/collections/firearms",
+        "page2Url": "https://aagcanada.ca/collections/firearms?page=2",
+        "page1First3": [
+          "savage-rascal-22-lr-bolt-action-rifle-accutrigger-synthetic-stock-3-9x-ao-scope-excellent-bore",
+          "wwi-british-smle-mk-iii-rifle-1915-bsa-303-british-force-matched-original-finish-excellent-bore",
+          "preview-1943-mosin-nagant-91-30-pu-sniper-rifle-7-62-54r"
+        ],
+        "page2First3": [
+          "very-rare-siamese-type-66-arisaka-system-military-rifle-matching-bolt-assembly-dust-cover-original-cleaning-rod",
+          "german-gewehr-1888-05-commission-rifle-1890-amberg-production-bavarian-regimental-marked-limited-turkish-alteration-well-preserved-example",
+          "soviet-m44-mosin-nagant-carbine-1944-izhevsk-with-unknown-german-style-marks"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://aagcanada.ca/collections/firearms?sort_by=created-descending",
+        "withoutSortUrl": "https://aagcanada.ca/collections/firearms",
+        "withSortFirst": "savage-rascal-22-lr-bolt-action-rifle-accutrigger-synthetic-stock-3-9x-ao-scope-excellent-bore",
+        "withoutSortFirst": "savage-rascal-22-lr-bolt-action-rifle-accutrigger-synthetic-stock-3-9x-ao-scope-excellent-bore",
+        "counterControlUrl": "https://aagcanada.ca/collections/firearms?sort_by=price-ascending",
+        "counterControlFirst": "stevens-marksman-model-12-single-shot-rifle-25-stevens-rimfire"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 574,
+      "actual": 570,
+      "evidence": {
+        "storedCount": 574,
+        "actualCount": 570,
+        "methodUsed": "shopify-products-json-walk",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f34024aab0dab0a-YYZ",
+          "set-cookie": "localization=CA; path=/; expires=Wed, 28 Apr 2027 06:28:48 GMT; SameSite=Lax,_shopify_y=83df24ec-629a-43bd-82fd-10fa9920cd6a; domain=aagcanada.ca; path=/; expires=Wed, 28 Apr 2027 12:28:48 GMT; SameSite=Lax,_shopify_s=428eecc7-a6b1-4c14-b1f1-361adc4e82c1; domain=aagcanada.ca; path=/; expires=Tue, 28 Apr 2026 06:58:48 GMT; SameSite=Lax,_shopify_essential=:AZ3SxqraAAEAVpZJI9W77-QCbi6pOIiHF0bAoGFA8UKR2MT-IkPtGOgHATApOOFFew_FlADn-3KkrzD1hRugRuSjD_WJTjcUtuXrF1e8y18tOxYEBH4MespoKvptBiCL5LyDpjPSOcg-1W1AH1GMEjre-yTkt0JZM7I_HchZNhRrxemaZqB6fU5JWixjd1JVPxDWEX3KXPd54v_GUNG-7ep3tFWZ4ripxknbqUacnzUs0EpRroTqb5ygJOPRsxZlRtU621w1K9sipvum2DDaP-v1A56dplR_ix76QCZDm1HRsPYl0c1P5YTXWQATo-PJsMAKVcMtmyyr1-F0dLr5U8Z19KvprpjKzM3iago1G8LBMoxJ4LFjnqYfVOFygTtp7_IU2gVkiusLnuU:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax,_shopify_analytics=:AZ3SxquxAAEAgXp3WxeD0Gky2HNfDahjgK0bzaBdwGYymQiXVd2Ho9cdpAqjq48rq9QvHD6qKi1kJlUZAYchGy3Oo9wM45AHgF1rhb8:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax,_shopify_marketing=:AZ3SxquxAAEA_fH5KyiESZdqakOljMdtCWiz6nrVMAov1Nl3LOE6cPuzRdAchumJtMNN-HeKaZUGQFlL8q_vMJXPleY:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "AAG Canada",
+    "notes": "Multilingual Shopify (EN/ZH/FR). 574 products across 14 collections. API /products.json returns newest-first. Collections have overlap (new-arrival, sale cross-reference other categories). Cloudflare passive WAF (no active blocking with UA present).",
+    "budget": 60,
+    "domain": "aagcanada.ca",
+    "hasWaf": true,
+    "adapter": "shopify",
+    "perPage": 12,
+    "timeout": 15000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "bootstrap": {
+        "apiEndpoints": {
+          "sitemap": "/sitemap_products_1.xml",
+          "collections": "/collections.json",
+          "productDiscovery": "/products.json"
+        }
+      },
+      "watermark": {
+        "notes": "API /products.json returns newest-first by default; adapter fetchCatalogPage handles pagination",
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "/products.json",
+          "notes": "All data in one API",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "stock",
+            "thumbnail",
+            "sourceId",
+            "tags"
+          ]
+        }
+      ]
+    },
+    "platform": "shopify",
+    "searchUrl": "/search?q={keyword}&type=product",
+    "sortParam": "?sort_by=created-descending",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/collections/firearms",
+      "/collections/antique-blank",
+      "/collections/deactivated",
+      "/collections/bayonet",
+      "/collections/scope-sights",
+      "/collections/magazine-clips",
+      "/collections/tactical-gear",
+      "/collections/garment",
+      "/collections/fun-stuff",
+      "/collections/new-arrival",
+      "/collections/sale",
+      "/collections/boutique-display-sold",
+      "/collections/public-notice"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-11",
+    "multilingual": [
+      "en",
+      "zh",
+      "fr"
+    ],
+    "siteCategory": "retailer",
+    "sortEvidence": "default first=replica-boots-1, created-descending first=no-pal-antique-1881-enfield-martini-henry-mk-ii (2026-04-10)",
+    "sortVerified": true,
+    "t1IntervalMin": 17,
+    "sortVerifiedAt": "2026-04-11",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive",
+    "catalogUrlStats": {
+      "sale": 19,
+      "bayonet": 16,
+      "garment": 77,
+      "firearms": 82,
+      "fun-stuff": 152,
+      "deactivated": 11,
+      "new-arrival": 67,
+      "scope-sights": 14,
+      "antique-blank": 31,
+      "public-notice": 2,
+      "tactical-gear": 80,
+      "magazine-clips": 18,
+      "boutique-display-sold": 105
+    },
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11T05:28:57Z",
+    "wafProbeEvidence": "server: cloudflare + cf-ray on all responses; all 200 except batch 8 (no UA) = 403",
+    "paginationPattern": {
+      "type": "query",
+      "template": "page",
+      "apiPerPage": 250,
+      "htmlPerPage": 12
+    },
+    "productCountMethod": {
+      "pages": 3,
+      "method": "api-walk",
+      "endpoint": "/products.json?limit=250",
+      "verifiedAt": "2026-04-11",
+      "sitemapCount": 575
+    },
+    "sortVerifiedMethod": "id-jump-test",
+    "expectedProductCount": 574
+  }
+}

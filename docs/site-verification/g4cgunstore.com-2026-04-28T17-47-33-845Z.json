@@ -1,0 +1,267 @@
+{
+  "siteId": "cmlvesqg0000i1a425uv5g6dv",
+  "domain": "g4cgunstore.com",
+  "timestamp": "2026-04-28T17:47:33.844Z",
+  "durationMs": 49953,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "6 URLs, each returning ≥1 product",
+      "actual": "6/6 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/firearms/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "benelli-lupo-30-06-sprg-22-black",
+              "benelli-lupo-308-win-22-black",
+              "armsan-a612-sporting-12-gauge-28-black"
+            ]
+          },
+          {
+            "url": "/product-category/ammunition/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "federal-american-eagle-38special-158gr-lrn-50rds",
+              "hornady-eld-match-300-win-mag-178gr-20rds",
+              "hornady-eld-match-300-win-mag-195gr-200rds"
+            ]
+          },
+          {
+            "url": "/product-category/accessories/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "black-creek-labs-mrx-bison-5-56-nato-20rds-magazine",
+              "magpul-pmag-gen2-5-56nato-5-30rd-magazine-black",
+              "mossberg-590m-5rd-magazine"
+            ]
+          },
+          {
+            "url": "/product-category/sights-optics/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "vortex-strike-eagle-1-8x24mm-ffp-30mm",
+              "eotech-eflx-mini-3moa-reflex-sight",
+              "eotech-eflx-mini-3moa-reflex-sight-tan"
+            ]
+          },
+          {
+            "url": "/product-category/high-value-optics/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "vortex-strike-eagle-1-8x24mm-ffp-30mm",
+              "eotech-eflx-mini-3moa-reflex-sight",
+              "eotech-eflx-mini-3moa-reflex-sight-tan"
+            ]
+          },
+          {
+            "url": "/product-category/iron-sights/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "magpul-mbus-3-front-sight-black",
+              "magpul-mbus-3-rear-sight-black",
+              "magpul-mbus-front-sight-black"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://g4cgunstore.com/product-category/firearms/",
+        "page2Url": "https://g4cgunstore.com/product-category/firearms/page/2",
+        "page1First3": [
+          "benelli-lupo-30-06-sprg-22-black",
+          "benelli-lupo-308-win-22-black",
+          "armsan-a612-sporting-12-gauge-28-black"
+        ],
+        "page2First3": [
+          "ege-arms-lever12s-short-lever-action-12-gauge-10-6-walnut",
+          "ege-arms-lv12-lever-action-12-gauge-18-5-walnut",
+          "ege-arms-lv12-tactical-12-gauge-3-inch-18-5-black-wood"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://g4cgunstore.com/product-category/firearms/?orderby=date&order=desc",
+        "withoutSortUrl": "https://g4cgunstore.com/product-category/firearms/",
+        "withSortFirst": "swedish-m96-1915-carl-gustafs-production-sa-marked-mauser-6-5x55-swedish-29-excellent-condition",
+        "withoutSortFirst": "benelli-lupo-30-06-sprg-22-black",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 5741,
+      "actual": 5805,
+      "evidence": {
+        "storedCount": 5741,
+        "actualCount": 5805,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37e48dcbf436d3-YYZ"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "G4C Gun Store",
+    "notes": "WooCommerce on WordPress behind passive Cloudflare. Previous \"DISABLED / Cloudflare Turnstile blocks everything\" note was WRONG — verified 2026-04-07 that direct HTTP GET works with any UA and WP REST returns 5741 products. DB had 1289 products because the crawler had worked intermittently. Key facts: (1) WP REST /wp-json/wp/v2/product works — x-wp-total=5741. (2) WC Store API /wp-json/wc/store/v1/products returns 403 from Cloudflare — do not use. (3) Pagination is /page/N/ PATH, NOT ?page=N query (?page=2 silently returns page 1). (4) Sort is standard WooCommerce ?orderby=date&order=desc. (5) 24 products per category page. CatalogUrls cover 5739/5741 products with minimum overlap: firearms(2035)+ammunition(1894)+accessories(1225)+sights-optics(587)+high-value-optics(277)+iron-sights(35). Removed /firearms/rifles/non-restricted-rifles/, /firearms/handguns/pistols/, /firearms/shotguns/, /firearms/rifles/restricted-rifles/ (all child cats of /firearms/ which includes them). Removed /new-arrivals/ (150 products, 100% contained in union). Promotions (1130) is 100% overlay and was not in old list. Watermark crawler should use api-date-since-watermark via WP REST ?after=DATE — verified returns 271 products after 2026-01-01. Rate limiting observed historically: max ~340 pages/hr, back off 2-4 hours after ~500 requests.",
+    "budget": 60,
+    "domain": "g4cgunstore.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 24,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "wp-rest",
+        "verifyBehavior": {
+          "notes": "WP REST returns title/slug/thumbnail but NOT price/stock (Store API blocked). Price enrichment must come from HTML scrape of /product/{slug}/.",
+          "onFound": "update-title-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wp/v2/product"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "Verified 2026-04-07: /wp-json/wp/v2/product?after=2026-01-01T00:00:00&order=desc&orderby=date returned x-wp-total=271. Native date-since watermark via WP REST — faster and more reliable than HTML navigation.",
+        "method": "api-date-since-watermark",
+        "endpoint": "/wp-json/wp/v2/product",
+        "dateParam": "after",
+        "orderParam": "order=desc&orderby=date"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST /wp-json/wp/v2/product",
+          "notes": "Returns id, slug, title, link, date, featured_media, product_cat (NO price/stock). Filter by ?after=DATE for watermark. Filter by ?product_cat=ID for category walk.",
+          "provides": [
+            "title",
+            "url",
+            "sourceId",
+            "categories",
+            "date"
+          ]
+        },
+        {
+          "api": "HTML /product/{slug}/",
+          "notes": "Extract price + stock from single-product HTML (woocommerce-storefront markup). No Playwright needed.",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date&order=desc",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/firearms/",
+      "/product-category/ammunition/",
+      "/product-category/accessories/",
+      "/product-category/sights-optics/",
+      "/product-category/high-value-optics/",
+      "/product-category/iron-sights/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 36,
+    "wafWorkaround": {
+      "notes": "Previous profile claimed Cloudflare Turnstile blocked all access — VERIFIED FALSE on 2026-04-07. Cloudflare is passive. HTTP 200 returned for every UA tested (iPhone Safari, desktop Chrome, Android). Page body contains the string \"turnstile\" because the Cloudflare challenge script is injected passively, but it never actually fires or blocks. WP REST API /wp-json/wp/v2/product returns 5741 products without challenge. No Playwright needed. Only /wp-json/wc/store/v1/products returns 403 (Store API is blocked at the WAF edge — prefer WP REST).",
+      "steps": [
+        "Direct axios HTTP GET with any modern UA — no cookies, no challenge solve",
+        "Use /wp-json/wp/v2/product for bootstrap discovery and watermark date-filter",
+        "Do NOT call /wp-json/wc/store/v1/products — returns 403 from Cloudflare edge"
+      ],
+      "method": "http-direct"
+    },
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "path",
+      "notes": "Verified 2026-04-07: /product-category/.../page/2/ returns different products from page 1. ?product-page=2 and ?page=2 both silently return page 1 content.",
+      "perPage": 24,
+      "template": "/page/{N}"
+    },
+    "productCountMethod": {
+      "notes": "Verified 2026-04-07: x-wp-total=5741 with per_page=1. Matches union of firearms+ammunition+accessories+sights-optics+high-value-optics+iron-sights (5739, gap 2 = uncategorized).",
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product"
+    },
+    "expectedProductCount": 5741
+  }
+}

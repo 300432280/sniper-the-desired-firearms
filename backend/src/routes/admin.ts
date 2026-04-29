@@ -524,6 +524,32 @@ router.get('/site-issues', async (req: Request, res: Response) => {
       }
     }
 
+    // Warning: siteProfile drift — 3 consecutive health-check failures (canScrape=false)
+    // Populated by verifyAllSiteProfiles() watchdog in health-monitor.ts
+    for (const site of sites) {
+      const recentChecks = await prisma.siteHealthCheck.findMany({
+        where: { siteId: site.id, checkType: 'watchdog' },
+        orderBy: { checkedAt: 'desc' },
+        take: 3,
+        select: { canScrape: true, errorMessage: true },
+      });
+      if (recentChecks.length >= 3 && recentChecks.every(r => !r.canScrape)) {
+        // Parse failing check names from the most recent errorMessage
+        let failDetail = '3+ consecutive verification failures';
+        try {
+          const parsed = JSON.parse(recentChecks[0].errorMessage || '[]');
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            failDetail = parsed.map((c: { name?: string; reason?: string }) => c.name || 'unknown').join(', ');
+          }
+        } catch { /* use default detail */ }
+        const conditionSnapshot = recentChecks[0].errorMessage || '';
+        addIssue(site.id, site.domain, 'warning', 'siteprofile_drift_3strikes',
+          'SiteProfile drift detected', `Failing checks: ${failDetail}`,
+          'Re-run /pre-bootstrap on this domain to refresh siteProfile.',
+          conditionSnapshot);
+      }
+    }
+
     // Sort: critical first, then warning, then info
     const severityOrder = { critical: 0, warning: 1, info: 2 };
     issues.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);

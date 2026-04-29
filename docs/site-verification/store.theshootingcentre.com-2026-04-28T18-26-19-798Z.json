@@ -1,0 +1,264 @@
+{
+  "siteId": "cmlvesqw9000w1a42wts64abe",
+  "domain": "store.theshootingcentre.com",
+  "timestamp": "2026-04-28T18:26:19.798Z",
+  "durationMs": 65555,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "7 URLs, each returning ≥1 product",
+      "actual": "7/7 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/firearms/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "adler-arms-rf-224-tac-rifle-black-22-lr-11-7-barrel-model-rf224tacblk",
+              "adler-arms-rf-224-tac-rifle-blue-22-lr-11-7-barrel-model-rf224tacblu",
+              "adler-arms-rf-224-tac-rifle-bronze-22-lr-11-7-barrel-model-rf224tacbrz"
+            ]
+          },
+          {
+            "url": "/ammunition/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "aguila-rifle-ammunition-30-carbine-110-gr-fmj-1990-fps-model-1e302110",
+              "aguila-subsonic-ammunition-22-lr-38-gr-lead-hollow-point-1024-fps-model-1b220268",
+              "barnes-harvest-collection-ammunition-223-rem-69-gr-sierra-tipped-gameking-3000-fps-model-32397"
+            ]
+          },
+          {
+            "url": "/optics/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "aimpoint-acro-p-2-3-5-moa-red-dot-reflex-sight-with-integrated-acro-interface-fde-model-200777",
+              "burris-droptine-hd-10x42mm-binoculars-model-300279",
+              "burris-droptine-hd-8x42mm-binoculars-model-300278"
+            ]
+          },
+          {
+            "url": "/optics-accessories/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "adm-ad-delta-c-cantilevered-scope-mount-30mm-1-5-20-moa-standard-lever-black",
+              "adm-aimpoint-compm4-mount-co-witness-standard-aluminum-lever",
+              "adm-trijicon-mro-mount-night-vision-height"
+            ]
+          },
+          {
+            "url": "/reloading/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "barnes-buster-bullets-45-70-45-cal-0-458-400-gr-fn-fb-model-30644",
+              "borebuddy-22-lr-hollow-pointing-die-kit",
+              "cci-bench-rest-small-rifle-primers"
+            ]
+          },
+          {
+            "url": "/gun-parts-accessories/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "3hgr-akor-sling",
+              "3hgr-driven-sling-blaser-front-swivel",
+              "3hgr-driven-sling-qd-front-rear-swivels"
+            ]
+          },
+          {
+            "url": "/gear/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "3m-peltor-gel-sealing-rings",
+              "5-11-tactical-1-5-trainer-belt-black",
+              "5-11-tactical-1-5-trainer-belt-coyote"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://store.theshootingcentre.com/firearms/",
+        "page2Url": "https://store.theshootingcentre.com/firearms/?page=2",
+        "page1First3": [
+          "adler-arms-rf-224-tac-rifle-black-22-lr-11-7-barrel-model-rf224tacblk",
+          "adler-arms-rf-224-tac-rifle-blue-22-lr-11-7-barrel-model-rf224tacblu",
+          "adler-arms-rf-224-tac-rifle-bronze-22-lr-11-7-barrel-model-rf224tacbrz"
+        ],
+        "page2First3": [
+          "benelli-ethos-upland-a-i-shotgun-20-gauge-3-28-barrel-model-12651",
+          "benelli-lupo-alpha-special-edition-rifle-308-win-20-barrel-model-15614",
+          "benelli-lupo-be-s-t-walnut-rifle-300-win-mag-24-barrel-model-11909"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://store.theshootingcentre.com/firearms/?sort=newest",
+        "withoutSortUrl": "https://store.theshootingcentre.com/firearms/",
+        "withSortFirst": "ruger-american-rimfire-target-rifle-17-hmr-18-barrel-model-08350",
+        "withoutSortFirst": "adler-arms-rf-224-tac-rifle-black-22-lr-11-7-barrel-model-rf224tacblk",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 16616,
+      "actual": 16847,
+      "evidence": {
+        "storedCount": 16616,
+        "actualCount": 16847,
+        "methodUsed": "sitemap",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f381d5b48b5d5f4-YYZ",
+          "set-cookie": "SF-CSRF-TOKEN=9b7348e9-e79f-452c-95c0-b61f44aa3826; Path=/; Secure; SameSite=Strict,Shopper-Pref=5E0F8FB0F8B7E5438F187B0C251CBE4CC138BC4A-1778005580124-x%7B%22cur%22%3A%22CAD%22%2C%22funcConsent%22%3Afalse%7D; Path=/; Secure; HttpOnly,SHOP_SESSION_TOKEN=92d55687-adeb-4937-a06a-0dd3d3955a5d; Path=/; Secure; HttpOnly; SameSite=None,__cf_bm=m5OCavXCenrX8An5kfOgX9yqa4LUTsiuPrkOcmU.MS0-1777400780.0507143-1.0.1.1-eqqDK4UgbbbDwfWFsoXMRq3ILq_cHXDSutJunZh7grTggGU8b2zLtEwj2kjuKb8WGrvhbanDkjuf_LohI72jPfoN1TMqYIdSHlQRz_OhX5IqAxNVlsNhkTTW2ZVAzlOM; HttpOnly; Secure; Path=/; Domain=store.theshootingcentre.com; Expires=Tue, 28 Apr 2026 18:56:20 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Calgary Shooting Centre",
+    "notes": "BigCommerce Stencil (s-stx5s5fhga). Cloudflare passive (cf-ray + __cf_bm on every response, no challenges). Stencil default-sort quirk: alphaasc is the selected default — must explicitly use ?sort=newest. /categories.php returns only ~46 carousel links, NOT a universal endpoint (same theme-dependent quirk as site 27 prophetriver). Sitemap-index /xmlsitemap.php has 3 product pages totaling ~16,616 URLs. ?limit=50 honored. Sort options read from <select name=\"sort\"> id=\"sort\": featured/newest/bestselling/alphaasc/alphadesc/avgcustomerreview/priceasc/pricedesc.",
+    "budget": 90,
+    "domain": "store.theshootingcentre.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 50,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "bigcommerce.stencil",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "?sort=newest",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/firearms/",
+      "/ammunition/",
+      "/optics/",
+      "/optics-accessories/",
+      "/reloading/",
+      "/gun-parts-accessories/",
+      "/gear/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "steps": [
+        "Launch Playwright",
+        "Wait for Cloudflare challenge auto-resolve (up to 35s)",
+        "Use resolved browser session for page fetches"
+      ],
+      "method": "playwright-session",
+      "rateLimitNotes": "Cloudflare — back off if challenge stops resolving",
+      "perRequestPlaywright": true
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cf-ray + server:cloudflare on every 200; rapid 10x burst clean; SQLi/XSS triggers 403; honeypot paths 403; passive mode",
+    "needsPlaywright": true,
+    "wafLastProbedAt": "2026-04-08",
+    "wafProbeEvidence": "cf-ray: 9e949b3b2a0d178c-YYZ; __cf_bm cookie set; cf-cache-status: DYNAMIC",
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "productCountMethod": {
+      "method": "sitemap-walk",
+      "perPage": [
+        3132,
+        9997,
+        3487
+      ],
+      "sitemapIndex": "/xmlsitemap.php",
+      "pagesObserved": 3,
+      "productSitemapTemplate": "/xmlsitemap.php?type=products&page={N}"
+    },
+    "expectedProductCount": 16616
+  }
+}

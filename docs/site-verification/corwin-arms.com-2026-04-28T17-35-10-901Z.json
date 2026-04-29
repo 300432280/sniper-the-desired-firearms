@@ -1,0 +1,218 @@
+{
+  "siteId": "cmlvesq80000a1a42tyfz7lgp",
+  "domain": "corwin-arms.com",
+  "timestamp": "2026-04-28T17:35:10.901Z",
+  "durationMs": 41623,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "6 URLs, each returning ≥1 product",
+      "actual": "5/6 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/firearms/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "mosin-rifle-bend-bolt-actions-in-7-62x54r",
+              "spanish-mauser-8x57mm",
+              "spanish-mauser-8x57mm-2"
+            ]
+          },
+          {
+            "url": "/product-category/axes/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "axe-hawk-head-3",
+              "825",
+              "axe-hawk-head-5"
+            ]
+          },
+          {
+            "url": "/product-category/firearms-accessories/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "mosin-91-30-pouch-tool-set",
+              "original-swiss-army-weapons-protective-lubricant-automatenfett"
+            ]
+          },
+          {
+            "url": "/product-category/swords-and-knives/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "scottish-dirk-dagger",
+              "scottish-dirk-dagger-2"
+            ]
+          },
+          {
+            "url": "/product-category/other/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "flag-of-galicia-and-lodomeria",
+              "kingdom-of-prussia-flag",
+              "scottish-lion-flag"
+            ]
+          },
+          {
+            "url": "/product-category/clearance/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "1/6 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "3 overlap",
+      "evidence": {
+        "page1Url": "https://www.corwin-arms.com/product-category/firearms/",
+        "page2Url": "https://www.corwin-arms.com/product-category/firearms/?page=2",
+        "page1First3": [
+          "mosin-rifle-bend-bolt-actions-in-7-62x54r",
+          "spanish-mauser-8x57mm",
+          "spanish-mauser-8x57mm-2"
+        ],
+        "page2First3": [
+          "mosin-rifle-bend-bolt-actions-in-7-62x54r",
+          "spanish-mauser-8x57mm",
+          "spanish-mauser-8x57mm-2"
+        ],
+        "overlapCount": 3
+      },
+      "reason": "All page2 first-3 slugs match page1 — pagination silently ignored (Mistake 26)"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.corwin-arms.com/product-category/firearms/?orderby=date",
+        "withoutSortUrl": "https://www.corwin-arms.com/product-category/firearms/",
+        "withSortFirst": "spanish-mauser-8x57mm-2",
+        "withoutSortFirst": "mosin-rifle-bend-bolt-actions-in-7-62x54r",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 18,
+      "actual": 18,
+      "evidence": {
+        "storedCount": 18,
+        "actualCount": 18,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 0
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "LiteSpeed"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "notes": "/shop redirects to homepage (301). Divi theme. LiteSpeed server with LiteSpeed Cache plugin. PHP 8.3.29. WooCommerce 10.6.2 / WordPress 6.9.4. cpfence on wp-login only. No JS overlays (no Searchspring/Ecwid). Tiny site — 18 products across 5 categories, all single-page.",
+    "hasWaf": false,
+    "perPage": 50,
+    "wafType": null,
+    "crawlers": {
+      "catalog": {
+        "note": "18 products total, all fit in 1 page per category. Single API call covers all.",
+        "method": "api-full-walk"
+      },
+      "watermark": {
+        "method": "api-date-since-watermark",
+        "apiParams": "orderby=modified&order=desc&modified_after={watermark}&per_page=50",
+        "apiEndpoint": "/wp-json/wp/v2/product",
+        "storeApiParams": "orderby=date&order=desc&per_page=100",
+        "storeApiEndpoint": "/wp-json/wc/store/v1/products",
+        "dateFilterEvidence": "WP REST v2 modified_after=2026-01-01 returns x-wp-total:12 (correct). Store API after=2026-04-01 returns x-wp-total:0 (correct). Monotonic: id=891 mod=2026-03-05 > id=2023 mod=2026-02-26 > id=2106 mod=2026-01-03.",
+        "dateFilterVerified": true,
+        "dateFilterVerifiedAt": "2026-04-11"
+      }
+    },
+    "platform": "woocommerce",
+    "sortParam": "?orderby=date",
+    "hasCaptcha": false,
+    "captchaNote": "Divi theme contact form captcha text in JS — not a site-wide captcha. wp-login.php has cpfence redirect but admin-only.",
+    "catalogUrls": [
+      "/product-category/firearms/",
+      "/product-category/axes/",
+      "/product-category/firearms-accessories/",
+      "/product-category/swords-and-knives/",
+      "/product-category/other/",
+      "/product-category/clearance/"
+    ],
+    "lastVerified": "2026-04-11",
+    "sortVerified": true,
+    "categoryStats": {
+      "axes": {
+        "catId": 33,
+        "count": 8,
+        "pages": 1
+      },
+      "other": {
+        "catId": 28,
+        "count": 3,
+        "pages": 1
+      },
+      "firearms": {
+        "catId": 22,
+        "count": 3,
+        "pages": 1
+      },
+      "clearance": {
+        "catId": 29,
+        "count": 0,
+        "pages": 0
+      },
+      "swords-and-knives": {
+        "catId": 25,
+        "count": 2,
+        "pages": 1
+      },
+      "firearms-accessories": {
+        "catId": 23,
+        "count": 2,
+        "pages": 1
+      }
+    },
+    "sortVerifiedAt": "2026-04-11",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "no-waf",
+    "wafLastProbedAt": "2026-04-11",
+    "wafProbeEvidence": "server: LiteSpeed on all probes. No cf-ray, no x-sucuri, no sgcaptcha. SQLi/XSS 403s from LiteSpeed ModSecurity (path-selective, not a WAF CDN). wp-login.php redirects to cpfence captcha (admin-only, does not affect crawling).",
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "lastVerifiedMethod": "7-phase audit",
+    "productCountMethod": "wp-rest-x-wp-total + store-api-x-wp-total",
+    "sortVerifiedMethod": "Store API orderby=date vs orderby=price counter-control (date: id=2106 first, price: id=637 first). HTML select confirms value=\"date\" for \"Sort by latest\".",
+    "expectedProductCount": 18,
+    "productCountVerifiedAt": "2026-04-11"
+  }
+}

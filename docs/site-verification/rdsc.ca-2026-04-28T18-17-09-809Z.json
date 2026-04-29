@@ -1,0 +1,200 @@
+{
+  "siteId": "cmltxz8k2001w89xae5sr2vew",
+  "domain": "rdsc.ca",
+  "timestamp": "2026-04-28T18:17:09.809Z",
+  "durationMs": 27415,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "1/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/new-products.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "die-free-co-quick-stop-black.html",
+              "leupold-vx-5hd-gen-2-2-10x42mm-cds-zl2-side-focus-illuminated-sfp-firedot-duplex-reticle.html",
+              "canuck-defender-marine-pump-shotgun-walnut-stock-14-00-barrel-12ga-nickel-walnut.html"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "3 overlap",
+      "evidence": {
+        "page1Url": "https://www.rdsc.ca/new-products.html",
+        "page2Url": "https://www.rdsc.ca/new-products.html?p=2",
+        "page1First3": [
+          "die-free-co-quick-stop-black.html",
+          "leupold-vx-5hd-gen-2-2-10x42mm-cds-zl2-side-focus-illuminated-sfp-firedot-duplex-reticle.html",
+          "canuck-defender-marine-pump-shotgun-walnut-stock-14-00-barrel-12ga-nickel-walnut.html"
+        ],
+        "page2First3": [
+          "die-free-co-quick-stop-black.html",
+          "leupold-vx-5hd-gen-2-2-10x42mm-cds-zl2-side-focus-illuminated-sfp-firedot-duplex-reticle.html",
+          "canuck-defender-marine-pump-shotgun-walnut-stock-14-00-barrel-12ga-nickel-walnut.html"
+        ],
+        "overlapCount": 3
+      },
+      "reason": "All page2 first-3 slugs match page1 — pagination silently ignored (Mistake 26)"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "FAIL",
+      "expected": "first product slug differs with sort",
+      "actual": "same (sort has no effect)",
+      "evidence": {
+        "withSortUrl": "https://www.rdsc.ca/new-products.html?product_list_order=new",
+        "withoutSortUrl": "https://www.rdsc.ca/new-products.html",
+        "withSortFirst": "die-free-co-quick-stop-black.html",
+        "withoutSortFirst": "die-free-co-quick-stop-black.html",
+        "counterControlUrl": "https://www.rdsc.ca/new-products.html?product_list_order=price&product_list_dir=asc",
+        "counterControlFirst": "die-free-co-quick-stop-black.html"
+      },
+      "reason": "Sort parameter and counter-control both return same first product — sort may be silently ignored"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 9089,
+      "actual": 11012,
+      "evidence": {
+        "storedCount": 9089,
+        "actualCount": 11012,
+        "methodUsed": "sitemap",
+        "driftPct": 21
+      },
+      "reason": "Count drifted 21% (stored=9089, actual=11012)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f380fedeed6a20a-YYZ",
+          "set-cookie": "PHPSESSID=c00c4418129666d88f36cd946445e74f; expires=Tue, 28 Apr 2026 19:17:10 GMT; Max-Age=3600; path=/; domain=rdsc.ca; secure; HttpOnly; SameSite=Lax"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "RDSC",
+    "notes": "Magento 2.x (NOT BigCommerce — earlier audit was wrong). Cloudflare passive (cf-ray on all responses, no active filtering). Sort: <select id=\"sorter\"> with merchant-custom default value \"new\" → ?product_list_order=new (verified). Pagination: ?p=N (Magento 2 standard, perPage 24). Single catalog URL /new-products.html covers entire site (9089 products, sorted newest by default).",
+    "budget": 20,
+    "domain": "rdsc.ca",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 24,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "magento2",
+    "searchUrl": "/catalogsearch/result/?q={keyword}",
+    "sortParam": "?product_list_order=new",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/new-products.html"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": null,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive: cf-ray on every 200, all 8 batches passed (no challenges, no rate-limit, no rule-fires)",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-08T06:49:54Z",
+    "wafProbeEvidence": {
+      "noUaAllowed": true,
+      "botUaBlocked": false,
+      "cfRayExample": "9e8f55b27b83abca-YYZ",
+      "xssRuleFired": false,
+      "sqliRuleFired": false,
+      "multiUaAllowed": true,
+      "rapidBurstStatus": "all 10 returned 200",
+      "cfHeadersDetected": [
+        "server: cloudflare",
+        "cf-ray",
+        "cf-cache-status"
+      ],
+      "honeypotPathsStatus": "404 (Magento 404, not WAF)",
+      "honeypotPathsBlocked": false
+    },
+    "paginationPattern": {
+      "type": "query",
+      "perPage": 24,
+      "template": "p"
+    },
+    "productCountMethod": {
+      "notes": "Read <span class=\"toolbar-number\">N</span> (3rd occurrence) on category page 1; verified 9089 on /new-products.html 2026-04-08",
+      "method": "magento2-toolbar-count"
+    },
+    "expectedProductCount": 9089
+  }
+}

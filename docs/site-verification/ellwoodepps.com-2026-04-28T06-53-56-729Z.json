@@ -1,0 +1,235 @@
+{
+  "siteId": "cmltxz6eo000189xayn5wvgkr",
+  "domain": "ellwoodepps.com",
+  "timestamp": "2026-04-28T06:53:56.728Z",
+  "durationMs": 41664,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "6 URLs, each returning ≥1 product",
+      "actual": "5/6 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/hunting/firearms.html",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "norinco-jw25a.html",
+              "canuck-recon-2-black-synth.html",
+              "mossberg-42m.html"
+            ]
+          },
+          {
+            "url": "/hunting/ammunition.html",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "winchester-varmint-hv-22-win-mag-30-gr-polymer-tip-v-max-50-rd.html",
+              "nosler-match-grade-308-win-168gr-custom-competition-20-rd.html",
+              "hodgdon-powder-h4831sc-rifle-short-grain-1-lb.html"
+            ]
+          },
+          {
+            "url": "/hunting/accessories.html",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "hornady-bullets-a-tip-match-30cal-308-176gr-100-ct.html",
+              "hornady-bullets-a-tip-match-6-5mm-264-135gr-100-ct.html",
+              "hornady-lock-n-load-modified-case-223-rem.html"
+            ]
+          },
+          {
+            "url": "/hunting/parts.html",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/hunting/bow.html",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "excalibur-revx-crossbow-package-mossy-oak-country-dna.html",
+              "excaliur-matrix-355.html",
+              "excalibur-mag-air.html"
+            ]
+          },
+          {
+            "url": "/hunting/sets.html",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "raffaello-trilogy-3-gun-set.html",
+              "e-dodson-louth-ireland-percussion-sxs-sporting-set.html",
+              "j-purdy-sons-side-by-side-side-lock-ejector-matched-pair-set.html"
+            ]
+          }
+        ]
+      },
+      "reason": "1/6 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.ellwoodepps.com/hunting/firearms.html",
+        "page2Url": "https://www.ellwoodepps.com/hunting/firearms.html?p=2",
+        "page1First3": [
+          "norinco-jw25a.html",
+          "canuck-recon-2-black-synth.html",
+          "mossberg-42m.html"
+        ],
+        "page2First3": [
+          "carl-gustaf-1896.html",
+          "savage-mark-i-fvt-single-shot-rimfire-target.html",
+          "browning-bar-mk-3-ovix-334117.html"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://www.ellwoodepps.com/hunting/firearms.html?dir=desc&order=news_from_date",
+        "withoutSortUrl": "https://www.ellwoodepps.com/hunting/firearms.html",
+        "withSortFirst": "carl-gustaf-1896.html",
+        "withoutSortFirst": "carl-gustaf-1896.html",
+        "counterControlUrl": "https://www.ellwoodepps.com/hunting/firearms.html?product_list_order=price&product_list_dir=asc",
+        "counterControlFirst": "winchester-wildcat.html"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 23545,
+      "actual": 33435,
+      "evidence": {
+        "storedCount": 23545,
+        "actualCount": 33435,
+        "methodUsed": "sitemap",
+        "driftPct": 42
+      },
+      "reason": "Count drifted 42% (stored=23545, actual=33435)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f34271c9d6dde04-YYZ",
+          "set-cookie": "om_frontend=ptsp9cmrldttuqi66ali4ffvpn; expires=Tue, 28-Apr-2026 07:53:56 GMT; Max-Age=3600; path=/; domain=ellwoodepps.com; secure; HttpOnly; SameSite=None"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Ellwood Epps",
+    "notes": "Magento 1.x with custom \"epps_interface\" theme. Cloudflare is PASSIVE (no challenge). HTTP with any UA works. | needsPlaywright=FALSE. | Platform layout: <ol class=\"products-list\"><li class=\"item\"> (OLD Magento 1.x, not 2.x). Each <li.item> contains <table class=\"firearm-table\"> with <td class=\"firearm-name\"> holding the title+link. | Pagination: ?p=N query param. perPage=20. \".toolbar .amount\" shows \"Items 1 to 20 of N\". | Sort: <select class=\"sort-by\"> options include news_from_date. Newest-first URL = ?dir=desc&order=news_from_date. Verified — sort persists across ?p=2. | Default category order is admin \"position\"; do not rely on it for watermark — always apply sortParam. | Product count via /sitemap.xml (32,703 depth-1 product .html URLs after filtering static+category pages). HEAD-tested 5 random → 200. lastmod varies (1,573 unique dates) — sitemap IS usable for date-watermark. | Category totals (.toolbar-amount): /hunting/firearms.html=2,728, /hunting/ammunition.html=3,759, /hunting/accessories.html=16,997, /hunting/bow.html=58, /hunting/sets.html=3. Total hunting-relevant = 23,545. | Removed from catalogUrls: /hunting/parts.html (empty), /hunting/gunsmith.html (service page), /hunting/miscellaneous.html (not firearm-relevant). | No Magento REST API (/rest/V1/products → 404). No public JSON endpoint. robots.txt references only /sitemap.xml (flat, no index). | FIX 2026-04-06: Product URLs follow /catalog/product/view/id/NN/s/slug/category/NN/ — the trailing /category/ breadcrumb segment tripped the generic isNavUrl filter in GenericRetailAdapter and dropped 84% of products (firearms 1/20, accessories 0/20, ammunition 16/20). Fixed in generic-retail.ts by whitelisting the Magento 1 product-view URL pattern /catalog/product/view/id/\\d+/ before the nav check in extractCatalogProducts. Post-fix extraction: firearms 20/20, accessories 20/20, ammunition 20/20, bow 20/20, sets 3/3. The existing \".products-list .item\" selector was sufficient all along; extractTitle already picked up td.firearm-name via the [class*=\"name\"] probe. The previous \"JS-rendered\" / \"custom layout needs dedicated selector\" claims were wrong — it was a URL-filter regression. | Audit dates: 2026-04-06.",
+    "budget": 90,
+    "domain": "ellwoodepps.com",
+    "hasWaf": false,
+    "adapter": "generic-retail",
+    "perPage": 20,
+    "timeout": 20000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "Sort by news_from_date desc works and survives ?p=N pagination. Verified 2026-04-06.",
+        "method": "navigate-from-watermark",
+        "sortParam": "?dir=desc&order=news_from_date"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards (<ol class=\"products-list\">)",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "magento-1.x",
+    "searchUrl": "/catalogsearch/result/?q={keyword}",
+    "sortParam": "?dir=desc&order=news_from_date",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/hunting/firearms.html",
+      "/hunting/ammunition.html",
+      "/hunting/accessories.html",
+      "/hunting/parts.html",
+      "/hunting/bow.html",
+      "/hunting/sets.html"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "query",
+      "perPage": 20,
+      "template": "p"
+    },
+    "productCountMethod": {
+      "notes": "Flat sitemap: 32811 total entries. ~32,703 are products (root /slug.html). Hunting-relevant subset ~23,545 via sum of hunting top categories.",
+      "filter": "depth=1 && path ends with .html && not in staticPaths && not in topLevelCategories",
+      "method": "sitemap-index",
+      "sitemapUrl": "/sitemap.xml"
+    },
+    "expectedProductCount": 23545
+  }
+}

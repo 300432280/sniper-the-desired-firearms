@@ -1,0 +1,733 @@
+{
+  "siteId": "cmltxz7xc001d89xaa7xlt78k",
+  "domain": "jobrookoutdoors.com",
+  "timestamp": "2026-04-28T18:06:45.471Z",
+  "durationMs": 149858,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "49 URLs, each returning ≥1 product",
+      "actual": "48/49 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/hunt/firearms/shotguns/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "canuck-renegade.html",
+              "12-ga-3-honcho-pump-930242.html",
+              "engage-12-ga.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearms/pal-courses/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/hunt/firearms/muzzleloading/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "buckstalker-combo.html",
+              "50-cal-buckstalker-real-tree-24.html",
+              "buckstalker-blk-blued-24-rings-base-inc.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearms/centerfire-rifles/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "wk180-magpul-edition.html",
+              "223-rem-axis-2-xp-new-gray.html",
+              "223-rem-axis-2-xp.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearms/rimfire-rifles/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "22-lr-tm-22-cadet-18-tan.html",
+              "21-sharp-mark11-fv-sr-21-sharp-165.html",
+              "22-lr-457-american-20.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/riflescopes/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "vortex-diamondback-hp-4-16x42-dead-hold-bdc-moa.html",
+              "diamondback-tactical-3-9x40-vmr-1-opp.html",
+              "red-hot-3-12x44-w-muzzle-loader-dial.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/pistol-scopes/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "trophy-xlt-2-6x-32-matte-multi-x.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/red-dot/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "viper-red-dot.html",
+              "45-degree-mount-62641913.html",
+              "delta-point-micro-3-moa-dot-glock.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/ar/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "fastfire-3-w-pic-mt-8-moa.html",
+              "ar-332-3x32-mm-bal-cq-w-ff3.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/rimfire-scopes/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "fx-1-rimfire-4x28-fine-duplex.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/binoculars/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "diamondback-10x42.html",
+              "diamondback-hd-12x50.html",
+              "diamondback-hd-10x50.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/spotting-scopes/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "crossfire-hd-16-48x65-straight-spotting-scope.html",
+              "diamondback-hd-16-48x65-angled.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/rangefinders/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "crossfire-hd-1400-66942715.html",
+              "rx-2800-tbr.html",
+              "triumph-hd-850-range-finder.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/tripods-window-mounts/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "leupold-compact-tripod.html",
+              "vortex-car-window-mount.html",
+              "vortex-summit-xlt-tripod-kit.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/rings/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "sport-ring-1-low-80.html",
+              "premier-scope-rings-1-med-100.html",
+              "premier-scope-rings-34-mm.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/bases/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "rem-783-base-matte-48477.html",
+              "28-base.html",
+              "3b-base.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/tools/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "fat-wrench-digital.html",
+              "fat-wrench.html"
+            ]
+          },
+          {
+            "url": "/hunt/optics/scope-accessories/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "m-lok-rail-pic-rail-4-8slots.html",
+              "vortex-switchview-throwlever.html",
+              "vortex-sure-fit-medium.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/mags/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "bx1-left-hand-mag.html",
+              "tikka-t1x-17hmr-magazine-10rd.html",
+              "remington-597-mag-clear-30-rnd.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/choke-tubes/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "carlsons-sporting-clay-hd-20ga-beretta-hp-choke-tu.html",
+              "briley-12ga-extended-beretta-optima-choke-tube.html",
+              "carlsons-sporting-clays-hd-skeet-12-ga-beretta-opt.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/slings/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "max-grip-sling-fde.html",
+              "qd-swivels.html",
+              "claw-rifle-sling.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/cleaning-maintenance/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "30-cal-brush.html",
+              "boreguide.html",
+              "12-ga-brush.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/cases/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "10-gun-steel-cabinet.html",
+              "crossfire-flex.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/holsters/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "8rab-12ga-tactical-stripper.html",
+              "classic-owb-holster-cz-shawdow-2-rh.html",
+              "signature-mag-pouch.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/cartridge-holders/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "butt-stock-shell-holder-rifle.html",
+              "butt-stock-shell-holder-shotgun.html",
+              "12-ga-shell-holder.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/muzzleloading-gear/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "hunter-powder-measurer-38617994.html",
+              "hunter-powder-measurer.html"
+            ]
+          },
+          {
+            "url": "/hunt/firearm-accessories/muzzleloading-gear-1682249/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "cva-cleaning-brush-50cal.html",
+              "50-cal-3-ramrod-extention.html"
+            ]
+          },
+          {
+            "url": "/hunt/range-accessories/bipods-shooting-sticks/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "tac-pod-pivot-w-adpt-9-13.html",
+              "xla-bipod-9-13.html",
+              "xla-bipod-6-9-41493835.html"
+            ]
+          },
+          {
+            "url": "/hunt/range-accessories/rests-bags/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "rock-jr.html",
+              "universal-frt-bag-wide.html",
+              "rock-w-rear-bag-filled.html"
+            ]
+          },
+          {
+            "url": "/hunt/range-accessories/targets/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "ar-40-airgun-target.html",
+              "fb65-exploding-target.html",
+              "triumph-pop-pack.html"
+            ]
+          },
+          {
+            "url": "/hunt/range-accessories/eyes-ears/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "youth-womens-shooting-glasses.html",
+              "walker-foam-ear-plug-singles.html",
+              "crosshair-shooting-glasses.html"
+            ]
+          },
+          {
+            "url": "/hunt/range-accessories/clay-throwers/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "clay-launcher.html"
+            ]
+          },
+          {
+            "url": "/hunt/range-accessories/bipods-trigger-sticks/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "tipi-snow.html"
+            ]
+          },
+          {
+            "url": "/hunt/gun-cases/soft-cases/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "beretta-vci-gunsock-52in.html",
+              "atacs-52-rifle-case.html",
+              "plainsman-blk-44s-43368672.html"
+            ]
+          },
+          {
+            "url": "/hunt/gun-cases/hard-cases/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "se-single-rifle-gun-case.html",
+              "express-gun-case.html",
+              "double-gun-case-6499nz.html"
+            ]
+          },
+          {
+            "url": "/hunt/gun-parts/stocks/",
+            "status": 200,
+            "productCount": 11,
+            "sampleSlugs": [
+              "xrs-chassis-system-rem-sa-blk.html",
+              "xrs-tikka-t1x-rh-fde.html",
+              "lss-rimfire-chassis-savage-mk2-cerakote-fde.html"
+            ]
+          },
+          {
+            "url": "/hunt/gun-parts/barrels/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "troy-industries-try-squid-grip-7-pack-blk.html",
+              "magpul-industries-magpul-moe-scout-mount-right-blk.html",
+              "magpul-industries-magpul-moe-scout-mount-left-blk.html"
+            ]
+          },
+          {
+            "url": "/hunt/gun-parts/ar-parts/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "mojo-mag-well-grip.html",
+              "vigilante-mojo-19714257.html",
+              "vigilante-mojo.html"
+            ]
+          },
+          {
+            "url": "/hunt/gun-parts/triggers/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "magpul-mde-vertical-grip.html"
+            ]
+          },
+          {
+            "url": "/hunt/air-guns-sling-shot/over-495-fps/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "swarm-viper-gen3i-177-1266fps.html",
+              "xm1-syn-22-cal-4xscope-combo.html",
+              "varmint-177-w-scope-1000-fps-pal-required.html"
+            ]
+          },
+          {
+            "url": "/hunt/air-guns-sling-shot/under-495-fps/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "nxg-kit-177-w-4x-scope-multipump.html",
+              "2840-camo-w-scope.html",
+              "ruger-explorer-youth-177-495-fps.html"
+            ]
+          },
+          {
+            "url": "/hunt/air-guns-sling-shot/airgun-access/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "air-gun-trap.html"
+            ]
+          },
+          {
+            "url": "/hunt/knifes/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "paraforce-lockback-knife.html",
+              "browning-buckmark-moneyclip.html",
+              "tin-knife-2025.html"
+            ]
+          },
+          {
+            "url": "/archery/bows/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "x9-td-recurve-kit-45-lb-rh.html",
+              "consequence-31-rh-50-fde.html",
+              "emerse-rh.html"
+            ]
+          },
+          {
+            "url": "/archery/crossbow/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "blackhawk-360-crossbow-w-rope-cocker.html",
+              "saga-405-crossbow.html",
+              "constrictor-cdx-stoke.html"
+            ]
+          },
+          {
+            "url": "/archery/arrows/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "arrow-shaft-size-65-bowhunter.html",
+              "max-hunter-sunset-gold-vane-100.html",
+              "ffp-225-100ct-wg.html"
+            ]
+          },
+          {
+            "url": "/archery/broadhead-specialty-pts/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "eskimo-125gr-4-bl.html",
+              "razortrick-4-blade.html",
+              "wacem-100gr-xbox.html"
+            ]
+          },
+          {
+            "url": "/archery/sights/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "dc-sight-deluxe-peep-system.html",
+              "20-20-40mm-scope-kit-rh.html",
+              "raptor-peep-7-32.html"
+            ]
+          },
+          {
+            "url": "/archery/bow-accessories/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "bow-scale-30.html",
+              "complete-fish-arrow-carp-pt1020-c.html",
+              "2-blade-chartreuse-1034-cbs-bottle-slide.html"
+            ]
+          }
+        ]
+      },
+      "reason": "1/49 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.jobrookoutdoors.com/hunt/firearms/shotguns/",
+        "page2Url": "https://www.jobrookoutdoors.com/hunt/firearms/shotguns/page2.html?sort=newest&limit=100",
+        "page1First3": [
+          "canuck-renegade.html",
+          "12-ga-3-honcho-pump-930242.html",
+          "engage-12-ga.html"
+        ],
+        "page2First3": [
+          "12-ga-3-28-sx4-hbrd-hnt-wdlnd.html",
+          "12ga-35-sx4-wtfl-max-7-28.html",
+          "12ga-35-sx4-wtfl-mobl-28.html"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.jobrookoutdoors.com/hunt/firearms/shotguns/?sort=newest&limit=100",
+        "withoutSortUrl": "https://www.jobrookoutdoors.com/hunt/firearms/shotguns/",
+        "withSortFirst": "12-ga-3-28-sx4-hbrd-hnt-wdlnd.html",
+        "withoutSortFirst": "canuck-renegade.html",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 1669,
+      "actual": 3969,
+      "evidence": {
+        "storedCount": 1669,
+        "actualCount": 3969,
+        "methodUsed": "sitemap",
+        "driftPct": 138
+      },
+      "reason": "Count drifted 138% (stored=1669, actual=3969)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f3800aeceb274a7-YYZ",
+          "set-cookie": "session_id=b99cd9f7ea95c7f7b39f07a616b1f572; expires=Tue, 28-Apr-2026 18:36:40 GMT; Max-Age=1795; path=/; secure; HttpOnly; SameSite=none,COOKIELAW=optin; expires=Wed, 28-Apr-2027 18:06:45 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_SOCIAL=1; expires=Wed, 28-Apr-2027 18:06:45 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_STATS=1; expires=Wed, 28-Apr-2027 18:06:45 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_ADS=1; expires=Wed, 28-Apr-2027 18:06:45 GMT; Max-Age=31536000; path=/; secure; SameSite=none,__cf_bm=SGw_hk0d4oZ.122PujAbKzni2_opzg9tcjLh6UkFyXU-1777399605.5627565-1.0.1.1-L2aSzp9i4_HsxkMOHb5l_3k3cqGSBERNx1mKkGLAmDN4snwcLWeoWDZi1zL44d6UBAEKyEXcGqL_NJBsLNHCrAu0n9ewb9KYWgAHv84FB59yVgVbBXAjghoSRBOueJpZ; HttpOnly; Secure; Path=/; Domain=www.jobrookoutdoors.com; Expires=Tue, 28 Apr 2026 18:36:45 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Jo Brook Outdoors",
+    "notes": "Platform: Shoplightspeed (NOT Shopify). Previous profile mis-identified as shopify adapter and had empty catalogUrls. /products.json returns 404.\nShoplightspeed product URL pattern: /slug.html (flat, no subpath). Sitemap /sitemap.xml is monolithic (5324 locs, 4007 product .html entries).\nPagination: rel=\"next\" link points to /category/pageN.html (suffix-replace appending \"pageN.html\" to category path). Confirmed via rel=\"next\" header on /hunt/firearms/shotguns/ → /page2.html → /page3.html (27 products, 3 pages).\nSort: ?sort=newest. Read directly from the sort dropdown anchors: <a href=\"...?sort=newest\">Newest products</a>. Verified (a) p1 default vs p1 newest return different first products, (b) p1 newest / p2 newest / p3 newest are all distinct sets (sort survives pagination).\nTop-level sections (/hunt/, /archery/, /hunt/firearms/, /hunt/optics/) are nav-only landings — onPage=0 direct products. Must use mid-level or leaf categories as catalogUrls.\nMid-level parents that DO list products (like /archery/bows/, /hunt/calls/, /hunt/knifes/) paginate through ALL descendants recursively (verified: /archery/bows/ walks 145 products across 13 pages; /hunt/calls/ walks 24 including sub-cat items).\nFirearm-relevant catalogUrls mix mid-level parents (for nodes where parent lists products) and leaves (for nav-only parents). 69 catalogUrls total. Non-firearm sections /outdoor/, /fish/, /paddle/, /cycle/ excluded — Jo Brook cleanly separates outdoor/cycle/fish from hunt/archery.\nWAF: Cloudflare passive (cf-ray header) — no challenge, plain axios works. Previous profile had needsPlaywright:true and wafType:unknown; both were wrong (stale flag). HTTP-only is sufficient.\nAdapter: GenericRetailAdapter — verified extracts 12/12 products with title+url+price on /hunt/firearms/shotguns/?sort=newest.\nexpectedProductCount 2716 = /hunt/ (1844) + /archery/ (872) from site-displayed count text. Total sitemap is 4007 but ~1300 are fish/cycle/outdoor non-firearm.\nKnown sanity check: current lastWatermarkUrl /consequence-31-rh-50-fde.html matches the CURRENT first product of /archery/bows/?sort=newest, proving T1 watermark mechanism is semantically correct.\nOn-page `NN Products` count text matches walked count exactly for every verified leaf (shotguns 27/27, centerfire-rifles 52/52, riflescopes 44/44, bows 145/145, calls 24/24). No drift. Production buildPaginatedUrl suffix-replace fallback at catalog-crawler.ts:127-136 handles baseUrls ending in '/' correctly by appending the template. | 2026-04-12 re-audit: Mistake 26 confirmed (same as sites 9/11). paginationPattern was BROKEN (.html match never hits on / URLs). Fixed with sortParam+limit=100 anchor. ?limit=100 reduces pages 8x. expectedProductCount 2716→1669 (prior inflated from sitemap). 4 zero-product catalogUrls removed.",
+    "budget": 20,
+    "domain": "jobrookoutdoors.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 100,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "json-ld"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": null,
+          "productDiscovery": null
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "Verified: ?sort=newest sort works and survives pagination (page1→page2→page3 all distinct, strictly newest-first). The current lastWatermarkUrl (consequence-31-rh-50-fde.html) matches the actual first product of /archery/bows/?sort=newest today, confirming T1 mechanism. Use navigate-from-watermark with ?sort=newest appended to each catalogUrl.",
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "notes": "Shoplightspeed platform — no products.json. All data from HTML catalog pages via GenericRetailAdapter.",
+          "source": "html",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "stock",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "shoplightspeed",
+    "searchUrl": "/search?q={keyword}&type=product",
+    "sortParam": "?sort=newest&limit=100",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/hunt/firearms/shotguns/",
+      "/hunt/firearms/pal-courses/",
+      "/hunt/firearms/muzzleloading/",
+      "/hunt/firearms/centerfire-rifles/",
+      "/hunt/firearms/rimfire-rifles/",
+      "/hunt/optics/riflescopes/",
+      "/hunt/optics/pistol-scopes/",
+      "/hunt/optics/red-dot/",
+      "/hunt/optics/ar/",
+      "/hunt/optics/rimfire-scopes/",
+      "/hunt/optics/binoculars/",
+      "/hunt/optics/spotting-scopes/",
+      "/hunt/optics/rangefinders/",
+      "/hunt/optics/tripods-window-mounts/",
+      "/hunt/optics/rings/",
+      "/hunt/optics/bases/",
+      "/hunt/optics/tools/",
+      "/hunt/optics/scope-accessories/",
+      "/hunt/firearm-accessories/mags/",
+      "/hunt/firearm-accessories/choke-tubes/",
+      "/hunt/firearm-accessories/slings/",
+      "/hunt/firearm-accessories/cleaning-maintenance/",
+      "/hunt/firearm-accessories/cases/",
+      "/hunt/firearm-accessories/holsters/",
+      "/hunt/firearm-accessories/cartridge-holders/",
+      "/hunt/firearm-accessories/muzzleloading-gear/",
+      "/hunt/firearm-accessories/muzzleloading-gear-1682249/",
+      "/hunt/range-accessories/bipods-shooting-sticks/",
+      "/hunt/range-accessories/rests-bags/",
+      "/hunt/range-accessories/targets/",
+      "/hunt/range-accessories/eyes-ears/",
+      "/hunt/range-accessories/clay-throwers/",
+      "/hunt/range-accessories/bipods-trigger-sticks/",
+      "/hunt/gun-cases/soft-cases/",
+      "/hunt/gun-cases/hard-cases/",
+      "/hunt/gun-parts/stocks/",
+      "/hunt/gun-parts/barrels/",
+      "/hunt/gun-parts/ar-parts/",
+      "/hunt/gun-parts/triggers/",
+      "/hunt/air-guns-sling-shot/over-495-fps/",
+      "/hunt/air-guns-sling-shot/under-495-fps/",
+      "/hunt/air-guns-sling-shot/airgun-access/",
+      "/hunt/knifes/",
+      "/archery/bows/",
+      "/archery/crossbow/",
+      "/archery/arrows/",
+      "/archery/broadhead-specialty-pts/",
+      "/archery/sights/",
+      "/archery/bow-accessories/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-12",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "mistake26Note": "LightSpeed eCom ?page=N silently ignored. Fixed with suffix-replace match on full sortParam including &limit=100. Verified page2.html?sort=newest&limit=100 returns different products from page 1.",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Cloudflare present (cf-ray header) but passive — plain axios with default desktop UA returns 200 with full product HTML. No challenge, no Playwright required.",
+      "steps": [
+        "Use plain HTTP via project http-client",
+        "Desktop Chrome UA works fine"
+      ],
+      "method": "plain-http"
+    },
+    "mistake26Fixed": true,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive (confirmed)",
+    "catalogUrlsNote": "49 active (firearm-relevant) + 22 hidden (non-firearm, kept for reference). Total site has 71 leaf categories.",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-12",
+    "hiddenCatalogUrls": [
+      "/hunt/decoys/moose/",
+      "/hunt/decoys/waterfowl/",
+      "/hunt/decoys/turkey/",
+      "/hunt/calls/",
+      "/hunt/sitka/",
+      "/hunt/scents-and-lures/",
+      "/hunt/trail-cameras/",
+      "/hunt/treestands-and-blinds/",
+      "/hunt/packs/",
+      "/hunt/hunting-accessories/",
+      "/hunt/clothing/",
+      "/archery/targets/paper/",
+      "/archery/targets/bag/",
+      "/archery/targets/broadhead/",
+      "/archery/targets/3-d-backyard/",
+      "/archery/targets/3-d-club/",
+      "/archery/stabilizer/",
+      "/archery/releases/",
+      "/archery/arrow-rests/",
+      "/archery/quivers/",
+      "/archery/gloves-tabs-guards/",
+      "/archery/cases/"
+    ],
+    "paginationPattern": {
+      "type": "suffix-replace",
+      "match": "?sort=newest&limit=100",
+      "perPage": 100,
+      "template": "page{N}.html?sort=newest&limit=100"
+    },
+    "productCountMethod": {
+      "notes": "4,007 site-wide product .html entries. Firearm-relevant sections (/hunt/=1844 + /archery/=872) = ~2716 total. expectedProductCount reflects firearm-relevant scope.",
+      "method": "sitemap-index",
+      "endpoint": "/sitemap.xml",
+      "productUrlPattern": "\\.html$",
+      "excludePathPattern": "/(service|account|cart|sitemap|brands|collection|catalog)/"
+    },
+    "expectedProductCount": 1669
+  }
+}

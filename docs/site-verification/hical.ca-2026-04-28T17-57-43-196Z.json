@@ -1,0 +1,424 @@
+{
+  "siteId": "cmltxz8xi002789xaaqs4yaj2",
+  "domain": "hical.ca",
+  "timestamp": "2026-04-28T17:57:43.196Z",
+  "durationMs": 113813,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "22 URLs, each returning ≥1 product",
+      "actual": "0/22 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "https://hical.ca/product-category/firearm-accessories/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/firearm-parts/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/firearms/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/optics-mounts/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/tactical-accessories/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/cleaning-maintenance/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/storage-cases-transport/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/shooting-accessories-misc/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/hunting-survival-gear/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/uncategorized/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/optics-2/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/courses-training/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/raffle/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/shotgun/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/clearance/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/draws/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/gun-smith-services/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/new-arrivals/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/scopes/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/handguards/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/range-finder/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://hical.ca/product-category/night-vision-accessories/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "22/22 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 1677,
+      "actual": 1679,
+      "evidence": {
+        "storedCount": 1677,
+        "actualCount": 1679,
+        "methodUsed": "sitemap",
+        "driftPct": 0
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "FAIL",
+      "expected": "imperva-incapsula",
+      "actual": "incapsula",
+      "evidence": {
+        "storedWafType": "imperva-incapsula",
+        "detectedWafType": "incapsula",
+        "headers": {
+          "server": "Apache",
+          "set-cookie": "PHPSESSID=cd3f27958b8c40f7f9721e00100a1d0c; path=/,visid_incap_3254206=nzFTb8P1QniLVyk5ngOwZhb18GkAAAAAQUIPAAAAAAChFe32Mt85J5cK3JQE6bEw; expires=Wed, 28 Apr 2027 06:16:03 GMT; HttpOnly; path=/; Domain=.hical.ca,incap_ses_382_3254206=9zKnelKEgyakiL2VkyNNBRb18GkAAAAAit7ltjZY2XVDGIgXhh1o1w==; path=/; Domain=.hical.ca",
+          "x-iinfo": "14-50251776-50251779 SNNN RT(1777399016891 46135) q(0 0 0 -1) r(5 5) U6"
+        },
+        "httpStatus": 200
+      },
+      "reason": "WAF vendor mismatch: stored='imperva-incapsula', detected='incapsula' (Mistake 35)"
+    }
+  ],
+  "rawSiteProfile": {
+    "hasWaf": true,
+    "perPage": 16,
+    "wafType": "imperva-incapsula",
+    "crawlers": {
+      "catalog": {
+        "api": "wp-rest-v2",
+        "notes": "Tiers use date ranges: T2=7d, T3=8-21d, T4=22+d via modified_after/modified_before on /wp/v2/product",
+        "method": "api-date-range"
+      },
+      "watermark": {
+        "api": "wp-rest-v2",
+        "notes": "WP REST v2 /wp/v2/product works with modified_after. Store API also available. WC REST v3 requires auth (401). 7d=22 modified, 21d=49 modified. Monotonicity confirmed (IDs strictly decreasing across pages).",
+        "method": "api-date-since-watermark",
+        "orderBy": "modified",
+        "dateFilterField": "modified_after"
+      }
+    },
+    "platform": "woocommerce",
+    "sortParam": "?orderby=date",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "https://hical.ca/product-category/firearm-accessories/",
+      "https://hical.ca/product-category/firearm-parts/",
+      "https://hical.ca/product-category/firearms/",
+      "https://hical.ca/product-category/optics-mounts/",
+      "https://hical.ca/product-category/tactical-accessories/",
+      "https://hical.ca/product-category/cleaning-maintenance/",
+      "https://hical.ca/product-category/storage-cases-transport/",
+      "https://hical.ca/product-category/shooting-accessories-misc/",
+      "https://hical.ca/product-category/hunting-survival-gear/",
+      "https://hical.ca/product-category/uncategorized/",
+      "https://hical.ca/product-category/optics-2/",
+      "https://hical.ca/product-category/courses-training/",
+      "https://hical.ca/product-category/raffle/",
+      "https://hical.ca/product-category/shotgun/",
+      "https://hical.ca/product-category/clearance/",
+      "https://hical.ca/product-category/draws/",
+      "https://hical.ca/product-category/gun-smith-services/",
+      "https://hical.ca/product-category/new-arrivals/",
+      "https://hical.ca/product-category/scopes/",
+      "https://hical.ca/product-category/handguards/",
+      "https://hical.ca/product-category/range-finder/",
+      "https://hical.ca/product-category/night-vision-accessories/"
+    ],
+    "lastVerified": "2026-04-12",
+    "overlapNotes": {
+      "optics-2": "INCLUDED - 3 of 16 products (53247, 51766, 51736) NOT in optics-mounts parent",
+      "handguards": "INCLUDED - products also in firearm-accessories but separate top-level cat",
+      "all-products": "EXCLUDED - umbrella category (29) fully overlaps with main categories",
+      "night-vision-accessories": "INCLUDED - products also in tactical-accessories but separate top-level cat"
+    },
+    "wafWorkaround": {
+      "notes": "Incapsula JS challenge blocks curl/axios. Playwright solves challenge, gets 13 cookies. axios + cookies works for both API and HTML. iPhone UA required.",
+      "method": "cookie-cache",
+      "wafVendor": "imperva-incapsula",
+      "cookieNames": [
+        "visid_incap_3254206",
+        "incap_ses_1848_3254206",
+        "nlbi_3254206",
+        "PHPSESSID"
+      ],
+      "challengeType": "js-challenge-loading-page",
+      "storeApiAvailable": true,
+      "wcRestV3Available": false,
+      "wpRestV2Available": true
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "active-incapsula",
+    "catalogUrlStats": {
+      "draws": {
+        "count": 2,
+        "pages": 1,
+        "perPage": 16
+      },
+      "raffle": {
+        "count": 3,
+        "pages": 1,
+        "perPage": 16
+      },
+      "scopes": {
+        "count": 2,
+        "pages": 1,
+        "perPage": 16
+      },
+      "shotgun": {
+        "count": 3,
+        "pages": 1,
+        "perPage": 16
+      },
+      "firearms": {
+        "count": 226,
+        "pages": 15,
+        "perPage": 16
+      },
+      "optics-2": {
+        "count": 16,
+        "pages": 1,
+        "perPage": 16
+      },
+      "clearance": {
+        "count": 2,
+        "pages": 1,
+        "perPage": 16
+      },
+      "handguards": {
+        "count": 4,
+        "pages": 1,
+        "perPage": 16
+      },
+      "new-arrivals": {
+        "count": 2,
+        "pages": 1,
+        "perPage": 16
+      },
+      "range-finder": {
+        "count": 1,
+        "pages": 1,
+        "perPage": 16
+      },
+      "firearm-parts": {
+        "count": 256,
+        "pages": 16,
+        "perPage": 16
+      },
+      "optics-mounts": {
+        "count": 221,
+        "pages": 14,
+        "perPage": 16
+      },
+      "uncategorized": {
+        "count": 25,
+        "pages": 2,
+        "perPage": 16
+      },
+      "courses-training": {
+        "count": 3,
+        "pages": 1,
+        "perPage": 16
+      },
+      "gun-smith-services": {
+        "count": 2,
+        "pages": 1,
+        "perPage": 16
+      },
+      "firearm-accessories": {
+        "count": 805,
+        "pages": 51,
+        "perPage": 16
+      },
+      "cleaning-maintenance": {
+        "count": 69,
+        "pages": 5,
+        "perPage": 16
+      },
+      "tactical-accessories": {
+        "count": 96,
+        "pages": 6,
+        "perPage": 16
+      },
+      "hunting-survival-gear": {
+        "count": 5,
+        "pages": 1,
+        "perPage": 16
+      },
+      "storage-cases-transport": {
+        "count": 8,
+        "pages": 1,
+        "perPage": 16
+      },
+      "night-vision-accessories": {
+        "count": 9,
+        "pages": 1,
+        "perPage": 16
+      },
+      "shooting-accessories-misc": {
+        "count": 6,
+        "pages": 1,
+        "perPage": 16
+      }
+    },
+    "needsPlaywright": true,
+    "wafLastProbedAt": "2026-04-12",
+    "productCountDate": "2026-04-12",
+    "sortVerification": {
+      "method": "id-jump",
+      "result": "ALL 11 categories show different first products with ?orderby=date - sort works universally",
+      "verifiedOn": "2026-04-12",
+      "verifiedCategories": [
+        "magazines (def=55774, sort=57927, DIFFERENT)",
+        "sks-parts (def=6689, sort=58017, DIFFERENT)",
+        "rifles-bolt-action (def=45355, sort=58158, DIFFERENT)",
+        "red-dot-holographic-sights (def=40667, sort=52322, DIFFERENT)",
+        "oils-solvents (def=15992, sort=51603, DIFFERENT)",
+        "tactical-accessories (def=52239, sort=57963, DIFFERENT)",
+        "cleaning-maintenance (def=15992, sort=52799, DIFFERENT)",
+        "uncategorized (def=4523, sort=58040, DIFFERENT)",
+        "storage-cases-transport (def=21601, sort=52786, DIFFERENT)",
+        "optics-2 (def=53247, sort=55872, DIFFERENT)",
+        "shooting-accessories-misc (def=5565, sort=52836, DIFFERENT)"
+      ]
+    },
+    "wafProbeEvidence": "visid_incap_3254206 + incap_ses_1848_3254206 + nlbi_3254206 cookies, x-iinfo header, JS challenge \"Loading\" page on curl, Playwright bypass yields 13 cookies. NOT Sucuri (no x-sucuri-id). NOT Cloudflare (no cf-ray).",
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}/"
+    },
+    "parentInclusivity": {
+      "firearms": "INCLUSIVE - parent shows all child products, 15 pages",
+      "optics-mounts": "INCLUSIVE - parent shows all child products, 14 pages",
+      "firearm-accessories": "INCLUSIVE - parent shows all child products, 51 pages"
+    },
+    "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "productCountMethod": "wp-rest-v2-x-wp-total",
+    "expectedProductCount": 1677,
+    "dateFilterMonotonicity": {
+      "evidence": "API date desc: page1 last id=58057 > page2 first id=58055 (strictly decreasing)",
+      "verified": true,
+      "verifiedOn": "2026-04-12"
+    },
+    "paginationVerification": {
+      "stocks": "maxPage=6, p1=16, p2=16, pLast=9, total~89",
+      "magazines": "maxPage=17, p1=16, p2=16, pLast=2, total~258",
+      "verifiedOn": "2026-04-12",
+      "rifles-bolt-action": "maxPage=5, p1=16, p2=16, pLast=8, total~72"
+    }
+  }
+}

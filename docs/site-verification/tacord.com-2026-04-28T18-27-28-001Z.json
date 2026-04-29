@@ -1,0 +1,275 @@
+{
+  "siteId": "cmlvesqsd000t1a42rcq7qm8s",
+  "domain": "tacord.com",
+  "timestamp": "2026-04-28T18:27:28.001Z",
+  "durationMs": 36813,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "8 URLs, each returning ≥1 product",
+      "actual": "8/8 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/shotgun-parts-accessories/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "tactical-ordnance-barrel-clamp-gasket",
+              "beretta-1301-tactical-magazine-extension-kit",
+              "asa-1301-stock-adapter"
+            ]
+          },
+          {
+            "url": "/product-category/optic-mounts/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "tacord-1301-mini-mount",
+              "beretta-1301-tactical-aimpoint-micro-co-witness-ready-optic-mount",
+              "aridus-industries-beretta-1301-tactical-trijicon-rmr-crom"
+            ]
+          },
+          {
+            "url": "/product-category/optics/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "holosun-pic-rail-mount",
+              "holosun-hs507c-x2-sight",
+              "holosun-hs507comp-red"
+            ]
+          },
+          {
+            "url": "/product-category/shotguns/",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "tacord-beretta-1301-tactical",
+              "versa-max-pro",
+              "remington-870-tactical-shotgun12ga-pistol-grip-stock-r81205"
+            ]
+          },
+          {
+            "url": "/product-category/rifle-parts-accessories/",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "tacord-smith-wesson-1854-co-witness-mini-mount-trijicon-rmr",
+              "tacord-smith-wesson-1854-co-witness-mini-mount-aimpoint-acro",
+              "smith-enterprise-vortex-g6a3-flash-hider"
+            ]
+          },
+          {
+            "url": "/product-category/specials/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "tacord-mini-mount-tomm",
+              "tactical-ordnance-logo-hat",
+              "tacord-toque"
+            ]
+          },
+          {
+            "url": "/product-category/merchandise/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "tacord-shotgun-chamber-flag-12-gauge",
+              "tactical-ordnance-logo-hat",
+              "tacord-toque"
+            ]
+          },
+          {
+            "url": "/product-category/master-tools/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "tactical-ordnance-extended-choke-wrench"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://tacord.com/product-category/shotgun-parts-accessories/",
+        "page2Url": "https://tacord.com/product-category/shotgun-parts-accessories/page/2/",
+        "page1First3": [
+          "tactical-ordnance-barrel-clamp-gasket",
+          "beretta-1301-tactical-magazine-extension-kit",
+          "asa-1301-stock-adapter"
+        ],
+        "page2First3": [
+          "12ga-barrel-clamp",
+          "beretta-1301-lifter-pro-style",
+          "nordic-mxt-shotgun-magazine-extension-tube-kit-12ga"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://tacord.com/product-category/shotgun-parts-accessories/?orderby=date",
+        "withoutSortUrl": "https://tacord.com/product-category/shotgun-parts-accessories/",
+        "withSortFirst": "magpul-m-lok-aluminum-rail-3-slots",
+        "withoutSortFirst": "tactical-ordnance-barrel-clamp-gasket",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 203,
+      "actual": 206,
+      "evidence": {
+        "storedCount": 203,
+        "actualCount": 206,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "Apache"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Tactical Ordnance",
+    "notes": "woocommerce site. Uses default adapter behavior (no custom URLs). | 2026-04-12: WP REST wp/v2/product returns 401 (auth-gated). Store API works but adapter has no standalone Store-API path. Watermark downgraded api-date-since→navigate-from-watermark. perPage 50→12. 8 catalogUrls. Future: add Store-API-only fetchCatalogPage branch.",
+    "budget": 40,
+    "domain": "tacord.com",
+    "hasWaf": false,
+    "adapter": "woocommerce",
+    "perPage": 12,
+    "timeout": 15000,
+    "wafType": null,
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/shotgun-parts-accessories/",
+      "/product-category/optic-mounts/",
+      "/product-category/optics/",
+      "/product-category/shotguns/",
+      "/product-category/rifle-parts-accessories/",
+      "/product-category/specials/",
+      "/product-category/merchandise/",
+      "/product-category/master-tools/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-12",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "t1IntervalMin": 17,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "No WAF. Apache, no proxy headers.",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-12",
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}/"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product"
+    },
+    "expectedProductCount": 203
+  }
+}

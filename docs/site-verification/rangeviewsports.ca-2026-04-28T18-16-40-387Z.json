@@ -1,0 +1,319 @@
+{
+  "siteId": "cmltxz79y000s89xaef4uraxy",
+  "domain": "rangeviewsports.ca",
+  "timestamp": "2026-04-28T18:16:40.387Z",
+  "durationMs": 56829,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "10 URLs, each returning ≥1 product",
+      "actual": "9/10 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/firearms/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "benelli-super-nova-shotgun-black-3-12-12ga-28-barrel",
+              "benelli-m4-tactical-shotgun-titanium-cerakote-pistol-grip-stock-3-12ga-185-barrel",
+              "beretta-694-pro-sporting-shotgun-with-adjustable-tsk-stock"
+            ]
+          },
+          {
+            "url": "/product-category/firearm-accessories/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "in-store-only-upgrade-package",
+              "tikka-3hgr-overberget-adjustable-sling-orange",
+              "noveske-kx3-556p-flaming-pig-flash-suppressor-556-nato-12x28-thread"
+            ]
+          },
+          {
+            "url": "/product-category/ammo/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "federal-h413-410ga-6-25rds",
+              "federal-h413-410ga-4-25rds",
+              "federal-h413-410ga-75-25rds"
+            ]
+          },
+          {
+            "url": "/product-category/optics/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "arken-optics-sh4-4-16x50mm-gen-2-ffp-riflescope-34mm-tube-mil-vpr-illuminated-reticle",
+              "arken-optics-sh4-4-16x50mm-gen-2-ffp-riflescope-34mm-tube-moa-vpr-illuminated-reticle",
+              "online-only-arken-optics-ep-5-7-35x56mm-gen-1-ffp-riflescope-34mm-tube-vpr-moa-illuminated-reticle"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-range-accessories/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "tikka-soft-gun-case-greenorange",
+              "magpul-daka-magnetic-field-tray-small",
+              "magpul-daka-magnetic-field-tray-large"
+            ]
+          },
+          {
+            "url": "/product-category/reloading/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "federal-gm210m-large-rifle-match-primer-1000ct",
+              "cci-250-large-rifle-magnum-primers-1000ct",
+              "cci-200-large-rifle-primers-1000ct"
+            ]
+          },
+          {
+            "url": "/product-category/knives/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "old-product-benchmade-osborne-470-1-emissary-assisted-open-folding-knife",
+              "benchmade-barrage-581bk-04-folding-knife-redstone",
+              "benchmade-bailout-537bk-06-folding-knife-ranger-green-grivory"
+            ]
+          },
+          {
+            "url": "/product-category/preowned/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/outdoor/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "cz-czech-m10-gas-mask-filter-2ct",
+              "cz-czech-m10-adult-gas-mask",
+              "shockguard-flashlight-stun-baton"
+            ]
+          },
+          {
+            "url": "/product-category/no-category/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "sako-100-explorer-wood-rifle",
+              "j0033",
+              "axem-a2-pistol-grip-for-ar15m4"
+            ]
+          }
+        ]
+      },
+      "reason": "1/10 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.rangeviewsports.ca/product-category/firearms/",
+        "page2Url": "https://www.rangeviewsports.ca/product-category/firearms/page/2/",
+        "page1First3": [
+          "benelli-super-nova-shotgun-black-3-12-12ga-28-barrel",
+          "benelli-m4-tactical-shotgun-titanium-cerakote-pistol-grip-stock-3-12ga-185-barrel",
+          "beretta-694-pro-sporting-shotgun-with-adjustable-tsk-stock"
+        ],
+        "page2First3": [
+          "browning-bt-99-shotgun",
+          "akdas-alcor-semi-auto-hunting-rifle-223-rem-185-barrel-synthetic-stock",
+          "cz-457-varmint-barreled-action-22-lr-24-barrel"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://www.rangeviewsports.ca/product-category/firearms/?orderby=date",
+        "withoutSortUrl": "https://www.rangeviewsports.ca/product-category/firearms/",
+        "withSortFirst": "benelli-super-nova-shotgun-black-3-12-12ga-28-barrel",
+        "withoutSortFirst": "benelli-super-nova-shotgun-black-3-12-12ga-28-barrel",
+        "counterControlUrl": "https://www.rangeviewsports.ca/product-category/firearms/?orderby=price",
+        "counterControlFirst": "cadex-aluminum-bi-pod-rail-for-strike-chassis-3-5"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 5347,
+      "actual": 5364,
+      "evidence": {
+        "storedCount": 5347,
+        "actualCount": 5364,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 0
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f380f32ed69aa98-YYZ",
+          "set-cookie": "__cf_bm=cKzaSkg7iAsl6MtHQZNv0F8VNyEXDmth2ftNJCJN1Q0-1777400200-1.0.1.1-HVmnSIjcw_hZel3hl.x67dKc5IuzsEx5WoTJuewANZyQo6kb7uTxctGxopcOw2gq6KZW8jhcno7X5k1cO9r8zGbB_JUsENOsazWK_k9OZ08; path=/; expires=Tue, 28-Apr-26 18:46:40 GMT; domain=.www.rangeviewsports.ca; HttpOnly; Secure; SameSite=None"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Rangeview Sports",
+    "notes": "woocommerce site. Uses default adapter behavior (no custom URLs). | 2026-04-12: wafType sucuri→cloudflare-passive (Mistake 35, 5/5 wrong Sucuri). needsPlaywright true→false. hasCaptcha true→false. Count confirmed 5347. 10 catalogUrls. Date filter monotonic (5347→30→18→10).",
+    "budget": 120,
+    "domain": "rangeviewsports.ca",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 100,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/firearms/",
+      "/product-category/firearm-accessories/",
+      "/product-category/ammo/",
+      "/product-category/optics/",
+      "/product-category/shooting-range-accessories/",
+      "/product-category/reloading/",
+      "/product-category/knives/",
+      "/product-category/preowned/",
+      "/product-category/outdoor/",
+      "/product-category/no-category/"
+    ],
+    "htmlPerPage": 16,
+    "hasRateLimit": true,
+    "lastVerified": "2026-04-12",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "t1IntervalMin": 17,
+    "sortVerifiedAt": "2026-04-12",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive (Kinsta hosting, cf-ray on all, no x-sucuri-id)",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-12",
+    "wafProbeEvidence": {
+      "cfRay": true,
+      "server": "cloudflare",
+      "xss200": true,
+      "hosting": "Kinsta",
+      "sqli200": true,
+      "xSucuriId": false
+    },
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}/"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product",
+      "wpRestTotal": 5347,
+      "storeApiTotal": 5347,
+      "dateFilterEvidence": {
+        "1d": 10,
+        "7d": 18,
+        "14d": 30,
+        "no_filter": 5347
+      },
+      "dateFilterVerified": true
+    },
+    "expectedInStockCount": 5347,
+    "expectedProductCount": 5347
+  }
+}

@@ -1,0 +1,302 @@
+{
+  "siteId": "cmltxz6pw000a89xacnyqekjc",
+  "domain": "firearmsoutletcanada.com",
+  "timestamp": "2026-04-28T17:42:47.943Z",
+  "durationMs": 107759,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "12 URLs, each returning ≥1 product",
+      "actual": "12/12 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/firearms?limit=250",
+            "status": 200,
+            "productCount": 250,
+            "sampleSlugs": [
+              "sulun-arms-sr-45-revolver-45-apc-9-8-5-shot-sr-45",
+              "federation-firearms-over-under-shotgun-20ga-2-3-4-or-3-28-barrel-ff-so20-blk-28",
+              "federation-firearms-over-under-shotgun-12ga-2-3-4-or-3-28-barrel-ff-so12-blk-28"
+            ]
+          },
+          {
+            "url": "/ammo?limit=250",
+            "status": 200,
+            "productCount": 250,
+            "sampleSlugs": [
+              "sellier-bellot-12ga-2-3-4-special-slug-box-of-5-v051332",
+              "aguila-high-velocity-22lr-40gr-cp-sp-pack-of-500-1b221115",
+              "sellier-bellot-subsonic-300aac-200gr-fmj-box-of-20-341302"
+            ]
+          },
+          {
+            "url": "/optics?limit=250",
+            "status": 200,
+            "productCount": 191,
+            "sampleSlugs": [
+              "apex-optics-edge-1-10x24-competition-tactical-lpvo",
+              "apex-optics-vapor-1-4x22-variable-prism-sight",
+              "vortex-talon-hd-10k-12x50-ballistic-laser-rangefinding-binocular-lrf-tln1250"
+            ]
+          },
+          {
+            "url": "/magazines-clips?limit=250",
+            "status": 200,
+            "productCount": 136,
+            "sampleSlugs": [
+              "benelli-r1-magazine-270-win-30-06-5-rounds-f0359300",
+              "cpd-ar-15-magazine-223-5-56-30-5-round-blk-3023001178cpd",
+              "mdt-polymer-aics-magazine-308-6-5-creedmoor-10-rounds-104447-blk"
+            ]
+          },
+          {
+            "url": "/gear-kit?limit=250",
+            "status": 200,
+            "productCount": 250,
+            "sampleSlugs": [
+              "butler-creek-comfort-stretch-rifle-sling-realtree-xtra-181019",
+              "allen-durango-rifle-case-52-blk-60252",
+              "allen-durango-rifle-case-46-blk-60246"
+            ]
+          },
+          {
+            "url": "/storage-maintenance?limit=250",
+            "status": 200,
+            "productCount": 136,
+            "sampleSlugs": [
+              "g96-crud-buster-polymer-safe-13-0-oz-1202",
+              "g96-nitro-solvent-6-0-oz-1105",
+              "breakthrough-vision-series-universal-handgun-cleaning-kit-bt-vsu-h"
+            ]
+          },
+          {
+            "url": "/reloading?limit=250",
+            "status": 200,
+            "productCount": 95,
+            "sampleSlugs": [
+              "dillon-xl750-casefeeder-62510",
+              "dillon-precision-bullet-feeder-caliber-conversion-kit-30-caliber-91109",
+              "dillon-precision-bullet-feeder-caliber-conversion-kit-22-caliber-91108"
+            ]
+          },
+          {
+            "url": "/pistol-parts?limit=250",
+            "status": 200,
+            "productCount": 18,
+            "sampleSlugs": [
+              "canuck-defender-regulator-barrel-kit-12ga-28-vent-rib-cbbl1228bf",
+              "sig-sauer-p320-pro-carry-kit-w-romeo2-reflex-sight-9mm-sor21600-p320",
+              "glock-oem-parts-g19-threaded-barrel-gen-4-47739"
+            ]
+          },
+          {
+            "url": "/rifle-parts?limit=250",
+            "status": 200,
+            "productCount": 250,
+            "sampleSlugs": [
+              "steyr-scout-high-capacity-adapter-kit-2614050601",
+              "magpul-hunter-x-22-stock-ruger-10-22-fde-mag548-fde-1",
+              "nightforce-standard-duty-base-remington-700-la-20-moa-a295"
+            ]
+          },
+          {
+            "url": "/shotgun-parts?limit=250",
+            "status": 200,
+            "productCount": 175,
+            "sampleSlugs": [
+              "s-j-hardware-sierra-rd-optics-plate-acro-to-remington-870-sierra-acro-r",
+              "s-j-hardware-sierra-rd-optics-plate-acro-to-mossberg-500-590-930-sierra-acro-m",
+              "mesa-tactical-urbino-pistol-grip-stock-riser-limbsaver-remington-870-12ga-black-91550"
+            ]
+          },
+          {
+            "url": "/emergency-survival-gear?limit=250",
+            "status": 200,
+            "productCount": 106,
+            "sampleSlugs": [
+              "yugoslavian-m1-gas-mask-kit",
+              "peak-refuel-white-chicken-chili-602069",
+              "peak-refuel-strawberry-cheesecake-bites-602086"
+            ]
+          },
+          {
+            "url": "/pre-owned/?limit=250",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "churchill-206-delux-wood-over-under-12ga-2-3-4-or-3-28-barrel-pre-owned",
+              "1977-winchester-model-70-bolt-action-rifle-308-win-22-barrel-pre-owned",
+              "oem-tikka-t3x-tactical-stock-w-magazine-pre-owned"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.firearmsoutletcanada.com/firearms?limit=250",
+        "page2Url": "https://www.firearmsoutletcanada.com/firearms?limit=250&page=2",
+        "page1First3": [
+          "sulun-arms-sr-45-revolver-45-apc-9-8-5-shot-sr-45",
+          "federation-firearms-over-under-shotgun-20ga-2-3-4-or-3-28-barrel-ff-so20-blk-28",
+          "federation-firearms-over-under-shotgun-12ga-2-3-4-or-3-28-barrel-ff-so12-blk-28"
+        ],
+        "page2First3": [
+          "sako-trg-m10-338-lapua-mag-27-2-threaded-coyote-sw2s44857mssm",
+          "kel-tec-ksg-tactical-12ga-2-3-4-or-3-13-7-barrel-blk-ksgtac",
+          "federation-firearms-rs-410-revolver-shotgun-410ga-3-12-barrel-nickel-ff-rs410-ni-12"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://www.firearmsoutletcanada.com/firearms?limit=250&sort=newest",
+        "withoutSortUrl": "https://www.firearmsoutletcanada.com/firearms?limit=250",
+        "withSortFirst": "sulun-arms-sr-45-revolver-45-apc-9-8-5-shot-sr-45",
+        "withoutSortFirst": "sulun-arms-sr-45-revolver-45-apc-9-8-5-shot-sr-45",
+        "counterControlUrl": "https://www.firearmsoutletcanada.com/firearms?limit=250&sort=alphaasc",
+        "counterControlFirst": "adler-arms-ad500-semi-auto-hunting-rifle-308-win-20-citad500sblk"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 3260,
+      "actual": 3337,
+      "evidence": {
+        "storedCount": 3260,
+        "actualCount": 3337,
+        "methodUsed": "sitemap",
+        "driftPct": 2
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37dd974f11c109-YYZ",
+          "set-cookie": "SF-CSRF-TOKEN=aca13e4c-663d-44e7-8ca4-a07b346b408c; Path=/; Secure; SameSite=Strict,fornax_anonymousId=29a8657a-c596-43a2-980c-5a380c4d79a7; Expires=Thu, 27 Apr 2028 17:42:48 GMT; Path=/; Secure; SameSite=None,athena_short_visit_id=b684f600-b077-44fa-9d57-36594ae2bd81:1777398168; Expires=Tue, 28 Apr 2026 18:12:48 GMT; Path=/; Secure; HttpOnly; SameSite=None,Shopper-Pref=C336199BEA8CFD857F9E91C607B11055D1756AF3-1778002968250-x%7B%22cur%22%3A%22CAD%22%2C%22funcConsent%22%3Afalse%7D; Path=/; Secure; HttpOnly,SHOP_SESSION_TOKEN=265ff775-654d-4a9d-b005-96a66d339660; Path=/; Secure; HttpOnly; SameSite=None,__cf_bm=L9t9vpUKBnNKsGR128B2nFCFaQl1h35DzrJUt1gnozI-1777398168.2107685-1.0.1.1-FYBNSRQyjhj0o.9hhpCytDLpuEAizQzeMx6Fg96CLdnFOa_7jAC6iTF6xsLGdIBuGhnjtPa.e8YUrKfmTFGwj1FtUcideD5y1Qp8.0MG56SUiX_MUXf2myZNzLDWRXmP; HttpOnly; Secure; Path=/; Domain=firearmsoutletcanada.com; Expires=Tue, 28 Apr 2026 18:12:48 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Firearms Outlet Canada",
+    "notes": "Platform: BigCommerce Stencil theme. 12 top-nav categories cover all firearm-relevant products.\nAccess: plain HTTP with default desktop UA works. Cloudflare passive (cf-ray present) — no challenge.\nProduct count source: /xmlsitemap.php index -> /xmlsitemap.php?type=products&page=N sub-sitemaps. As of 2026-04-06 page=1 returns 3260 <loc> entries, page=2 empty. HEAD-tested 5 random entries — all 200 live.\nSort: <select id=\"sort\" name=\"sort\"> has 8 options: featured (default), newest, bestselling, alphaasc, alphadesc, avgcustomerreview, priceasc, pricedesc. Verified `?sort=newest` is accepted and sort survives pagination (BigCommerce's own pagination anchors include sort=newest).\nNote: on /firearms the default featured order is IDENTICAL to sort=newest (first 3 products match); on /ammo same. Other sorts (alphaasc, priceasc, pricedesc, bestselling) change order as expected so the sort=newest param is actually being applied, not ignored.\nPagination: ?page=N query-style, verified (page=2 returns different products than page=1). `limit=50`, `limit=100`, `limit=250` all honored (actual returned counts match). `limit=250` is embedded in catalogUrls to reduce pages walked.\nPer-page: 250 verified.\nCatalogUrls walk (2026-04-06) with sort=newest&limit=250: /firearms=841, /ammo=388, /optics=189, /magazines-clips=134, /gear-kit=455, /storage-maintenance=130, /reloading=95, /pistol-parts=21, /rifle-parts=311, /shotgun-parts=174, /emergency-survival-gear=106, /pre-owned/=2. Total unique after dedupe: 2836.\nGap vs sitemap (3260): ~13% (424 products). Likely products only reachable via /brands/<brand>/ listings or unassigned to top-nav categories. The gap is acceptable because Tier 1 watermark and bootstrap paths primarily use the catalogUrls set; expectedProductCount from sitemap is the authoritative count.\nAttempted parent consolidation: /parts, /accessories, /hunting, /knives all 404 — there is NO higher-level parent; 12 URLs are the minimum set.\n/pre-owned/ currently only 2 items but is a live category per site nav — keep.\nWatermark method: navigate-from-watermark (sort=newest works + survives pagination).\nBigCommerce Store API (/api/storefront/products) not tested — sitemap count was sufficient and authoritative.",
+    "budget": 90,
+    "domain": "firearmsoutletcanada.com",
+    "hasWaf": false,
+    "adapter": "generic-retail",
+    "perPage": 250,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping (BigCommerce Stencil)",
+          "notes": "Extracted from article.card via GenericRetailAdapter.extractCatalogProducts",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "bigcommerce-stencil",
+    "searchUrl": "/search.php?search_query={keyword}",
+    "sortParam": "?sort=newest",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/firearms?limit=250",
+      "/ammo?limit=250",
+      "/optics?limit=250",
+      "/magazines-clips?limit=250",
+      "/gear-kit?limit=250",
+      "/storage-maintenance?limit=250",
+      "/reloading?limit=250",
+      "/pistol-parts?limit=250",
+      "/rifle-parts?limit=250",
+      "/shotgun-parts?limit=250",
+      "/emergency-survival-gear?limit=250",
+      "/pre-owned/?limit=250"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-06",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": null,
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "query",
+      "perPage": 250,
+      "template": "page"
+    },
+    "productCountMethod": {
+      "notes": "Walk xmlsitemap.php sub-sitemaps (?type=products&page=1..N); count <loc> entries. As of 2026-04-06: 3260 product locs on page=1, page=2 empty.",
+      "method": "sitemap-index",
+      "sitemapUrl": "/xmlsitemap.php",
+      "subSitemapPattern": "?type=products&page={N}"
+    },
+    "expectedProductCount": 3260
+  }
+}

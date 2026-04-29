@@ -1,0 +1,608 @@
+{
+  "siteId": "cmltxz6ic000489xacjiyigbn",
+  "domain": "theammosource.com",
+  "timestamp": "2026-04-28T18:30:35.826Z",
+  "durationMs": 185814,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "FAIL",
+      "expected": "27 URLs, each returning ≥1 product",
+      "actual": "26/27 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/modern-sporting-rifles/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "rock-island-armory-tm22-22lr-lever-action-20-barrel-fpdq",
+              "rock-island-armory-tm22-feather-22lr-18-barrel-black"
+            ]
+          },
+          {
+            "url": "/rimfire-rifles/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "derya-ria-tm22-semi-auto-22-lr-18-brl-black-2-stock-combo",
+              "derya-ria-tm22-semi-auto-22-lr-20-brl-black-2-stock-combo",
+              "sticker-draw-derya-tm22-pro-semi-auto-22-lr-adjustable-stock-16-white-tm22-pro-16-white-w-vortex-optics-sparc-ar-red-dot-2-moa-dot-multi-height-mount-vt-spc-ar2"
+            ]
+          },
+          {
+            "url": "/shotguns-hunting/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "browning-maxus-ii-ultimate-maple-12-ga-3-semi-28-barrel-maple-stock",
+              "sticker-draw-browning-maxus-ii-semi-auto-12-ga-3-5-28-barrel-max-7-011746204",
+              "federation-firearms-sa-20-20ga-3-semi-28-barrel-walnut-stock"
+            ]
+          },
+          {
+            "url": "/shotguns-tactical/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "canuck-defender-12-ga-pump-action-14-brl-marine-walnut",
+              "canuck-defender-12-ga-pump-action-14-brl-marine-black",
+              "canuck-sentry-12ga-pump-action-3-24-barrel-distressed-odg"
+            ]
+          },
+          {
+            "url": "/sporting-rifles/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "ruger-american-gen-ii-223-rem-bolt-action-rifle-20-fluted-metal-grey-barrel-grey-splatter",
+              "henry-brass-lever-action-rifle-45-70-gov-t-22-octagon-barrel-walnut-stock",
+              "winchester-xpr-extreme-lh-308-win-22-brl-truetimber-midnight"
+            ]
+          },
+          {
+            "url": "/surplus-rifles-pistols/",
+            "status": 200,
+            "productCount": 26,
+            "sampleSlugs": [
+              "sks-rifle-semi-auto-7-62x39-with-ati-folding-stock-fde",
+              "toz-17-01-bolt-action-training-rifle-no-mag-sight-used-surplus-oepm",
+              "toz-17-01-bolt-action-training-rifle-no-magazine-no-body-cap-used-surplus-khp6"
+            ]
+          },
+          {
+            "url": "/used-non-restricted-firearms/",
+            "status": 200,
+            "productCount": 51,
+            "sampleSlugs": [
+              "mossberg-500-pump-action-410-shotgun-3-chamber-24-vent-rib-barrel-wood-stock",
+              "noble-model-40a-pump-action-shotgun-12ga-2-75-chamber-26-barrel-with-multi-choke-wood-stock",
+              "remington-870-pump-action-shotgun-20ga-3-chamber-18-5-rifled-barrel-black-synthetic-with-red-dot"
+            ]
+          },
+          {
+            "url": "/used-restricted-firearms/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "norinco-hp9-pump-action-shotgun-12ga-3-chamber-18-5-barrel-black-synthetic-stock"
+            ]
+          },
+          {
+            "url": "/target-rifles/",
+            "status": 200,
+            "productCount": 18,
+            "sampleSlugs": [
+              "cadex-cdx-r7-shp-338-lapua-27-barrel-hybrid-bronze-black",
+              "cadex-cdx-r7-fcp-la-338-lapua-27-brl-hybrid-white-black-1p0m",
+              "cadex-cdx30-lite-bolt-action-6-5-creedmoor-26-barrel-tan"
+            ]
+          },
+          {
+            "url": "/air-guns/",
+            "status": 200,
+            "productCount": 51,
+            "sampleSlugs": [
+              "crosman-vital-shot-air-gun-177-cal-1200fps-open-sights",
+              "umarex-p2p-secure-impact-68-cal-co2-air-pistol-kit",
+              "umarex-p2p-hdp-50-gen-2-full-size-50cal-air-pistol-485fps"
+            ]
+          },
+          {
+            "url": "/pistol-ammunition/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "speer-gold-dot-380-auto-90gr-hp-box-of-20",
+              "cci-9mmx18-makarov-95gr-tmj-50-per-box",
+              "sellier-bellot-357-sig-140-gr-fmj-50-rounds-ytgw"
+            ]
+          },
+          {
+            "url": "/rifle-ammunition/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "barnes-7mm-prc-lrx-bt-160gr-20-rounds-uywa",
+              "federal-7mm-prc-155-gr-terminal-ascent-20-rounds",
+              "federal-7mm-prc-175-gr-fusion-tipped-20-rounds"
+            ]
+          },
+          {
+            "url": "/rimfire-ammunition/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "winchester-21-sharp-37gr-fmj-100-rnds",
+              "hornady-rimfire-varmint-22-lr-40-gr-lrn-500-rds",
+              "norma-tac-22-22-lr-box-of-50-bklm"
+            ]
+          },
+          {
+            "url": "/shotgun-ammunition/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "remington-premier-magnum-turkey-high-velocity-12-ga-3-4-1-3-4-oz-5-rnds",
+              "remington-nitro-magnum-20-ga-3-1-1-4oz-4-25-rds",
+              "remington-nitro-magnum-20-ga-2-3-4-1-1-8oz-4-25-rds"
+            ]
+          },
+          {
+            "url": "/surplus-ammunition/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "chinese-7-62-x-54r-surplus-147-gr-fmj-20-rounds-paper-wrapped"
+            ]
+          },
+          {
+            "url": "/ammunition/pellets-bbs-airsoft-co2/",
+            "status": 404,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 404"
+          },
+          {
+            "url": "/bipods-2/",
+            "status": 200,
+            "productCount": 41,
+            "sampleSlugs": [
+              "primos-magnum-steady-stix-shooting-rest-15-40",
+              "primos-steady-stix-shooting-rest-15-40",
+              "primos-pole-cat-rapid-pivot-bipod-25-43"
+            ]
+          },
+          {
+            "url": "/cleaning-supplies-lubricants/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "birchwood-casey-super-blue-liquid-gun-blue-960ml-i6ft",
+              "traditions-12ga-brush-3-pack",
+              "traditions-20ga-brush-kit"
+            ]
+          },
+          {
+            "url": "/holsters/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "gray-fox-strategic-zidar-rimfire-mag-pouch-with-bladetech-tek-lok-tikka-t1x",
+              "gray-fox-strategic-gryphon-glock-48-mos-rh-black-holster",
+              "hudson-fast-mag-pistol-duty-belt-camo-green"
+            ]
+          },
+          {
+            "url": "/magazines/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "cadex-defense-accu-mag-308-win-sa-10-rd-mag",
+              "sks-stripper-clip-5-pack",
+              "cz-600-polymer-magazine-7-62x39-5-round"
+            ]
+          },
+          {
+            "url": "/magazine-pouches-holders/",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "magpul-daka-takeout-3-5l-kit-bag",
+              "beartooth-shotgun-sideshell-pouch-realtree-edge",
+              "beartooth-rifle-sidecart-realtree-edge"
+            ]
+          },
+          {
+            "url": "/slings-swivels/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "butler-creek-alaskan-magnum-rifle-sling-serenity",
+              "butler-creek-highlander-sling-black",
+              "uncle-mike-s-brass-chicago-screws-24pk"
+            ]
+          },
+          {
+            "url": "/stocks-grips/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "hogue-cz-75-full-size-overmolded-rubber-grip-black",
+              "hogue-remington-870-20ga-overmold-shotgun-forend-black",
+              "tactaload-flash-5-tactical-forend-and-gunstock-12ga-combo-wetland-camo-remington"
+            ]
+          },
+          {
+            "url": "/animal-protection/",
+            "status": 200,
+            "productCount": 22,
+            "sampleSlugs": [
+              "tru-flare-pen-launcher-kit-with-flares-bangers",
+              "lightfield-12-ga-2-3-4-super-star-round-5-rounds-pxei",
+              "lightfield-410-ga-rubber-buckshot-2-1-2-5-rounds-onbh"
+            ]
+          },
+          {
+            "url": "/archery/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "excalibur-illuminated-v-flight-pro-w-beacon-v-nock-3-pack",
+              "sticker-draw-excalibur-hybrid-x-w-overwatch-scope-mossy-oak-country-dna-e16261-2",
+              "excalibur-excel-string-exo-series-w-mag-tips-zombie-green"
+            ]
+          },
+          {
+            "url": "/camping-outdoors/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "plano-gonow-30l-freshwater-fish-kit-20-x-15-6-x-12-2",
+              "plano-gonow-30l-camp-kit-20-x-15-6-x-12-2",
+              "avian-x-ridge-runner-turkey-vest-mobl-small-large"
+            ]
+          },
+          {
+            "url": "/clothing-glasses-and-footwear/",
+            "status": 200,
+            "productCount": 52,
+            "sampleSlugs": [
+              "magpul-daybreak-mesh-back-trucker-hat-brown",
+              "danner-tachyon-boot-8-mens-13-ee-coyote",
+              "danner-tachyon-boot-8-mens-10-ee-coyote"
+            ]
+          }
+        ]
+      },
+      "reason": "1/27 URLs failed: /ammunition/pellets-bbs-airsoft-co2/"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.theammosource.com/modern-sporting-rifles/",
+        "page2Url": "https://www.theammosource.com/modern-sporting-rifles/?page=2",
+        "page1First3": [
+          "rock-island-armory-tm22-22lr-lever-action-20-barrel-fpdq",
+          "rock-island-armory-tm22-feather-22lr-18-barrel-black"
+        ],
+        "page2First3": [],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://www.theammosource.com/rimfire-rifles/?sort=newest",
+        "withoutSortUrl": "https://www.theammosource.com/rimfire-rifles/",
+        "withSortFirst": "derya-ria-tm22-semi-auto-22-lr-18-brl-black-2-stock-combo",
+        "withoutSortFirst": "derya-ria-tm22-semi-auto-22-lr-18-brl-black-2-stock-combo",
+        "counterControlUrl": "https://www.theammosource.com/rimfire-rifles/?sort=alphaasc",
+        "counterControlFirst": "adler-rf224-tactical-22-lr-semi-auto-11-7-brl-black"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 2437,
+      "actual": 48221,
+      "evidence": {
+        "storedCount": 2437,
+        "actualCount": 48221,
+        "methodUsed": "sitemap",
+        "driftPct": 1879
+      },
+      "reason": "Count drifted 1879% (stored=2437, actual=48221)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f382398cd08c730-YYZ",
+          "set-cookie": "SF-CSRF-TOKEN=afa5339f-d00e-40e1-92f3-46de9224d1b5; Path=/; Secure; SameSite=Strict,fornax_anonymousId=0d0c72ab-4259-4251-a025-a1c9c5b064bf; Expires=Thu, 27 Apr 2028 18:30:35 GMT; Path=/; Secure; SameSite=None,athena_short_visit_id=7468cafb-bafc-47e9-8d9f-4a958d857ee9:1777401035; Expires=Tue, 28 Apr 2026 19:00:35 GMT; Path=/; Secure; HttpOnly; SameSite=None,Shopper-Pref=6FC776B544CE9C7431B7269BF70679B0009D5AF5-1778005836155-x%7B%22cur%22%3A%22CAD%22%2C%22funcConsent%22%3Atrue%7D; Expires=Tue, 05 May 2026 18:30:36 GMT; Path=/; Secure; HttpOnly,SHOP_SESSION_TOKEN=0884b334-7efd-4a72-8f98-f6b144f13c72; Expires=Tue, 05 May 2026 18:30:36 GMT; Path=/; Secure; HttpOnly; SameSite=None,__cf_bm=kWD37Duu2ZAZv00N6PZQVoaSPxn_nwXB4SpQNMdTI9I-1777401035.6473875-1.0.1.1-wvtu0lssDV30UGRWVUTyNcpRAJcyUQnwhCsw2UAVUItBoPleFokfsT81NcYzKLo4Vx2AtS6tWlefYOmv9laBgmaV6rVt50moZYWqBUg2SrxVHtZNUv3GuwQ2BmjezNuj; HttpOnly; Secure; Path=/; Domain=theammosource.com; Expires=Tue, 28 Apr 2026 19:00:36 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "The Ammo Source",
+    "notes": "expectedProductCount = 2,437 firearm-relevant aggregate walked across 27 catalogUrls. totalSiteProductCount = 48,012 whole sitemap (includes out-of-scope verticals: motorcycle, ATV, fishing, camping).",
+    "budget": 180,
+    "domain": "theammosource.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 52,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "sort-newest-paginated"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "bigcommerce.stencil",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "sort=newest",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/modern-sporting-rifles/",
+      "/rimfire-rifles/",
+      "/shotguns-hunting/",
+      "/shotguns-tactical/",
+      "/sporting-rifles/",
+      "/surplus-rifles-pistols/",
+      "/used-non-restricted-firearms/",
+      "/used-restricted-firearms/",
+      "/target-rifles/",
+      "/air-guns/",
+      "/pistol-ammunition/",
+      "/rifle-ammunition/",
+      "/rimfire-ammunition/",
+      "/shotgun-ammunition/",
+      "/surplus-ammunition/",
+      "/ammunition/pellets-bbs-airsoft-co2/",
+      "/bipods-2/",
+      "/cleaning-supplies-lubricants/",
+      "/holsters/",
+      "/magazines/",
+      "/magazine-pouches-holders/",
+      "/slings-swivels/",
+      "/stocks-grips/",
+      "/animal-protection/",
+      "/archery/",
+      "/camping-outdoors/",
+      "/clothing-glasses-and-footwear/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "categoryStats": {
+      "/archery/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 4,
+        "total": 165
+      },
+      "/air-guns/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 2,
+        "total": 55
+      },
+      "/bipods-2/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 1,
+        "total": 37
+      },
+      "/holsters/": {
+        "sort": "honored",
+        "pages": 1,
+        "total": 8
+      },
+      "/magazines/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 3,
+        "total": 145
+      },
+      "/stocks-grips/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 1,
+        "total": 24
+      },
+      "/target-rifles/": {
+        "sort": "honored",
+        "pages": 1,
+        "total": 15
+      },
+      "/rimfire-rifles/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 2,
+        "total": 57
+      },
+      "/slings-swivels/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 2,
+        "total": 81
+      },
+      "/sporting-rifles/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 3,
+        "total": 105
+      },
+      "/camping-outdoors/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 2,
+        "total": 92
+      },
+      "/rifle-ammunition/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 7,
+        "total": 323
+      },
+      "/shotguns-hunting/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 3,
+        "total": 114
+      },
+      "/animal-protection/": {
+        "sort": "honored",
+        "pages": 1,
+        "total": 15
+      },
+      "/pistol-ammunition/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 2,
+        "total": 98
+      },
+      "/shotguns-tactical/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 2,
+        "total": 58
+      },
+      "/rimfire-ammunition/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 2,
+        "total": 68
+      },
+      "/shotgun-ammunition/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 3,
+        "total": 118
+      },
+      "/surplus-ammunition/": {
+        "sort": "noop-small",
+        "pages": 1,
+        "total": 1
+      },
+      "/modern-sporting-rifles/": {
+        "sort": "honored",
+        "pages": 1,
+        "total": 3
+      },
+      "/surplus-rifles-pistols/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 1,
+        "total": 28
+      },
+      "/magazine-pouches-holders/": {
+        "sort": "honored",
+        "pages": 1,
+        "total": 17
+      },
+      "/used-restricted-firearms/": {
+        "sort": "empty-kept-for-future",
+        "pages": 0,
+        "total": 0
+      },
+      "/cleaning-supplies-lubricants/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 7,
+        "total": 392
+      },
+      "/used-non-restricted-firearms/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 3,
+        "total": 142
+      },
+      "/clothing-glasses-and-footwear/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 5,
+        "total": 213
+      },
+      "/ammunition/pellets-bbs-airsoft-co2/": {
+        "sort": "honored-default-eq-newest",
+        "pages": 2,
+        "total": 63
+      }
+    },
+    "t1IntervalMin": 17,
+    "wafWorkaround": "none",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "passive",
+    "lastReAuditedAt": "2026-04-07",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-09T01:42:53.511Z",
+    "wafProbeEvidence": {
+      "cfRay": true,
+      "noUaOk": true,
+      "probedAt": "2026-04-09",
+      "multiUaOk": true,
+      "honeypot403": [
+        "/wp-admin/",
+        "/wp-login.php",
+        "/.env",
+        "/.git/config"
+      ],
+      "sqliXssBlocked": false,
+      "rapidBurst10xOk": true
+    },
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "productCountMethod": "sitemap-index",
+    "supportsLimitParam": true,
+    "expectedProductCount": 2437,
+    "totalSiteProductCount": 48012
+  }
+}

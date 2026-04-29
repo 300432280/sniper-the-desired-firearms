@@ -1,0 +1,205 @@
+{
+  "siteId": "cmltxz83m001i89xarjvjsc0g",
+  "domain": "gunpost.ca",
+  "timestamp": "2026-04-28T17:55:47.382Z",
+  "durationMs": 17408,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "0/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/ads?sort_by=date_pub&sort_order=DESC",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "1/1 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 30423,
+      "actual": 74,
+      "evidence": {
+        "storedCount": 30423,
+        "actualCount": 74,
+        "methodUsed": "sitemap",
+        "driftPct": 100
+      },
+      "reason": "Count drifted 100% (stored=30423, actual=74)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "FAIL",
+      "expected": "cloudflare-active",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-active",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37f09eba37ac12-YYZ"
+        },
+        "httpStatus": 200
+      },
+      "reason": "WAF vendor mismatch: stored='cloudflare-active', detected='cloudflare-passive' (Mistake 35)"
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "GunPost",
+    "notes": "Drupal 10 classifieds behind Cloudflare WAF (rule-selective active). 30K+ listings. Sorted/search URLs pass CF without challenge (only bare /ads triggers interactive challenge). Sold items stay on site with CSS class. Wanted ads detected by title prefix/suffix and CSS class. Date extracted is MODIFIED/BUMPED date (watermark signal). Price capped at $99,999. Node IDs from data-history-node-id attribute. First 3-5 listings on each page are promoted/sticky (older dates), rest follow date DESC. Pagination 0-indexed.",
+    "budget": 350,
+    "domain": "gunpost.ca",
+    "hasWaf": true,
+    "adapter": "classifieds-gunpost",
+    "perPage": 18,
+    "timeout": 30000,
+    "wafType": "cloudflare-active",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scrape via HTTP (Playwright fallback for CF challenges)",
+          "notes": "Drupal 10 classifieds. Sorted/search URLs pass Cloudflare without challenge. Date is modified/bumped date, NOT original post date. 3-5 sticky/promoted ads appear at top of each page before date-sorted results.",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "price",
+            "categories",
+            "sourceId",
+            "postDate",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "drupal",
+    "apiConfig": {
+      "customSelectors": {
+        "postDate": ".node__pubdate, [class*=\"pubdate\"]",
+        "sourceId": "[data-history-node-id], class=\"node--id-(\\d+)\"",
+        "pagination": "li.pager__item--next a, a[rel=\"next\"]",
+        "soldIndicator": ".sold, .ad-sold, .field-sold",
+        "productListing": "[class*=\"node--type-classified\"], [class*=\"gunpost-teaser\"], [class*=\"node--type-\"][class*=\"teaser\"]",
+        "wantedIndicator": ".wanted"
+      }
+    },
+    "searchUrl": "/ads?key={keyword}",
+    "sortParam": "?sort_by=date_pub&sort_order=DESC",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/ads?sort_by=date_pub&sort_order=DESC"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-11",
+    "siteCategory": "classified",
+    "t1IntervalMin": 9,
+    "wafWorkaround": {
+      "steps": [
+        "Sorted/search URLs (?sort_by=, ?key=) pass CF without challenge",
+        "Only bare /ads (no query params) triggers CF interactive challenge",
+        "Plain HTTP (axios) works for all crawler URLs — no Playwright needed for normal ops",
+        "Playwright fallback auto-fires via catalog-crawler if CF policy changes"
+      ],
+      "method": "http-direct",
+      "rateLimitNotes": "No rate limit observed on sorted URLs. CF may activate challenges under heavy load — back off if 403s appear.",
+      "perRequestPlaywright": false
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-active (rule-selective)",
+    "classifiedRules": {
+      "soldDetection": [
+        "class=sold",
+        "class=ad-sold",
+        "field-sold Yes",
+        "SOLD"
+      ],
+      "wantedDetection": [
+        "^wanted",
+        "wtb$",
+        "wtt$",
+        "iso$",
+        "wanted$",
+        "wanted:"
+      ]
+    },
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11",
+    "wafProbeEvidence": "server:cloudflare + cf-ray on all responses. Normal GETs 200. SQLi UNION → 403. XSS → 403. Bare /ads → interactive challenge. Sorted/search URLs pass without challenge.",
+    "paginationPattern": {
+      "type": "query",
+      "template": "page",
+      "zeroIndexed": true,
+      "firstPageHasParam": false
+    },
+    "productCountMethod": {
+      "method": "pagination-walk",
+      "formula": "(1690 * 18) + 3 = 30,423",
+      "totalPages": 1691,
+      "lastPageItems": 3
+    },
+    "expectedProductCount": 30423
+  }
+}

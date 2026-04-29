@@ -1,0 +1,487 @@
+{
+  "siteId": "cmn5lkx720000koewfoyqlhkk",
+  "domain": "solelyoutdoors.com",
+  "timestamp": "2026-04-28T07:05:32.715Z",
+  "durationMs": 96390,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "29 URLs, each returning ≥1 product",
+      "actual": "29/29 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/firearms/non-restricted/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "norinco-type-81-sr-762x39-semi-auto.html",
+              "chinese-sks-type-56-76239-french-tickler.html",
+              "crusader-arms-crypto-556-223-semi-auto-rifle.html"
+            ]
+          },
+          {
+            "url": "/firearms/restricted-rifles/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "cz-bren-2-ms-76239-11.html",
+              "cz-bren-2-ms-556-nato-mexican-force-w-3-m-lok-rail.html",
+              "freedom-ordnance-fx9-p8-9mm-8-carbine-fde.html"
+            ]
+          },
+          {
+            "url": "/firearms/shotguns/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "sulun-sr-410-black.html",
+              "auslof-wood-stock-12ga-13-barrel-satin-nickel.html",
+              "ege-arms-rv-tac-compact-revolver-shotgun-telescopi.html"
+            ]
+          },
+          {
+            "url": "/firearms/barrels/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "slc-2-762-linearcomp.html"
+            ]
+          },
+          {
+            "url": "/ammunition/rifle-ammo/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "winchester-44-40win-200gr-sp-50rs-box.html",
+              "prvi-ppu-75x55-swiss-fmj-bt-174gr-20rs-box.html",
+              "prvi-ppu-8x57-is-mauser-200gr-fmj-20rds-box.html"
+            ]
+          },
+          {
+            "url": "/ammunition/handgun-ammo/",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "fh-munition-inc-range-grade-9mm-124gr-fcp-rn-50rs.html",
+              "ppu-32-acp-71gr-fmj-50rds-box.html",
+              "federal-american-eagle-9mm-147gr-syntech-traning-m.html"
+            ]
+          },
+          {
+            "url": "/ammunition/shotgun-ammo/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "federal-premium-flitecontrol-12ga-3-12pellet-00-bu.html",
+              "remington-premier-magnum-turkey-12ga-2oz-35-5-5rs.html",
+              "federal-premium-law-enforcement-12ga-00-buck-9-pel.html"
+            ]
+          },
+          {
+            "url": "/ammunition/rim-fire-ammo/",
+            "status": 200,
+            "productCount": 14,
+            "sampleSlugs": [
+              "cci-maxi-mag-22wmr-40gr-tmj-50rs-box.html",
+              "cci-maxi-mag-22wmr-40gr-jhp-200rs-box.html",
+              "eley-high-velocity-hollow-22lr-38gr-hp-box-of-50.html"
+            ]
+          },
+          {
+            "url": "/ammunition/bulk-ammo/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "pmc-9x19mm-147gr-1000rs-case.html",
+              "chinese-surplus-762x54r-147gr-fmj-100rs.html",
+              "copy-of-fh-munition-inc-match-grade-9mm-124gr-fmj.html"
+            ]
+          },
+          {
+            "url": "/opitcs-plus/scopes/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "npz-4x24-optic-sight.html",
+              "vortex-crossfire-hd-6-18x50-sfp-illuminated-dead-h.html",
+              "arken-ep-8-1-8x28-ffp-kl-box-moa.html"
+            ]
+          },
+          {
+            "url": "/opitcs-plus/red-dots/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "holosun-hs403b-micro-red-dot-sight-fde.html",
+              "riton-x1-tactix-ard-red-dot.html",
+              "holosun-hs515gm-military-grade-micro-circle-red-do.html"
+            ]
+          },
+          {
+            "url": "/opitcs-plus/binoculars-spotting-scopes/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "vortex-diamondback-hd-10x50-binoculars.html",
+              "vortex-crossfire-hd-20-60x80-straight-spotting-sco.html"
+            ]
+          },
+          {
+            "url": "/opitcs-plus/range-finders/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "vortex-triumph-hd-850-laser-rangefinder.html",
+              "kilo1600-6x22-mm-rangefinder-monocular.html",
+              "sig-sauer-kilo1000-lrf-5x20mm-rangefinder.html"
+            ]
+          },
+          {
+            "url": "/opitcs-plus/mounts-rails/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "sun-optics-sks-scope-mount-shell-deflector.html",
+              "chiappa-firearms-m1-scope-mount-adapter.html",
+              "mauser-base-double-square-mount-for-rings-30mm.html"
+            ]
+          },
+          {
+            "url": "/opitcs-plus/rings/",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "copy-of-eotech-prs-2-cantilever-ring-mount-30mm-37.html",
+              "sako-optilock-30mm-medium-scope-ring.html",
+              "vortex-precision-matched-rings-34mm-100-254mm.html"
+            ]
+          },
+          {
+            "url": "/opitcs-plus/iron-sights/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "chiappa-rhino-red-fiber-optic-front-sight.html",
+              "magpul-mbus-3-front-sight-black-56910254.html",
+              "magpul-share-icon-mbus-pro-offset-sight-rear.html"
+            ]
+          },
+          {
+            "url": "/shooting-firearm-acessories/magazines-clips/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "ruger-bx-1-22lr-magazine-10-22-10rd.html",
+              "blackhawk-buttstock-mag-pouch-w-adjustable-lid.html",
+              "mec-gar-witness-sf9-9mm-10-round-mags.html"
+            ]
+          },
+          {
+            "url": "/shooting-firearm-acessories/bipods-shooting-rests/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "mdt-peanut-shooting-bag-heavy-fill.html",
+              "magpul-bipod-for-1913-picatiney-rail-blk.html",
+              "magpul-bipod-black-sling-stud-qd.html"
+            ]
+          },
+          {
+            "url": "/shooting-firearm-acessories/slings-swivels/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "magpul-forward-sling-mount-mossberg-590a1.html",
+              "original-chinese-pla-2-point-type-95-97-c-38070014.html",
+              "original-chinese-pla-2-point-type-95-97-canadian-t.html"
+            ]
+          },
+          {
+            "url": "/shooting-firearm-acessories/shooting-protection/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "krousis-carbon-steel-half-mask-w-upgraded-ear-prot.html",
+              "sordin-gel-ear-seals-for-sharp-share-headsets.html",
+              "pilla-68cimn-chromashift-infra-red-max-neutralizer.html"
+            ]
+          },
+          {
+            "url": "/shooting-firearm-acessories/targets/",
+            "status": 200,
+            "productCount": 14,
+            "sampleSlugs": [
+              "uspsa-idpa-full-size-metric-target.html",
+              "triumph-systems-pivotal-trainer.html",
+              "darkotic-splattering-targets-blood-trail.html"
+            ]
+          },
+          {
+            "url": "/reloading/bullets-projectiles/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "dkc-9mm-124gr-full-meatl-jacket-bullet-2500rs-case.html",
+              "nosler-65mm-140gr-hpbt-100ct.html",
+              "hornady-a-max-rifle-bullets-50-cal-510-750-gr-20-c.html"
+            ]
+          },
+          {
+            "url": "/reloading/brass/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "lapua-338-lm-brass-100-box.html",
+              "copy-of-lapua-brass-6mm-br.html",
+              "lapua-65-creedmoor-lrp-case-100-box.html"
+            ]
+          },
+          {
+            "url": "/reloading/gun-powder/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "vihtavuori-3n38-4lb-2kg-vihtavuori.html",
+              "vihtavuori-n150.html",
+              "vihtavuori-vihtavuori-3n37-4-lb-vihtavuori.html"
+            ]
+          },
+          {
+            "url": "/reloading/primers/",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "federal-100-small-pistol-primers-5000ct.html",
+              "copy-of-sellier-bellot-large-rifle-primers-1000-pk.html",
+              "federal-100-small-pistol-primers-1000ct.html"
+            ]
+          },
+          {
+            "url": "/reloading/dies/",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "lee-factory-crimp-die-303b-lp-90826.html",
+              "lee-308-win-factory-crimp-die.html",
+              "lee-collet-2-die-set-30-06-90715.html"
+            ]
+          },
+          {
+            "url": "/reloading/presses-equipment/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "hornady-lock-n-load-85003.html",
+              "frankford-frankford-arsenal-platinum-series-rotary.html"
+            ]
+          },
+          {
+            "url": "/archeryairgunsairsoft-slingshots/airguns/",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "morini-cm-200el-air-pistol.html",
+              "daisy-winchester-air-rifles-daisy-model74-15-shot.html",
+              "feinwerkbau-800x-black-sliver.html"
+            ]
+          },
+          {
+            "url": "/hunting/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "moultrie-blueberry-pie.html",
+              "hme-executioner-2-person-hub-groud-blind-62x62.html",
+              "tinks-red-fox-p-power-cover-scent.html"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.solelyoutdoors.com/firearms/non-restricted/",
+        "page2Url": "https://www.solelyoutdoors.com/firearms/non-restricted/page2.html?sort=newest",
+        "page1First3": [
+          "norinco-type-81-sr-762x39-semi-auto.html",
+          "chinese-sks-type-56-76239-french-tickler.html",
+          "crusader-arms-crypto-556-223-semi-auto-rifle.html"
+        ],
+        "page2First3": [
+          "henry-22lr-mare-leg.html",
+          "marlin-1894-classic-lever-action-rifle-44-mag-20-b.html",
+          "derya-tm-22-semi-auto-22-lr-18-barrel-blue.html"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.solelyoutdoors.com/firearms/non-restricted/?sort=newest",
+        "withoutSortUrl": "https://www.solelyoutdoors.com/firearms/non-restricted/",
+        "withSortFirst": "crusader-arms.html",
+        "withoutSortFirst": "norinco-type-81-sr-762x39-semi-auto.html",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 900,
+      "actual": 1746,
+      "evidence": {
+        "storedCount": 900,
+        "actualCount": 1746,
+        "methodUsed": "sitemap",
+        "driftPct": 94
+      },
+      "reason": "Count drifted 94% (stored=900, actual=1746)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f34381aca751a24-YYZ",
+          "set-cookie": "session_id=43b5f740ad4f98fbb8d43715885b5093; expires=Tue, 28-Apr-2026 07:35:27 GMT; Max-Age=1795; path=/; secure; HttpOnly; SameSite=none,COOKIELAW=optin; expires=Wed, 28-Apr-2027 07:05:32 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_SOCIAL=1; expires=Wed, 28-Apr-2027 07:05:32 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_STATS=1; expires=Wed, 28-Apr-2027 07:05:32 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_ADS=1; expires=Wed, 28-Apr-2027 07:05:32 GMT; Max-Age=31536000; path=/; secure; SameSite=none,__cf_bm=a896sD8bOH6iMH74FPurF9j37WiQaDJNV3AisNKRXes-1777359932.6066904-1.0.1.1-lAZp1iSm3zWo5TcbCLJQK7ecYFIX21diHS3Qikms7HcaJWI2LS.lXVsr_q5K4mZ_yx7.uY9YtqRqudsYwQRKv7xWne79KdRDGx1UBnFLxhCyZ1Hwkj7vjIPXykfqQDoZ; HttpOnly; Secure; Path=/; Domain=www.solelyoutdoors.com; Expires=Tue, 28 Apr 2026 07:35:32 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Solely Outdoors",
+    "notes": "LightSpeed eCom (hosted, shop 613284) Nova theme. Cloudflare passive WAF. Pagination uses page{N}.html suffix replace; sort=newest survives pagination. Site exposes 29 firearm-adjacent leaf catalogs (parent /firearms/, /ammunition/, /opitcs-plus/, /shooting-firearm-acessories/ do NOT aggregate products). Sitemap shows 1739 product .html leaves total; firearm-relevant subset ~900 via catalogUrls walk.",
+    "budget": 20,
+    "domain": "solelyoutdoors.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 24,
+    "timeout": 15000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "lightspeed-ecom",
+    "searchUrl": "/search/{keyword}/",
+    "sortParam": "?sort=newest",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/firearms/non-restricted/",
+      "/firearms/restricted-rifles/",
+      "/firearms/shotguns/",
+      "/firearms/barrels/",
+      "/ammunition/rifle-ammo/",
+      "/ammunition/handgun-ammo/",
+      "/ammunition/shotgun-ammo/",
+      "/ammunition/rim-fire-ammo/",
+      "/ammunition/bulk-ammo/",
+      "/opitcs-plus/scopes/",
+      "/opitcs-plus/red-dots/",
+      "/opitcs-plus/binoculars-spotting-scopes/",
+      "/opitcs-plus/range-finders/",
+      "/opitcs-plus/mounts-rails/",
+      "/opitcs-plus/rings/",
+      "/opitcs-plus/iron-sights/",
+      "/shooting-firearm-acessories/magazines-clips/",
+      "/shooting-firearm-acessories/bipods-shooting-rests/",
+      "/shooting-firearm-acessories/slings-swivels/",
+      "/shooting-firearm-acessories/shooting-protection/",
+      "/shooting-firearm-acessories/targets/",
+      "/reloading/bullets-projectiles/",
+      "/reloading/brass/",
+      "/reloading/gun-powder/",
+      "/reloading/primers/",
+      "/reloading/dies/",
+      "/reloading/presses-equipment/",
+      "/archeryairgunsairsoft-slingshots/airguns/",
+      "/hunting/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-08T18:35:34Z",
+    "wafProbeEvidence": "cf-ray header on every response (e.g. 9e935f664d1a592d-YYZ); server: cloudflare; all 8 batches returned 200 except batch 4 honeypots (wp-login.php, .env, phpinfo.php) returned 403 (origin path-selective, not WAF) and batch 6b SQL UNION returned 403 (CF managed-rules SQLi). Multi-UA all OK. Burst 10x OK. Barebones OK. No challenge body anywhere.",
+    "paginationPattern": {
+      "type": "suffix-replace",
+      "match": "?sort=newest",
+      "template": "page{N}.html?sort=newest"
+    },
+    "productCountMethod": {
+      "method": "catalog-walk",
+      "source": "29-catalog-leaves-page1+lastPage*perPage estimate, walked 2026-04-08; non-restricted=146, shotguns=128 verified"
+    },
+    "expectedProductCount": 900
+  }
+}

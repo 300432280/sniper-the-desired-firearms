@@ -1,0 +1,408 @@
+{
+  "siteId": "cmlvesqtw000u1a42p9j8e7i7",
+  "domain": "fishingworldgc.ca",
+  "timestamp": "2026-04-28T17:44:30.863Z",
+  "durationMs": 100912,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "23 URLs, each returning ≥1 product",
+      "actual": "0/23 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "https://fishingworldgc.ca/collections/all",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/all-guns",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/all-ammo-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/centre-fire-rifle",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/rimfire-rifles-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/shot-gun",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/semi-auto-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/pump-action-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/break-action-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/lever-action",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/bolt-action-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/shotgun-ammo",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/centrefire-ammo",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/rimfire-ammo",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/pistol-ammo",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/optics",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/scopes-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/red-dots-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/magazines-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/gun-parts",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/reloading-supplies",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/pellet-gun-1",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "https://fishingworldgc.ca/collections/pre-owned",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "23/23 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 1953,
+      "actual": 1989,
+      "evidence": {
+        "storedCount": 1953,
+        "actualCount": 1989,
+        "methodUsed": "shopify-products-json-walk",
+        "driftPct": 2
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37e01a3bee0426-YYZ",
+          "set-cookie": "localization=CA; path=/; expires=Wed, 28 Apr 2027 17:44:31 GMT,_shopify_y=ea0b6adb-1230-4324-8efb-a677721a0b2a; domain=fishingworldgc.ca; path=/; expires=Wed, 28 Apr 2027 23:44:31 GMT; SameSite=Lax,_shopify_s=11f5ec70-b997-4cbb-b4c3-dfc2ee7132ae; domain=fishingworldgc.ca; path=/; expires=Tue, 28 Apr 2026 18:14:31 GMT; SameSite=Lax,_shopify_essential=:AZ3VMUybAAEAs0fTKxxY6wEMeSi1aB1uivd03kOSwdMYOw8lm6Oo4o6l0c_PTDvaUPPRBPXzE0pjHzAh4ZTtBcsAOSK8S8yMCciNGbwrJ9tH7jz0EtG29rNhrGwDaukAsGcfaPoazx1FEAypnnoYIvvjFvxv2UMcD4gZyFGc8_T_2DpmCTaRZUOCe5e5-_ZHY0jVijF2wK5LI60lvuHGkZdltN0wyCfvjo2gApX0wwe6TpqP8sFebxQwzuwItD_FM0VDn72x0TYthJ3o-baU1_39cTJ1llo_I_nXZtrdrw3CupuO0R2urKE2OqWptsbe42zuibUsjs3oTzYstQD58NyWaZUjGImNT_3X2v0RurvvDnYT_GH4njuYkOXDIM4DROpQUdHycVHcNdcQbw:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax,_shopify_analytics=:AZ3VMUyxAAEA3MogWZfZwmr2FcqE0l1Q-3rX3ecuHN6kUVJKu78_wopjUVTAo0PNFD6E0XyANul_2XlZ5SpDlZhQMPoOTSZI46LUi2E:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax,_shopify_marketing=:AZ3VMUyxAAEA58kiZSTvVWlv7HdKLibZsm3ibNFzgfvtgt0ZQuNiT18BaSLOL8uT39HCaWpjPPuYakQtLRjV8gSVjQU:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Fishing World GC",
+    "notes": "Shopify site. Fishing/hunting/shooting retailer. 272 collections. Primary crawl via /products.json API (250/page, 8 pages). HTML fallback via /collections/all. Cloudflare passive WAF (cf-ray present, server: cloudflare). No JS overlays (no Searchspring/Algolia/Klevu).",
+    "budget": 90,
+    "domain": "fishingworldgc.ca",
+    "hasWaf": true,
+    "adapter": "shopify",
+    "perPage": 250,
+    "timeout": 15000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "json-ld"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": null,
+          "productDiscovery": "/products.json"
+        },
+        "htmlFallback": false
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "/products.json",
+          "notes": "All data in one API. 250/page max, 8 pages for full catalog. API default order is roughly newest-first (created_at descending) but not strictly monotonic.",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "stock",
+            "thumbnail",
+            "sourceId",
+            "tags"
+          ]
+        }
+      ]
+    },
+    "platform": "shopify",
+    "searchUrl": "/search?q={keyword}&type=product",
+    "sortParam": "?sort_by=created-descending",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "apiSortNote": "products.json default returns newest-first by created_at but not strictly monotonic (minor reordering within same-day batches). HTML ?sort_by=created-descending is honored and verified.",
+    "catalogUrls": [
+      "https://fishingworldgc.ca/collections/all",
+      "https://fishingworldgc.ca/collections/all-guns",
+      "https://fishingworldgc.ca/collections/all-ammo-1",
+      "https://fishingworldgc.ca/collections/centre-fire-rifle",
+      "https://fishingworldgc.ca/collections/rimfire-rifles-1",
+      "https://fishingworldgc.ca/collections/shot-gun",
+      "https://fishingworldgc.ca/collections/semi-auto-1",
+      "https://fishingworldgc.ca/collections/pump-action-1",
+      "https://fishingworldgc.ca/collections/break-action-1",
+      "https://fishingworldgc.ca/collections/lever-action",
+      "https://fishingworldgc.ca/collections/bolt-action-1",
+      "https://fishingworldgc.ca/collections/shotgun-ammo",
+      "https://fishingworldgc.ca/collections/centrefire-ammo",
+      "https://fishingworldgc.ca/collections/rimfire-ammo",
+      "https://fishingworldgc.ca/collections/pistol-ammo",
+      "https://fishingworldgc.ca/collections/optics",
+      "https://fishingworldgc.ca/collections/scopes-1",
+      "https://fishingworldgc.ca/collections/red-dots-1",
+      "https://fishingworldgc.ca/collections/magazines-1",
+      "https://fishingworldgc.ca/collections/gun-parts",
+      "https://fishingworldgc.ca/collections/reloading-supplies",
+      "https://fishingworldgc.ca/collections/pellet-gun-1",
+      "https://fishingworldgc.ca/collections/pre-owned"
+    ],
+    "apiSortOrder": "roughly-newest-first",
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-11",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "t1IntervalMin": 17,
+    "sortVerifiedAt": "2026-04-11",
+    "sortVerifiedOn": [
+      "centre-fire-rifle",
+      "shotgun-ammo",
+      "semi-auto-1",
+      "rimfire-rifles-1",
+      "pump-action-1"
+    ],
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive",
+    "catalogUrlStats": {
+      "all": {
+        "note": "global collection, all products",
+        "products_count": 1953
+      },
+      "optics": {
+        "products_count": 99
+      },
+      "all-guns": {
+        "products_count": 693
+      },
+      "scopes-1": {
+        "products_count": 133
+      },
+      "shot-gun": {
+        "products_count": 175
+      },
+      "gun-parts": {
+        "products_count": 101
+      },
+      "pre-owned": {
+        "products_count": 31
+      },
+      "all-ammo-1": {
+        "products_count": 585
+      },
+      "red-dots-1": {
+        "products_count": 51
+      },
+      "magazines-1": {
+        "products_count": 143
+      },
+      "pistol-ammo": {
+        "products_count": 43
+      },
+      "semi-auto-1": {
+        "products_count": 99
+      },
+      "lever-action": {
+        "products_count": 13
+      },
+      "pellet-gun-1": {
+        "products_count": 51
+      },
+      "rimfire-ammo": {
+        "products_count": 39
+      },
+      "shotgun-ammo": {
+        "products_count": 143
+      },
+      "bolt-action-1": {
+        "products_count": 11
+      },
+      "pump-action-1": {
+        "products_count": 85
+      },
+      "break-action-1": {
+        "products_count": 66
+      },
+      "centrefire-ammo": {
+        "products_count": 168
+      },
+      "rimfire-rifles-1": {
+        "products_count": 119
+      },
+      "centre-fire-rifle": {
+        "products_count": 173
+      },
+      "reloading-supplies": {
+        "products_count": 66
+      }
+    },
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11",
+    "wafProbeEvidence": "cf-ray header on all responses, server: cloudflare. Batch 8 (no UA) returned 403. All other batches 200.",
+    "paginationPattern": {
+      "note": "HTML uses ?page=N with 24 products/page. API uses ?limit=250&page=N.",
+      "type": "query",
+      "perPage": 24,
+      "template": "page",
+      "firstPageHasParam": false
+    },
+    "productCountMethod": {
+      "note": "8 pages x 250 + 203 on last page = 1953 total",
+      "method": "products-json-walk",
+      "perPage": 250,
+      "totalPages": 8
+    },
+    "sortVerifiedMethod": "3-way: default vs created-descending vs price-ascending; all 5 collections showed different first products",
+    "expectedProductCount": 1953
+  }
+}

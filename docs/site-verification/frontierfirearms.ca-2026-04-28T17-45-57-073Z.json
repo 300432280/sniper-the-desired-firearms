@@ -1,0 +1,317 @@
+{
+  "siteId": "cmltxz6je000589xaijhcnlds",
+  "domain": "frontierfirearms.ca",
+  "timestamp": "2026-04-28T17:45:57.073Z",
+  "durationMs": 84206,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "13 URLs, each returning ≥1 product",
+      "actual": "13/13 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/firearms.html",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "husqvarna-swedish-m96-by-in-9-3-x-57-used",
+              "swedish-m96-by-stiga-in-30-06-used",
+              "bsa-made-lee-enfield-shtle-dated-1940-n01-mk3-303-british"
+            ]
+          },
+          {
+            "url": "/scopes-optics/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "sig-sauer-oscar8-27-55x80mm-spotting-scope",
+              "truglo-4x32mm-buckline-riflescope-w-rings-duplex-qnsz",
+              "3-tactix-mprd-3"
+            ]
+          },
+          {
+            "url": "/equipment/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "ai-tactical-velites-level-3a-soft-plate",
+              "multicurve-auxilia-level-4-silicon-carbide-ceramic-plate",
+              "lightweight-multicurve-auxilia-level-4-silicon-carbide-ceramic-plate"
+            ]
+          },
+          {
+            "url": "/surplus/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "canadian-military-mukluk-size-9-med",
+              "canadian-military-mukluk-size-10-med",
+              "n-1b-extreme-cold-weather-mukluk-boots-are-us-air-force"
+            ]
+          },
+          {
+            "url": "/surplus-bags-hats-clothing/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "ehg-elite-kenai-mossy-oak-fleece-performance-mid-season",
+              "ehg-elite-kenai-mossy-oak-fleece-performance-mid-season-jacket-mountain-country",
+              "ehg-elite-men-s-mossy-oak-late-season-hunting-jacket"
+            ]
+          },
+          {
+            "url": "/security-devices.html",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "rothco-21-expandable-aluminum-baton-w-side-handle",
+              "telescoping-baton-led-flashlight-window-breaker-tactical-protection",
+              "olympia-900-lumen-flashlight"
+            ]
+          },
+          {
+            "url": "/farm-supplies/",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "7-livestock-corral-panel",
+              "10-livestock-corral-panel",
+              "6-livestock-driveway-gate"
+            ]
+          },
+          {
+            "url": "/power-equipment/",
+            "status": 200,
+            "productCount": 31,
+            "sampleSlugs": [
+              "2026-ssl580-mini-skid-steer",
+              "2025-new-bttl-15-mini-excavator",
+              "2025-mini-skidsteer-sda-140w-z"
+            ]
+          },
+          {
+            "url": "/shooting-accessories.html",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "streamlight-speedlocker",
+              "hq-outfitters-elastic-buttstock-cartridge-carrier-rifle",
+              "wk180-parts-kit-brass-deflector-and-2x-key-m-rails"
+            ]
+          },
+          {
+            "url": "/buy-online.html",
+            "status": 200,
+            "productCount": 30,
+            "sampleSlugs": [
+              "the-bible-promise-book",
+              "cz-455-american-beachwood-rimfire-stock-04",
+              "cz-455-american-beachwood-rimfire-stock-03"
+            ]
+          },
+          {
+            "url": "/ammunition-reloading/centerfire-ammunition.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "sellier-bellot-223-rem-55gr-fmj-case-of-1000",
+              "pmc-223-55-grain-fmj-1000-rounds"
+            ]
+          },
+          {
+            "url": "/ammunition-reloading/rimfire-ammunition.html",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "extreme-cold-weather-face-mask",
+              "rothco-metal-tent-stakes",
+              "french-fork-spoon-set-new"
+            ]
+          },
+          {
+            "url": "/ammunition-reloading/surplus-ammunition.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "chinese-surplus-7-62x39mm-1120-rounds",
+              "chinese-surplus-7-62x54r-ammunition-880rds"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.frontierfirearms.ca/firearms.html",
+        "page2Url": "https://www.frontierfirearms.ca/firearms.html?page=2",
+        "page1First3": [
+          "husqvarna-swedish-m96-by-in-9-3-x-57-used",
+          "swedish-m96-by-stiga-in-30-06-used",
+          "bsa-made-lee-enfield-shtle-dated-1940-n01-mk3-303-british"
+        ],
+        "page2First3": [
+          "spandau-mauser-71-84-in-11mm",
+          "barrel-action-bolt-lee-enfield-no1-mk3-303-british",
+          "lee-enfield-303-stripper-clip-kit-with-oiler-and-pouch"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://www.frontierfirearms.ca/firearms.html?sort=newest",
+        "withoutSortUrl": "https://www.frontierfirearms.ca/firearms.html",
+        "withSortFirst": "husqvarna-swedish-m96-by-in-9-3-x-57-used",
+        "withoutSortFirst": "husqvarna-swedish-m96-by-in-9-3-x-57-used",
+        "counterControlUrl": "https://www.frontierfirearms.ca/firearms.html?sort=alphaasc",
+        "counterControlFirst": "coach-gun-16g-side-by-side-external-hammer-19-used-cg03"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 1282,
+      "actual": 1448,
+      "evidence": {
+        "storedCount": 1282,
+        "actualCount": 1448,
+        "methodUsed": "sitemap",
+        "driftPct": 13
+      },
+      "reason": "Count drifted 13% (stored=1282, actual=1448)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37e233add76d93-YYZ",
+          "set-cookie": "SF-CSRF-TOKEN=032d183c-e60d-4d54-86f7-fca7465313f5; Path=/; Secure; SameSite=Strict,fornax_anonymousId=03127c44-fe19-45a9-aac5-8e892f5a8f4c; Expires=Thu, 27 Apr 2028 17:45:57 GMT; Path=/; Secure; SameSite=None,athena_short_visit_id=820a6a90-152c-40fc-b631-916dad3e50e6:1777398357; Expires=Tue, 28 Apr 2026 18:15:57 GMT; Path=/; Secure; HttpOnly; SameSite=None,Shopper-Pref=AAE03477BDCCA2E75B4CB253DD8AFBB177D526FF-1778003157389-x%7B%22cur%22%3A%22CAD%22%2C%22funcConsent%22%3Atrue%7D; Expires=Tue, 05 May 2026 17:45:57 GMT; Path=/; Secure; HttpOnly,SHOP_SESSION_TOKEN=0e47dc51-ea18-4a31-be0e-5972c63c66f9; Expires=Tue, 05 May 2026 17:45:57 GMT; Path=/; Secure; HttpOnly; SameSite=None,__cf_bm=m0fghBNsFNHf8zHTN0DMX0v5BNGjfeRyfNCs8zP.7Ug-1777398357.0647404-1.0.1.1-aUlgaxM5sZrlKCFK752VhUdxfXqxgFXYXnTN9ayoz08CUC6IU8VEvVGPpyBG2N7IBsDZCKPkFbKUu9t1xDLRbecUwKNG2ReubAvRllXW.c0oAC0M_nctsOacVDU3OOSx; HttpOnly; Secure; Path=/; Domain=frontierfirearms.ca; Expires=Tue, 28 Apr 2026 18:15:57 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Frontier Firearms",
+    "notes": "Audited 2026-04-06.\nPlatform: BigCommerce Blueprint (legacy, NOT Stencil). HTML contains BCData global and stencil refs but URL conventions are mixed .html (top-level legacy categories) + trailing-slash (newer categories). Generator meta tag is absent.\nWAF: Cloudflare CDN in passive mode (cf-ray header present, no challenge). Desktop Chrome UA returns 200 with full ~410KB HTML. needsPlaywright=false.\nProduct count: sitemap-index via /xmlsitemap.php?type=products&page=1 returns 1286 product <loc>s on a single page; 5/5 HEAD samples returned 200. Replaces stale stream-page-count value of 374.\nPagination: ?page=N (query). Verified page 2 returns different products from page 1 on both /firearms.html (.html cat) and /equipment/ (slash cat). ?p=2 is silently ignored (returns page 1). Suffix-replace -2.html does NOT work (404).\nSort: <select id=\"sort\" name=\"sort\"> options include \"newest\"=Newest Items, alphaasc, priceasc, etc. ?sort=newest is the real param. On firearms.html the default order already matches sort=newest (default is newest-first), so the param is harmless additive — page 2 with sort yields strictly older products than page 1, confirming sort survives pagination.\nCatalogUrls: dropped duplicates and clearance overlays.\n  - /sport-optics/ ≡ /scopes-optics/ (Jaccard 1.0, 45/45) — kept /scopes-optics/.\n  - /camping-outdoors.html ≡ /surplus-bags-hats-clothing/ (Jaccard 1.0, 288/288) — kept /surplus-bags-hats-clothing/.\n  - /ammo-clear-out, /reloading-clear-out, /knife-clear-out, /hunting-clear-out, /accessory-clearout, /archery-clear-out, /bulk-buys/ — clearance overlays. Their products live under main categories. Dropped to keep minimum overlap; bootstrap discovers them from /xmlsitemap.php anyway.\n  - Ammunition has no top-level URL — /ammunition-reloading/ and /ammunition-reloading.html both 404. Added 5 explicit ammo subcategories (centerfire/rimfire/shotgun/handgun/surplus).\n  - /firearms.html=56, /scopes-optics/=45, /equipment/=200, /surplus/=260, /surplus-bags-hats-clothing/=288, /security-devices.html=4, /farm-supplies/=17, /power-equipment/=30, /shooting-accessories.html=73, /buy-online.html=30, ammo subcats=2+17+9+9+2.\nWalked unique total via final catalogUrls: ~832/1286 (65%). Remaining ~454 are brand pages, orphan products, and items only reachable via /brands/ or product detail pages — bootstrap covers them via the sitemap.\ncrawlers.watermark.method=navigate-from-watermark (default order is newest-first; sort=newest survives pagination).",
+    "budget": 60,
+    "domain": "frontierfirearms.ca",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 40,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "Default category order is already newest-first; ?sort=newest is the verified BC sort param (option value=\"newest\" in <select id=\"sort\">) and yields identical first products as no-sort. Pagination preserves newest-first ordering (page 2 IDs are strictly older than page 1).",
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "bigcommerce-stencil",
+    "searchUrl": "/search.php?search_query={keyword}",
+    "sortParam": "?sort=newest",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/firearms.html",
+      "/scopes-optics/",
+      "/equipment/",
+      "/surplus/",
+      "/surplus-bags-hats-clothing/",
+      "/security-devices.html",
+      "/farm-supplies/",
+      "/power-equipment/",
+      "/shooting-accessories.html",
+      "/buy-online.html",
+      "/ammunition-reloading/centerfire-ammunition.html",
+      "/ammunition-reloading/rimfire-ammunition.html",
+      "/ammunition-reloading/surplus-ammunition.html"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-13",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "No WAF blocking. Cloudflare CDN passive only — desktop UA returns HTTP 200 with full HTML. Verified 2026-04-06.",
+      "method": "none"
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive-all-200",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-13T00:00:00Z",
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "productCountMethod": {
+      "notes": "BigCommerce Blueprint xmlsitemap.php product sub-sitemap. 5/5 random HEAD checks returned 200.",
+      "method": "sitemap-index",
+      "sitemapUrl": "/xmlsitemap.php?type=products&page=1"
+    },
+    "expectedProductCount": 1282
+  }
+}

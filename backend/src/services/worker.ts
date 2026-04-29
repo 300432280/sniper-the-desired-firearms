@@ -2,7 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { redisConnection } from './queue';
 import { pushEvent } from './debugLog';
 import { prisma } from '../lib/prisma';
-import { runHealthChecks, pruneOldHealthChecks } from './health-monitor';
+import { runHealthChecks, pruneOldHealthChecks, verifyAllSiteProfiles } from './health-monitor';
 import { schedulerTick, onCrawlComplete, initializeCrawlSchedule, pruneCrawlEvents } from './crawl-scheduler';
 import { sendDailyDigests } from './daily-digest';
 import { crawlWatermark } from './watermark-crawler';
@@ -983,9 +983,25 @@ export function startHealthWorker(): Worker {
       type: 'info',
       message: `Health check complete: ${result.reachable}/${result.total} reachable, ${result.canScrape}/${result.total} scrapable, ${result.failed.length} failed`,
     });
+
+    // SiteProfile watchdog: verify all site profiles against live sites (complementary to connectivity check)
+    try {
+      console.log(`[HealthWorker] Running siteProfile watchdog...`);
+      const watchdogResults = await verifyAllSiteProfiles();
+      const alertCount = watchdogResults.filter(r => r.shouldAlert).length;
+      pushEvent({
+        type: alertCount > 0 ? 'job_failed' : 'info',
+        message: `SiteProfile watchdog complete: ${watchdogResults.length} sites verified, ${alertCount} drift alerts`,
+      });
+    } catch (watchdogErr) {
+      console.error(`[HealthWorker] SiteProfile watchdog failed: ${watchdogErr instanceof Error ? watchdogErr.message : String(watchdogErr)}`);
+      pushEvent({ type: 'job_failed', message: `SiteProfile watchdog error: ${watchdogErr instanceof Error ? watchdogErr.message : String(watchdogErr)}` });
+    }
   }, {
     connection: redisConnection,
     concurrency: 1,
+    lockDuration: 7200000,   // 2 hours — covers watchdog 70-min run + buffer
+    lockRenewTime: 600000,   // renew every 10 min
   });
 
   worker.on('completed', (job) => {

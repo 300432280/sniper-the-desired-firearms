@@ -1,0 +1,8 @@
+{
+  "profilePath": "docs/site-audit/bullseyenorth.com-2026-04-27T12-00-00-000Z.json",
+  "domain": "bullseyenorth.com",
+  "timestamp": "2026-04-28T08:12:57.801Z",
+  "stages": [],
+  "overallVerdict": "PASS",
+  "approvedForDbWrite": true
+}

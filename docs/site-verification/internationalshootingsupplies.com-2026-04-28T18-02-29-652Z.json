@@ -1,0 +1,1013 @@
+{
+  "siteId": "cmltxz7pk001689xa1de9mpyl",
+  "domain": "internationalshootingsupplies.com",
+  "timestamp": "2026-04-28T18:02:29.652Z",
+  "durationMs": 284450,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "79 URLs, each returning ≥1 product",
+      "actual": "78/79 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/ammunition/airgun-ammunition/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "elite-force-airsoft-11-1v-lipo-900-mah-stick-battery-15c-tamiya-connector",
+              "elite-force-airsoft-6mm-airsoft-bbs-0-2g-biodegradable-5000-count-bottle",
+              "elite-force-airsoft-9-6v-nimh-1600-mah-nunchuk-batteries-deans-connector"
+            ]
+          },
+          {
+            "url": "/product-category/ammunition/crossbow-bolts/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "steambow-ar-series-aluminum-shaft-bodkin-bolt-162gr-6-count-pack",
+              "steambow-ar-series-aluminum-shaft-broadhead-hunting-bolt-157gr-3-count-pack"
+            ]
+          },
+          {
+            "url": "/product-category/ammunition/handgun-ammo/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "barnes-pioneer-357-mag-180gr-ofn-20-round-box",
+              "barnes-vor-tx-357mag-140gr-xpbhp-20-round-box",
+              "barnes-vor-tx-44-rem-mag-225gr-xpbhp-20-round-box"
+            ]
+          },
+          {
+            "url": "/product-category/ammunition/rifle-ammo/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "aguila-6-5-creedmoor-140gr-fmjbt-20-round-box",
+              "barnes-vor-tx-30-30-winchester-150-gr-tsx-fn-20-round-box",
+              "barnes-vor-tx-300-winchester-magnum-165-gr-ttsx-bt-20-round-box"
+            ]
+          },
+          {
+            "url": "/product-category/ammunition/rimfire-ammo/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "aguila-interceptor-22-lr-40gr-cphp-1470fps-50-round-box",
+              "aguila-super-extra-22lr-40gr-lsp-1130fps-50-round-case",
+              "aguila-super-extra-hp-22lr-38gr-cphp-1280fps-200-round-case"
+            ]
+          },
+          {
+            "url": "/product-category/ammunition/shotgun-ammo/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "browning-wicked-wing-xd-12-ga-3-1-1-4oz-2-edp-steel-1450-fps-25-round-box",
+              "browning-wicked-wing-xd-12-ga-3-1-1-4oz-bb-edp-steel-1450-fps-25-round-box",
+              "clever-mirage-t3-granditalia-12-ga-2-3-4-1oz-8-1280-fps-250-round-case"
+            ]
+          },
+          {
+            "url": "/product-category/bows/crossbows/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "steambow-ar-series-m10-tactical-repeating-crossbow-6-2x162mm"
+            ]
+          },
+          {
+            "url": "/product-category/firearms/airguns-pal-not-required/",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "beretta-92fs-co2-air-pistol-177-cal-pellet-4-75-barrel-394-fps",
+              "beretta-m9a3-co2-air-pistol-177-cal-bb-4-75-barrel-330-fps",
+              "heckler-koch-hk416-co2-airgun-177-cal-bb-13-5-barrel-460-fps"
+            ]
+          },
+          {
+            "url": "/product-category/firearms/airguns-pal-required/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "umarex-nxg-apx-multi-shot-pneumatic-airgun-177-cal-pellet-20-barrel-800-fps"
+            ]
+          },
+          {
+            "url": "/product-category/firearms/airsoft-guns-pal-not-required/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "heckler-koch-hk-416-a5-aeg-6mm-bb-11-barrel-370-fps",
+              "sig-sauer-sig-air-proforce-mcx-virtus-aeg-6mm-bb-11-5-barrel",
+              "vegaforce-company-avalon-samurai-edge-aeg-6mm-bb-15-0-barrel"
+            ]
+          },
+          {
+            "url": "/product-category/firearms/rifles/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "uberti-1894-carbine-30-30-win-20-barrel",
+              "adler-arms-rf-224-tac-gen-2-22-lr-11-6-barrel",
+              "adler-arms-ad-500s-gray-308-win-20-barrel"
+            ]
+          },
+          {
+            "url": "/product-category/firearms/shotguns/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "benelli-nova-3-tactical-multicam-black-12-ga-3-18-5-barrel",
+              "benelli-supernova-tactical-pump-shotgun-14-12g",
+              "beretta-686-silver-pigeon-1-12g-28"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/decoys-decoy-accessories/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "allen-decoy-bag-30-x-50-mesh",
+              "allen-decoy-bag-47-x-50-mesh",
+              "foxpro-fat-bob-predator-horn-call"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/game-bags/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "koola-buck-anti-microbial-deer-quarter-game-bags-large-8-x-40-4-count",
+              "koola-buck-deer-antilope-game-bags-large-10-x-40-5-count",
+              "koola-buck-elk-moose-caribou-game-bags-extra-large-16-x-60-5-count"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/game-calls/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "cass-creek-ergo-predator-electronic-game-call",
+              "cass-creek-ergo-predator-ii-electronic-game-call",
+              "foxpro-x24-digital-game-calls"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/hunting-accessories-backpacks-frames/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "ruger-glendale-sling-daypack"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/hunting-accessories-bladed-tools/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "benchmade-a%d0%b8o%d0%b8imus-539gy-fixed-knife-5-0-drop-point-blade",
+              "benchmade-bailout-537gy-1-folding-knife-3-38-tanto-blade",
+              "benchmade-535-3-bugout-folding-knife-3-24-drop-point-blade"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/hunting-accessories-clothing-and-apparel/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "allen-vanish-3-4-head-net-realtree-edge",
+              "allen-vanish-balaclava-face-mask-w-mesh-mossy-oak-country",
+              "allen-vanish-stake-out-blind-realtree-edge"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/hunting-accessories-game-cameras-thermal-imagers/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "caldwell-ballistic-precision-lr-target-camera-system",
+              "stealth-cam-revolver-360-cellular-trail-camera"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/hunting-accessories-game-processing/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "allen-field-dressing-gloves-6-pairs",
+              "allen-gambrel-and-hoist-kit",
+              "koola-buck-anti-microbial-game-spray-10oz-aerosol"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/hunting-accessories-shooting-sticks-and-tripods/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "bog-pod-dead-silent-kneeling-shooting-sticks",
+              "bog-fieldpod-tripod-shooting-cradle-20-42",
+              "vortex-high-country-ii-tripod-kit-11-3-62-5"
+            ]
+          },
+          {
+            "url": "/product-category/hunting-accessories/hunting-accessories-tool-maintenance/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "benchmade-14-guided-hone-tool",
+              "benchmade-20-guided-hone-tool",
+              "boker-arbolito-classic-sharpening-steel"
+            ]
+          },
+          {
+            "url": "/product-category/novelties/electronics-protection/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "faraday-defense-jacket-pro-cordura-magnetic-closure-14-x-17-faraday-xl-laptop-bag",
+              "faraday-defense-jacket-pro-cordura-magnetic-closure-8-5-x-4-5-faraday-phone-bag",
+              "faraday-defense-jacket-tpu-magnetic-closure-4-75-x-2-75-faraday-key-fob-bag"
+            ]
+          },
+          {
+            "url": "/product-category/optics/binoculars/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "burris-droptine-hd-10x42mm-binoculars-green",
+              "burris-droptine-hd-8x42mm-binoculars-green",
+              "burris-signature-hd-12x52mm-binoculars-green"
+            ]
+          },
+          {
+            "url": "/product-category/optics/mounts/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "burris-standard-rings-1-medium-universal-dovetail-matte",
+              "burris-trumount-universal-bases-for-tikka-t3-reversible-matte",
+              "burris-xtreme-tactical-picatinny-base-25moa-for-remington-700-long-action-howa-1500-long-action"
+            ]
+          },
+          {
+            "url": "/product-category/optics/night-vision/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "sionyx-aurora-pro-1-3x16mm-digital-night-vision-monocular-w-illuminator-kit-firearm-mount"
+            ]
+          },
+          {
+            "url": "/product-category/optics/optics-rifelscope-accessories/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "butler-creek-blizzard-flip-open-scope-cover-size-10-2-3-2-40-58-2-60-96mm",
+              "butler-creek-flip-open-scope-cover-size-10-eyepiece-1-516-38-5mm",
+              "butler-creek-flip-open-scope-cover-size-11-objective-1-54x1-34-39-1mmx34-0mm"
+            ]
+          },
+          {
+            "url": "/product-category/optics/range-finders/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "bushnell-nitro-1800-6x24mm-laser-range-finder",
+              "bushnell-r3-laser-range-finder-1200-6x25mm",
+              "bushnell-r5-laser-range-finder-2000-ab-6x25mm"
+            ]
+          },
+          {
+            "url": "/product-category/optics/red-dots-reflex/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "browning-buck-mark-pro-1x18mm-3-moa-red-dot-closed-reflex-sight-w-integrated-weaver-picatinny-mount",
+              "burris-rt-1-1x25mm-2-moa-red-dot-sight",
+              "hawke-1x15mm-speed-dot-prism-sight"
+            ]
+          },
+          {
+            "url": "/product-category/optics/rifle-scopes/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "burris-scout-2-7x32mm-riflescope-ballistic-plex-reticle",
+              "burris-fullfield-5th-gen-2-8x35mm-ballistic-e3-il-reticle-riflescope-1-maintube",
+              "burris-fullfield-5th-gen-3-12x42mm-ballistic-e3-reticle-riflescope-1-maintube"
+            ]
+          },
+          {
+            "url": "/product-category/optics/sights/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "magpul-moe-mbus-front-sight-blk",
+              "midwest-industries-ghost-ring-picatinny-rail-sight-set-for-marlin-1895",
+              "trijicon-bright-tough-night-sight-set-white-outline-green-lamp-for-1911-pistols-w-0-125-tang"
+            ]
+          },
+          {
+            "url": "/product-category/optics/spotting-scopes-and-accessories/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "hawke-adjustable-smart-phone-camera-adapter-for-observation-optics-1-3-2-4-eyepiece-diameter",
+              "hawke-endurance-ed-13-39x50mm-compact-angled-spotting-scope",
+              "hawke-endurance-ed-20-60x68mm-angled-spotting-scope"
+            ]
+          },
+          {
+            "url": "/product-category/parts/actions-and-action-parts/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "cz-75-sp-01-sp-01-shadow-ts-recoil-spring-13-lbs",
+              "mtngear-titanium-ambidextrous-hunter-original-bolt-handle-for-tikka-t3-t3x",
+              "pristine-bolt-action-receiver-right-handed-short-action-308-caliber"
+            ]
+          },
+          {
+            "url": "/product-category/parts/barrels/",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "pre-owned-ibi-barrels-stainless-blank-6mm-27-medium-hunter-contour-1-8-twist-5r-rifling-1-250-shank",
+              "pre-owned-robinson-arms-xcr-l-barrel-6-8-spc-18-6-1-11-twist-w-type-1-gas-block-and-muzzle-brake",
+              "tactical-solutions-performance-x-ring-barrel-red-22-lr-16-5-for-ruger-10-22"
+            ]
+          },
+          {
+            "url": "/product-category/parts/bow-function-parts-upgrades/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "steambow-ar-6-stinger-ii-folding-stock-adapter",
+              "steambow-ar-series-aluminum-limb-tips-2-count-pack",
+              "steambow-ar-series-bow-limb-qd-mounting-block"
+            ]
+          },
+          {
+            "url": "/product-category/parts/buttstocks/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "boyds-at-one-adjustable-laminate-gunstock-for-remington-700-short-action-right-hand-hinged-floorplate-coyote",
+              "magpul-elg-m-lok-stock-blk-for-marlin-1894-1895-336",
+              "magpul-pc-backpacker-stock-for-ruger-pc-carbine"
+            ]
+          },
+          {
+            "url": "/product-category/parts/internal-stability-upgrades/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/parts/magazine-upgrade-parts/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "adaptive-technologies-detachable-magazine-conversion-kit-for-howa-1500-weatherby-vanguard-short-action-w-10-round-223-rem-204-rug-magazine",
+              "howa-1500-detachable-magazine-conversion-kit-short-action-with-5rd-223rem-204rug-magazine",
+              "tactical-solutions-performance-magazine-release-blue-for-ruger-10-22-and-x-ring"
+            ]
+          },
+          {
+            "url": "/product-category/parts/stock-and-chassis-systems/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "boyds-at-one-adjustable-gunstock-for-the-howa-1500-sa-bull-barrel-channel-applejack-laminate",
+              "boyds-at-one-adjustable-gunstock-for-the-howa-1500-sa-bull-barrel-channel-blaze-laminate",
+              "boyds-at-one-adjustable-laminate-gunstock-for-the-howa-1500-short-action-sky-blue"
+            ]
+          },
+          {
+            "url": "/product-category/parts/trigger-assemblies-and-parts/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "tacsol-xrt-trigger-for-x-ring-and-ruger-10-22-rifles-2-5-3-lbs-pull-weight",
+              "triggertech-diamond-trigger-2-stage-0-375-2-5lbs-pro-curved-for-remington-700-and-clones",
+              "triggertech-primary-trigger-single-stage-1-5-4-0lbs-curved-for-remington-700-right-hand-w-o-bolt-release-and-clones"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-components/brass/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "nosler-premium-brass-270-wsm-unprimed-25-count-box",
+              "nosler-brass-270-ack-imp-50-piece-box",
+              "nosler-premium-brass-30-06-sprg-unprimed-50-count-box"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-components/primers/",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "cci-small-rifle-primers-br-2-100-count-box",
+              "cci-small-pistol-primers-100",
+              "cci-small-pistol-primers-500-1000-count-brick"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-components/projectiles/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "barnes-tsx-30-cal-308-180-gr-tsx-bt-50-bullets-copy",
+              "barnes-tsx-30-cal-308-180-gr-tsx-bt-50-bullets",
+              "barnes-tsx-338-cal-338-250-gr-tsx-fb-50-bullets"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/case-cleaning-prep/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "hornady-handheld-priming-tool",
+              "lee-precision-universal-3-jaw-chuck",
+              "lyman-case-lube-2fl-oz"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/dies-die-accessories/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "lee-precision-factory-crimp-die-6-5-creedmoor",
+              "rcbs-223-rem-neck-die-set",
+              "rcbs-223-rem-neck-sizing-die"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/hand-tools/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "lyman-universal-case-prep-accessory-tool-set",
+              "lyman-magnum-inertia-bullet-puller",
+              "lyman-vld-chamfer-reamer"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/kits/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "hornady-lock-n-load-classic-single-stage-press-reloading-kit",
+              "lyman-brass-smith-ideal-reloading-kit",
+              "lyman-brass-smith-all-american-8-reloading-kit-12-piece"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/presses-accessories/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "lyman-shellholder-x-11-for-45-colt-454-casull",
+              "lyman-shellholder-x-13-for-270-wsm-300-wsm-243-wssm-325-wsm",
+              "lyman-shellholder-x-17-for-7-62x54r-338-lapua-mag-40-60-win-45-70-45-120-480-ruger-500-sw"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/reloading-equip-projectile-production/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "lyman-bullet-casting-thermometer"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/reloading-equip-reloading-component-dispensers/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "lyman-e-zee-powder-funnel",
+              "rcbs-powder-trickler-2"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/reloading-equip-scales-measures-gauges/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "frankford-arsenal-ds750-digital-scale",
+              "hornady-lock-n-load-26-nosler-modified-case",
+              "hornady-lock-n-load-280rem-modified-case"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/trimmers/",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "lyman-carbide-cutter-head",
+              "lyman-e-zee-trim-hand-case-trimmer-for-pistol-calibers",
+              "lyman-trimmer-pilot-22-for-22-cal-cartridges"
+            ]
+          },
+          {
+            "url": "/product-category/reloading-equipment/tumblers/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "lyman-turbo-1200-pro-tumbler"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/achery-accessories/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "steambow-ar-series-tactical-arrow-quiver-kit"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/ammo-storage-locking-devices/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "allen-tactical-heavy-duty-shotshell-bandoleer",
+              "plano-field-ammo-box-compact-odg",
+              "pursuit-gear-30-cal-plastic-ammo-box-11-5-x-5-3-x-7-3-odg-4-piece-set-w-crate"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/bags-pouches/",
+            "status": 200,
+            "productCount": 11,
+            "sampleSlugs": [
+              "allen-girls-with-guns-handgun-range-bag-gwg-shade-blackout-camo",
+              "allen-neoprene-shotgun-belt-realtree-max-4",
+              "allen-shotgun-shell-belt"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/bipods-adapters/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "bt-industries-accu-shot-monopod-mid-height-prm-bt13-qk",
+              "accu-shot-monopod-bt12-qk-standard-height-precision-rail-monopod",
+              "bt10-lw17-v8-atlas-bipod"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/buttstock-accessories/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "pachmayr-decelerator-magnum-slip-on-recoil-pad-large-black",
+              "pachmayr-decelerator-magnum-slip-on-recoil-pad-small-black-copy",
+              "pachmayr-decelerator-magnum-slip-on-recoil-pad-small-black"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/cleaning-supplies-reusable/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "hoppes-boresnake-den-for-7mm-270-284-280-caliber-rifle",
+              "lyman-l-e-range-kit",
+              "tipton-deluxe-1-piece-carbon-fiber-cleaning-rod-22-26-caliber-36"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/eye-protection/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "allen-guardian-shooting-safety-glasses-glasses-yellow-lens-ansi-z87-1-and-ce-rated",
+              "lyman-l-e-range-kit"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/flashlights-lasers/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "browning-epic-white-green-headlamp-and-folding-knife-2-drop-point-combo",
+              "lasermax-micro-ii-red-laser-universal-rail",
+              "spartan-red-laser-mint-led"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/forends/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "magpul-moe-m-lok-forend-for-remington-870-12ga-black",
+              "magpul-elg-m-lok-forend-for-marlin-1895",
+              "magpul-moe-m-lok-hand-guard-carbine-length-ar15-fde"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/grips/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "bcm-kag-m-lok-kinesthetic-angled-grip-black",
+              "bcm-mod-3-m-lok-vertical-grip-black",
+              "gear-sector-picatinny-mounted-hand-stop-mod-3-flat-dark-earth"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/gun-cabinets-safes/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "hq-outfitters-8-gun-steel-cabinet-keyed-lock-55x14x12"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/gun-cases/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "allen-42-durango-rifle-soft-case-black",
+              "allen-52-durango-rifle-soft-case-black",
+              "allen-52-magnum-gun-sock-heather-gray"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/gun-parts/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "magpul-msa-qd-moe-sling-attachment",
+              "magpul-light-mount-v-block-rings",
+              "magpul-m-lok-3-slot-aluminum-rail"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/gunsmithing/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "lyman-electronic-digital-trigger-pull-gauge",
+              "lyman-gunsmith-punch-set-7-count",
+              "wheeler-engineering-trigger-pull-scale"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/hearing-protection/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "browning-cadence-electronic-hearing-protection",
+              "caldwell-e-max-low-profile-electronic-hearing-protection-w-clear-shooting-glasses",
+              "caldwell-e-max-pro-bluetooth-rechargeable-electronic-hearing-protection-24db-nrr"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/holsters/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "galco-gunleather-miami-classic-ii-shoulder-system-holster-and-double-mag-pouch-for-springfield-xd-fn-509-right-hand-draw",
+              "safariland-6355-als-drop-leg-tactical-holster-w-quick-release-leg-harness-for-glock-17-gen-3-gen-4-right-hand-draw",
+              "safariland-6355-als-drop-leg-tactical-holster-w-quick-release-leg-harness-for-hk-sfp9-vp9-right-hand-draw-copy"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/magazines-accessories/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "accurate-mag-aics-magazine-dssf-7rd-300wsm-6-5prc",
+              "howa-1500-weatherby-vanguard-mossberg-1500-smith-wesson-m1500-interarms-1500-300win-mag-detachable-5-round-magazine",
+              "howa-1500-weatherby-vanguard-mossberg-1500-smith-wesson-m1500-interarms-1500-243win-7mm-08rem-308win-detachable-5-round-magazine"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/shooting-accessories-apparel/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "beretta-silver-pigeon-shooting-vest-unisex-x-large-hunter-green",
+              "browning-trapper-creek-mesh-shooting-vest-large-gray"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/shooting-accessories-chronographs-recording-tools/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "caldwell-ballistic-precision-chronograph-g2",
+              "caldwell-ballistic-precision-chronograph-with-bluetooth-2",
+              "caldwell-ballistic-precision-chronograph-with-bluetooth"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/shooting-accessories-cleaning-supplies-consumables/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "breakthough-clean-technologies-battle-born-grease-fortified-w-ptfe-12cc-syringe",
+              "breakthough-clean-technologies-copper-remover-59ml",
+              "battle-born-high-purity-oil-6-fl-oz-spray-bottle"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/shooting-accessories-muzzle-devices-externally-attached/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "ibi-tactical-2-gill-muzzle-brake-6-5mm-1-2-28-thread-satin-stainless",
+              "ibi-tactical-3-gill-muzzle-brake-308-cal-5-8-24-thread-black-nitride",
+              "ibi-tactical-3-gill-muzzle-brake-308-cal-5-8-24-thread-stainless"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/shooting-rests/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "benchmaster-perfect-shot-adjustable-shooting-rest",
+              "caldwell-lead-sled-standard-size-weight-bag",
+              "caldwell-lead-sled-3-shooting-rest"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/slings-sling-hardware/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "allen-1-sling-swivel-set-for-ruger-rifles-w-barrel-bands",
+              "allen-baktrak-boulder-sling-black-yellow",
+              "allen-deluxe-binocular-strap-black"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/snap-caps/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "a-zoom-22-250-snap-caps-2pk",
+              "a-zoom-243-win-snap-caps-2pk",
+              "a-zoom-300-win-mag-metal-snap-caps-2-pack"
+            ]
+          },
+          {
+            "url": "/product-category/shooting-accessories/targets-accessories/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "birchwood-casey-texas-star-reactive-steel-plinking-target",
+              "caldwell-duramax-self-healing-polymer-reactive-ball-target",
+              "caldwell-handgun-resetting-metal-target"
+            ]
+          },
+          {
+            "url": "/product-category/uncategorized/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "ege-arms-levar-12s-gen-2-walnut-copper-12-ga-3-10-6-barrel"
+            ]
+          }
+        ]
+      },
+      "reason": "1/79 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page2 returns 200",
+      "actual": "HTTP 404",
+      "evidence": {
+        "page1Url": "https://internationalshootingsupplies.com/product-category/ammunition/airgun-ammunition/",
+        "page2Url": "https://internationalshootingsupplies.com/product-category/ammunition/airgun-ammunitionpage/2/",
+        "page1First3": [
+          "elite-force-airsoft-11-1v-lipo-900-mah-stick-battery-15c-tamiya-connector",
+          "elite-force-airsoft-6mm-airsoft-bbs-0-2g-biodegradable-5000-count-bottle",
+          "elite-force-airsoft-9-6v-nimh-1600-mah-nunchuk-batteries-deans-connector"
+        ],
+        "page2First3": [],
+        "overlapCount": 0
+      },
+      "reason": "Page 2 returned HTTP 404"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://internationalshootingsupplies.com/product-category/ammunition/airgun-ammunition/?orderby=date",
+        "withoutSortUrl": "https://internationalshootingsupplies.com/product-category/ammunition/airgun-ammunition/",
+        "withSortFirst": "elite-force-airsoft-9-6v-nimh-1600-mah-nunchuk-batteries-deans-connector",
+        "withoutSortFirst": "elite-force-airsoft-11-1v-lipo-900-mah-stick-battery-15c-tamiya-connector",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 5111,
+      "actual": 5167,
+      "evidence": {
+        "storedCount": 5111,
+        "actualCount": 5167,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "nginx"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "notes": "WooCommerce site. WP REST v2 API WORKS (subagent wrongly claimed 405 blocked — verified 200 with x-wp-total=5111 on 2026-04-12). Store API also works (2192 in-stock). WC v3 requires auth (401 — normal). Date filter modified_after monotonic: 5111→256→174→33. 2026-04-03: 2898 products wrongly deactivated by Store API verify (not-found false positives). Reactivated. Switched to detail-page verification. Parent category HTML pages show subcategory tiles on page 1 (0 products) but products on page 2+ — unreliable for HTML crawl, but API is primary path. Re-audit 2026-04-12: parent categories confirmed showing subcategory tiles only (0 products on page 1, miscategorized products on page 2+ — unreliable). 78 leaf URLs + 1 uncategorized = 79 total confirmed correct. Sort verified on 5 leaf categories (rifle-ammo, rifles, rifle-scopes, magazines-accessories, projectiles). Pagination path/page/{N}/ verified. BPS plugin blocks bare curl UA but Chrome UA passes (production http-client uses UA rotation so no issue). WP REST API x-wp-total: 5111 confirmed. Date filter monotonic: 7d=174, 14d=256.",
+    "hasWaf": false,
+    "adapter": "woocommerce",
+    "perPage": 12,
+    "wafType": null,
+    "crawlers": {
+      "catalog": {
+        "notes": "WooCommerce adapter fetchCatalogPage returns 0 products (WP REST blocked). adapterType changed to generic-retail to force HTML crawl path. 78 leaf category pages cover 100% of products.",
+        "method": "html-category-walk"
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "platform": "woocommerce",
+    "apiStatus": {
+      "wcRestV3": "401 (admin auth required — normal)",
+      "wpRestV2": "working (200, x-wp-total: 5111)",
+      "wcStoreV1": "working (200, x-wp-total: 2192 in-stock)",
+      "dateFilter": "modified_after works on WP REST v2 (monotonic verified)"
+    },
+    "sortParam": "orderby=date",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/ammunition/airgun-ammunition/",
+      "/product-category/ammunition/crossbow-bolts/",
+      "/product-category/ammunition/handgun-ammo/",
+      "/product-category/ammunition/rifle-ammo/",
+      "/product-category/ammunition/rimfire-ammo/",
+      "/product-category/ammunition/shotgun-ammo/",
+      "/product-category/bows/crossbows/",
+      "/product-category/firearms/airguns-pal-not-required/",
+      "/product-category/firearms/airguns-pal-required/",
+      "/product-category/firearms/airsoft-guns-pal-not-required/",
+      "/product-category/firearms/rifles/",
+      "/product-category/firearms/shotguns/",
+      "/product-category/hunting-accessories/decoys-decoy-accessories/",
+      "/product-category/hunting-accessories/game-bags/",
+      "/product-category/hunting-accessories/game-calls/",
+      "/product-category/hunting-accessories/hunting-accessories-backpacks-frames/",
+      "/product-category/hunting-accessories/hunting-accessories-bladed-tools/",
+      "/product-category/hunting-accessories/hunting-accessories-clothing-and-apparel/",
+      "/product-category/hunting-accessories/hunting-accessories-game-cameras-thermal-imagers/",
+      "/product-category/hunting-accessories/hunting-accessories-game-processing/",
+      "/product-category/hunting-accessories/hunting-accessories-shooting-sticks-and-tripods/",
+      "/product-category/hunting-accessories/hunting-accessories-tool-maintenance/",
+      "/product-category/novelties/electronics-protection/",
+      "/product-category/optics/binoculars/",
+      "/product-category/optics/mounts/",
+      "/product-category/optics/night-vision/",
+      "/product-category/optics/optics-rifelscope-accessories/",
+      "/product-category/optics/range-finders/",
+      "/product-category/optics/red-dots-reflex/",
+      "/product-category/optics/rifle-scopes/",
+      "/product-category/optics/sights/",
+      "/product-category/optics/spotting-scopes-and-accessories/",
+      "/product-category/parts/actions-and-action-parts/",
+      "/product-category/parts/barrels/",
+      "/product-category/parts/bow-function-parts-upgrades/",
+      "/product-category/parts/buttstocks/",
+      "/product-category/parts/internal-stability-upgrades/",
+      "/product-category/parts/magazine-upgrade-parts/",
+      "/product-category/parts/stock-and-chassis-systems/",
+      "/product-category/parts/trigger-assemblies-and-parts/",
+      "/product-category/reloading-components/brass/",
+      "/product-category/reloading-components/primers/",
+      "/product-category/reloading-components/projectiles/",
+      "/product-category/reloading-equipment/case-cleaning-prep/",
+      "/product-category/reloading-equipment/dies-die-accessories/",
+      "/product-category/reloading-equipment/hand-tools/",
+      "/product-category/reloading-equipment/kits/",
+      "/product-category/reloading-equipment/presses-accessories/",
+      "/product-category/reloading-equipment/reloading-equip-projectile-production/",
+      "/product-category/reloading-equipment/reloading-equip-reloading-component-dispensers/",
+      "/product-category/reloading-equipment/reloading-equip-scales-measures-gauges/",
+      "/product-category/reloading-equipment/trimmers/",
+      "/product-category/reloading-equipment/tumblers/",
+      "/product-category/shooting-accessories/achery-accessories/",
+      "/product-category/shooting-accessories/ammo-storage-locking-devices/",
+      "/product-category/shooting-accessories/bags-pouches/",
+      "/product-category/shooting-accessories/bipods-adapters/",
+      "/product-category/shooting-accessories/buttstock-accessories/",
+      "/product-category/shooting-accessories/cleaning-supplies-reusable/",
+      "/product-category/shooting-accessories/eye-protection/",
+      "/product-category/shooting-accessories/flashlights-lasers/",
+      "/product-category/shooting-accessories/forends/",
+      "/product-category/shooting-accessories/grips/",
+      "/product-category/shooting-accessories/gun-cabinets-safes/",
+      "/product-category/shooting-accessories/gun-cases/",
+      "/product-category/shooting-accessories/gun-parts/",
+      "/product-category/shooting-accessories/gunsmithing/",
+      "/product-category/shooting-accessories/hearing-protection/",
+      "/product-category/shooting-accessories/holsters/",
+      "/product-category/shooting-accessories/magazines-accessories/",
+      "/product-category/shooting-accessories/shooting-accessories-apparel/",
+      "/product-category/shooting-accessories/shooting-accessories-chronographs-recording-tools/",
+      "/product-category/shooting-accessories/shooting-accessories-cleaning-supplies-consumables/",
+      "/product-category/shooting-accessories/shooting-accessories-muzzle-devices-externally-attached/",
+      "/product-category/shooting-accessories/shooting-rests/",
+      "/product-category/shooting-accessories/slings-sling-hardware/",
+      "/product-category/shooting-accessories/snap-caps/",
+      "/product-category/shooting-accessories/targets-accessories/",
+      "/product-category/uncategorized/"
+    ],
+    "lastVerified": "2026-04-12",
+    "sortVerified": true,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "no-waf (nginx origin, no proxy WAF)",
+    "reauditVerified": {
+      "bpsPlugin": "BulletProof Security blocks default curl UA (403), Chrome UA passes (200). Production http-client uses UA rotation.",
+      "apiConfirmed": "WP REST v2 returns 200, x-wp-total: 5111",
+      "sortVerified": [
+        "ammunition/rifle-ammo: default=aguila, date=hornady-black, price=chinese-surplus (3-way differ)",
+        "firearms/rifles: default=adler-ad-500s, date=adler-rf-224-multicam, price=chiappa-little-badger (3-way differ)",
+        "optics/rifle-scopes: default=date=burris-fullfield, price=bushnell-prime (default=newest, price counter-control differs)",
+        "shooting-accessories/magazines-accessories: default=accurate-mag, date=browning-blr (differs)",
+        "reloading-components/projectiles: default=barnes-lrx, date=barnes-tsx (differs)"
+      ],
+      "catalogUrlCount": 79,
+      "hasWafConfirmed": "false — nginx only, no CDN WAF detected (no cf-ray, no x-sucuri-id)",
+      "dateFilterVerified": "WP REST v2 modified_after monotonic: 5111 > 256 (14d) > 174 (7d) > 33 (1d)",
+      "paginationVerified": "rifle-ammo page1 vs page2 differ, rifles page1 vs page2 differ",
+      "parentChildInclusion": "parents show subcategory tiles only, not child products"
+    },
+    "wafLastProbedAt": "2026-04-12",
+    "productCountDate": "2026-04-12",
+    "sortVerifiedDate": "2026-04-12",
+    "wafProbeEvidence": "server: nginx, no cf-ray/sucuri/incapsula headers. SQLi/XSS probes return 403 from nginx rules (not WAF). All UAs accepted. No rate limiting on 10-burst.",
+    "categoryStructure": {
+      "type": "hierarchical-leaf-only",
+      "notes": "Parent pages show subcategory tiles only (0 products). All products accessible ONLY via leaf categories. Store API parents are inclusive (include_children) but HTML parents are not.",
+      "excludedTaxonomies": [
+        "manufacturers (brand cross-reference, all products also in functional leaves)",
+        "uncategorized (2 products also in shotguns)"
+      ],
+      "topLevelFunctional": [
+        "ammunition",
+        "firearms",
+        "hunting-accessories",
+        "novelties",
+        "optics",
+        "parts",
+        "reloading-components",
+        "reloading-equipment",
+        "shooting-accessories"
+      ]
+    },
+    "paginationPattern": {
+      "type": "path",
+      "template": "page/{N}/"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product",
+      "wpRestTotal": 5111,
+      "storeApiTotal": 2192,
+      "dateFilterEvidence": {
+        "1d": 33,
+        "7d": 174,
+        "14d": 256,
+        "no_filter": 5111,
+        "tested_at": "2026-04-12"
+      },
+      "dateFilterVerified": true
+    },
+    "sortVerifiedMethod": "id-jump-5-categories",
+    "expectedInStockCount": 2192,
+    "expectedProductCount": 5111,
+    "totalSiteProductCount": 5111
+  }
+}

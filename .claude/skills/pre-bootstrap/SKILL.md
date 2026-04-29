@@ -1,6 +1,6 @@
 ---
 name: pre-bootstrap
-description: Automated site onboarding — runs probes, applies judgment, builds siteProfile, validates, and writes to DB
+description: AI-driven per-site audit producing siteProfile JSON for operator review (NOT direct DB write)
 ---
 
 # Pre-Bootstrap Site Onboarding
@@ -27,6 +27,20 @@ The orchestrator is intentionally thin. Platform-specific branching (`if platfor
 4. **Per-field confidence** — every judgment records `verified` / `inferred` / `default`.
 5. **Validation gate before DB write** — required failures abort. No exceptions.
 6. **`hasWaf` is a DB COLUMN** — `crawl-scheduler.ts:209,282,576` reads `site.hasWaf`, not `siteProfile.hasWaf`. Update BOTH.
+
+## 6 Audit Phases (conceptual; mapped to 9 mechanical steps below)
+
+| Phase | Name | Mechanical steps used |
+|---|---|---|
+| 0 | Read existing profile + canonical URL | Step 1 (orchestrator preamble) |
+| 1 | WAF probe + platform detection | Steps 1-2 (`probe-access`, `probe-platform`) |
+| 2 | API accessibility (NEW explicit phase) | Step 2 sub-judgment + extra curl probes (see Phase 2 detail below) |
+| 3 | Catalog URL discovery | Steps 3-4 (`probe-sitemap`, `probe-catalog-urls`) |
+| 4 | Pagination detection | Step 9 (`probe-pagination`) |
+| 5 | Sort param + watermark method | Step 8 (`probe-sort`) + watermark decision table |
+| 6 | Coverage verification + multi-method count cross-check | Steps 6-7 + count cross-check (NEW) |
+
+Output: candidate siteProfile JSON written to `docs/site-audit/<domain>-<timestamp>.json` PLUS a sibling `<domain>-<timestamp>-evidence.json` with per-phase raw evidence. **The skill does NOT write to DB.** The downstream `audit-review-pipeline.ts` (Task 3) gates the DB write.
 
 ## 9-Step Process
 
@@ -65,6 +79,23 @@ Before doing any judgment, confirm the evidence blob is usable:
 - `evidence.extraction.productCount > 0` (unless `evidence.extraction.subcategoryTilesFound >= 5`, which is a known "walked to a tile-only parent" state — handled below).
 
 If any fatal gap, stop and investigate the module that failed. Common causes: heavy-waf-probe.sh timing out on slow Cloudflare backends (extends Mistake 36 defect pattern — increase `HEAVY_PROBE_TIMEOUT_MS`), Playwright not installed (see `probe-fetch.ts`), site behind a challenge no module can bypass (fall back to Mistake 38 WAF-Playwright pattern).
+
+### Phase 2 detail: API accessibility — explicit verification (NEW)
+
+After `probe-platform` reports `apiEndpointsReachable.*`, run ONE additional verification curl per API your judgment plans to use. This catches Mistake 33 (subagent fabricated 405 on internationalshootingsupplies WP REST API).
+
+| API | Verification curl | Expect |
+|---|---|---|
+| WP REST | `curl -sI '<base>/wp-json/wp/v2/product?per_page=1'` | 200 + `x-wp-total` header (number) |
+| WC Store API | `curl -sI '<base>/wp-json/wc/store/v1/products?per_page=1'` | 200 + `x-wp-total` header (number) |
+| Shopify | `curl -s '<base>/products.json?limit=1'` | JSON with `products[]` array (length 0 or 1) |
+| Shopify count | `curl -s '<base>/products/count.json'` | JSON with numeric `count` field |
+| Ecwid | `curl -s -X POST '<storefrontApiBase>/catalog/search' -H 'Content-Type: application/json' -d '{"lang":"en","pagination":{"offset":0,"limit":1}}'` | JSON with numeric `totalProductsCount` |
+| BigCommerce GraphQL | `curl -sI '<base>/graphql'` | 200 (we use sitemap for count, but accessibility flags the path) |
+
+**Record in evidence:** for each API your skill plans to depend on, the verification status code + first 200 bytes of body. If verification fails, do NOT silently downgrade adapter — flag it as a Phase 2 hard fail and abort.
+
+**Reason this is its own phase:** Phase 1 detects markers; Phase 2 confirms accessibility. The two were conflated in earlier rooms (Room 2 + Room 3 both produced count via overlapping methods — see spec §1.1). Separating them avoids the Mistake 33 fabrication trap and the api-vs-html count drift trap.
 
 ### Step 3: Decide `adapterType`
 
@@ -239,45 +270,37 @@ Template format rules (Mistake 14): `{N}` is UPPERCASE, `query` type stores only
 | `access.wafType === 'sgcaptcha'` | Desktop UA gets 1 cookie (fails); iPhone gets 10 (works) | `userAgentOverride` MUST be iPhone Safari | 30 Fix B |
 | DB=0 on existing site | Platform/WAF/notes fields are ALL suspect | Re-verify EVERY stored field against live HTML | 28 |
 
-### Step 9: Write to DB
+### Step 9: Output candidate JSON for review (NOT DB write)
 
-Write a one-shot `.js` script (Windows constraint — `prisma.$disconnect` breaks under inline `node -e` bash escaping).
+The skill writes TWO files:
 
-Template:
-
-```javascript
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-
-async function main() {
-  const profile = { /* validated profile from Step 7 */ };
-
-  const site = await prisma.monitoredSite.upsert({
-    where: { url: '<canonical-url>' },
-    update: {
-      siteProfile: profile,
-      hasWaf: profile.hasWaf,             // DB column — load-bearing
-      adapterType: '<adapter>',
-      crawlPhase: 'bootstrap',
-    },
-    create: {
-      name: '<site-name>',
-      url: '<canonical-url>',
-      siteType: '<type>',
-      siteProfile: profile,
-      hasWaf: profile.hasWaf,
-      adapterType: '<adapter>',
-      crawlPhase: 'bootstrap',
-      enabled: true,
-    },
-  });
-  console.log('Written site:', site.id, site.name);
-}
-
-main().catch(console.error).finally(() => prisma.$disconnect());
+```bash
+mkdir -p docs/site-audit
 ```
 
-After running, query the DB to confirm the profile was written. Never say "it should work now" without proof.
+```javascript
+const fs = require('fs');
+const path = require('path');
+
+const ts = new Date().toISOString().replace(/[:.]/g, '-');
+const domain = '<canonical-domain>';
+
+fs.writeFileSync(
+  path.join('docs', 'site-audit', `${domain}-${ts}.json`),
+  JSON.stringify(profile, null, 2)
+);
+
+fs.writeFileSync(
+  path.join('docs', 'site-audit', `${domain}-${ts}-evidence.json`),
+  JSON.stringify(evidence, null, 2)
+);
+
+console.log(`Candidate profile written: docs/site-audit/${domain}-${ts}.json`);
+console.log(`Run review pipeline:`);
+console.log(`  npx tsx backend/scripts/audit-review-pipeline.ts docs/site-audit/${domain}-${ts}.json`);
+```
+
+**The skill terminates here.** DB writes happen ONLY after `audit-review-pipeline.ts` (Task 3) passes all 5 stages AND operator approves.
 
 ---
 
@@ -334,6 +357,7 @@ Before declaring a profile complete, all of these must be true:
 
 - [ ] Heavy 8-batch probe ran (`access.wafEvidence.heavyProbeRawOutput` non-empty)
 - [ ] Platform verified against `platform.markers[]` + `platform.generatorMeta` (not stored tag)
+- [ ] Each API endpoint your judgment plans to use was independently re-verified with one curl (Phase 2)
 - [ ] `expectedProductCount` derived from authoritative source (`platform.apiEndpointsReachable.*`, `sitemap.totalProductUrls`, or `pagination.totalPagesObserved * perPage + lastPageItems`)
 - [ ] Every `catalogUrls` entry exists in `catalogUrls.candidates[]` or was manually added for full-coverage
 - [ ] `extraction.productCount > 0` on the testUrl (or `subcategoryTilesFound >= 5` with a documented deeper catalogUrl)

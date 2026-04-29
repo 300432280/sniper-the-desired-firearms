@@ -1,0 +1,245 @@
+{
+  "siteId": "cmltxz8gg001t89xa3u23ezcd",
+  "domain": "dlaskarms.com",
+  "timestamp": "2026-04-28T17:37:12.420Z",
+  "durationMs": 41847,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "FAIL",
+      "expected": "9 URLs, each returning ≥1 product",
+      "actual": "0/9 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/rifles/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/product-category/shotguns/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/product-category/pistols/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/product-category/parts-accessories/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/product-category/clearance/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/product-category/dlask-custom-build/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/product-category/magpul/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/product-category/derya/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/product-category/gsg-16/",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          }
+        ]
+      },
+      "reason": "9/9 URLs failed: /product-category/rifles/, /product-category/shotguns/, /product-category/pistols/, /product-category/parts-accessories/, /product-category/clearance/, /product-category/dlask-custom-build/, /product-category/magpul/, /product-category/derya/, /product-category/gsg-16/"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 233,
+      "actual": null,
+      "evidence": {
+        "storedCount": 233,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "WARN",
+      "expected": "malcare",
+      "actual": null,
+      "evidence": {
+        "storedWafType": "malcare",
+        "detectedWafType": null,
+        "headers": {
+          "server": "Apache"
+        },
+        "httpStatus": 403
+      },
+      "reason": "Stored wafType='malcare' but HEAD probe detected no WAF vendor headers"
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Dlask Arms",
+    "notes": "WooCommerce with MalCare WAF (WordPress security plugin). MalCare rate-limits aggressively — IP-blocks (403) after burst requests. No CAPTCHA, hard block. API (WP REST + Store API) is primary path; HTML fallback blocked under rate limit. Bot UA returns 406. Apex dlaskarms.com redirects to same. Sort ?orderby=date verified on rifles + pistols (ID-jump). perPage=16 from HTML.",
+    "budget": 40,
+    "domain": "dlaskarms.com",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 16,
+    "timeout": 15000,
+    "wafType": "malcare",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/rifles/",
+      "/product-category/shotguns/",
+      "/product-category/pistols/",
+      "/product-category/parts-accessories/",
+      "/product-category/clearance/",
+      "/product-category/dlask-custom-build/",
+      "/product-category/magpul/",
+      "/product-category/derya/",
+      "/product-category/gsg-16/"
+    ],
+    "hasRateLimit": true,
+    "lastVerified": "2026-04-11",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "malcare-rate-block",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11",
+    "wafProbeEvidence": "server: Apache, no cloud WAF headers. MalCare plugin detected: 403 response body \"MalCare WordPress Security Plugin - Malware Scanner, Cleaner, Security Firewall Firewall / Blocked because of Malicious Activities\". Bot UA (Googlebot) returns 406. SQLi/XSS probes return 406 (mod_security). IP blocked after heavy probe (~20 requests) — all subsequent requests return 403 for 10+ minutes. Rate limit is real.",
+    "paginationPattern": {
+      "type": "path",
+      "template": "page/{N}/"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product"
+    },
+    "expectedProductCount": 233
+  }
+}

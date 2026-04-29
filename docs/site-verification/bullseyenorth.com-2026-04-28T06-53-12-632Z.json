@@ -1,0 +1,306 @@
+{
+  "siteId": "cmlvesq1c00031a421xipjyxw",
+  "domain": "bullseyenorth.com",
+  "timestamp": "2026-04-28T06:53:12.632Z",
+  "durationMs": 16024,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "1/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/all-products/browse/orderby/new-arrivals/perpage/36",
+            "status": 200,
+            "productCount": 36,
+            "sampleSlugs": [
+              "promag-sks-polymer-drum-magazine-black-762x39mm-5-50-rounds-drma48-37235",
+              "canuck-enforcer-shotgun-distressed-od-green-12-gauge-3-chamber-17-barrel-cenfdod1217-37363",
+              "canuck-enforcer-shotgun-distressed-bronze-12-gauge-3-chamber-17-barrel-cenfdbz1217-37361"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36",
+        "page2Url": "https://www.bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36/page/2",
+        "page1First3": [
+          "promag-sks-polymer-drum-magazine-black-762x39mm-5-50-rounds-drma48-37235",
+          "canuck-enforcer-shotgun-distressed-od-green-12-gauge-3-chamber-17-barrel-cenfdod1217-37363",
+          "canuck-enforcer-shotgun-distressed-bronze-12-gauge-3-chamber-17-barrel-cenfdbz1217-37361"
+        ],
+        "page2First3": [
+          "derya-tm22-cadet-semiauto-rifle-22lr-18-barrel-od-green-tm22cad18odg-37341",
+          "walkers-restrictor-rechargeable-earbuds-bluetooth-black-gwprstrbt-35766",
+          "walkers-recon-hybrid-communicator-bluetooth-walkie-talkie-gwprecmbtwt-36321"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "sortParam defined",
+      "actual": "empty/missing",
+      "evidence": {},
+      "reason": "No sortParam in siteProfile"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 3117,
+      "actual": 15,
+      "evidence": {
+        "storedCount": 3117,
+        "actualCount": 15,
+        "methodUsed": "sitemap",
+        "driftPct": 100
+      },
+      "reason": "Count drifted 100% (stored=3117, actual=15)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "Null",
+          "set-cookie": "CFTOKEN=175c2b5705610a48-3CA169D8-BD25-A7C3-98F277DF8A8C2AE9; Expires=Wed, 29 Apr 2026 06:53:11 GMT; Path=/; Secure; HttpOnly"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Bullseye North",
+    "notes": "Celerant/ColdFusion storefront (bullseyenorth_cf). HTTP/1.1 headers have trailing whitespace before colons (e.g. \"X-Frame-Options : SAMEORIGIN\") which makes Node's llhttp parser throw HPE_INVALID_HEADER_TOKEN. The project http-client catches axios \"Parse Error\" and falls back to native fetch, which handles non-standard headers cleanly (http-client.ts:344-347). Verified 3/3 successful fetches via native-fetch on 2026-04-14 — Playwright NOT required. Sort baked into URL path (/orderby/<value>). Site's perpage option has dynamic \"All\" value set to total product count in the storefront-visible inventory (3117 today, 3153 earlier — fluctuates per request). Sitemap has 3,878 product URLs but 838 of those are out-of-stock special-order items hidden from /all-products/browse listings; not indexable as buyable inventory. No WAF detected.",
+    "budget": 60,
+    "domain": "bullseyenorth.com",
+    "hasWaf": false,
+    "adapter": "generic-retail",
+    "perPage": 36,
+    "timeout": 30000,
+    "wafType": null,
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "a.product anchor tags on /all-products/browse listing pages. Product detail URL pattern: /shop/<slug>-<numericId>. Numeric ID is stable Celerant item ID (e.g. 37297 for the newest arrival). Pagination uses path style /page/{N} (NOT query). Sliding-window pagination: page 1 only shows links to pages 2-4 in nav, but direct /page/N URLs work for all N up to the end. End-of-pagination detected by 0 products on page (verified pages 88-89 return 0).",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail",
+            "sourceId"
+          ]
+        }
+      ]
+    },
+    "platform": "celerant-coldfusion",
+    "searchUrl": "/all-products/browse/keyword/{keyword}",
+    "sortParam": "",
+    "walkProof": {
+      "url": "/all-products/browse/orderby/new-arrivals/perpage/36",
+      "date": "2026-04-14",
+      "notes": "Walked pages 1-89 via HTTP GET (native-fetch fallback each). Pages 1-87 returned 36 products each (3132 gross). Dedupe to 3114 unique (18 boundary duplicates). Pages 88-89 returned 0 products. Matches perpage=3117 All-option within ±3 (cache jitter).",
+      "pagesWalked": 87,
+      "emptyFromPage": 88,
+      "uniqueProducts": 3114
+    },
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/all-products/browse/orderby/new-arrivals/perpage/36"
+    ],
+    "sortOptions": {
+      "source": "<select id=\"ordering\" name=\"ordering\"> on /all-products/browse pages",
+      "values": [
+        {
+          "label": "New Arrivals",
+          "value": "new-arrivals",
+          "recommended": true
+        },
+        {
+          "label": "Price: Low to High",
+          "value": "price-low-to-high"
+        },
+        {
+          "label": "Price: High to Low",
+          "value": "price-high-to-low"
+        },
+        {
+          "label": "Name (A-Z)",
+          "value": "name-a-to-z"
+        },
+        {
+          "label": "Name (Z-A)",
+          "value": "name-z-to-a"
+        },
+        {
+          "label": "Newest received",
+          "value": "newest-rcvd"
+        },
+        {
+          "label": "Oldest received",
+          "value": "oldest-rcvd"
+        }
+      ],
+      "sortIdJumpVerified": {
+        "date": "2026-04-14",
+        "verdict": "honored — all 3 newest-style sorts produce distinct first-product IDs. new-arrivals is the canonical Celerant \"newest to storefront\" sort; newest-rcvd is \"newest received by warehouse\" (different metric).",
+        "name-a-to-z": {
+          "firstId": 34646,
+          "firstSlug": "/shop/-amend2-m2-556mm-...-34646"
+        },
+        "newest-rcvd": {
+          "firstId": 33478,
+          "firstSlug": "/shop/winchester-superx-3030-...-33478"
+        },
+        "new-arrivals": {
+          "firstId": 37297,
+          "firstSlug": "/shop/henry-h1-classic-carbine-rifle-...-37297"
+        },
+        "default (no orderby)": {
+          "firstId": 33478,
+          "firstSlug": "same as newest-rcvd"
+        }
+      }
+    },
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-14",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "coverageNotes": "Sitemap has 3,878 distinct numeric product IDs (extracted via regex /-(\\d{3,})<\\/loc>/ from /sitemap.xml). Catalog listing /all-products/browse exposes only 3,117 (active, storefront-visible, not special-order). Gap of ~761 = out-of-stock special-order items (verified sample: all 5 tested returned HTTP 200 product detail pages with \"out of stock, special order\" markers). These are NOT indexable as buyable inventory. Active-inventory coverage via /all-products/browse/orderby/new-arrivals/perpage/36 = 3117/3117 = 100%.",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Celerant/ColdFusion sends malformed HTTP/1.1 headers (trailing whitespace before colons). Project http-client catches \"Parse Error\" from axios/undici and falls back to native fetch via nativeFetchFallback() at http-client.ts:277-302. Verified 3/3 reliable on 2026-04-14. Playwright is no longer required — needsPlaywright field removed as it was unused by production code (only informational).",
+      "steps": [
+        "axios GET (fails with HPE_INVALID_HEADER_TOKEN on HTTP/1.1)",
+        "http-client catches \"Parse Error\" → nativeFetchFallback()",
+        "native fetch handles trailing-space headers cleanly → returns 200 + 150KB HTML"
+      ],
+      "method": "undici-fallback"
+    },
+    "profileVersion": 1,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "No WAF. 8/8 batches 200 OK. server: Null. No cf-ray/x-sucuri-id/visid_incap cookies. Burst of 10 GETs in 2s: no rate-limit. Honeypot (wp-admin, .env, .git/config): all 200 (server ignores path, returns 16KB default page). SQLi/XSS payloads: 200. UA rotation (desktop/mobile/bot/curl): 200. Only observation: CFID/CFTOKEN session cookies on every response, classic ColdFusion.",
+    "wafLastProbedAt": "2026-04-14T14:08:00Z",
+    "extractionTested": true,
+    "wafProbeEvidence": "Batch 1 headers: \"server: Null\", \"set-cookie: CFID=...\", \"set-cookie: CFTOKEN=...\". Batch 3 burst: 10 GETs all 200 in ~9s total, no 429/503. HTTP/1.1 response shows malformed trailing-space headers: \"X-Frame-Options : SAMEORIGIN\\r\\n\"",
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}"
+    },
+    "productUrlSchemes": {
+      "notes": "Each product has TWO URL forms both returning same detail page: canonical /shop/<slug>-<id> (from /all-products/browse listings) and /<brand-slug>/<slug>-<id> (from /sitemap.xml). Both 200. SourceId extractor regex /-(\\d{4,})(?:[?#]|$)/ in generic-retail.ts:1028 matches both.",
+      "canonical": "/shop/<slug>-<numericId>",
+      "sitemapForm": "/<brand>/<slug>-<numericId>"
+    },
+    "paginationVerified": {
+      "date": "2026-04-14",
+      "p1First": "/shop/henry-h1-classic-carbine-rifle-22-s--l--lr-165-barrel-h001r22-37297",
+      "p2First": "/shop/federation-firearms-rs410-revolver-shotgun-410ga-3-20-barrel-nickel-ffrs410ni20-37259",
+      "p1p2Overlap": 0,
+      "subcategoryPaginationVerified": {
+        "url": "/firearms-rifles/browse/orderby/new-arrivals/perpage/36/page/2",
+        "p1First": 37043,
+        "p2First": 37277,
+        "p2UniqueCount": 36
+      }
+    },
+    "productCountMethod": {
+      "notes": "Celerant renders the <select id=\"perpage\"> with a dynamic final option value=\"<N>\" label=\"All\" where N is the total storefront-visible product count. Value fluctuates 3117-3153 across requests (cache jitter). Extract via regex: /value=\"([0-9]+)\"[^>]*>\\s*All\\s*<\\/option>/. This is a MORE reliable ground truth than walking pagination (which also returns ~3100-3120 unique products with boundary dedupe noise).",
+      "method": "celerant-perpage-all-option"
+    },
+    "topLevelCategories": {
+      "source": "/sitemap.xml top-level <loc> entries, parent categories before /brand/* entries",
+      "categories": [
+        {
+          "slug": "/firearms",
+          "allOption": 491
+        },
+        {
+          "slug": "/ammunition",
+          "allOption": 452
+        },
+        {
+          "slug": "/magazines",
+          "allOption": 154
+        },
+        {
+          "slug": "/storage",
+          "allOption": 168
+        },
+        {
+          "slug": "/reloading",
+          "allOption": 163
+        },
+        {
+          "slug": "/optics",
+          "allOption": 454
+        },
+        {
+          "slug": "/accessories",
+          "allOption": 1147
+        },
+        {
+          "slug": "/knives",
+          "allOption": 309
+        }
+      ],
+      "totalsSumCheck": "491+452+154+168+163+454+1147+309 = 3338 (vs /all-products All=3153: ~5% overlap across parent categories). Walking 8 parents with perpage={all}+50 yielded 3,140 unique IDs on 2026-04-14; using /all-products alone yields 3,117. Parent-category partitioning NOT needed — single /all-products URL gives equivalent coverage."
+    },
+    "sitemapProductCount": 3878,
+    "activeInventoryCount": 3117,
+    "expectedProductCount": 3117
+  }
+}

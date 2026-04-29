@@ -1,0 +1,59 @@
+{
+  "profileVersion": 1,
+  "platform": "celerant-coldfusion",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-04-27T12:00:00.000Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches returned 200; no WAF vendor headers detected",
+  "wafProbeEvidence": {
+    "method": "heavy-8-batch",
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "sgCaptchaDetected": false,
+    "incapsulaCookies": [],
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "botUaBlocked": false,
+    "honeypotPathsBlocked": false,
+    "serverHeader": "Null",
+    "setCookieMarkers": {
+      "cfid": true,
+      "cftoken": true
+    }
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3276,
+  "productCountMethod": "celerant-perpage-all",
+  "catalogUrls": [
+    "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36"
+  ],
+  "extractionTested": true,
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 36,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "No API date filter and no date source on listing; sort exists (new-arrivals) but no exposed date field on products to verify monotonicity"
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    }
+  },
+  "wafWorkaround": {
+    "method": "undici-fallback"
+  },
+  "lastVerified": "2026-04-27"
+}

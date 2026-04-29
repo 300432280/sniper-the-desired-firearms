@@ -1,0 +1,1744 @@
+{
+  "siteId": "cmltxz8ml001y89xaez2d0byp",
+  "domain": "truenortharms.com",
+  "timestamp": "2026-04-28T07:03:30.810Z",
+  "durationMs": 571996,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "149 URLs, each returning ≥1 product",
+      "actual": "149/149 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/tools/grease-lube-oil",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "anti-seize-thread-grease-mil-spec-aeroshell-64-replaces-33ms-1-8-oz.html",
+              "g96-complete-gun-treatment-triple-action-large-12oz-spray-can-1055p",
+              "g96-complete-gun-oil-cleaner-degreaser-4-fld-oz-bottle-1088"
+            ]
+          },
+          {
+            "url": "/parts/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "firing-pin-retaining-pin.html",
+              "gas-ring-split-style.html",
+              "ejector-roll-pin.html"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/muzzle-devices/brakes.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "fake-can-suppressor-reverse-style-with-brake.html",
+              "precision-armament-hypertap-muzzle-brake-a04",
+              "precision-armament-m4-72-severe-duty-compensator-a040000"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/bolt-carrier-group-parts/bcg-parts.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "firing-pin-retaining-pin.html",
+              "gas-ring-split-style.html",
+              "ejector-roll-pin.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/rail-adapters",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "premium-picatinny-rail-segments-for-m-lok-handguards.html",
+              "magpul-mag58x-aluminum-picatinny-rail-for-m-lok-handguards.html",
+              "basic-picatinny-rail-segments-for-m-lok-handguards.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/ar-15-handguard-drop-in.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "delta-ring-assembly-for-ar-15.html",
+              "weld-spring-for-delta-ring.html",
+              "handguard-snap-ring.html"
+            ]
+          },
+          {
+            "url": "/vip-club/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "mec-gar-cz-75b-85b-sp-01-c-9mm-10-rd-blue",
+              "czech-army-jp75-a-nbc-suit",
+              "rem-870-mcs-mag-tube-ext-plug-3-shot"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ower-parts/telescopic/buttstocks",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "magpul-mag400-moer-carbine-stock-mil-spec.html",
+              "magpul-mag310-ctrr-carbine-buttstock-mil-spec.html",
+              "buttstock-for-m4-ar-15-carbine-true-north-arms-mil-spec.html"
+            ]
+          },
+          {
+            "url": "/tools/hand-tools",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "barrel-torque-tool.html",
+              "vinyl-caps-for-barrel-storage-shipping.html",
+              "basic-brush-for-lube-and-oil.html"
+            ]
+          },
+          {
+            "url": "/tools",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "5-16-drill-bit-gunsmithing-tool.html",
+              "tna-feather-duster-basic",
+              "g96-complete-gun-treatment-triple-action-large-12oz-spray-can-1055p"
+            ]
+          },
+          {
+            "url": "/deals/boxing-day-specials/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "damaged-packaging-triggertech-ar-safety-black-or-stainless",
+              "damaged-packaging-triggertech-ar-15-single-stage-drop-in-trigger",
+              "magpul-mag1004-rls-rifleman-loop-sling.html"
+            ]
+          },
+          {
+            "url": "/swords-knives/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "gear-stock-stainless-steel-g-i-type-m-9-bayonet-w-scabbard",
+              "regimental-scottish-dirk-dagger-trousse-short-sword",
+              "viking-sword-black"
+            ]
+          },
+          {
+            "url": "/accessories/scope-accessories/mounts-risers",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "sun-optics-scope-mount-for-mossberg-500-12-ga-sm4500",
+              "versa-tactical-beretta-dovetail-optic-mounting-kit-with-sightsecure-optic-plate",
+              "sun-optics-1-piece-aluminum-scope-base-for-ruger-10-22-black-sm5514"
+            ]
+          },
+          {
+            "url": "/ar-15-magazines/magazines.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "magpul-mag557-pmag-m3-5-30-magazine.html",
+              "magpul-mag556-pmag-m3-magazine-5-30-rounds-5-56-with-window.html",
+              "6-pack-magpul-mag801-pmag-10-gl9-9mm-magazines-for-glock-g17"
+            ]
+          },
+          {
+            "url": "/deals.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "bulk-co2-cartridges",
+              "6-pack-magpul-mag801-pmag-10-gl9-9mm-magazines-for-glock-g17",
+              "-6-pack-c-products-cpd-lar-15-pistol-magazines-.223-10rd-1023041178cpdce-"
+            ]
+          },
+          {
+            "url": "/hunting/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "ar-series-limb-hunting-150lbs",
+              "ar-series-b08-tactical-crossbow",
+              "adler-ad500-tac-308-win-18-5-semi-auto-rifle-gray"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/muzzle-devices/thread-adapters.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "type-81-lmg-muzzle-device-thread-adapter.html",
+              "shoulderless-muzzle-adapter-1-2-28-to-5-8-24.html",
+              "precision-armament-m4-muzzle-thread-adapter-a02000"
+            ]
+          },
+          {
+            "url": "/new-arrivals/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "small-screw-for-tna-and-wartak-sks-chassis-pistol-grip-adapter",
+              "small-cone-top-screw-for-tna-and-wartak-sks-chassis-handguard",
+              "open-box-streamlight-tl-racker-shotgun-forend-light-for-mossberg-500-590"
+            ]
+          },
+          {
+            "url": "/parts/wk180-c-ws-mcr/upgrade-parts/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "wk180-c-adjustable-gas-valve-compatible-with-5-56-7-62x39-gas-systems.html",
+              "wk180-c-nylon-bushing-protector-replacement-part.html",
+              "safety-selector-detent-spring.html"
+            ]
+          },
+          {
+            "url": "/outdoors-survival/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "enola-gaye-mk5-thunderflash-singles-10152",
+              "hardcore-taginn-pro-tag-67-frag-grenade-less-lethal",
+              "enola-gaye-eg25-micro-output-smoke-grenade-106"
+            ]
+          },
+          {
+            "url": "/magpul",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "magpul-mag597-m-lok-mvg-vertical-grip-m-lok-slot-system.html",
+              "magpul-mag557-pmag-m3-5-30-magazine.html",
+              "magpul-mag556-pmag-m3-magazine-5-30-rounds-5-56-with-window.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/range-accessories",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "s-j-hardware-d-s-c-detachable-shotshell-carrier-strip-3-0",
+              "scorpio-combination-cable-lock.html",
+              "scorpio-combination-cable-lock-2.html"
+            ]
+          },
+          {
+            "url": "/tools/misc-modifications",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "5-16-drill-bit-gunsmithing-tool.html",
+              "set-screws-for-takedown-pin-detent-retention-mod.html",
+              "lacquer-stik-fill-in-paint-marker.html"
+            ]
+          },
+          {
+            "url": "/ar-15-magazines.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "-6-pack-c-products-cpd-lar-15-pistol-magazines-.223-10rd-1023041178cpdce-",
+              "promag-sks-detachable-5-30-mag-polymer.html",
+              "csa-7-62x39mm-5-30rd-magazine-black-vzmag76239-5-30"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/upper-receiver-parts.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "ejection-port-dust-cover-kit.html",
+              "wk180-c-shell-deflector-1.html",
+              "magpul-mag1206-enhanced-ejection-port-cover-for-mil-spec-uppers-quick-install"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/sling-mounts",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "magpul-mag606-m-lok-qd-sling-mount.html",
+              "magpul-mag332-blk-sling-mount-kit-type-2.html",
+              "magpul-mag607-m-lok-paraclip-sling-mount.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/optics-red-dots",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "bushnell-ar-optics-red-dot-first-strike-2-0-3-moa-reflex-sight-ar71xrs-ar71xrs",
+              "riton-optics-x3-conquer-3-15x44-ir-rifle-scope-3c3156asi",
+              "riton-optics-x3-tactix-mprd-v2-red-dot-sight-3tmprd2"
+            ]
+          },
+          {
+            "url": "/ar-15-magazines/mag-accessories.html",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "magpul-mag001-the-original-magpul-for-5-56-nato-3-pack.html",
+              "custom-magpul-pmag-1-2-sided-design-options",
+              "versa-tactical-glock-g17-22-magazine-extension-gen-1-5-0-rounds-vtgs-glf"
+            ]
+          },
+          {
+            "url": "/parts/wk180-c-ws-mcr/oem-parts/",
+            "status": 200,
+            "productCount": 22,
+            "sampleSlugs": [
+              "handguard-set-screw-for-wk180-c-rifle.html",
+              "wk180-c-nylon-bushing-protector-replacement-part.html",
+              "gas-block-set-screw-for-wk180-c-rifle.html"
+            ]
+          },
+          {
+            "url": "/tna-merch/swords-knives/",
+            "status": 200,
+            "productCount": 23,
+            "sampleSlugs": [
+              "regimental-scottish-dirk-dagger-trousse-short-sword",
+              "viking-sword-black",
+              "black-leather-scabbard-for-swords"
+            ]
+          },
+          {
+            "url": "/wk180-c-ws-mcr/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "wk180-c-adjustable-gas-valve-compatible-with-5-56-7-62x39-gas-systems.html",
+              "handguard-set-screw-for-wk180-c-rifle.html",
+              "wk180-c-nylon-bushing-protector-replacement-part.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "tna-feather-duster-basic",
+              "tna-feather-duster-spiked",
+              "tna-crypto-vise-block"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts",
+            "status": 200,
+            "productCount": 22,
+            "sampleSlugs": [
+              "tna-lar-magazine-extension",
+              "magpul-mag461-sga-high-cheek-riser-kit-includes-0-50-and-0-75-cheek-riser",
+              "magpul-mag1254-esk-selector-ar-15-ar-10-3-pack-ambidextrous-user-configurable-levers"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/foregrips.html",
+            "status": 200,
+            "productCount": 22,
+            "sampleSlugs": [
+              "magpul-mag597-m-lok-mvg-vertical-grip-m-lok-slot-system.html",
+              "magpul-mag598-m-lok-afg-angled-foregrip.html",
+              "magpul-mag608-m-lok-hand-stop-kit.html"
+            ]
+          },
+          {
+            "url": "/parts/vr-66/",
+            "status": 200,
+            "productCount": 18,
+            "sampleSlugs": [
+              "tna-vr-66-tactical-stock",
+              "blem-tna-vr-66-12ga-3-5-chamber-barrel",
+              "tna-vr-66-sporting-stock"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/charging-handle/charging-handles.html",
+            "status": 200,
+            "productCount": 22,
+            "sampleSlugs": [
+              "tna-ultimate-wk180-c-charging-handle",
+              "ar-10-charging-handle-complete-6061-t6-aluminum.html",
+              "ar-15-charging-handle-complete-6061-t6-aluminum.html"
+            ]
+          },
+          {
+            "url": "/firearms/co2-pellet-bb-paintball/",
+            "status": 200,
+            "productCount": 21,
+            "sampleSlugs": [
+              "salt-supply-co-s2-paintball-stinkbomb-gun-starter-kit-damaged-packaging",
+              "umarex-p2p-hdp-50-gen-2-50-cal-485-fps-orange-black-rubber-practice-round-no-pal-required",
+              "asg-co2-4-5mm-cobray-ingram-m11-18522"
+            ]
+          },
+          {
+            "url": "/parts/tm22/",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "tommy-derya-tm22-ar-style-charging-handle-for-tm22",
+              "tommy-derya-tm22-derya-tm22-magazine-sleeve-15-rnd-metal-zg1v",
+              "tommy-derya-tm22-derya-tm22-magazine-sleeve-15-rnd-polymer-ifek"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/gas-system.html",
+            "status": 200,
+            "productCount": 21,
+            "sampleSlugs": [
+              "gas-tube-roll-pin.html",
+              "gas-tubes-for-ar-15-ar-10-stainless.html",
+              "canadian-national-arms-cna-black-gas-tubes-for-ar-15.html"
+            ]
+          },
+          {
+            "url": "/parts/kits/",
+            "status": 200,
+            "productCount": 19,
+            "sampleSlugs": [
+              "ar-15-spring-kit.html",
+              "sks-rifle-performance-spring-pack-7-62x39mm",
+              "cz-spare-parts-set-cz-75-sp-01-shadow-0423-01-0734nd"
+            ]
+          },
+          {
+            "url": "/clearance/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "open-box-streamlight-tl-racker-shotgun-forend-light-for-mossberg-500-590",
+              "streamlight-tl-racker-shotgun-forend-light-for-mossberg-590-shockwave",
+              "688776-LVL-IV-NIJ-January2025"
+            ]
+          },
+          {
+            "url": "/tools-accessories/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "g96-complete-gun-treatment-triple-action-large-12oz-spray-can-1055p",
+              "g96-complete-gun-oil-cleaner-degreaser-4-fld-oz-bottle-1088",
+              "ballistol-guncer-gun-oil-spray-200ml-euro-2166ball"
+            ]
+          },
+          {
+            "url": "/tna-gear/novelties.html",
+            "status": 200,
+            "productCount": 19,
+            "sampleSlugs": [
+              "enola-gaye-mk5-thunderflash-singles-10152",
+              "hardcore-taginn-pro-tag-67-frag-grenade-less-lethal",
+              "enola-gaye-eg25-micro-output-smoke-grenade-106"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/pistol-grips",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "magpul-mag412-rvg-rail-vertical-grip.html",
+              "magpul-mag532-moe-k2-grip.html",
+              "magpul-mag522-moe-k2-grip.html"
+            ]
+          },
+          {
+            "url": "/parts/sks/",
+            "status": 200,
+            "productCount": 19,
+            "sampleSlugs": [
+              "5-16-drill-bit-gunsmithing-tool.html",
+              "sks-military-issue-rifle-sling",
+              "sks-rifle-performance-spring-pack-7-62x39mm"
+            ]
+          },
+          {
+            "url": "/handgun-parts/",
+            "status": 200,
+            "productCount": 19,
+            "sampleSlugs": [
+              "tna-glock-g19-gen3-recoil-spring-rod",
+              "cz-spare-parts-set-cz-75-sp-01-shadow-0423-01-0734nd",
+              "versa-tactical-beretta-dovetail-optic-mounting-kit-with-sightsecure-optic-plate"
+            ]
+          },
+          {
+            "url": "/firearms/non-restricted/",
+            "status": 200,
+            "productCount": 18,
+            "sampleSlugs": [
+              "tna-3-gun-vr-66-12ga-shotgun-semi-auto-nickel-carrier-non-restricted",
+              "kodiak-defence-sks-101-tactical-scope-rail.html",
+              "tna-vr-66-barebones-12ga-semi-auto-shotgun-18-6-bbl-black-synthetic-stock-non-restricted"
+            ]
+          },
+          {
+            "url": "/tna-merch/",
+            "status": 200,
+            "productCount": 18,
+            "sampleSlugs": [
+              "tna-black-hat",
+              "tna-multi-cam-hat",
+              "tna-mag-loader"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/fixed-style",
+            "status": 200,
+            "productCount": 18,
+            "sampleSlugs": [
+              "magpul-mag460-sga-stock-for-remingtonr-870.html",
+              "magpul-mag490-sga-stock-for-mossberg-500-590-590a1.html",
+              "a2-buttstock-screw.html"
+            ]
+          },
+          {
+            "url": "/ar-15-magazines/magazine-parts.html",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "magpul-mag110-enhanced-self-leveling-follower-for-usgi-5-56x45-3-pack.html",
+              "magpul-mag561-pmag-ranger-plate-gen-m3-3-pack.html",
+              "magpul-mag020-ranger-plate-usgi-5-56x45-3-pack.html"
+            ]
+          },
+          {
+            "url": "/military-surplus/sks-guns-parts-upgrades/",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "sks-recoil-buffer.html",
+              "sks-original-stripper-clips-7-62x39mm-25-pack",
+              "sks-military-issue-rifle-sling"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/safety",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "magpul-mag215-blk-5-56-nato-223-dummy-rounds-5-pack.html",
+              "tipton-snap-caps.html",
+              "scorpio-combination-cable-lock.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/telescopic/buffer-tube-kits-parts",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "castle-nut-canadian-national-arms.html",
+              "magpul-mag529-blk-ambidextrous-sling-attachment-point-qd-asap-qd.html",
+              "receiver-end-plate-canadian-national-arms.html"
+            ]
+          },
+          {
+            "url": "/tools/machine-tools-bits",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "5-16-drill-bit-gunsmithing-tool.html",
+              "tna-sks-muzzle-thread-alignment-helper-tool",
+              "die-for-barrel-muzzle-threads.html"
+            ]
+          },
+          {
+            "url": "/parts/handgun-parts/glock/",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "6-pack-magpul-mag801-pmag-10-gl9-9mm-magazines-for-glock-g17",
+              "magpul-mag801-pmag-10-gl9-magazine-for-glock-g17.html",
+              "magpul-mag662-10-27-glock-17-pmag.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/iron-sights.html",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "magpul-mag1166-mbus-3-sight-front",
+              "magpul-mag1167-mbus-3-sight-rear",
+              "magpul-mag247-back-up-sight-front.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/bipods",
+            "status": 200,
+            "productCount": 15,
+            "sampleSlugs": [
+              "magpul-bipod-mlok-mag933.html",
+              "magpul-mag1075-bipod-for-sling-stud-qd.html",
+              "magpul-mag609-m-lok-bipod-mount.html"
+            ]
+          },
+          {
+            "url": "/ammo/shotgun",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "sureshell-side-mount-carrier-for-remington-870-1100-11-87-12ga-6-shell-5-in-aluminum-91630",
+              "sureshell-alum-carrier-for-moss-500-590-20ga-6-shell-95170",
+              "adapter-mount-sureshell-carrier-6-shell-12-ga-90380"
+            ]
+          },
+          {
+            "url": "/ammo-reloading/pellets-bbs-paintballs-rubber-balls/",
+            "status": 200,
+            "productCount": 14,
+            "sampleSlugs": [
+              "bulk-co2-cartridges",
+              "umarex-t4e-hdp-rubber-balls-50-cal-black-250-ct",
+              "northernaer-12-gr-co2-cartridge-25-pack"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/assemblies/gunsmith-assembly-services",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "20-stress-relieved-barrel-blank",
+              "tna-crypto-vise-block",
+              "tna-sks-muzzle-thread-alignment-helper-tool"
+            ]
+          },
+          {
+            "url": "/firearms/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "tna-3-gun-vr-66-12ga-shotgun-semi-auto-nickel-carrier-non-restricted",
+              "tna-vr-66-barebones-12ga-semi-auto-shotgun-18-6-bbl-black-synthetic-stock-non-restricted",
+              "asg-co2-4-5mm-cobray-ingram-m11-18522"
+            ]
+          },
+          {
+            "url": "/tools/wrenches",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "iwi-tavor-barrel-wrench-tool-for-sar-x95-or-tavor-7-0070475101",
+              "castle-nut-wrench-for-old-style-castle-nuts.html",
+              "crows-foot-wrench-for-lightweight-handguards-v4-0-wk180-gen2-late-models"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/slings",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "magpul-mag540-qd-sling-swivel.html",
+              "magpul-mag518-ms4-dual-qd-sling-gen-2.html",
+              "magpul-mag514-ms3-gen-2-sling.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/barrels.html",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "barrel-extension-pin.html",
+              "barrel-extension-with-m4-feedramps.html",
+              "s-j-hardware-shotgun-barrel-clamp-with-light-rail-qd-mkii"
+            ]
+          },
+          {
+            "url": "/handguns/cz.html",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "cz-75-9mm-shadow-2-magazine-all-metal.html",
+              "cz-spare-parts-set-cz-75-sp-01-shadow-0423-01-0734nd",
+              "cz-pistol-part-cz-75-85-sp-01-shadow-2-ts2-firing-pin.html"
+            ]
+          },
+          {
+            "url": "/tna-gear/patches.html",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "tna-true-north-arms-pvc-morale-patch-w-velcro.html",
+              "slide-it-in-like-a-gentleman-morale-patch",
+              "do-the-pew-pew-patch"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/trigger-group/parts",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "magazine-catch-button.html",
+              "trigger-pin-hammer-pin.html",
+              "trigger-spring.html"
+            ]
+          },
+          {
+            "url": "/explosives-smoke/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "enola-gaye-mk5-thunderflash-singles-10152",
+              "hardcore-taginn-pro-tag-67-frag-grenade-less-lethal",
+              "enola-gaye-eg25-micro-output-smoke-grenade-106"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/flashlights-mounts",
+            "status": 200,
+            "productCount": 15,
+            "sampleSlugs": [
+              "magpul-mag1296-wire-control-kit-wkc-cable-management-m-lok-compatible-6-pack",
+              "s-j-hardware-shotgun-barrel-clamp-with-light-rail-qd-mkii",
+              "magpul-mag498-rail-light-mount.html"
+            ]
+          },
+          {
+            "url": "/tools/gauges-measurement",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "tna-go-no-go-gauges-saami-spec.html",
+              "tna-sks-muzzle-thread-alignment-helper-tool",
+              "muzzle-break-alignment-pin-multi-options"
+            ]
+          },
+          {
+            "url": "/ar-15-magazines/mag-couplers.html",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "tna-lar-magazine-extension",
+              "magwedge-magazine-coupler-type-1.html",
+              "magpul-mag595-maglink-magazine-coupler-for-pmag-30-gen-m2-moer-gen-m3.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/handguard-assembly-parts.html",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "super-m-lok-handguard-easy-install.html",
+              "coronus-series-m-lok-free-float-handguard-ar-15.html",
+              "tna-so1-m-lok-free-float-handguard-for-wk180-c-ar-15"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/trigger-group/trigger-kits",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "damaged-packaging-triggertech-ar-15-single-stage-drop-in-trigger",
+              "triggertech-ar-15-trigger-adaptable-model-adjustable-2-5-lb.html",
+              "hiperfire-enhanced-duty-trigger.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/pistol-grips/pistol-grip-parts",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "pistol-grip-lockwasher.html",
+              "enhanced-pistol-grip-screw-set-stainless-steel.html",
+              "pistol-grip-screw-stainless.html"
+            ]
+          },
+          {
+            "url": "/mag-sale/",
+            "status": 200,
+            "productCount": 11,
+            "sampleSlugs": [
+              "6-pack-magpul-mag801-pmag-10-gl9-9mm-magazines-for-glock-g17",
+              "-6-pack-c-products-cpd-lar-15-pistol-magazines-.223-10rd-1023041178cpdce-",
+              "5-pack-magpul-mag572-pmag-7-62x39mm-magazine-5-30rd-for-ak-akm-moe.html"
+            ]
+          },
+          {
+            "url": "/ar-15-magazines/mag-adapters.html",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "tna-wk180-c-gen-2-v2-magwell-adapter",
+              "s-j-hardware-universal-12ga-spring-and-no-jam-follower.html",
+              "tna-sks-magwell-latch-block"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/safety-selector",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "safety-selector-detent-spring.html",
+              "safety-selector-detent.html",
+              "damaged-packaging-triggertech-ar-safety-black-or-stainless"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/muzzle-devices.html",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "colour-anodized-crush-washer.html",
+              "precision-armament-hypertap-muzzle-brake-a04",
+              "precision-armament-m4-72-severe-duty-compensator-a040000"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/gas-system/gas-blocks.html",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "spare-set-screw-for-tna-steel-gas-blocks-m5x0-8.html",
+              "cna-adjustable-gas-block-steel-low-profile-0-75.html",
+              "a2-front-sight-base-with-integrated-gas-block.html"
+            ]
+          },
+          {
+            "url": "/tools/armourers-kits",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "tna-sks-muzzle-thread-alignment-helper-tool",
+              "thread-checker-verification-tool",
+              "tna-muzzle-thread-alignment-helper-tool"
+            ]
+          },
+          {
+            "url": "/tools/vice-blocks-fixtures",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "barrel-torque-tool.html",
+              "magpul-mag536-bev-block.html",
+              "barrel-dimpling-jig.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts.html",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "20-stress-relieved-barrel-blank",
+              "side-charger-carrier.html",
+              "tommy-derya-tm22-ar-style-charging-handle-for-tm22"
+            ]
+          },
+          {
+            "url": "/glock/magazines/magazines.html",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "6-pack-magpul-mag801-pmag-10-gl9-9mm-magazines-for-glock-g17",
+              "magpul-mag801-pmag-10-gl9-magazine-for-glock-g17.html",
+              "magpul-mag662-10-27-glock-17-pmag.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/muzzle-devices/linear-compensators.html",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "reverse-fake-can-suppressor-with-linear-compensator-1-2-28-threading.html",
+              "s-j-hardware-linear-compensator-223-9mm-and-7-62",
+              "surefire-surefire-warden-blast-diffuser.html"
+            ]
+          },
+          {
+            "url": "/ar-15-magazines/magazine-loaders-clips.html",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "sks-original-stripper-clips-7-62x39mm-25-pack",
+              "maglula-uplula-universal-pistol-magazine-loader-9mm-45acp-black-up60b",
+              "tna-sks-ak-stipper-clip-loader-tool.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/takedown-pivot-pins",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "detent-for-pivot-pin-or-takedown-pin.html",
+              "detent-spring-for-pivot-pin-or-takedown-pin.html",
+              "takedown-pin.html"
+            ]
+          },
+          {
+            "url": "/deals/christmas/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "clamp-on-ambi-sling-hook-mount-for-buffer-tube.html",
+              "45-degree-angled-picatinny-adapter.html",
+              "crusader-arms-backland-hunter-semi-auto-rifle-223-rem-5-56-black-18-6-barrel-5-rounds-non-restricted"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/muzzle-devices/flash-hiders.html",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "cna-a2-style-birdcage-flash-hider-5-slots.html",
+              "sks-pin-on-muzzle-device",
+              "surefire-warcomp-sport-flash-hider-non-suppressor-adapter"
+            ]
+          },
+          {
+            "url": "/firearms/tna-invictus-shotgun/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "tna-as46-invictus-pump-action-12ga-20-round-drum-magazine",
+              "tna-invictus-12ga-shotgun-10rd-magazine-blem",
+              "tna-invictus-12ga-shotgun-5rd-magazine"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/charging-handle.html",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "tna-ultimate-wk180-c-charging-handle",
+              "s-j-hardware-benelli-m4-combat-charging-handle.html",
+              "s-j-hardware-benelli-m2-sbe-jumbo-charging-handle.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/bolt-catch-release",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "bolt-catch-spring.html",
+              "bolt-catch-plunger.html",
+              "bolt-catch-roll-pin.html"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/gas-system/gas-tubes.html",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "gas-tube-roll-pin.html",
+              "gas-tubes-for-ar-15-ar-10-stainless.html",
+              "canadian-national-arms-cna-black-gas-tubes-for-ar-15.html"
+            ]
+          },
+          {
+            "url": "/military-surplus/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "sks-sling-military-surplus",
+              "cz-protective-filter-only-1",
+              "sks-military-issue-rifle-sling"
+            ]
+          },
+          {
+            "url": "/parts/lower-parts/chassis-stock-system/",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "3d-printed-adapter-plate-for-alcor-to-remington-870-stock",
+              "tna-vr-66-tactical-stock",
+              "tna-vr-66-sporting-stock"
+            ]
+          },
+          {
+            "url": "/more-guns/shotguns/benelli-nova-shotgun.html",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "crusader-arms-backland-hunter-semi-auto-rifle-223-rem-5-56-black-18-6-barrel-5-rounds-non-restricted",
+              "in-store-demo-crusader-arms-backland-hunter-semi-auto-rifle-223-rem-5-56-black-18-6-barrel-5-rounds-non-restricted",
+              "turkenelli-m4-aluminum-handguard"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/rail-covers",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "magpul-mag603-m-lok-rail-cover-type-2.html",
+              "magpul-mag510-xtm-enhanced-rail-panels.html",
+              "magpul-mag602-m-lok-rail-cover-type-1.html"
+            ]
+          },
+          {
+            "url": "/magazines/magazines/drum-mags/",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "tna-as46-invictus-pump-action-12ga-20-round-drum-magazine",
+              "magpul-mag1137-pmag-d-50-gl9-5-50-drum-mag-for-9mm-pcc-w-glock-magwell",
+              "ege-arms-levar12-drum-mags-12ga-20-round-metal-black-umql"
+            ]
+          },
+          {
+            "url": "/more-guns/shotguns/mossberg-500-590.html",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "519firearms-sks-5-round-carbon-fiber-polymer-clip-mag",
+              "519firearms-mossberg-magazine-cap-spike",
+              "519firearms-mossberg-590-shockwave-nightstick-replacement-forend-pistol-grip"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/bolt-carrier-group-parts/complete-bolts.html",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "bolt-assembly-223-5-56.html",
+              "cna-bolt-assembly-223-5-56-phosphate.html",
+              "toolcraft-bolt-assembly.html"
+            ]
+          },
+          {
+            "url": "/tools/boresnakes",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "the-snek-bore-cleaning-snake.html",
+              "tna-crypto-vise-block",
+              "flat-needle-file-6-piece-set"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/muzzle-devices/shims-washers-nuts.html",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "crush-washers.html",
+              "synthetic-rubber-muzzle-thread-o-ring.html",
+              "jam-nut-for-muzzle-device-hex.html"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/gas-system/other-parts.html",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "front-sight-taper-pin-for-ar-15.html",
+              "front-sling-swivel-rivet.html",
+              "front-sling-swivel.html"
+            ]
+          },
+          {
+            "url": "/firearms/less-lethals/",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "salt-supply-co-s2-paintball-stinkbomb-gun-starter-kit-damaged-packaging",
+              "pulsefire-compact",
+              "chiappa-valve-assembly-ltl-50-098-857"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/bolt-carrier-group-parts.html",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "bcl15-ambi-bolt-release.html",
+              "aero-precision-5-56-bolt-carrier-group-complete",
+              "wolff-colt-ar-15-sporter-m16-rifle-service-pak-xtra-power-30450"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/magazine-catch-cat",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "magazine-catch-spring.html",
+              "magazine-catch.html",
+              "pro-mag-ruger-10-22-charger-extended-tact-mag-release"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/telescopic",
+            "status": 200,
+            "productCount": 5,
+            "sampleSlugs": [
+              "magpul-mag461-sga-high-cheek-riser-kit-includes-0-50-and-0-75-cheek-riser",
+              "magpul-mag1435-moe-pr-carbine-buttstock-mil-spec",
+              "magpul-mag463-sga-low-cheek-riser-kit-includes-0-25-and-0-50-cheek-riser"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/telescopic/buffer-tube-buttstock-kits",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "mesa-tactical-leo-gen-ii-telescoping-stock-adapter-for-remington-870-12ga-only-91150",
+              "tommy-derya-tm22-ar-style-charging-handle-for-tm22",
+              "tna-fn-p90-ps90-cheek-riser-gen-2"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/muzzle-devices/fake-suppressors.html",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "fake-can-suppressor-reverse-style-with-brake.html",
+              "fake-can-suppressor-reverse-style-with-brake-reverse-style",
+              "reverse-fake-can-suppressor-with-linear-compensator-1-2-28-threading.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/trigger-guard",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "magpul-mag417-moe-trigger-guard-polymer.html",
+              "magpul-mag1186-moe-enhanced-trigger-guard-polymer-ar15-m4.html",
+              "trigger-guard-roll-pin.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/lower-parts-kits",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "lower-parts-kit-for-ar-15.html",
+              "ar-308-lower-parts-kit-conversion.html",
+              "timber-creek-ar-takedown-pin-sets"
+            ]
+          },
+          {
+            "url": "/accessories/tools-accessories/gear-armour/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "688776-LVL-IV-NIJ-January2025",
+              "rugged-textiles-pistol-magazine-storage-pouch",
+              "chiappa-ltl-soft-case-lightly-padded-synthetic-black"
+            ]
+          },
+          {
+            "url": "/accessories/scope-accessories/scope-rings",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "sun-optics-30mm-scope-ring-st-1-inserts-high-sm1436",
+              "sun-optics-30mm-scope-ring-st-1-inserts-ultra-high-sm1438",
+              "sun-optics-30mm-scope-ring-st-1-inserts-medium-sm1434"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/muzzle-devices/thread-protectors.html",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "smooth-muzzle-thread-protector-stainless.html",
+              "knurled-muzzle-thread-protector-stainless.html",
+              "timber-creek-1-2-28-thread-protector"
+            ]
+          },
+          {
+            "url": "/tools/hammers-punches",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "tna-roll-pin-finish-punch-set-for-ar-15.html",
+              "tna-roll-pin-punch-set-9-piece.html",
+              "roll-pin-starter-punches-v3-0.html"
+            ]
+          },
+          {
+            "url": "/outdoors-survival/camping/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "frontiersman-bear-spray-with-glow-in-the-dark-safety-wedge-with-holster"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/targets",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "bushmaster-25-metre-sight-in-target-10-pack.html",
+              "pair-of-laser-cut-shooting-stand-support-for-2x4-and-1-2-pipe",
+              "tannerite-brand-binary-explosive-rifle-targets-pro-pack-of-10.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/buffer-retainer",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "buffer-retainer.html",
+              "buffer-retainer-spring.html",
+              "offset-buffer-retainer.html"
+            ]
+          },
+          {
+            "url": "/accessories/scope-accessories/bubble-levels",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "bubble-level-picatinny-weaver-mount.html",
+              "scope-bubble-level-scope-ring-mounted.html",
+              "scope-bubble-level-30mm.html"
+            ]
+          },
+          {
+            "url": "/accessories/tools-accessories/tripods/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "k700-amt-aluminum-tripod-with-reaper-grip-kj85001k",
+              "k800-carbon-fiber-tripod-with-reaper-grip-kj85002k",
+              "reaper-hellbound-tripod-kit-kj85009k"
+            ]
+          },
+          {
+            "url": "/firearms/non-restricted/tna-vr-66-shotgun/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "tna-3-gun-vr-66-12ga-shotgun-semi-auto-nickel-carrier-non-restricted",
+              "tna-vr-66-barebones-12ga-semi-auto-shotgun-18-6-bbl-black-synthetic-stock-non-restricted",
+              "tna-vr-66-ma-12ga-semi-auto-shotgun-18-6-bbl-black-synthetic-stock-non-restricted"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/ar-15-parts/iron-sights/fsb-sight-posts.html",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "a2-front-sight-post-shape-upgrades.html",
+              "front-sight-spring.html",
+              "front-sight-detent.html"
+            ]
+          },
+          {
+            "url": "/reloading/tools-equipment.html",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "reloading-die-wrench.html",
+              "tipton-snap-caps-packs-of-2-or-5.html",
+              "tna-mag-loader"
+            ]
+          },
+          {
+            "url": "/reloading/reloading-components/pistol-rifle-reloading.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "hodgdon-h335-smokeless-rifle-powder-for-reloading-1lb.html",
+              "hodgdon-sporting-fuse--15-foot-roll"
+            ]
+          },
+          {
+            "url": "/reloading/reloading-components.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "hodgdon-h335-smokeless-rifle-powder-for-reloading-1lb.html",
+              "hodgdon-sporting-fuse--15-foot-roll"
+            ]
+          },
+          {
+            "url": "/tools-accessories/accessories/knives-bayonets/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "gear-stock-stainless-steel-g-i-type-m-9-bayonet-w-scabbard",
+              "ceramic-knife-sharpener-8-inch"
+            ]
+          },
+          {
+            "url": "/glock/magazines/magazine-accessories.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "versa-tactical-glock-g17-22-magazine-extension-gen-1-5-0-rounds-vtgs-glf",
+              "versa-tactical-glock-19-magazine-extension-compatible-with-glock-19-23-32-38-gen-1-5-0-rounds"
+            ]
+          },
+          {
+            "url": "/accessories/scope-accessories",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "timber-creek-scope-cover-many-diameters"
+            ]
+          },
+          {
+            "url": "/glock/magazines.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "custom-magpul-pmag-1-2-sided-design-options",
+              "versa-tactical-glock-g17-22-magazine-extension-gen-1-5-0-rounds-vtgs-glf"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/charging-handle/parts.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "side-charger-carrier.html",
+              "charging-handle-latch-spring.html"
+            ]
+          },
+          {
+            "url": "/tna-gear/ar15-soft-goods.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "tna-multi-cam-hat",
+              "tna-black-hat"
+            ]
+          },
+          {
+            "url": "/reloading/reloading-components/pistol-rifle-reloading/powders.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "hodgdon-h335-smokeless-rifle-powder-for-reloading-1lb.html",
+              "hodgdon-sporting-fuse--15-foot-roll"
+            ]
+          },
+          {
+            "url": "/hunting-modern-sporting/alcore-223/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "3d-printed-adapter-plate-for-alcor-to-remington-870-stock",
+              "3d-printed-carbon-fiber-pistol-grip-tang-for-sks-chassis"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/lower-parts/trigger-group",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "damaged-packaging-triggertech-ar-15-single-stage-drop-in-trigger",
+              "golden-pin-crusader-backlands-antiwalk-pin-prototype"
+            ]
+          },
+          {
+            "url": "/reloading.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "hodgdon-sporting-fuse--15-foot-roll",
+              "reloading-die-wrench.html"
+            ]
+          },
+          {
+            "url": "/ar-15-ar-308/accessories/batteries",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "magpul-mag1296-wire-control-kit-wkc-cable-management-m-lok-compatible-6-pack",
+              "ag13-lr44-battery.html"
+            ]
+          },
+          {
+            "url": "/parts/10-22/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "pro-mag-ruger-10-22-charger-extended-tact-mag-release"
+            ]
+          },
+          {
+            "url": "/ar-15-parts/muzzle-devices/brakes/brake-shrouds.html",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "surefire-surefire-warden-blast-diffuser.html"
+            ]
+          },
+          {
+            "url": "/crossbows/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "ar-series-b08-tactical-crossbow",
+              "ar-series-limb-hunting-150lbs",
+              "steambow-ar-series-polymer-limb-tips-set-of-2"
+            ]
+          },
+          {
+            "url": "/glock/magazines/magwells.html",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "versa-tactical-glock-19-magazine-extension-compatible-with-glock-19-23-32-38-gen-1-5-0-rounds"
+            ]
+          },
+          {
+            "url": "/parts/henry/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "henry-stock-for-h001y-series-hl2251y"
+            ]
+          },
+          {
+            "url": "/glock/magazines/magazine-catch.html",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "extended-mag-release-button-for-glock-43.html"
+            ]
+          },
+          {
+            "url": "/handguns/1911.html",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "magpul-mag524-moe-1911-grip-panels.html"
+            ]
+          },
+          {
+            "url": "/firearms/alcor-223/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "3d-printed-adapter-plate-for-alcor-to-remington-870-stock"
+            ]
+          },
+          {
+            "url": "/fun/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "pulsefire-compact"
+            ]
+          },
+          {
+            "url": "/tna-gear/stickers.html",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "tna-double-bumper-sticker.html"
+            ]
+          },
+          {
+            "url": "/ammo/centerfire",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "tipton-snap-caps-packs-of-2-or-5.html"
+            ]
+          },
+          {
+            "url": "/parts/alcor-223/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "3d-printed-adapter-plate-for-alcor-to-remington-870-stock"
+            ]
+          },
+          {
+            "url": "/ammo",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "magpul-mag215-dummy-rounds-5-56x45-5-pack"
+            ]
+          },
+          {
+            "url": "/accessories/scope-accessories/boresights",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "laser-boresight-9-19-parabellum.html"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.truenortharms.com/tools/grease-lube-oil",
+        "page2Url": "https://www.truenortharms.com/tools/grease-lube-oil?page=2",
+        "page1First3": [
+          "anti-seize-thread-grease-mil-spec-aeroshell-64-replaces-33ms-1-8-oz.html",
+          "g96-complete-gun-treatment-triple-action-large-12oz-spray-can-1055p",
+          "g96-complete-gun-oil-cleaner-degreaser-4-fld-oz-bottle-1088"
+        ],
+        "page2First3": [
+          "remington-rem-action-cleaner-10-5-oz-spray-can-19914",
+          "remington-rem-all-in-4-oz-squeeze-bottle.html",
+          "remington-rem-oil-2-oz-squeeze-bottle.html"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.truenortharms.com/tools/grease-lube-oil?sort=newest",
+        "withoutSortUrl": "https://www.truenortharms.com/tools/grease-lube-oil",
+        "withSortFirst": "vibra-tite-vc-3-tape-60-in",
+        "withoutSortFirst": "anti-seize-thread-grease-mil-spec-aeroshell-64-replaces-33ms-1-8-oz.html",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 1264,
+      "actual": 3729,
+      "evidence": {
+        "storedCount": 1264,
+        "actualCount": 3729,
+        "methodUsed": "sitemap",
+        "driftPct": 195
+      },
+      "reason": "Count drifted 195% (stored=1264, actual=3729)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f34351f5cc1711c-YYZ",
+          "set-cookie": "SF-CSRF-TOKEN=ee4846f9-e014-4d7c-ae7b-3ffeda3bca3f; Path=/; Secure; SameSite=Strict,fornax_anonymousId=2ba47818-2511-4f8c-ad02-e58ad84b6878; Expires=Thu, 27 Apr 2028 07:03:30 GMT; Path=/; Secure; SameSite=None,athena_short_visit_id=164b9853-e7fe-42c0-81f8-64f0654954d0:1777359810; Expires=Tue, 28 Apr 2026 07:33:30 GMT; Path=/; Secure; HttpOnly; SameSite=None,Shopper-Pref=26E4587EDCCC13162CC4ECC24DD4553179605517-1777964610882-x%7B%22cur%22%3A%22CAD%22%2C%22funcConsent%22%3Afalse%7D; Path=/; Secure; HttpOnly,SHOP_SESSION_TOKEN=e5fce83c-e582-4edf-a910-c17a73265b7d; Path=/; Secure; HttpOnly; SameSite=None,__cf_bm=3sFbZuhGPU3JFUai2sB51RG9kTwmK33BXD0FSmTG9Wc-1777359810.452612-1.0.1.1-R7xQa.Q7tJ81bxNwFWWb.laq.DtMghVAj0cVNYhv0Bj4rGV25kCP_Iq772hranKd7BW4vn.mO5TtK6PxtED1p0DKk.86ohnplDbUWGr6SiZ8FUU4WyomrV68mEsc91AB; HttpOnly; Secure; Path=/; Domain=truenortharms.com; Expires=Tue, 28 Apr 2026 07:33:30 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "notes": "149 catalogUrls = ALL product-bearing leaf categories. BC Stencil parent categories are non-inclusive on this theme — parents show subcategory tiles, not child products. Full coverage requires ALL leaves. /new-arrivals/ is the primary T1 watermark target (default=newest). Algolia is search-only, does not interfere with catalog. www.truenortharms.com 301s to truenortharms.com (apex). Product sitemap has 4420 entries but only 1264 are live/reachable via category browsing (rest are OOS/hidden). VIP Club has 144 exclusive products not in any other category.",
+    "hasWaf": true,
+    "perPage": 24,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "watermark": {
+        "notes": "/new-arrivals/ defaults to newest-first (product IDs descending). ?sort=newest honored on all categories. T1 watermark walks from newest until hitting known product.",
+        "method": "navigate-from-watermark"
+      }
+    },
+    "platform": "bigcommerce.stencil",
+    "sortParam": "?sort=newest",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/tools/grease-lube-oil",
+      "/parts/",
+      "/ar-15-parts/muzzle-devices/brakes.html",
+      "/ar-15-ar-308/ar-15-parts/bolt-carrier-group-parts/bcg-parts.html",
+      "/ar-15-ar-308/accessories/rail-adapters",
+      "/ar-15-ar-308/ar-15-parts/ar-15-handguard-drop-in.html",
+      "/vip-club/",
+      "/ar-15-ar-308/ower-parts/telescopic/buttstocks",
+      "/tools/hand-tools",
+      "/tools",
+      "/deals/boxing-day-specials/",
+      "/swords-knives/",
+      "/accessories/scope-accessories/mounts-risers",
+      "/ar-15-magazines/magazines.html",
+      "/deals.html",
+      "/hunting/",
+      "/ar-15-ar-308/ar-15-parts/muzzle-devices/thread-adapters.html",
+      "/new-arrivals/",
+      "/parts/wk180-c-ws-mcr/upgrade-parts/",
+      "/outdoors-survival/",
+      "/magpul",
+      "/ar-15-ar-308/accessories/range-accessories",
+      "/tools/misc-modifications",
+      "/ar-15-magazines.html",
+      "/ar-15-ar-308/ar-15-parts/upper-receiver-parts.html",
+      "/ar-15-ar-308/accessories/sling-mounts",
+      "/ar-15-ar-308/accessories/optics-red-dots",
+      "/ar-15-magazines/mag-accessories.html",
+      "/parts/wk180-c-ws-mcr/oem-parts/",
+      "/tna-merch/swords-knives/",
+      "/wk180-c-ws-mcr/",
+      "/ar-15-ar-308/accessories",
+      "/ar-15-ar-308/lower-parts",
+      "/ar-15-ar-308/ar-15-parts/foregrips.html",
+      "/parts/vr-66/",
+      "/ar-15-parts/charging-handle/charging-handles.html",
+      "/firearms/co2-pellet-bb-paintball/",
+      "/parts/tm22/",
+      "/ar-15-parts/gas-system.html",
+      "/parts/kits/",
+      "/clearance/",
+      "/tools-accessories/",
+      "/tna-gear/novelties.html",
+      "/ar-15-ar-308/lower-parts/pistol-grips",
+      "/parts/sks/",
+      "/handgun-parts/",
+      "/firearms/non-restricted/",
+      "/tna-merch/",
+      "/ar-15-ar-308/lower-parts/fixed-style",
+      "/ar-15-magazines/magazine-parts.html",
+      "/military-surplus/sks-guns-parts-upgrades/",
+      "/ar-15-ar-308/accessories/safety",
+      "/ar-15-ar-308/lower-parts/telescopic/buffer-tube-kits-parts",
+      "/tools/machine-tools-bits",
+      "/parts/handgun-parts/glock/",
+      "/ar-15-ar-308/ar-15-parts/iron-sights.html",
+      "/ar-15-ar-308/accessories/bipods",
+      "/ammo/shotgun",
+      "/ammo-reloading/pellets-bbs-paintballs-rubber-balls/",
+      "/ar-15-ar-308/assemblies/gunsmith-assembly-services",
+      "/firearms/",
+      "/tools/wrenches",
+      "/ar-15-ar-308/accessories/slings",
+      "/ar-15-ar-308/ar-15-parts/barrels.html",
+      "/handguns/cz.html",
+      "/tna-gear/patches.html",
+      "/ar-15-ar-308/lower-parts/trigger-group/parts",
+      "/explosives-smoke/",
+      "/ar-15-ar-308/accessories/flashlights-mounts",
+      "/tools/gauges-measurement",
+      "/ar-15-magazines/mag-couplers.html",
+      "/ar-15-ar-308/ar-15-parts/handguard-assembly-parts.html",
+      "/ar-15-ar-308/lower-parts/trigger-group/trigger-kits",
+      "/ar-15-ar-308/lower-parts/pistol-grips/pistol-grip-parts",
+      "/mag-sale/",
+      "/ar-15-magazines/mag-adapters.html",
+      "/ar-15-ar-308/lower-parts/safety-selector",
+      "/ar-15-ar-308/ar-15-parts/muzzle-devices.html",
+      "/ar-15-parts/gas-system/gas-blocks.html",
+      "/tools/armourers-kits",
+      "/tools/vice-blocks-fixtures",
+      "/ar-15-ar-308/ar-15-parts.html",
+      "/glock/magazines/magazines.html",
+      "/ar-15-ar-308/ar-15-parts/muzzle-devices/linear-compensators.html",
+      "/ar-15-magazines/magazine-loaders-clips.html",
+      "/ar-15-ar-308/lower-parts/takedown-pivot-pins",
+      "/deals/christmas/",
+      "/ar-15-ar-308/ar-15-parts/muzzle-devices/flash-hiders.html",
+      "/firearms/tna-invictus-shotgun/",
+      "/ar-15-parts/charging-handle.html",
+      "/ar-15-ar-308/lower-parts/bolt-catch-release",
+      "/ar-15-parts/gas-system/gas-tubes.html",
+      "/military-surplus/",
+      "/parts/lower-parts/chassis-stock-system/",
+      "/more-guns/shotguns/benelli-nova-shotgun.html",
+      "/ar-15-ar-308/accessories/rail-covers",
+      "/magazines/magazines/drum-mags/",
+      "/more-guns/shotguns/mossberg-500-590.html",
+      "/ar-15-ar-308/ar-15-parts/bolt-carrier-group-parts/complete-bolts.html",
+      "/tools/boresnakes",
+      "/ar-15-ar-308/ar-15-parts/muzzle-devices/shims-washers-nuts.html",
+      "/ar-15-parts/gas-system/other-parts.html",
+      "/firearms/less-lethals/",
+      "/ar-15-ar-308/ar-15-parts/bolt-carrier-group-parts.html",
+      "/ar-15-ar-308/lower-parts/magazine-catch-cat",
+      "/ar-15-ar-308/lower-parts/telescopic",
+      "/ar-15-ar-308/lower-parts/telescopic/buffer-tube-buttstock-kits",
+      "/ar-15-ar-308/ar-15-parts/muzzle-devices/fake-suppressors.html",
+      "/ar-15-ar-308/lower-parts/trigger-guard",
+      "/ar-15-ar-308/lower-parts/lower-parts-kits",
+      "/accessories/tools-accessories/gear-armour/",
+      "/accessories/scope-accessories/scope-rings",
+      "/ar-15-ar-308/ar-15-parts/muzzle-devices/thread-protectors.html",
+      "/tools/hammers-punches",
+      "/outdoors-survival/camping/",
+      "/ar-15-ar-308/accessories/targets",
+      "/ar-15-ar-308/lower-parts/buffer-retainer",
+      "/accessories/scope-accessories/bubble-levels",
+      "/accessories/tools-accessories/tripods/",
+      "/firearms/non-restricted/tna-vr-66-shotgun/",
+      "/ar-15-ar-308/ar-15-parts/iron-sights/fsb-sight-posts.html",
+      "/reloading/tools-equipment.html",
+      "/reloading/reloading-components/pistol-rifle-reloading.html",
+      "/reloading/reloading-components.html",
+      "/tools-accessories/accessories/knives-bayonets/",
+      "/glock/magazines/magazine-accessories.html",
+      "/accessories/scope-accessories",
+      "/glock/magazines.html",
+      "/ar-15-parts/charging-handle/parts.html",
+      "/tna-gear/ar15-soft-goods.html",
+      "/reloading/reloading-components/pistol-rifle-reloading/powders.html",
+      "/hunting-modern-sporting/alcore-223/",
+      "/ar-15-ar-308/lower-parts/trigger-group",
+      "/reloading.html",
+      "/ar-15-ar-308/accessories/batteries",
+      "/parts/10-22/",
+      "/ar-15-parts/muzzle-devices/brakes/brake-shrouds.html",
+      "/crossbows/",
+      "/glock/magazines/magwells.html",
+      "/parts/henry/",
+      "/glock/magazines/magazine-catch.html",
+      "/handguns/1911.html",
+      "/firearms/alcor-223/",
+      "/fun/",
+      "/tna-gear/stickers.html",
+      "/ammo/centerfire",
+      "/parts/alcor-223/",
+      "/ammo",
+      "/accessories/scope-accessories/boresights"
+    ],
+    "lastVerified": "2026-04-10",
+    "categoryStats": {
+      "totalCategories": 174,
+      "bcStencilDualRender": true,
+      "catalogUrlsCoverage": "149 categories covering 1264/1264 (100%) unique products",
+      "parentChildBehavior": "BC Stencil parents do NOT include child products. Leaf categories required for full coverage.",
+      "categoriesWithProducts": 149,
+      "productIdCorrelatesWithDate": true
+    },
+    "algoliaOverlay": {
+      "appId": "SXI4LSR4P5",
+      "notes": "Algolia loads only on search results page (conditional script). Does NOT hijack category catalog rendering. Native BC Stencil sort/pagination works on all category pages.",
+      "scope": "search-only",
+      "detected": true
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "Cloudflare passive: cf-ray on all responses, no active filtering, honeypot 403 from CF",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-10T20:03:38.172Z",
+    "wafProbeEvidence": {
+      "cfRay": "present on all responses",
+      "allUAs": "200 (desktop, mobile, bot, curl, no-UA)",
+      "server": "cloudflare",
+      "sqliXss": "200 (no active OWASP rules)",
+      "rateLimit": "none triggered (10 rapid burst all 200)",
+      "honeypot403": [
+        "/wp-admin/",
+        "/wp-login.php",
+        "/.env",
+        "/.git/config"
+      ],
+      "canonicalHost": "truenortharms.com (www redirects to apex)"
+    },
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "userAgentOverride": null,
+    "productCountMethod": {
+      "notes": "Sitemap has 4420 product URLs (many OOS/hidden). Deduplicated walk of all 149 categories yields 1264 unique reachable products.",
+      "method": "sitemap-index",
+      "endpoint": "/xmlsitemap.php?type=products&page=1",
+      "liveReachableCount": 1264,
+      "sitemapProductCount": 4420
+    },
+    "expectedProductCount": 1264,
+    "totalSiteProductCount": 4420
+  }
+}

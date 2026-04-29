@@ -1,0 +1,289 @@
+{
+  "siteId": "cmm3v7tta0018o7a3bxcyi9my",
+  "domain": "outfitters.goldnloan.com",
+  "timestamp": "2026-04-28T18:12:52.565Z",
+  "durationMs": 48602,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "10 URLs, each returning ≥1 product",
+      "actual": "10/10 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/shop/category/firearms-42",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "tikka-rifle-t3x-hunter-218",
+              "tikka-rifle-t3x-lite-roughtech-217",
+              "browning-rifle-x-bolt-2-speed-ovix-215"
+            ]
+          },
+          {
+            "url": "/shop/category/ammunition-39",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "0066-challenger-12-gauge-2-3-4-steel-shot-6-25-rounds-976",
+              "0067-winchester-super-x-270-win-130-grain-power-point-20-rounds-975",
+              "0072-winchester-super-x-rifle-ammo-358-win-200-gr-power-point-20-rounds-974"
+            ]
+          },
+          {
+            "url": "/shop/category/optics-45",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "9007-weaver-oem-scope-3-9x40-blk-w-rings-1710",
+              "174181-leupold-vx-freedom-rimfire-3-9x40-1-inch-rimfire-moa-1708",
+              "9489-vortex-crossfire-hd-20-60x80-straight-spotting-scope-1707"
+            ]
+          },
+          {
+            "url": "/shop/category/accessories-35",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "2296-winchester-universal-rifle-cleaning-kit-22-243-270-and-30-calibers-16-pc-38229-1753",
+              "2302-winchester-14-piece-universal-shotgun-cleaning-kit-1752",
+              "0447-hoppe-s-9-gun-bore-cleaner-2oz-bottle-1751"
+            ]
+          },
+          {
+            "url": "/shop/category/archery-131",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "4225-truglo-activator-single-jaw-roller-release-side-lock-4090",
+              "788130018484-truglo-detonatortm-single-jaw-hunting-release-4091",
+              "9962-truglo-speed-shot-xs-standard-realtree-boa-release-4092"
+            ]
+          },
+          {
+            "url": "/shop/category/fishing-92",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "garmin-striker-vivid-5cv-ice-fishing-bundle-3858",
+              "4456-shakespeare-medium-heavy-catch-more-fish-pike-spinning-fishing-rod-and-pre-spooled-reel-combo-right-hand-6-6-ft-2-pc-3853",
+              "7829-celsius-combo-29-medium-flat-line-reel-3851"
+            ]
+          },
+          {
+            "url": "/shop/category/reloading-supplies-52",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "4125-ramshot-comp1-competition-shotgun-powder-12oz-767",
+              "8738-nosler-6-5mm-140gr-accubond-50ct-644",
+              "4816-winchester-748-ball-powder-1lb-3665"
+            ]
+          },
+          {
+            "url": "/shop/category/hunting-86",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "7013-browning-command-ops-elite-22-trail-camera-3590",
+              "1086-hornady-99108-gun-cheek-piece-ammo-pouch-black-rh-3589",
+              "1109-hornady-99110-gun-cheek-piece-ammo-pouch-tan-rh-3588"
+            ]
+          },
+          {
+            "url": "/shop/category/clothing-91",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "5861-browning-pahvant-pro-jacket-ovix-medium-3748",
+              "5878-browning-pahvant-pro-jacket-ovix-large-3747",
+              "5885-browning-pahvant-pro-jacket-ovix-extra-large-3746"
+            ]
+          },
+          {
+            "url": "/shop/category/camping-gear-135",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "3951-kelty-mistral-20-sleeping-bag-long-4140",
+              "5159-bear-guard-professional-bear-deterrent-225g-4154",
+              "4955-browning-range-headlamp-wide-angle-plus-ovix-4394"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://outfitters.goldnloan.com/shop/category/firearms-42",
+        "page2Url": "https://outfitters.goldnloan.com/shop/category/firearms-42/page/2",
+        "page1First3": [
+          "tikka-rifle-t3x-hunter-218",
+          "tikka-rifle-t3x-lite-roughtech-217",
+          "browning-rifle-x-bolt-2-speed-ovix-215"
+        ],
+        "page2First3": [
+          "saues100300w0000-sauer-rifle-s100-veil-cervidae-194",
+          "howam150270w8441-howa-m1500-scope-combo-composite-192",
+          "browning-rifle-x-bolt-2-hunter-composite-191"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://outfitters.goldnloan.com/shop/category/firearms-42?order=create_date%2Bdesc",
+        "withoutSortUrl": "https://outfitters.goldnloan.com/shop/category/firearms-42",
+        "withSortFirst": null,
+        "withoutSortFirst": "tikka-rifle-t3x-hunter-218",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 1787,
+      "actual": 1811,
+      "evidence": {
+        "storedCount": 1787,
+        "actualCount": 1811,
+        "methodUsed": "sitemap",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f3809a5cc26deef-YYZ",
+          "set-cookie": "frontend_lang=en_US; Expires=Wed, 28 Apr 2027 18:12:52 GMT; Path=/,session_id=21f109ef8c155590ba1a68f50b88a7fa1960a350; Expires=Wed, 28 Apr 2027 18:12:52 GMT; Max-Age=604800; HttpOnly; Path=/"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Gold'n Loan Outfitters",
+    "notes": "Odoo eCommerce (theme prefix: tp-*). Bilingual (English used). 10 top-level catalogUrls cover ~1787 products (walked 2026-04-07). Subcategories roll up into parents. Sitemap: /sitemap.xml (1921 <loc> entries for /shop/* products, verified via 5 HEAD samples).",
+    "budget": 20,
+    "domain": "outfitters.goldnloan.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 20,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "odoo",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "?order=create_date+desc",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/shop/category/firearms-42",
+      "/shop/category/ammunition-39",
+      "/shop/category/optics-45",
+      "/shop/category/accessories-35",
+      "/shop/category/archery-131",
+      "/shop/category/fishing-92",
+      "/shop/category/reloading-supplies-52",
+      "/shop/category/hunting-86",
+      "/shop/category/clothing-91",
+      "/shop/category/camping-gear-135"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": null,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive-no-rules-firing",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-08T05:58:19Z",
+    "wafProbeEvidence": {
+      "botUaBlocked": false,
+      "cfRayExample": "9e8f0a2a1821b5e5-YYZ",
+      "xssRuleFired": false,
+      "sqliRuleFired": false,
+      "rapidBurstStatus": "10/10 HTTP 200 in ~5s, no rate limit",
+      "cfHeadersDetected": true,
+      "honeypotPathsBlocked": false
+    },
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}"
+    },
+    "productCountMethod": {
+      "notes": "Walked all 10 catalogUrls with GenericRetailAdapter.extractCatalogProducts + sort=create_date+desc, pagination path /page/N. Dedup stop on zero-added-page.",
+      "method": "catalog-walk"
+    },
+    "expectedProductCount": 1787
+  }
+}

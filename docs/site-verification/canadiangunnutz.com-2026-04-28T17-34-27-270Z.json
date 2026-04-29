@@ -1,0 +1,163 @@
+{
+  "siteId": "cmltxz815001g89xamlvho7by",
+  "domain": "canadiangunnutz.com",
+  "timestamp": "2026-04-28T17:34:27.270Z",
+  "durationMs": 14113,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "FAIL",
+      "expected": "at least 1 catalogUrl",
+      "actual": 0,
+      "evidence": {
+        "perUrl": []
+      },
+      "reason": "No catalogUrls defined in siteProfile"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "sortParam defined",
+      "actual": "empty/missing",
+      "evidence": {},
+      "reason": "No sortParam in siteProfile"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 6147,
+      "actual": null,
+      "evidence": {
+        "storedCount": 6147,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "Apache/2.4.52 (Ubuntu)",
+          "set-cookie": "xf_csrf=mLt8eZlBFG3iwCTj; path=/; secure"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Canadian Gun Nutz",
+    "notes": "XenForo forum. 10 exchange/classified sub-forums.",
+    "budget": 120,
+    "domain": "canadiangunnutz.com",
+    "hasWaf": false,
+    "adapter": "forum-xenforo",
+    "perPage": 50,
+    "timeout": 15000,
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Forum thread listings",
+          "provides": [
+            "title",
+            "url",
+            "postDate",
+            "seller"
+          ]
+        }
+      ]
+    },
+    "platform": "xenforo",
+    "apiConfig": {
+      "forumSections": [
+        "exchange-of-hunting-and-sporting-rifles.64",
+        "exchange-of-modern-sporting-rifles.65",
+        "exchange-of-pistols-and-revolvers.66",
+        "exchange-of-shotguns.145",
+        "exchange-of-rimfire-firearms.160",
+        "exchange-of-military-surplus-rifle.128",
+        "exchange-of-precision-and-target-rifles.156",
+        "exchange-of-12x-prohib-firearms.330",
+        "exchange-of-optics.67",
+        "exchange-of-reloading-components-and-equipment.68"
+      ]
+    },
+    "searchUrl": "/search/?q={keyword}&t=post",
+    "sortParam": null,
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "listingUrls": [
+      "/forum/index.php?forums/exchange-of-military-surplus-rifle.44/",
+      "/forum/index.php?forums/exchange-of-handguns.7/",
+      "/forum/index.php?forums/exchange-of-rifles.8/",
+      "/forum/index.php?forums/exchange-of-shotguns.9/",
+      "/forum/index.php?forums/exchange-of-firearm-parts.46/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-03-29",
+    "siteCategory": "forum",
+    "forumBasePath": "/forum",
+    "forumPlatform": "xenforo",
+    "t1IntervalMin": 9,
+    "needsPlaywright": false,
+    "searchUrlTemplate": "/forum/search/?q={keyword}&t=post",
+    "productCountMethod": {
+      "method": "stream-page-count"
+    },
+    "expectedProductCount": 6147
+  }
+}

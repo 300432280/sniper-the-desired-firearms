@@ -1,0 +1,187 @@
+{
+  "siteId": "cmltxz84q001j89xa65b7d1y9",
+  "domain": "townpost.ca",
+  "timestamp": "2026-04-28T18:31:47.368Z",
+  "durationMs": 43164,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "1/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/category/guns",
+            "status": 200,
+            "productCount": 21,
+            "sampleSlugs": [
+              "1168559",
+              "1165108",
+              "1168684"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.townpost.ca/category/guns",
+        "page2Url": "https://www.townpost.ca/category/guns?page=2",
+        "page1First3": [
+          "1168559",
+          "1165108",
+          "1168684"
+        ],
+        "page2First3": [
+          "1159761",
+          "1144072",
+          "1158682"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "sortParam defined",
+      "actual": "empty/missing",
+      "evidence": {},
+      "reason": "No sortParam in siteProfile"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 7484,
+      "actual": null,
+      "evidence": {
+        "storedCount": 7484,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "WARN",
+      "expected": "none",
+      "actual": null,
+      "evidence": {
+        "storedWafType": "none",
+        "detectedWafType": null,
+        "headers": {
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "httpStatus": 200
+      },
+      "reason": "Stored wafType='none' but HEAD probe detected no WAF vendor headers"
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "TownPost",
+    "notes": "TownPost: custom Next.js App Router classifieds. MongoDB backend. nginx/1.24.0 (Ubuntu). Default sort = activity-based (not creation date). Ad URLs: /marketplace/{town}/sporting-goods/{slug}/{numericId}. Static SSR works (no Playwright needed). 4 pinned \"Top Ads\" repeat on every page. JSON-LD + og:tags on detail pages. BLOCKER: generic adapter cannot extract — needs /marketplace/ link selector added to generic-retail.ts.",
+    "budget": 20,
+    "domain": "townpost.ca",
+    "hasWaf": false,
+    "adapter": "generic",
+    "perPage": 21,
+    "timeout": 30000,
+    "wafType": "none",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Generic HTML extraction",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "nextjs-custom",
+    "sortNote": "Default order is activity-based (bump/renew date), NOT creation date. Ad IDs are NOT monotonically descending across pages (page 1 has ID 654750 mixed with 1166922). Watermark tracks last-seen active ad URL. Same pattern as gunpost.ca classifieds.",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": null,
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/category/guns"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-12",
+    "siteCategory": "classified",
+    "t1IntervalMin": 9,
+    "wafWorkaround": {
+      "notes": "WAF type not yet identified. Playwright fallback handles most cases.",
+      "steps": [
+        "Try plain HTTP first",
+        "If blocked (403/challenge HTML), fall back to Playwright",
+        "Cache any obtained cookies for reuse"
+      ],
+      "method": "playwright-fallback"
+    },
+    "adapterConcern": "GenericRetailAdapter extractCatalogProducts has ZERO matching selectors for townpost HTML (Tailwind utility classes only, no semantic product classes). Site cannot be crawled until a /marketplace/ link selector or custom adapter is added. See project_future_tasks.md Task 2.",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "No WAF. nginx/1.24.0 (Ubuntu), plain server, no CDN.",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-12",
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "productCountMethod": {
+      "method": "page-count-times-perpage",
+      "perPage": 17,
+      "pinnedAds": 4,
+      "totalPages": 440
+    },
+    "expectedProductCount": 7484
+  }
+}

@@ -1,0 +1,237 @@
+{
+  "siteId": "cmlvesr0l000z1a425mydrwe4",
+  "domain": "canadasgunstore.ca",
+  "timestamp": "2026-04-28T07:06:41.424Z",
+  "durationMs": 66616,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "7 URLs, each returning ≥1 product",
+      "actual": "7/7 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/departments/firearms-|30|FA.html",
+            "status": 200,
+            "productCount": 255,
+            "sampleSlugs": [
+              "uberti-1873-competition-45lc-20-%7C2045.html",
+              "uberti-1887-scout-carbine-22mag-19--lever-action--silverboy-%7C2201.html",
+              "uberti-1886-hunter-lite-45-70-22-a-walnut-case-hardened-blued%7C5014.html"
+            ]
+          },
+          {
+            "url": "/departments/ammunition-|30|AMM.html",
+            "status": 200,
+            "productCount": 255,
+            "sampleSlugs": [
+              "federal-premium-game-shok-22-wmr-50gr-jhp%7C757.html",
+              "cci-maxi-mag-22-wmr-40gr-jhp-200rd-box%7C958.html",
+              "cci-quiet-22-22-lr-50r%7C960.html"
+            ]
+          },
+          {
+            "url": "/departments/optics-|30|OPT.html",
+            "status": 200,
+            "productCount": 252,
+            "sampleSlugs": [
+              "browning--x-lock-1--intermediate--scope-rings%7C12502.html",
+              "browning--x-lock-30mm-std-scope-rings%7C12510.html",
+              "browning--x-lock-30mm-high-scope-rings%7C12512.html"
+            ]
+          },
+          {
+            "url": "/departments/shooting-|30|SHO.html",
+            "status": 200,
+            "productCount": 255,
+            "sampleSlugs": [
+              "glock-56-firing-pin-spacer-sleeve--fits-all-models-excludes-g42-%7C56.html",
+              "allen-standard-endura-sling--black%7C85.html",
+              "federal-champion-small-pistol-primers---100--100-pk-%7C100.html"
+            ]
+          },
+          {
+            "url": "/departments/hunting-|30|HNT.html",
+            "status": 200,
+            "productCount": 114,
+            "sampleSlugs": [
+              "allen-47-tack--reflective-trail%7C47.html",
+              "allen-gambrel-440lbs%7C181.html",
+              "primos-lil-heart-breaker-turkey-call%7C230.html"
+            ]
+          },
+          {
+            "url": "/departments/knives-and-tools-|30|KT.html",
+            "status": 200,
+            "productCount": 100,
+            "sampleSlugs": [
+              "primos-hunting-compact-folding-saw%7C6018.html",
+              "camillus-carnivore-x-18--titanium-bonded-machete%7C19236.html",
+              "buck-knives-edgetek-field-flipstik-diamond-sharpener%7C97043.html"
+            ]
+          },
+          {
+            "url": "/departments/apparel-|30|CLO.html",
+            "status": 200,
+            "productCount": 60,
+            "sampleSlugs": [
+              "coghlan-s-emergency-rain-poncho-clear%7C0112676.html",
+              "browning-ridgeline-flashlight%7C3711265.html",
+              "browning-3713318--light--pro-hunter-base-camp-elite%7C3713318.html"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.canadasgunstore.ca/departments/firearms-|30|FA.html",
+        "page2Url": "https://www.canadasgunstore.ca/departments/firearms-|30|FA.html?top=255",
+        "page1First3": [
+          "uberti-1873-competition-45lc-20-%7C2045.html",
+          "uberti-1887-scout-carbine-22mag-19--lever-action--silverboy-%7C2201.html",
+          "uberti-1886-hunter-lite-45-70-22-a-walnut-case-hardened-blued%7C5014.html"
+        ],
+        "page2First3": [
+          "winchester-model-1873-competition-carbine-357-high-grade%7C534280137.html",
+          "winchester-model-1886-saddle-ring-carbine-45-70-gov%7C534281142.html",
+          "winchester-model-1892-deluxe-octagon-takedown-24--44mag%7C534283124.html"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "n/a (method C)",
+      "actual": "full-catalog-sweep",
+      "evidence": {},
+      "reason": "not-applicable-method-c"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 2361,
+      "actual": null,
+      "evidence": {
+        "storedCount": 2361,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "Apache",
+          "set-cookie": "PHPSESSID=3h6b6e9jrp0h1vhckt26gaamv7; path=/; secure; HttpOnly,INET_MOBILE=full; expires=Tue, 05-May-2026 07:06:41 GMT; Max-Age=604800; path=/; secure; HttpOnly"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Canada's Gun Store",
+    "notes": "Activant/Epicor iNet retail platform. Product URL pattern: /products/{slug}{|}{numericId}.html (pipe character is literal, NOT %7C). Category URL pattern: /departments/{slug}-|30|{CODE}.html. Pagination is OFFSET-based via ?top=N (skip first N), default perPage 255. Pagination \"next\" link is unreliable — sometimes jumps offsets (e.g. 0→510 skipping 255), so the crawler MUST compute offset = (pageNum-1)*255 itself. 7 top-level departments cover all products with zero overlap (verified). No sitemap.xml. No WAF. Live product count: 2,361 (Firearms 653 + Ammo 453 + Optics 253 + Shooting 725 + Hunting 115 + Knives 101 + Apparel 61).",
+    "budget": 40,
+    "domain": "canadasgunstore.ca",
+    "hasWaf": false,
+    "adapter": "generic-retail",
+    "perPage": 255,
+    "timeout": 15000,
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "No date-based sort available on this site (verified). T1 walks all catalogUrls every cycle and dedupes against DB.",
+        "method": "full-catalog-sweep"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Activant/Epicor iNet platform. Product URL pattern: /products/{slug}{|}{numericId}.html. Listing pages return all products inline (no JS rendering). Pagination uses ?top=N offset (skip-style) — NOT page-based. Default perPage = 255. Categories use pipe-encoded URLs: /departments/{slug}-|30|{CODE}.html.",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail",
+            "sourceId"
+          ]
+        }
+      ]
+    },
+    "platform": "custom",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": null,
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/departments/firearms-|30|FA.html",
+      "/departments/ammunition-|30|AMM.html",
+      "/departments/optics-|30|OPT.html",
+      "/departments/shooting-|30|SHO.html",
+      "/departments/hunting-|30|HNT.html",
+      "/departments/knives-and-tools-|30|KT.html",
+      "/departments/apparel-|30|CLO.html"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-06",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 20,
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "offset-query",
+      "perPage": 255,
+      "template": "top"
+    },
+    "productCountMethod": {
+      "method": "stream-page-count"
+    },
+    "expectedProductCount": 2361
+  }
+}

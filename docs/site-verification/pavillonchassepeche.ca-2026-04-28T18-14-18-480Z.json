@@ -1,0 +1,255 @@
+{
+  "siteId": "cmm3v7t71000po7a3h0o2t7yb",
+  "domain": "pavillonchassepeche.ca",
+  "timestamp": "2026-04-28T18:14:18.480Z",
+  "durationMs": 83908,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "6 URLs, each returning ≥1 product",
+      "actual": "6/6 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/en/product-category/hunting-en-6/",
+            "status": 200,
+            "productCount": 36,
+            "sampleSlugs": [
+              "adler-alpard-c-trio-12ga-3-barrel-shotgun-camo",
+              "adler-alpard-12ga-3-pump-action-28-turkish-walnut",
+              "adler-shotgun-alpard-synthetic-12ga-28"
+            ]
+          },
+          {
+            "url": "/en/product-category/liquidation-en/",
+            "status": 200,
+            "productCount": 37,
+            "sampleSlugs": [
+              "en",
+              "10-4-job-mitaines-en-cuir-fendu",
+              "acton-corinne-winter-boot"
+            ]
+          },
+          {
+            "url": "/en/product-category/fishing/",
+            "status": 200,
+            "productCount": 36,
+            "sampleSlugs": [
+              "13-fishing-canne-lancer-leger-defy-silver-2pcs",
+              "13-fishing-moulinet-lancer-leger-kalon-a-2-0",
+              "74th-element-tete-de-ted-1-8oz-black"
+            ]
+          },
+          {
+            "url": "/en/product-category/clothing/",
+            "status": 200,
+            "productCount": 36,
+            "sampleSlugs": [
+              "10-4-job-mitaines-en-cuir-fendu",
+              "ackfield-junior-camo-pants",
+              "acton-corinne-winter-boot"
+            ]
+          },
+          {
+            "url": "/en/product-category/outdoors-en-4/",
+            "status": 200,
+            "productCount": 36,
+            "sampleSlugs": [
+              "adventure-medical-kits-c-splint-4x36",
+              "after-bite-gel-soulagement-rapide-pique-dinsecte-20g",
+              "allen-terrain-armature-de-transport-pour-portage-rock-canyon"
+            ]
+          },
+          {
+            "url": "/en/product-category/saltworks/",
+            "status": 200,
+            "productCount": 37,
+            "sampleSlugs": [
+              "en",
+              "buck-expert-bear-site-lure-scent-lure-decomposing-fish-125ml-4oz",
+              "buck-expert-bear-site-lure-scent-lure-tainted-meat-125ml-4oz"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://pavillonchassepeche.ca/en/product-category/hunting-en-6/",
+        "page2Url": "https://pavillonchassepeche.ca/en/product-category/hunting-en-6/page/2/",
+        "page1First3": [
+          "adler-alpard-c-trio-12ga-3-barrel-shotgun-camo",
+          "adler-alpard-12ga-3-pump-action-28-turkish-walnut",
+          "adler-shotgun-alpard-synthetic-12ga-28"
+        ],
+        "page2First3": [
+          "beretta-m9a3-177-18rds-magazine",
+          "beretta-rail-weaver-aluminium",
+          "billet-de-tirage"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://pavillonchassepeche.ca/en/product-category/hunting-en-6/?orderby=date",
+        "withoutSortUrl": "https://pavillonchassepeche.ca/en/product-category/hunting-en-6/",
+        "withSortFirst": "plano-etui-noir-pour-arbalete",
+        "withoutSortFirst": "adler-alpard-c-trio-12ga-3-barrel-shotgun-camo",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 1318,
+      "actual": 1303,
+      "evidence": {
+        "storedCount": 1318,
+        "actualCount": 1303,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "LiteSpeed"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Pavillon Chasse Peche",
+    "notes": "woocommerce site. Uses default adapter behavior (no custom URLs). | 2026-04-12: WPML bilingual FR/EN. hasWaf false confirmed (LiteSpeed). Count 1315→1318. perPage 50→100. Watermark upgraded navigate-from→api-date-since (modified_after monotonic: 18/43/78/1318). 6 catalogUrls added (/en/ prefix). Elementor load_more_on_click frontend but /page/N/ still works for HTML fallback. HTML perPage=76.",
+    "budget": 60,
+    "domain": "pavillonchassepeche.ca",
+    "hasWaf": false,
+    "adapter": "woocommerce",
+    "perPage": 100,
+    "timeout": 15000,
+    "wafType": null,
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "json-ld"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/en/product-category/hunting-en-6/",
+      "/en/product-category/liquidation-en/",
+      "/en/product-category/fishing/",
+      "/en/product-category/clothing/",
+      "/en/product-category/outdoors-en-4/",
+      "/en/product-category/saltworks/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-12",
+    "multilingual": "wpml",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "t1IntervalMin": 17,
+    "sortVerifiedAt": "2026-04-12",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "No WAF. LiteSpeed direct. All 8 batches 200.",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-12",
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}/"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product",
+      "wpRestTotal": 1318,
+      "enScopeTotal": 1318,
+      "storeApiTotal": 1291,
+      "rootScopeTotal": 1311
+    },
+    "expectedInStockCount": 1291,
+    "expectedProductCount": 1318
+  }
+}

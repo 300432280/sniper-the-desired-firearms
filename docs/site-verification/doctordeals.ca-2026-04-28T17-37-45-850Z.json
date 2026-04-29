@@ -1,0 +1,206 @@
+{
+  "siteId": "cmm3v7t4a000no7a3o042mkal",
+  "domain": "doctordeals.ca",
+  "timestamp": "2026-04-28T17:37:45.850Z",
+  "durationMs": 31422,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "5 URLs, each returning ≥1 product",
+      "actual": "0/5 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/gun-shop/firearms/",
+            "status": 202,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/gun-shop/parts/",
+            "status": 202,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/gun-shop/accessories/",
+            "status": 202,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/gun-shop/clothing-gun-related/",
+            "status": 202,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/gun-shop/defense/",
+            "status": 202,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "5/5 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 965,
+      "actual": null,
+      "evidence": {
+        "storedCount": 965,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "sgcaptcha",
+      "actual": "sgcaptcha",
+      "evidence": {
+        "storedWafType": "sgcaptcha",
+        "detectedWafType": "sgcaptcha",
+        "headers": {
+          "server": "nginx",
+          "sg-captcha": "challenge",
+          "set-cookie": "nevercache-b39818=Y;Max-Age=-1"
+        },
+        "httpStatus": 202
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Doctor Deals",
+    "notes": "WooCommerce + nginx WAF. WAF blocks desktop UA hard (403); iPhone mobile UA bypasses cleanly via plain HTTP — no Playwright needed (siteProfile.userAgentOverride). WP REST API gives x-wp-total exact count = 965. Site DOES NOT sell ammunition (verified — no ammo categories in WP product_cat taxonomy). Site DOES sell optics under \"Sights\" category (id 205) which contains scopes, red dots, reflex sights, AND iron sights — NOT only iron sights. Sights are all reachable via the parent /accessories/ catalogUrl (verified: 16/16 sights present, 3/4 scope-mounts present; the 1 orphaned scope-mount is still discoverable via T1 api-date-since-watermark which calls WP REST API and returns all 965 products). Site sells: firearms (217), parts (416), accessories (293 incl. optics 16, magazines 98, grips 79, etc), clothing (46), defense (1). T1 uses api-date-since-watermark via WP REST API. catalogUrls are for HTML stream fallback only — minimum-overlap set of 5 top-level Gun Shop subcategories. Old /ammunition/ and /optics-sights/ URLs are 404 (deleted from site).",
+    "budget": 60,
+    "domain": "doctordeals.ca",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 20,
+    "timeout": 30000,
+    "wafType": "sgcaptcha",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "json-ld"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment via include=<ids>",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/gun-shop/firearms/",
+      "/product-category/gun-shop/parts/",
+      "/product-category/gun-shop/accessories/",
+      "/product-category/gun-shop/clothing-gun-related/",
+      "/product-category/gun-shop/defense/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-06",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Store API works with cached Sucuri cookies. No Playwright needed per-request.",
+      "steps": [
+        "Solve Sucuri JS challenge via Playwright once",
+        "Cache cookies in Redis (key: waf-cookies:{domain})",
+        "Reuse cookies for all HTTP/API calls",
+        "Re-solve on 403 or cookie expiry"
+      ],
+      "method": "cookie-cache",
+      "cookieTtlMinutes": 30,
+      "storeApiAvailable": true
+    },
+    "needsPlaywright": true,
+    "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product"
+    },
+    "expectedProductCount": 965
+  }
+}

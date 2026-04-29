@@ -1,0 +1,372 @@
+{
+  "siteId": "cmm3v7t2a000mo7a3gvavqaac",
+  "domain": "dantesports.com",
+  "timestamp": "2026-04-28T17:36:28.559Z",
+  "durationMs": 75650,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "16 URLs, each returning ≥1 product",
+      "actual": "16/16 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/en/product-category/firearms/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "tikka-t3x-lite-stainless-2",
+              "tikka-t3x-lite-300-wsm",
+              "ruger-10-22-carbine-magpul-moe-x-22-carbon-fiber-copy"
+            ]
+          },
+          {
+            "url": "/en/product-category/riflescopes-optics/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "vortex-venom-1-6x24mm-sfp-sport-mount-bundle",
+              "leupold-vx-3i-4-5-14x50mm-duplex",
+              "leupold-vx-4hd-3-12x50mm-cds-zl2-illuminated"
+            ]
+          },
+          {
+            "url": "/en/product-category/accessories/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "celik-chimera-pb-223-adjustable-rear-stock-kit",
+              "magpul-m-lok-aluminum-qd-sling-mount",
+              "hera-arms-h22-chassis-for-ruger-10-22"
+            ]
+          },
+          {
+            "url": "/en/product-category/other-an/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "tikka-t3x-lite-stainless-2",
+              "tikka-t3x-lite-300-wsm",
+              "cz-600-alpha-7-62x39mm"
+            ]
+          },
+          {
+            "url": "/en/product-category/ammunition/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "remington-20-ga-x-3-accutip-sabot-slug-5-shells",
+              "norma-whitetail-30-30-win-150-gr-20-rounds",
+              "norma-whitetail-7mm-08-rem-150-gr-20-rounds"
+            ]
+          },
+          {
+            "url": "/en/product-category/parts-accessories/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "savage-93-series-magazine-17-hmr-22-wmr-10-round",
+              "magpul-m-lok-aluminum-qd-sling-mount",
+              "hera-arms-h22-chassis-for-ruger-10-22"
+            ]
+          },
+          {
+            "url": "/en/product-category/airguns/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "gamo-swarm-evo-10x-gen3i-with-scope",
+              "gamo-swarm-fusion-10x-gen3i-air-rifle",
+              "daisy-premium-grade-bb-2400-ct"
+            ]
+          },
+          {
+            "url": "/en/product-category/30-days-of-bushnell/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "bushnell-r5-2000-ab-laser-rangefinder-6x25mm",
+              "bushnell-r3-1200-laser-rangefinder-6x25mm",
+              "bushnell-r3-3-9x50-multi-x-r-series"
+            ]
+          },
+          {
+            "url": "/en/product-category/storage/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "mazzlock-combo-gun-lock",
+              "leupold-rendezvous-carbine-case",
+              "plano-element-proof-field-ammo-box"
+            ]
+          },
+          {
+            "url": "/en/product-category/knives/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "hx-outdoors-nightstalker-fixed-knife-blade-with-sheath",
+              "lamoureux-sons-schefferville-pro-guide-olive-hunting-knife",
+              "lamoureux-sons-radisson-pro-guide-black-orange-hunting-knife"
+            ]
+          },
+          {
+            "url": "/en/product-category/winchester-historical-en/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "winchester-model-1873-short-rifle",
+              "winchester-model-1886-saddle-ring-carbine",
+              "winchester-model-94-trails-end-takedown"
+            ]
+          },
+          {
+            "url": "/en/product-category/licence/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "gamo-swarm-evo-10x-gen3i-with-scope",
+              "gamo-swarm-fusion-10x-gen3i-air-rifle",
+              "remington-870-12-ga-slug-barrel-with-cantilever-mount"
+            ]
+          },
+          {
+            "url": "/en/product-category/unclassified/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "vortex-crossfire-green-dot",
+              "vortex-crossfire-hd-20-60x80mm-angled-spotting-scope",
+              "allen-sound-defender-foldable-safety-earmuffs"
+            ]
+          },
+          {
+            "url": "/en/product-category/rugeramericangen2-en/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "ruger-american-rifle-gen-2-ranch-5-56-nato",
+              "ruger-american-rifle-gen-2-predator-223-rem",
+              "ruger-american-rifle-gen-2-prairie-223-rem"
+            ]
+          },
+          {
+            "url": "/en/product-category/pmcsale-en/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "pmc-bronze-223-rem-55-gr-fmj-500-rounds",
+              "pmc-bronze-223-rem-55-gr-fmj-1000-rounds"
+            ]
+          },
+          {
+            "url": "/en/product-category/reloading/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "frankford-arsenal-ds-750-digital-reloading-scale-2",
+              "hornady-lock-n-load-classic-kit"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page2 returns 200",
+      "actual": "HTTP 404",
+      "evidence": {
+        "page1Url": "https://dantesports.com/en/product-category/firearms/",
+        "page2Url": "https://dantesports.com/en/product-category/firearmspage/2/",
+        "page1First3": [
+          "tikka-t3x-lite-stainless-2",
+          "tikka-t3x-lite-300-wsm",
+          "ruger-10-22-carbine-magpul-moe-x-22-carbon-fiber-copy"
+        ],
+        "page2First3": [],
+        "overlapCount": 0
+      },
+      "reason": "Page 2 returned HTTP 404"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://dantesports.com/en/product-category/firearms/?orderby=date",
+        "withoutSortUrl": "https://dantesports.com/en/product-category/firearms/",
+        "withSortFirst": "tikka-t3x-lite-stainless-2",
+        "withoutSortFirst": "tikka-t3x-lite-stainless-2",
+        "counterControlUrl": "https://dantesports.com/en/product-category/firearms/?orderby=price",
+        "counterControlFirst": "rossi-r95-lever-action-45-70-govt-22-barrel"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 2086,
+      "actual": 2094,
+      "evidence": {
+        "storedCount": 2086,
+        "actualCount": 2094,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 0
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37d451784f94e3-YYZ",
+          "set-cookie": "br_lgv_stat=default%7Cdefault; path=/; domain=dantesports.com,br_lgv_stat=default%7Cdefault; path=/; domain=dantesports.com"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "notes": "Bilingual FR/EN via WPML. Root domain redirects to /fr/. EN products at /en/. API scoped via /en/wp-json/. Store API also works at /en/wp-json/wc/store/v1/products (x-wp-total: 2086). Default sort on all category pages is already date (newest first). perPage=12 on HTML, per_page=100 on API. No Searchspring/Algolia/Klevu overlays.",
+    "hasWaf": true,
+    "perPage": 12,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "catalog": {
+        "notes": "API per_page=100, 21 pages total. HTML fallback uses /en/product-category/ paths with path pagination.",
+        "method": "api-full-catalog",
+        "apiEndpoint": "/en/wp-json/wp/v2/product"
+      },
+      "watermark": {
+        "notes": "Date filter monotonic: 3d=4, 7d=13, 14d=37, 30d=58. WPML scopes to EN via /en/ prefix.",
+        "method": "api-date-since-watermark",
+        "apiOrder": "desc",
+        "apiOrderBy": "date",
+        "apiPerPage": 100,
+        "apiEndpoint": "/en/wp-json/wp/v2/product",
+        "apiDateFilterField": "after"
+      }
+    },
+    "platform": "woocommerce",
+    "sortParam": "?orderby=date",
+    "apiPerPage": 100,
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/en/product-category/firearms/",
+      "/en/product-category/riflescopes-optics/",
+      "/en/product-category/accessories/",
+      "/en/product-category/other-an/",
+      "/en/product-category/ammunition/",
+      "/en/product-category/parts-accessories/",
+      "/en/product-category/airguns/",
+      "/en/product-category/30-days-of-bushnell/",
+      "/en/product-category/storage/",
+      "/en/product-category/knives/",
+      "/en/product-category/winchester-historical-en/",
+      "/en/product-category/licence/",
+      "/en/product-category/unclassified/",
+      "/en/product-category/rugeramericangen2-en/",
+      "/en/product-category/pmcsale-en/",
+      "/en/product-category/reloading/"
+    ],
+    "sortDefault": "date",
+    "multilingual": {
+      "plugin": "wpml",
+      "apiPrefix": "/en/wp-json",
+      "crawlLanguage": "en",
+      "defaultLanguage": "fr"
+    },
+    "categoryStats": {
+      "knives": {
+        "count": 23,
+        "pages": 2
+      },
+      "airguns": {
+        "count": 55,
+        "pages": 5
+      },
+      "licence": {
+        "count": 17,
+        "pages": 2
+      },
+      "storage": {
+        "count": 25,
+        "pages": 3
+      },
+      "firearms": {
+        "count": 1085,
+        "pages": 91
+      },
+      "other-an": {
+        "count": 259,
+        "pages": 22
+      },
+      "reloading": {
+        "count": 2,
+        "pages": 1
+      },
+      "ammunition": {
+        "count": 236,
+        "pages": 20
+      },
+      "pmcsale-en": {
+        "count": 2,
+        "pages": 1
+      },
+      "accessories": {
+        "count": 288,
+        "pages": 24
+      },
+      "unclassified": {
+        "count": 14,
+        "pages": 2
+      },
+      "parts-accessories": {
+        "count": 187,
+        "pages": 16
+      },
+      "riflescopes-optics": {
+        "count": 342,
+        "pages": 29
+      },
+      "30-days-of-bushnell": {
+        "count": 27,
+        "pages": 3
+      },
+      "rugeramericangen2-en": {
+        "count": 4,
+        "pages": 1
+      },
+      "winchester-historical-en": {
+        "count": 20,
+        "pages": 2
+      }
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "Cloudflare-passive: cf-ray on all 200s, XSS probe 403, burst probes 8-10 got 410 (rate limit). No challenge page served on normal requests.",
+    "wafLastProbedAt": "2026-04-11T15:19:26Z",
+    "wafProbeEvidence": {
+      "cfRay": true,
+      "xssBlocked": true,
+      "serverHeader": "cloudflare",
+      "burstRateLimited": true,
+      "rateLimit410After": 7
+    },
+    "paginationPattern": {
+      "type": "path",
+      "template": "page/{N}/"
+    },
+    "productCountMethod": "wp-rest-api",
+    "expectedProductCount": 2086,
+    "productCountLastVerified": "2026-04-11"
+  }
+}

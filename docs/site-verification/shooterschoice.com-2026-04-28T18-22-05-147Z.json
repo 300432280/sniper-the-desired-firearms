@@ -1,0 +1,528 @@
+{
+  "siteId": "cmn4d3n020000uf41baa4ecdi",
+  "domain": "shooterschoice.com",
+  "timestamp": "2026-04-28T18:22:05.147Z",
+  "durationMs": 131780,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "30 URLs, each returning ≥1 product",
+      "actual": "30/30 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/category/4022-firearms/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "benelli-ethos-silver-20ga-3-28",
+              "benelli-lupo-syn-270-winchester-2",
+              "benelli-lupo-syn-30-06"
+            ]
+          },
+          {
+            "url": "/category/4021-ammunition/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "american-eagle-30-carbine-110gr-mc",
+              "apex-steel-blend-12-3-3-steel-8-tss",
+              "apex-steel-blend-20-3-2-steel-7-5-tss"
+            ]
+          },
+          {
+            "url": "/category/4027-accessories/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "1911-pistol-fits-most-1911-single-stack-models",
+              "airvault-vci-bag-blue-12x52",
+              "all-ruger-blackwater-takedown-case-25"
+            ]
+          },
+          {
+            "url": "/category/4030-optics/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "allen-crossbow-laser-bore-sighter",
+              "allen-scope-cover-large",
+              "allen-scope-cover-medium"
+            ]
+          },
+          {
+            "url": "/category/4023-reloading/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "accurate-arms-2200",
+              "accurate-arms-no-5",
+              "accurate-arms-no-2"
+            ]
+          },
+          {
+            "url": "/category/4031-knives-cutlery/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "accusharp-9-pc-game-kit",
+              "accusharp-knife-tool-sharpener",
+              "adler-scout-hatchet-red-black"
+            ]
+          },
+          {
+            "url": "/category/uncategorized/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "1911-pistol-fits-most-1911-single-stack-models",
+              "aae-adjustable-clicker",
+              "aae-pro-blade"
+            ]
+          },
+          {
+            "url": "/category/4026-clothing/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "allen-buttstock-holder-rifle",
+              "allen-buttstock-holder-shotgun",
+              "allen-clip-on-shell-holder"
+            ]
+          },
+          {
+            "url": "/category/4027-accessoires/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "allen-mesh-decoy-bag",
+              "allen-ultrx-foam-ear-plugs-200-pairs",
+              "avian-x-1-2-strut-jake"
+            ]
+          },
+          {
+            "url": "/category/tbsbows/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "alibow-xongkoro-40-black",
+              "apa-blk-mamba-pro-rh-60-sand-pkg-custom-2",
+              "apa-summit-rh-60-od-green-pkg-custom"
+            ]
+          },
+          {
+            "url": "/category/tbsbow-accessories/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "3-rivers-beaver-fur-silencer",
+              "3-rivers-aro-holder",
+              "3-rivers-bear-style-calf-hair-stripe-black"
+            ]
+          },
+          {
+            "url": "/category/tbshunting-accessories/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "30-06-brite-trail-led-cap-light",
+              "30-06-string-snot-wax",
+              "allen-treestand-drink-holder"
+            ]
+          },
+          {
+            "url": "/category/tbsarrows-components/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "3-rivers-bunny-buster-11-32-black",
+              "3-rivers-whistling-point-s-in-ea",
+              "3r-brass-2016-100gr-1"
+            ]
+          },
+          {
+            "url": "/category/tbsparts-service-tools/",
+            "status": 200,
+            "productCount": 39,
+            "sampleSlugs": [
+              "3-rivers-taper-tool-11-32",
+              "3-rivers-taper-tool-5-16",
+              "30-06-cable-slide"
+            ]
+          },
+          {
+            "url": "/category/tbs-used-accessories/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "ultraview-uv3xl-se-hunt-cartidge-3-pin-015",
+              "usde-qad-tri-premium-target-rh"
+            ]
+          },
+          {
+            "url": "/category/tbsarrows-componets/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "3-rivers-bunny-buster-11-32-black",
+              "3-rivers-broadhead-adaptors-lg-sht",
+              "aae-epoxy-2-part-24-hour"
+            ]
+          },
+          {
+            "url": "/category/tbsmisc/",
+            "status": 200,
+            "productCount": 39,
+            "sampleSlugs": [
+              "aae-mag-clip-2",
+              "acorp-string-keeper-suede",
+              "avalon-classic-easy-bow-stand"
+            ]
+          },
+          {
+            "url": "/category/tbstargets-butts/",
+            "status": 200,
+            "productCount": 34,
+            "sampleSlugs": [
+              "beiter-target-pin-2",
+              "beiter-target-pin",
+              "field-logic-hurricane-bag"
+            ]
+          },
+          {
+            "url": "/category/centerfire-rifle-ammo/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "barnes-pioneer-30-30-win-190gr-original",
+              "barnes-original-44-mag-300gr",
+              "barnes-pioneer-45-70-govt-400gr-original"
+            ]
+          },
+          {
+            "url": "/category/brass-4023-reloading/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "bertram-222-rimmed",
+              "bertram-240-nitro",
+              "bertram-25-25-stevens"
+            ]
+          },
+          {
+            "url": "/category/knives-lights-tools/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "accusharp-9-pc-game-kit",
+              "benchmade-dacian-black-micarta-w-sheath",
+              "benchmade-fixed-adamas-black"
+            ]
+          },
+          {
+            "url": "/category/sling-swivels-4027-accessories/",
+            "status": 200,
+            "productCount": 32,
+            "sampleSlugs": [
+              "grovtec-swivel-set-pump-auto",
+              "grovtec-870-12ga-swivel-set-cap",
+              "grovtec-swivel-set-bolt-machine-screw"
+            ]
+          },
+          {
+            "url": "/category/muzzleloading-accessories/",
+            "status": 200,
+            "productCount": 23,
+            "sampleSlugs": [
+              "cva-t-bullet-starter",
+              "pedersoli-powder-spouts",
+              "pedersoli-ramrod-adaptor"
+            ]
+          },
+          {
+            "url": "/category/die-sets/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "hornady-american-series-die-sets",
+              "hornady-bullet-feeder-die",
+              "hornady-custom-grade-die-set-pistol"
+            ]
+          },
+          {
+            "url": "/category/reloading-accessories/",
+            "status": 200,
+            "productCount": 19,
+            "sampleSlugs": [
+              "frankford-stainless-steel-media-5lbs",
+              "horn-l-n-l-primer-tube-kit-sml",
+              "hornady-cam-lock-bullet-puller-collets"
+            ]
+          },
+          {
+            "url": "/category/pistol-bullets/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "cam-pro-38-357-125gr-tc",
+              "cam-pro-38-357-158gr-rnfp",
+              "cam-pro-45-230gr-hp"
+            ]
+          },
+          {
+            "url": "/category/patches-wads/",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "ox-yoke-cusion-shotgun-wads",
+              "ox-yoke-felt-shotgun-wads",
+              "ox-yoke-lubed-patches"
+            ]
+          },
+          {
+            "url": "/category/parts-replacement-4027-accessories/",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "allen-shotgun-plug",
+              "browning-standard-invector-choke-410",
+              "browning-standard-invector-choke-16ga"
+            ]
+          },
+          {
+            "url": "/category/pouches-holders-4027-accessories/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "magpul-daka-pouch-large-odg",
+              "magpul-daka-pouch-medium-odg",
+              "magpul-daka-pouch-x-large-odg"
+            ]
+          },
+          {
+            "url": "/category/parts-custom-4027-accessories/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "mdt-bolt-knob-threaded-universal-green"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://shooterschoice.com/category/4022-firearms/",
+        "page2Url": "https://shooterschoice.com/category/4022-firearms/page/2/",
+        "page1First3": [
+          "benelli-ethos-silver-20ga-3-28",
+          "benelli-lupo-syn-270-winchester-2",
+          "benelli-lupo-syn-30-06"
+        ],
+        "page2First3": [
+          "browning-bar-mk4-composite-308-win",
+          "browning-bar-mk4-hunter-30-06",
+          "browning-bar-mk4-hunter-7mm-rem-mag"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://shooterschoice.com/category/4022-firearms/?orderby=date",
+        "withoutSortUrl": "https://shooterschoice.com/category/4022-firearms/",
+        "withSortFirst": "browning-maxus-ii-ww-legacy-12-3-5-26",
+        "withoutSortFirst": "benelli-ethos-silver-20ga-3-28",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 11411,
+      "actual": 11494,
+      "evidence": {
+        "storedCount": 11411,
+        "actualCount": 11494,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f3817244bc2cca0-YYZ"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Shooter's Choice Pro Shop",
+    "notes": "woocommerce site. Uses default adapter behavior (no custom URLs). | 2026-04-12: hasWaf false→true (CF passive with XSS rule). Count 11710→11411. perPage 50→40. Watermark upgraded navigate-from→api-date-since (modified_after monotonic: 11411→1843→1147→124). 30 catalogUrls (firearms + TBS archery). Combined firearms + archery shop (The Bow Shop / Shooters Choice). Uses /category/ not /product-category/.",
+    "budget": 90,
+    "domain": "shooterschoice.com",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 40,
+    "timeout": 15000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "json-ld"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/category/4022-firearms/",
+      "/category/4021-ammunition/",
+      "/category/4027-accessories/",
+      "/category/4030-optics/",
+      "/category/4023-reloading/",
+      "/category/4031-knives-cutlery/",
+      "/category/uncategorized/",
+      "/category/4026-clothing/",
+      "/category/4027-accessoires/",
+      "/category/tbsbows/",
+      "/category/tbsbow-accessories/",
+      "/category/tbshunting-accessories/",
+      "/category/tbsarrows-components/",
+      "/category/tbsparts-service-tools/",
+      "/category/tbs-used-accessories/",
+      "/category/tbsarrows-componets/",
+      "/category/tbsmisc/",
+      "/category/tbstargets-butts/",
+      "/category/centerfire-rifle-ammo/",
+      "/category/brass-4023-reloading/",
+      "/category/knives-lights-tools/",
+      "/category/sling-swivels-4027-accessories/",
+      "/category/muzzleloading-accessories/",
+      "/category/die-sets/",
+      "/category/reloading-accessories/",
+      "/category/pistol-bullets/",
+      "/category/patches-wads/",
+      "/category/parts-replacement-4027-accessories/",
+      "/category/pouches-holders-4027-accessories/",
+      "/category/parts-custom-4027-accessories/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-12",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "t1IntervalMin": 17,
+    "sortVerifiedAt": "2026-04-12",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive with active XSS rule",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-12",
+    "wafProbeEvidence": {
+      "cfRay": true,
+      "server": "cloudflare",
+      "uaFilter": false,
+      "rateLimit": false,
+      "xssBlocked": true
+    },
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}/"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product",
+      "wpRestTotal": 11411,
+      "storeApiTotal": 4311,
+      "dateFilterEvidence": {
+        "1d": 124,
+        "7d": 1147,
+        "14d": 1843,
+        "no_filter": 11411
+      },
+      "dateFilterVerified": true
+    },
+    "expectedInStockCount": 4311,
+    "expectedProductCount": 11411
+  }
+}

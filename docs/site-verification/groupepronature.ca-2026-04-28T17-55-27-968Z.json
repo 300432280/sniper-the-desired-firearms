@@ -1,0 +1,254 @@
+{
+  "siteId": "cmm3v7sfu0003o7a3assboall",
+  "domain": "groupepronature.ca",
+  "timestamp": "2026-04-28T17:55:27.968Z",
+  "durationMs": 72510,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "14 URLs, each returning ≥1 product",
+      "actual": "0/14 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/en/collections/all",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/carabines-et-fusils-rifles-shotguns",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/armes-a-air-comprime-et-autres-armes-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/accessoires-pour-armes-a-feu-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/lunettes-de-visee-telescopes-pour-chasse-et-tir-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/optique-et-accessoires-de-tir-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/arbaletes-et-arcs-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/billes-plombs-et-co2-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/chargeurs-pour-armes-a-feu-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/nettoyage-et-entretien-des-armes-a-feu-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/etuis-pour-armes-a-feu-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/equipements-et-vetements-de-chasse-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/collection-peche",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/en/collections/camping-et-plein-air-chez-pronature",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "14/14 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 1456,
+      "actual": 1503,
+      "evidence": {
+        "storedCount": 1456,
+        "actualCount": 1503,
+        "methodUsed": "shopify-products-json-walk",
+        "driftPct": 3
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37f0215e33ab6d-YYZ",
+          "set-cookie": "localization=CA; path=/en; expires=Wed, 28 Apr 2027 17:55:28 GMT; SameSite=Lax,_shopify_y=8ade714e-8b83-4643-98a3-f368a51686ec; domain=groupepronature.ca; path=/; expires=Wed, 28 Apr 2027 23:55:28 GMT; SameSite=Lax,_shopify_s=b10fb12b-49f1-4f35-815f-315e16f1cda4; domain=groupepronature.ca; path=/; expires=Tue, 28 Apr 2026 18:25:28 GMT; SameSite=Lax,_shopify_essential=:AZ3VO1ETAAEA3aXHet4tn31wF7PiiAgoJSb7GHVoExBxizoL30rRAIcjifkv-UrdBttXTgUDIWzHYBrZKl_gIiOIcyqHaCnZ_EOVKzEyjnLuhul9qcold92sktzGA7s5Cdb-AJ9auV80kBDQP0n322raewvlLEouoqr9-LGwEhCUVJe3nyIY7RDEs_22OIQIYaZMz6e-LQ4NfyDfllO-_yPkCiOk6fxdpvAfkbIGgQ_YN51-FfwoGc7P-c8zcWrY5xs5SnyluJvm8QrLCJJpDCLYqBPfDMmoa5YfGpw-WKxQJpNSYXd5Gi7YyCEyj5hI8FtxLq0ZqwIYaEvZfntAIR_XuHo2VOkOa88w_liPYeUbkO1f2Sz1obdcTT8Eu7tqMbJHvCMOhcRZWTLFSNv3HiQ:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax,_shopify_analytics=:AZ3VO1OXAAEALJ1pFFbAsnIJ8VbZL-6nhVwjb9hxM2zLgiUledsa6RFLdpN6ncWDycEdsaBoL7xjXnZrxcVbKRDSGnBGoUTDezsluSCLRA:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax,_shopify_marketing=:AZ3VO1OXAAEA_fuLehWA0Qk2bei_Vi6qzJbWr8muZYnBmYOOkvjwHywpW6rkKcX1XfgVLJkzfPiL_lJSObBQqlyx1vE:; Max-Age=31536000; Path=/; HttpOnly; Secure; Priority=High; SameSite=Lax"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "notes": "Bilingual Shopify (FR default, /en/ for English). Outdoor/hunting/fishing retailer. 723 collections total (many promotional/brand collections). Cloudflare passive WAF - no active challenges. JSON API unrestricted. Default collection sort IS newest-first (merchant configured). /collections/all covers 100% of products for HTML fallback.",
+    "hasWaf": true,
+    "adapter": "shopify",
+    "perPage": 24,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "catalog": {
+        "note": "Global /products.json paginated walk, 6 pages at 250/page = 1456 products",
+        "method": "shopify-products-json",
+        "perPage": 250,
+        "totalPages": 6
+      },
+      "watermark": {
+        "note": "Shopify adapter fetchCatalogPage uses global /products.json with postDate=published_at for watermark stop signal",
+        "method": "navigate-from-watermark",
+        "perPage": 250,
+        "apiEndpoint": "/products.json",
+        "apiSortOrder": "published_at descending (natural order)"
+      }
+    },
+    "platform": "shopify",
+    "bilingual": true,
+    "sortParam": "?sort_by=created-descending",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/en/collections/all",
+      "/en/collections/carabines-et-fusils-rifles-shotguns",
+      "/en/collections/armes-a-air-comprime-et-autres-armes-chez-pronature",
+      "/en/collections/accessoires-pour-armes-a-feu-chez-pronature",
+      "/en/collections/lunettes-de-visee-telescopes-pour-chasse-et-tir-chez-pronature",
+      "/en/collections/optique-et-accessoires-de-tir-chez-pronature",
+      "/en/collections/arbaletes-et-arcs-chez-pronature",
+      "/en/collections/billes-plombs-et-co2-chez-pronature",
+      "/en/collections/chargeurs-pour-armes-a-feu-chez-pronature",
+      "/en/collections/nettoyage-et-entretien-des-armes-a-feu-chez-pronature",
+      "/en/collections/etuis-pour-armes-a-feu-chez-pronature",
+      "/en/collections/equipements-et-vetements-de-chasse-chez-pronature",
+      "/en/collections/collection-peche",
+      "/en/collections/camping-et-plein-air-chez-pronature"
+    ],
+    "lastVerified": "2026-04-11",
+    "sortVerified": true,
+    "bilingualNote": "/en/ prefix returns English titles on both HTML and JSON API; root returns French. API works at both /products.json and /en/products.json",
+    "lastVerifiedBy": "audit-b11-full-7phase",
+    "sortVerifiedAt": "2026-04-11",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive",
+    "catalogUrlStats": {
+      "/en/collections/all": {
+        "pages": 61,
+        "products": 1456
+      },
+      "/en/collections/collection-peche": {
+        "products": 402
+      },
+      "/en/collections/arbaletes-et-arcs-chez-pronature": {
+        "products": 88
+      },
+      "/en/collections/billes-plombs-et-co2-chez-pronature": {
+        "products": 16
+      },
+      "/en/collections/camping-et-plein-air-chez-pronature": {
+        "products": 565
+      },
+      "/en/collections/carabines-et-fusils-rifles-shotguns": {
+        "products": 120
+      },
+      "/en/collections/etuis-pour-armes-a-feu-chez-pronature": {
+        "products": 18
+      },
+      "/en/collections/chargeurs-pour-armes-a-feu-chez-pronature": {
+        "products": 12
+      },
+      "/en/collections/accessoires-pour-armes-a-feu-chez-pronature": {
+        "products": 155
+      },
+      "/en/collections/optique-et-accessoires-de-tir-chez-pronature": {
+        "products": 96
+      },
+      "/en/collections/equipements-et-vetements-de-chasse-chez-pronature": {
+        "products": 857
+      },
+      "/en/collections/armes-a-air-comprime-et-autres-armes-chez-pronature": {
+        "products": 33
+      },
+      "/en/collections/nettoyage-et-entretien-des-armes-a-feu-chez-pronature": {
+        "products": 14
+      },
+      "/en/collections/lunettes-de-visee-telescopes-pour-chasse-et-tir-chez-pronature": {
+        "products": 40
+      }
+    },
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11",
+    "wafProbeEvidence": "server: cloudflare + cf-ray on all responses, all 200, no active challenges",
+    "paginationPattern": {
+      "type": "query",
+      "template": "page",
+      "firstPageHasParam": false
+    },
+    "productCountMethod": "shopify-products-json-walk",
+    "sortVerifiedMethod": "counter-control price-ascending differs, created-descending = default on collections (merchant default is newest-first)",
+    "expectedProductCount": 1456,
+    "productCountVerifiedAt": "2026-04-11"
+  }
+}

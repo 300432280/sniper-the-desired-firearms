@@ -1,0 +1,381 @@
+{
+  "siteId": "cmltxz78r000r89xanb2brv1f",
+  "domain": "precisionoptics.net",
+  "timestamp": "2026-04-28T18:15:41.549Z",
+  "durationMs": 81057,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "FAIL",
+      "expected": "17 URLs, each returning ≥1 product",
+      "actual": "16/17 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/category_s/662.htm",
+            "status": 403,
+            "productCount": 0,
+            "sampleSlugs": [],
+            "error": "HTTP 403"
+          },
+          {
+            "url": "/category_s/391.htm",
+            "status": 200,
+            "productCount": 90,
+            "sampleSlugs": [
+              "bt-bt1517.htm",
+              "bt-adm-170-s.htm",
+              "nikon-30817.htm"
+            ]
+          },
+          {
+            "url": "/category_s/674.htm",
+            "status": 200,
+            "productCount": 18,
+            "sampleSlugs": [
+              "consign-f01t00575-tysonb.htm",
+              "consign-cafft300wmblk.htm",
+              "consign-t3xlam300wsm-johnb.htm"
+            ]
+          },
+          {
+            "url": "/Outlet_Firearms_Packages_s/1266.htm",
+            "status": 200,
+            "productCount": 15,
+            "sampleSlugs": [
+              "1fp07053.htm",
+              "1fp14942.htm",
+              "flt0965.htm"
+            ]
+          },
+          {
+            "url": "/Riflescopes_s/64.htm",
+            "status": 200,
+            "productCount": 90,
+            "sampleSlugs": [
+              "522931-9994-080.htm",
+              "50201.htm",
+              "50213.htm"
+            ]
+          },
+          {
+            "url": "/Binoculars_s/65.htm",
+            "status": 200,
+            "productCount": 60,
+            "sampleSlugs": [
+              "40818.htm",
+              "524204-9901.htm",
+              "bf1042t.htm"
+            ]
+          },
+          {
+            "url": "/Spotting_Scope_s/66.htm",
+            "status": 200,
+            "productCount": 25,
+            "sampleSlugs": [
+              "tsn-ex16s.htm",
+              "40155.htm",
+              "tsn-ex16.htm"
+            ]
+          },
+          {
+            "url": "/Range_Finders_s/67.htm",
+            "status": 200,
+            "productCount": 18,
+            "sampleSlugs": [
+              "40504.htm",
+              "40549.htm",
+              "r3-1200.htm"
+            ]
+          },
+          {
+            "url": "/Outdoor_Tech_s/68.htm",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "010-03387-10.htm",
+              "sf12a-bb.htm",
+              "333-107.htm"
+            ]
+          },
+          {
+            "url": "/category_s/551.htm",
+            "status": 200,
+            "productCount": 60,
+            "sampleSlugs": [
+              "b-420044.htm",
+              "b-420077.htm",
+              "t-930000.htm"
+            ]
+          },
+          {
+            "url": "/category_s/860.htm",
+            "status": 200,
+            "productCount": 28,
+            "sampleSlugs": [
+              "consign-f01t00575-tysonb.htm",
+              "consign-cafft300wmblk.htm",
+              "consign-t3xlam300wsm-johnb.htm"
+            ]
+          },
+          {
+            "url": "/category_s/1238.htm",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "dirtnap-22cm-80eldm.htm",
+              "dirtnap-300prc-nos200ab.htm",
+              "dirtnap-22cm-77cc.htm"
+            ]
+          },
+          {
+            "url": "/category_s/556.htm",
+            "status": 200,
+            "productCount": 90,
+            "sampleSlugs": [
+              "dirtnap-22cm-80eldm.htm",
+              "dirtnap-300prc-nos200ab.htm",
+              "80711.htm"
+            ]
+          },
+          {
+            "url": "/category_s/719.htm",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "wby-brass65300wbymag.htm",
+              "gw-f3091g.htm",
+              "nos-65cm-pb.htm"
+            ]
+          },
+          {
+            "url": "/category_s/735.htm",
+            "status": 200,
+            "productCount": 72,
+            "sampleSlugs": [
+              "redd-11001.htm",
+              "redd-11006.htm",
+              "redd-73248.htm"
+            ]
+          },
+          {
+            "url": "/category_s/721.htm",
+            "status": 200,
+            "productCount": 37,
+            "sampleSlugs": [
+              "redd-28252c.htm",
+              "redd-28799c.htm",
+              "29252.htm"
+            ]
+          },
+          {
+            "url": "/category_s/1012.htm",
+            "status": 200,
+            "productCount": 61,
+            "sampleSlugs": [
+              "30353.htm",
+              "30291.htm",
+              "nos-58623.htm"
+            ]
+          }
+        ]
+      },
+      "reason": "1/17 URLs failed: /category_s/662.htm"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "3 overlap",
+      "evidence": {
+        "page1Url": "https://www.precisionoptics.net/category_s/391.htm",
+        "page2Url": "https://www.precisionoptics.net/category_s/391.htm?page=2",
+        "page1First3": [
+          "bt-bt1517.htm",
+          "bt-adm-170-s.htm",
+          "nikon-30817.htm"
+        ],
+        "page2First3": [
+          "bt-bt1517.htm",
+          "bt-adm-170-s.htm",
+          "nikon-30817.htm"
+        ],
+        "overlapCount": 3
+      },
+      "reason": "All page2 first-3 slugs match page1 — pagination silently ignored (Mistake 26)"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "FAIL",
+      "expected": "first product slug differs with sort",
+      "actual": "same (sort has no effect)",
+      "evidence": {
+        "withSortUrl": "https://www.precisionoptics.net/category_s/391.htm?sort=",
+        "withoutSortUrl": "https://www.precisionoptics.net/category_s/391.htm",
+        "withSortFirst": "bt-bt1517.htm",
+        "withoutSortFirst": "bt-bt1517.htm",
+        "counterControlUrl": "https://www.precisionoptics.net/category_s/391.htm?sort=price",
+        "counterControlFirst": "bt-bt1517.htm"
+      },
+      "reason": "Sort parameter and counter-control both return same first product — sort may be silently ignored"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 1778,
+      "actual": 10,
+      "evidence": {
+        "storedCount": 1778,
+        "actualCount": 10,
+        "methodUsed": "sitemap",
+        "driftPct": 99
+      },
+      "reason": "Count drifted 99% (stored=1778, actual=10)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f380dc4a85f0702-YYZ",
+          "set-cookie": "volses=a740278d-bdd7-3a9c-951b-751a774501ff; expires=; path=/;Secure;  HttpOnly; SameSite=Lax,vsettings=; expires=Fri, 23-Apr-2027 05:00:00 GMT; path=/,ASPSESSIONIDACDDADTB=CLGDHLHAHOEKDNOGHIMPIKDH; path=/; HttpOnly,__cf_bm=4v_QHTtLwyPtE_XqZ2y2rCmLl7DIniaSxOJGuqI7BJ0-1777400141.5459254-1.0.1.1-A.2zCCRTpzt0z27CfPEZjmy._4Qn2jOZYs9KqLwOmlfqKpk97vls0THnjDDhRXfDR5WHhFV0YUQcJBXdPJmt.GPX7c6IJ46ae51R0y2BimuF6SUPWfjEZSrJvaK0vblo; HttpOnly; Secure; Path=/; Domain=www.precisionoptics.net; Expires=Tue, 28 Apr 2026 18:45:41 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Precision Optics",
+    "notes": "Volusion (x-powered-by:Volusion confirmed). Categories at /Name_s/NN.htm or /category_s/NN.htm. Products at /Name_p/CODE.htm. Volusion search params: searching=Y&sort=N&show=90&page=N. sort=3=Newest (verified via ID-jump vs sort=4=Oldest). Top parents Firearms_s/325 and Ammunition_s/550 are EMPTY (children-only); use category_s/662 (All In Stock Firearms, 775 products) and category_s/556 (Ammunition leaf, 196). Cloudflare passive (cf-ray on every response, no JS challenge for plain GET); occasional 403 on Riflescopes_s/64 first request - retry succeeds.",
+    "budget": 40,
+    "domain": "precisionoptics.net",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 90,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "Append searching=Y&sort=3&show=90&page=N to any catalog URL for newest-first ordering.",
+        "method": "navigate-from-watermark",
+        "sortParam": "sort=3"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "volusion",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "sort",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/category_s/662.htm",
+      "/category_s/391.htm",
+      "/category_s/674.htm",
+      "/Outlet_Firearms_Packages_s/1266.htm",
+      "/Riflescopes_s/64.htm",
+      "/Binoculars_s/65.htm",
+      "/Spotting_Scope_s/66.htm",
+      "/Range_Finders_s/67.htm",
+      "/Outdoor_Tech_s/68.htm",
+      "/category_s/551.htm",
+      "/category_s/860.htm",
+      "/category_s/1238.htm",
+      "/category_s/556.htm",
+      "/category_s/719.htm",
+      "/category_s/735.htm",
+      "/category_s/721.htm",
+      "/category_s/1012.htm"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Plain HTTP with realistic UA works. Retry 1.5s on 403 (transient Cloudflare). Playwright not required.",
+      "steps": [
+        "Realistic browser UA",
+        "Retry 403 once after 1.5s",
+        "No challenge solver needed"
+      ],
+      "method": "http-with-retry"
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive + rule-selective (XSS/UNION blocked, normal GETs pass)",
+    "needsPlaywright": false,
+    "sortValueNewest": "3",
+    "wafLastProbedAt": "2026-04-08T06:16:00Z",
+    "wafProbeEvidence": {
+      "botUaBlocked": false,
+      "cfRayExample": "9e8f23e8cea3aa71-YYZ",
+      "xssRuleFired": true,
+      "sqliRuleFired": "partial (UNION blocked, generic OR=1 passed)",
+      "rapidBurstStatus": "all 301 (no rate limit fired in 10-burst)",
+      "cfHeadersDetected": true,
+      "honeypotPathsBlocked": true,
+      "transient403OnFirstRiflescopesFetch": true
+    },
+    "catalogUrlBuilder": "{path}?searching=Y&sort=3&show=90&page={page}",
+    "paginationPattern": {
+      "type": "query",
+      "startsAt": 1,
+      "template": "page"
+    },
+    "productCountMethod": {
+      "method": "sum-catalog-walk-deduped",
+      "verifiedAt": "2026-04-08"
+    },
+    "expectedProductCount": 1778,
+    "sortRequiresSearchingY": true
+  }
+}

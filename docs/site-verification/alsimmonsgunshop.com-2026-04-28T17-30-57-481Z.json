@@ -1,0 +1,358 @@
+{
+  "siteId": "cmm3v7t5d000oo7a3bb9vsztq",
+  "domain": "alsimmonsgunshop.com",
+  "timestamp": "2026-04-28T17:30:57.481Z",
+  "durationMs": 45832,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "6 URLs, each returning ≥1 product",
+      "actual": "5/6 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/used-non-restricted/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "ihc-intl-harvester-co-m1-garand-30-06sprg-14334nc",
+              "marlin-1895-ss-45-70govt-14333nc",
+              "savage-220-camo-20ga-unfired-14297n"
+            ]
+          },
+          {
+            "url": "/product-category/new-non-restricted/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "benelli-m4-t-pro-12ga-14337n",
+              "weatherby-custom-shop-mark-v-308win-13518n",
+              "franchi-instinct-l-410ga-13906n"
+            ]
+          },
+          {
+            "url": "/product-category/magazines/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "kel-tec-p3at-36-380auto-magazine-100017007",
+              "colt-1911-38super-magazine-sp574481",
+              "beretta-px4-9mm-magazine-jm4px910"
+            ]
+          },
+          {
+            "url": "/product-category/collectable-22s/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "savage-1905-22cal-10908nc",
+              "mossberg-model-152-22lr-13443n",
+              "cooey-sureshot-22cal-12552nc"
+            ]
+          },
+          {
+            "url": "/product-category/accessories/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/shop/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "benelli-m4-t-pro-12ga-14337n",
+              "ihc-intl-harvester-co-m1-garand-30-06sprg-14334nc",
+              "marlin-1895-ss-45-70govt-14333nc"
+            ]
+          }
+        ]
+      },
+      "reason": "1/6 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://alsimmonsgunshop.com/product-category/used-non-restricted/",
+        "page2Url": "https://alsimmonsgunshop.com/product-category/used-non-restricted/page/2/",
+        "page1First3": [
+          "ihc-intl-harvester-co-m1-garand-30-06sprg-14334nc",
+          "marlin-1895-ss-45-70govt-14333nc",
+          "savage-220-camo-20ga-unfired-14297n"
+        ],
+        "page2First3": [
+          "remington-model-1100-trap-12ga-14316nc",
+          "mossberg-model-352k-22lr-14317nc",
+          "browning-citori-625-canada-50th-anniversary-1-of-50-12ga-14315n"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://alsimmonsgunshop.com/product-category/used-non-restricted/?orderby=date",
+        "withoutSortUrl": "https://alsimmonsgunshop.com/product-category/used-non-restricted/",
+        "withSortFirst": "ihc-intl-harvester-co-m1-garand-30-06sprg-14334nc",
+        "withoutSortFirst": "ihc-intl-harvester-co-m1-garand-30-06sprg-14334nc",
+        "counterControlUrl": "https://alsimmonsgunshop.com/product-category/used-non-restricted/?orderby=price",
+        "counterControlFirst": "cooey-sureshot-22cal-12552nc"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 1638,
+      "actual": 1651,
+      "evidence": {
+        "storedCount": 1638,
+        "actualCount": 1651,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37cc390d0b4d63-YYZ"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Al Simmons Gun Shop",
+    "notes": "2026-04-11: Full 7-phase audit. Cloudflare passive (not blocking API). WP REST=1638 total, Store API=168 in-stock. Most products are sold/out-of-stock firearms (consignment shop). Date filter verified monotonic. Default sort is newest-first. perPage=9 HTML, 100 API. 2026-04-02: 1,444 products wrongly discontinued by Store API verify (Store API only returns in-stock).",
+    "budget": 60,
+    "domain": "alsimmonsgunshop.com",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 9,
+    "timeout": 15000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark",
+        "dateFilterEvidence": "Monotonic scaling: no filter=1638, 14d=12, 1d=0. after= param works correctly on WP REST API.",
+        "dateFilterVerified": true,
+        "dateFilterVerifiedAt": "2026-04-11"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/used-non-restricted/",
+      "/product-category/new-non-restricted/",
+      "/product-category/magazines/",
+      "/product-category/collectable-22s/",
+      "/product-category/accessories/",
+      "/shop/"
+    ],
+    "perPageNote": "HTML pages show 9 (Jetpack Infinite Scroll). API uses per_page=100.",
+    "categoryTree": {
+      "magazines": {
+        "id": 36514,
+        "count": 85,
+        "parent": 0,
+        "wpRestTotal": 91
+      },
+      "accessories": {
+        "id": 36510,
+        "count": 1,
+        "parent": 0,
+        "wpRestTotal": 1
+      },
+      "consignment": {
+        "id": 36341,
+        "count": 51,
+        "parent": 36057,
+        "wpRestTotal": 608
+      },
+      "uncategorized": {
+        "id": 35905,
+        "count": 0,
+        "parent": 0,
+        "wpRestTotal": 5
+      },
+      "new-restricted": {
+        "id": 36069,
+        "count": 0,
+        "parent": 0,
+        "wpRestTotal": 0
+      },
+      "collectable-22s": {
+        "id": 36513,
+        "count": 3,
+        "parent": 0,
+        "wpRestTotal": 33
+      },
+      "used-restricted": {
+        "id": 36064,
+        "count": 0,
+        "parent": 0,
+        "wpRestTotal": 0
+      },
+      "new-non-restricted": {
+        "id": 35994,
+        "count": 19,
+        "parent": 0,
+        "wpRestTotal": 613
+      },
+      "used-non-restricted": {
+        "id": 36057,
+        "count": 63,
+        "parent": 0,
+        "children": [
+          "consignment"
+        ],
+        "wpRestTotal": 924
+      }
+    },
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-11",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "t1IntervalMin": 17,
+    "sortVerifiedAt": "2026-04-11",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive",
+    "catalogUrlStats": {
+      "/shop/": {
+        "note": "Global shop page, HTML fallback. API walk is primary."
+      },
+      "/product-category/magazines/": {
+        "wpRestTotal": 91,
+        "inStockCount": 85
+      },
+      "/product-category/accessories/": {
+        "wpRestTotal": 1,
+        "inStockCount": 1
+      },
+      "/product-category/collectable-22s/": {
+        "wpRestTotal": 33,
+        "inStockCount": 3
+      },
+      "/product-category/new-non-restricted/": {
+        "wpRestTotal": 613,
+        "inStockCount": 19
+      },
+      "/product-category/used-non-restricted/": {
+        "note": "Parent category, inclusive of Consignment child (608 total)",
+        "wpRestTotal": 924,
+        "inStockCount": 63
+      }
+    },
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11",
+    "wafProbeEvidence": "server: cloudflare + cf-ray on all responses. Bot UA (python-requests) gets 403; desktop/mobile/curl UAs get 200. SQLi/XSS queries not blocked. No active challenge.",
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}/",
+      "firstPageHasParam": false
+    },
+    "lastVerifiedMethod": "full-7-phase-audit",
+    "paginationVerified": true,
+    "productCountMethod": {
+      "note": "WP REST = all published (1638), Store API = in-stock only (168)",
+      "method": "dual-api",
+      "wpRestCount": 1638,
+      "wpRestHeader": "x-wp-total",
+      "storeApiCount": 168,
+      "storeApiHeader": "x-wp-total",
+      "wpRestEndpoint": "/wp-json/wp/v2/product",
+      "storeApiEndpoint": "/wp-json/wc/store/v1/products"
+    },
+    "sortVerifiedMethod": "counter-control",
+    "expectedInStockCount": 168,
+    "expectedProductCount": 1638,
+    "paginationVerifiedAt": "2026-04-11",
+    "sortVerifiedEvidence": "orderby=date first product: kel-tec-p3at-36-380auto-magazine; orderby=price first: mossberg-817-17hmr-magazine. Different = sort honored. Also default selected in <select name=\"orderby\">.",
+    "paginationVerifiedEvidence": "Page 1 first product: ruger-sr-22-rifle-22lr-14318nc. Page 2 first product: mossberg-151m-b-22lr-14275n. Zero overlap."
+  }
+}

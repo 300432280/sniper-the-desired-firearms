@@ -1,0 +1,395 @@
+{
+  "siteId": "cmm0hekt0000110ndvcwnp4hr",
+  "domain": "doubletapsports.com",
+  "timestamp": "2026-04-28T17:39:39.995Z",
+  "durationMs": 112144,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "13 URLs, each returning ≥1 product",
+      "actual": "13/13 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/parts/",
+            "status": 200,
+            "productCount": 120,
+            "sampleSlugs": [
+              "wilson-combat-sig-sauer-p320-full-size-grip-module",
+              "ismi-beretta-recoil-spring-115lb",
+              "wolff-tanfoglio-hammer-spring-pack-26507"
+            ]
+          },
+          {
+            "url": "/product-category/accessories/",
+            "status": 200,
+            "productCount": 120,
+            "sampleSlugs": [
+              "doubletap-sports-blackout-target-patches-white-5000",
+              "cabelas-tactical-gun-case-used",
+              "doubletap-sports-team-hat-2026"
+            ]
+          },
+          {
+            "url": "/product-category/reloading/",
+            "status": 200,
+            "productCount": 120,
+            "sampleSlugs": [
+              "double-alpha-academy-auto-case-lubricator",
+              "doubletap-sports-processed-brass-9mm-5000",
+              "dillon-precision-powder-funnel-y-6-5"
+            ]
+          },
+          {
+            "url": "/product-category/holsters-pouches-belts/",
+            "status": 200,
+            "productCount": 120,
+            "sampleSlugs": [
+              "double-alpha-academy-universal-magnet-kit",
+              "double-alpha-academy-gen2-pouch",
+              "blade-tech-signature-single-mag-pouch-pro-1911"
+            ]
+          },
+          {
+            "url": "/product-category/doubletap-wholesale/",
+            "status": 200,
+            "productCount": 91,
+            "sampleSlugs": [
+              "doubletap-sports-team-hat-2026",
+              "doubletap-sports-clear-liquid-chalk",
+              "dtsc-czts2-basepad-spring-plate-bundle"
+            ]
+          },
+          {
+            "url": "/product-category/range-gear/",
+            "status": 200,
+            "productCount": 67,
+            "sampleSlugs": [
+              "doubletap-sports-blackout-target-patches-white-5000",
+              "daa-ratchet-strap-retainer",
+              "axil-trackr-gel-pads-2"
+            ]
+          },
+          {
+            "url": "/product-category/range-wholesale/",
+            "status": 200,
+            "productCount": 48,
+            "sampleSlugs": [
+              "doubletap-sports-blackout-target-patches-white-5000",
+              "amg-commander-silicone-skin-orange",
+              "doubletap-sports-blackout-target-patches-white-35000"
+            ]
+          },
+          {
+            "url": "/product-category/ammunition/",
+            "status": 200,
+            "productCount": 40,
+            "sampleSlugs": [
+              "7-62x39mm-surplus-rifle-ammunition-20-rounds",
+              "remington-golden-bullet-22lr-40gr-high-velocity-round-nose-100",
+              "cci-speer-lawman-9mm-147gr-tmj-50"
+            ]
+          },
+          {
+            "url": "/product-category/clearance/",
+            "status": 200,
+            "productCount": 29,
+            "sampleSlugs": [
+              "doubletap-sports-blackout-target-patches-white-5000",
+              "pro-shot-dry-lube-2-oz-spray",
+              "cz-sport-hat-black"
+            ]
+          },
+          {
+            "url": "/product-category/firearms/",
+            "status": 200,
+            "productCount": 15,
+            "sampleSlugs": [
+              "mossberg-500-field-security-combo-used",
+              "remington-model-1100-12ga-semi-automatic-shotgun",
+              "winchester-model-94-30-30-win-lever-action-rifle-used"
+            ]
+          },
+          {
+            "url": "/product-category/specials/",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "dtsc-czts2-basepad-spring-plate-bundle",
+              "black-sport-shooting-glasses-with-case",
+              "ghost-quick-release-clip-d-holster-belt-attachment"
+            ]
+          },
+          {
+            "url": "/product-category/revolution-armory/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "revolution-armory-swift-semi-auto-shotgun-12ga-28",
+              "revolution-armory-mauler-mk91-pump-action-shotgun"
+            ]
+          },
+          {
+            "url": "/product-category/chronographs/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "athlon-rangecraft-velocity-chrono"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page2 returns 200",
+      "actual": "HTTP 404",
+      "evidence": {
+        "page1Url": "https://doubletapsports.com/product-category/parts/",
+        "page2Url": "https://doubletapsports.com/product-category/partspage/2/",
+        "page1First3": [
+          "wilson-combat-sig-sauer-p320-full-size-grip-module",
+          "ismi-beretta-recoil-spring-115lb",
+          "wolff-tanfoglio-hammer-spring-pack-26507"
+        ],
+        "page2First3": [],
+        "overlapCount": 0
+      },
+      "reason": "Page 2 returned HTTP 404"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://doubletapsports.com/product-category/parts/?orderby=date",
+        "withoutSortUrl": "https://doubletapsports.com/product-category/parts/",
+        "withSortFirst": "wilson-combat-sig-sauer-p320-full-size-grip-module",
+        "withoutSortFirst": "wilson-combat-sig-sauer-p320-full-size-grip-module",
+        "counterControlUrl": "https://doubletapsports.com/product-category/parts/?orderby=price",
+        "counterControlFirst": "wolff-glock-striker-spring-pak-4-4-5-5lb-reduced-power"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 1858,
+      "actual": 1847,
+      "evidence": {
+        "storedCount": 1858,
+        "actualCount": 1847,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37d9008ea3051b-YYZ"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Double Tap Sports",
+    "notes": "Competition shooting sports store. BRANDS category (id=2875) is cross-cutting brand taxonomy (1618 products) - excluded from catalogUrls. Functional categories cover all 1858 products with some cross-listing overlap. Default sort is newest-first on all categories. Cloudflare passive WAF, not Sucuri as previously stored. API works without Playwright cookies.",
+    "budget": 60,
+    "domain": "doubletapsports.com",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 20,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "captchaNote": "reCAPTCHA v3 on Contact Form 7 only, not on product browsing/API",
+    "catalogUrls": [
+      "/product-category/parts/",
+      "/product-category/accessories/",
+      "/product-category/reloading/",
+      "/product-category/holsters-pouches-belts/",
+      "/product-category/doubletap-wholesale/",
+      "/product-category/range-gear/",
+      "/product-category/range-wholesale/",
+      "/product-category/ammunition/",
+      "/product-category/clearance/",
+      "/product-category/firearms/",
+      "/product-category/specials/",
+      "/product-category/revolution-armory/",
+      "/product-category/chronographs/"
+    ],
+    "apiEndpoints": {
+      "storeApi": "/wp-json/wc/store/v1/products",
+      "wpRestV2": "/wp-json/wp/v2/product",
+      "wpRestV3": "/wp-json/wc/v3/products (auth required)",
+      "dateFilter": "modified_after/modified_before on wp/v2/product"
+    },
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-11",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "storeApiNote": "Store API category_id filter returns full catalog for all categories. WP REST v2 product_cat works but only for direct-assigned products (not children). Use global API endpoint.",
+    "t1IntervalMin": 17,
+    "wafWorkaround": null,
+    "lastVerifiedBy": "crawler-specialist-b9-audit",
+    "sortVerifiedOn": "all catalogUrls - default order is newest-first, ?orderby=date also works",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive (server: cloudflare + cf-ray on all responses, bot UA 403, all other UAs 200)",
+    "catalogUrlStats": {
+      "/product-category/parts/": {
+        "count": 855,
+        "pages": 43
+      },
+      "/product-category/firearms/": {
+        "count": 18,
+        "pages": 1
+      },
+      "/product-category/specials/": {
+        "count": 12,
+        "pages": 1
+      },
+      "/product-category/clearance/": {
+        "count": 33,
+        "pages": 2
+      },
+      "/product-category/reloading/": {
+        "count": 308,
+        "pages": 16
+      },
+      "/product-category/ammunition/": {
+        "count": 38,
+        "pages": 2
+      },
+      "/product-category/range-gear/": {
+        "count": 70,
+        "pages": 4
+      },
+      "/product-category/accessories/": {
+        "count": 367,
+        "pages": 19
+      },
+      "/product-category/chronographs/": {
+        "count": 1,
+        "pages": 1
+      },
+      "/product-category/range-wholesale/": {
+        "count": 50,
+        "pages": 3
+      },
+      "/product-category/revolution-armory/": {
+        "count": 2,
+        "pages": 1
+      },
+      "/product-category/doubletap-wholesale/": {
+        "count": 92,
+        "pages": 5
+      },
+      "/product-category/holsters-pouches-belts/": {
+        "count": 265,
+        "pages": 14
+      }
+    },
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11",
+    "productCountDate": "2026-04-11",
+    "sortVerifiedDate": "2026-04-11",
+    "wafProbeEvidence": "cf-ray: 9eab66d9b8e971ff-YYZ, server: cloudflare, bot-UA=403, no x-sucuri-id anywhere",
+    "paginationPattern": {
+      "type": "path",
+      "template": "page/{N}/",
+      "firstPageHasParam": false
+    },
+    "storeApiAvailable": true,
+    "productCountMethod": "wp-rest-api-x-wp-total",
+    "expectedProductCount": 1858,
+    "storeApiCategoryFilterBroken": true
+  }
+}

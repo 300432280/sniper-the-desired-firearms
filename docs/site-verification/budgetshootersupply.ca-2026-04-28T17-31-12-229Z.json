@@ -1,0 +1,207 @@
+{
+  "siteId": "cmltxz6xs000h89xascxu85b0",
+  "domain": "budgetshootersupply.ca",
+  "timestamp": "2026-04-28T17:31:12.229Z",
+  "durationMs": 12736,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "0/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/products/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "1/1 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 2756,
+      "actual": 2797,
+      "evidence": {
+        "storedCount": 2756,
+        "actualCount": 2797,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "Apache"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Budget Shooter Supply",
+    "notes": "Reloading-focused WooCommerce (Woodmart theme). API-only crawl - HTML grid is AJAX-loaded and unreliable. Global API crawl (no category filter - WP REST product_cat doesn't recurse). 209 categories total, deeply nested. /shop/ returns 404, use /products/ as shop page.",
+    "theme": "woodmart",
+    "budget": 90,
+    "domain": "budgetshootersupply.ca",
+    "hasWaf": false,
+    "adapter": "woocommerce",
+    "perPage": 100,
+    "timeout": 15000,
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": false
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "Primary discovery. 2756 products, 100/page, 28 pages. Supports orderby=date, modified_after/before filters.",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment. 1598 in-stock products. Prices in cents (divide by 100).",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "jsOverlay": "none",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/products/"
+    ],
+    "perPageNote": "API uses per_page=100 (WP REST max). HTML shop page is Woodmart AJAX-loaded, shows ~24 but unreliable for crawling.",
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-11",
+    "shopPageNote": "/shop/ returns 404. WooCommerce shop page is configured as /products/",
+    "shopPageSlug": "/products/",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "apiDateFilter": {
+      "param": "modified_after",
+      "format": "ISO8601",
+      "evidence": "no-filter=2756, 14d=608, 7d=352, 1d=40. Monotonically decreasing.",
+      "monotonic": true,
+      "verifiedAt": "2026-04-11"
+    },
+    "htmlCrawlNote": "Woodmart theme with AJAX shop (woodmart-ajax-shop-on). Static HTML only shows sidebar widget products (5 in <main>). Full product grid requires JS execution. API is the only reliable crawl path.",
+    "t1IntervalMin": 17,
+    "sortVerifiedAt": "2026-04-11",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "no-waf",
+    "catalogUrlsNote": "Single global shop page. WP REST API product_cat filter does NOT recurse into children (parent cats return 0), so per-category API crawl is not viable. Global API crawl via /wp-json/wp/v2/product is the only reliable path. The /products/ URL is for HTML fallback reference only.",
+    "htmlCrawlViable": false,
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11",
+    "jsOverlayChecked": [
+      "searchspring",
+      "klevu",
+      "fastsim",
+      "algolia",
+      "doofinder"
+    ],
+    "wafProbeEvidence": "server: Apache on all responses. No cf-ray, x-sucuri, or vendor headers. SQLi/XSS probes get 403 from Apache mod_security (not a WAF proxy). All UAs return 200. Rapid burst 10x no throttle.",
+    "paginationPattern": {
+      "note": "WP REST API pagination via ?page=N param. HTML uses /page/N/ but AJAX grid makes it unreliable.",
+      "type": "api-page",
+      "template": "page={N}"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product",
+      "storeApiNote": "Store API returns in-stock only (1598 vs WP REST 2756 all published)",
+      "storeApiTotal": 1598
+    },
+    "sortVerifiedMethod": "api-id-jump",
+    "expectedProductCount": 2756,
+    "sortVerifiedEvidence": "WP REST API ?orderby=date&order=desc returns IDs descending: page1 first=96950, last=94751; page2 first=94725. Monotonic. HTML sort not applicable (Woodmart AJAX grid)."
+  }
+}

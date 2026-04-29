@@ -1,0 +1,196 @@
+{
+  "siteId": "cmltxz6uc000e89xayuooizbe",
+  "domain": "nordicmarksman.com",
+  "timestamp": "2026-04-28T18:09:51.070Z",
+  "durationMs": 38842,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "1/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/categories.php",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "anschutz-1827f-stainless-steel-sprint-finished-drop-in-barrel-550mm",
+              "anschutz-1827f-hb-nitrate-finished-drop-in-barrel-550mm",
+              "anschutz-1827f-sprint-nitrate-finished-drop-in-barrel-550mm-rfhh"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.nordicmarksman.com/categories.php",
+        "page2Url": "https://www.nordicmarksman.com/categories.php?page=2",
+        "page1First3": [
+          "anschutz-1827f-stainless-steel-sprint-finished-drop-in-barrel-550mm",
+          "anschutz-1827f-hb-nitrate-finished-drop-in-barrel-550mm",
+          "anschutz-1827f-sprint-nitrate-finished-drop-in-barrel-550mm-rfhh"
+        ],
+        "page2First3": [
+          "anschutz-conversion-kit-bolt-lock-1782",
+          "anschutz-spare-parts-set-model-1771-bolt-head-222-223-rem",
+          "anschutz-spare-parts-set-model-1771-bolt-head-for-17-hornet"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.nordicmarksman.com/categories.php?sort=newest",
+        "withoutSortUrl": "https://www.nordicmarksman.com/categories.php",
+        "withSortFirst": "sako-85-bravarian-7mm-rem-mag",
+        "withoutSortFirst": "anschutz-1827f-stainless-steel-sprint-finished-drop-in-barrel-550mm",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 4605,
+      "actual": 4735,
+      "evidence": {
+        "storedCount": 4605,
+        "actualCount": 4735,
+        "methodUsed": "sitemap",
+        "driftPct": 3
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f380536682babc1-YYZ",
+          "set-cookie": "SF-CSRF-TOKEN=9005177d-3c64-40a4-aee4-f9ba7d42a745; Path=/; Secure; SameSite=Strict,fornax_anonymousId=3a41faa6-2518-4053-a9e0-cbb709e1fa49; Expires=Thu, 27 Apr 2028 18:09:51 GMT; Path=/; Secure; SameSite=None,athena_short_visit_id=0b5eb47c-d9aa-4a27-a302-eda623e49083:1777399791; Expires=Tue, 28 Apr 2026 18:39:51 GMT; Path=/; Secure; HttpOnly; SameSite=None,Shopper-Pref=297A998B41812B6D5921F29A7A9FCEABEB681364-1778004591389-x%7B%22cur%22%3A%22CAD%22%2C%22funcConsent%22%3Afalse%7D; Path=/; Secure; HttpOnly,SHOP_SESSION_TOKEN=fdb79e23-991f-4035-aea8-2717d630f5aa; Path=/; Secure; HttpOnly; SameSite=None,__cf_bm=2EvrgIsTYI2kIwlS7HZRqE3mByZcbjzdYgzf0fIX.vw-1777399791.1021678-1.0.1.1-l7MegPlrbrtynXJPs4HGFL7vLIo2xALdSdp5YtwdY7uO66grkZWp_.BIjOJH8tbYoGN4utEcfMsAusCW_xpHmgrgFb2gwFspjoEkPy_B8l.aMgilvX8pbVWdVx6Cms9J; HttpOnly; Secure; Path=/; Domain=nordicmarksman.com; Expires=Tue, 28 Apr 2026 18:39:51 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Nordic Marksman",
+    "budget": 60,
+    "domain": "nordicmarksman.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 20,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "bigcommerce-stencil",
+    "searchUrl": "/search.php?search_query={keyword}",
+    "sortParam": "?sort=newest",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/categories.php"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": null,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive-no-rules-firing",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-08T06:14:47Z",
+    "wafProbeEvidence": {
+      "botUaBlocked": false,
+      "cfRayExample": "9e8f2247ee8aabb1-YYZ",
+      "serverHeader": "cloudflare",
+      "xssRuleFired": false,
+      "cfBmCookieSet": true,
+      "sqliRuleFired": false,
+      "multiUaAllowed": true,
+      "rapidBurstStatus": "10/10 HTTP 200, 312-1838ms, no rate limit",
+      "cfHeadersDetected": true,
+      "honeypotPathsBlocked": false
+    },
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "productCountMethod": {
+      "method": "sitemap",
+      "lastCount": 4605,
+      "sitemapUrls": [
+        "/xmlsitemap.php?type=products&page=1",
+        "/xmlsitemap.php?type=products&page=2"
+      ]
+    },
+    "expectedProductCount": 4605
+  }
+}

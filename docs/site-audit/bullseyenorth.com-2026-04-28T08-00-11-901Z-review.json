@@ -1,0 +1,94 @@
+{
+  "profilePath": "D:\\VScode\\Projects\\firearm-alert\\docs\\site-audit\\bullseyenorth.com-2026-04-27T12-00-00-000Z.json",
+  "domain": "bullseyenorth.com",
+  "timestamp": "2026-04-28T08:00:11.901Z",
+  "stages": [
+    {
+      "stage": 1,
+      "name": "Spec Compliance",
+      "verdict": "PASS",
+      "details": {
+        "validatorResult": {
+          "valid": true,
+          "score": 100,
+          "passed": [
+            "platform",
+            "hasWaf",
+            "expectedProductCount",
+            "catalogUrls",
+            "paginationPattern",
+            "perPage",
+            "adapterType",
+            "crawlers.watermark.method",
+            "sortVerification",
+            "wafType",
+            "wafLastProbedAt",
+            "productCountMethod",
+            "lastVerified",
+            "profileVersion",
+            "sortParam",
+            "extractionTested"
+          ],
+          "requiredFailures": [],
+          "warnings": []
+        }
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 2,
+      "name": "Live Walk Test",
+      "verdict": "PASS",
+      "details": {
+        "perUrl": [
+          {
+            "url": "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36",
+            "page1Products": 36,
+            "page1Slugs": [
+              "promag-sks-polymer-drum-magazine-black-762x39mm-5-50-rounds-drma48-37235",
+              "canuck-enforcer-shotgun-distressed-od-green-12-gauge-3-chamber-17-barrel-cenfdod1217-37363",
+              "canuck-enforcer-shotgun-distressed-bronze-12-gauge-3-chamber-17-barrel-cenfdbz1217-37361"
+            ],
+            "page2Products": 3,
+            "page2Slugs": [
+              "derya-tm22-cadet-semiauto-rifle-22lr-18-barrel-od-green-tm22cad18odg-37341",
+              "walkers-restrictor-rechargeable-earbuds-bluetooth-black-gwprstrbt-35766",
+              "walkers-recon-hybrid-communicator-bluetooth-walkie-talkie-gwprecmbtwt-36321"
+            ],
+            "page3Products": 36,
+            "paginationVerdict": "PASS"
+          }
+        ]
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 3,
+      "name": "Multi-Method Count",
+      "verdict": "PASS",
+      "details": {
+        "counts": {
+          "walk": 3270
+        },
+        "driftPairs": {
+          "walk-expected": 0
+        },
+        "availableMethods": 1
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 4,
+      "name": "Operator Review",
+      "verdict": "PASS",
+      "details": {
+        "mode": "default",
+        "stagesPass": true,
+        "approved": false
+      },
+      "blockingErrors": []
+    }
+  ],
+  "overallVerdict": "PASS",
+  "approvedForDbWrite": false
+}

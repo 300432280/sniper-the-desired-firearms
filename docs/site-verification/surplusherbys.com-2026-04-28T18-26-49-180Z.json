@@ -1,0 +1,190 @@
+{
+  "siteId": "cmlvesqby000e1a42eom7ltyx",
+  "domain": "surplusherbys.com",
+  "timestamp": "2026-04-28T18:26:49.180Z",
+  "durationMs": 27375,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "1/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/shop",
+            "status": 200,
+            "productCount": 21,
+            "sampleSlugs": [
+              "departments",
+              "bushpro-hip-pad-replacement",
+              "bushpro-replacement-straps"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "3 overlap",
+      "evidence": {
+        "page1Url": "https://www.surplusherbys.com/shop",
+        "page2Url": "https://www.surplusherbys.com/shop?%3Fpage%3D%7Bn%7D=2",
+        "page1First3": [
+          "departments",
+          "bushpro-hip-pad-replacement",
+          "bushpro-replacement-straps"
+        ],
+        "page2First3": [
+          "departments",
+          "bushpro-hip-pad-replacement",
+          "bushpro-replacement-straps"
+        ],
+        "overlapCount": 3
+      },
+      "reason": "All page2 first-3 slugs match page1 — pagination silently ignored (Mistake 26)"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "n/a (method C)",
+      "actual": "full-catalog-sweep",
+      "evidence": {},
+      "reason": "not-applicable-method-c"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 164,
+      "actual": null,
+      "evidence": {
+        "storedCount": 164,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": null,
+      "actual": null,
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": null,
+        "headers": {
+          "server": "Pepyaka",
+          "set-cookie": "sec-fetch-unsupported=1; Path=/; Secure; SameSite=Lax;,ssr-caching=cache#desc=miss#varnish=miss_miss#dc#desc=fastly_virginia-phy_g; max-age=20"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Surplus Herby's",
+    "notes": "Wix Stores (server: Pepyaka, sitemap generatedBy=WIX, Thunderbolt SPA). Root cause of DB=0: prior profile had 5 catalogUrls but 4 were sub-category pages whose pagination leaks to global /shop order, and /shop itself was listed without any proof of extraction. The bootstrap crawler likely extracted the same global 20 products from every URL then deduped — which would still populate 20 rows. Actual DB=0 means the crawl never completed (bootstrap stuck? Playwright flag? old FastSimon note suggests a previous session chased a wrong platform hypothesis). Verified fix: GenericRetailAdapter.extractCatalogProducts against /shop HTML extracts 20 clean product-page URLs + prices per page. Pages 1-9 = 164 unique products = exact sitemap count. No WAF (heavy 8-batch probe all 200, no cf-ray/x-sucuri, no rate-limit). No URL sort. No FastSimon/Algolia overlay (prior note was wrong). Catalog is mostly outdoor/fishing/workwear; firearms-related items are sparse (gun rack, ammo cases). Still alive per user confirmation.",
+    "budget": 20,
+    "domain": "surplusherbys.com",
+    "hasWaf": false,
+    "adapter": "generic-retail",
+    "perPage": 20,
+    "timeout": 15000,
+    "wafType": null,
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "No URL sort on Wix Stores. T1 sweeps all /shop pages each tick (9 pages, cheap).",
+        "method": "full-catalog-sweep"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML SSR (Wix Thunderbolt)",
+          "notes": "/shop?page=N returns server-rendered React markup with 20 product cards per page. GenericRetailAdapter selectors match.",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail",
+            "stock"
+          ]
+        },
+        {
+          "api": "OG meta tags on /product-page/{slug}",
+          "notes": "Per-product detail pages SSR og/product meta — usable for T2+ verification.",
+          "provides": [
+            "og:title",
+            "product:price:amount",
+            "product:price:currency",
+            "og:image",
+            "og:availability"
+          ]
+        }
+      ]
+    },
+    "platform": "wix-stores",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": null,
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/shop"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 29,
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "query",
+      "template": "?page={n}",
+      "startPage": 1,
+      "firstPageHasParam": false
+    },
+    "productCountMethod": {
+      "urls": [
+        "/store-products-sitemap.xml"
+      ],
+      "notes": "Wix-generated sitemap with one <url> per product, includes <lastmod>. 164 products as of 2026-04-08.",
+      "method": "sitemap-xml"
+    },
+    "expectedProductCount": 164
+  }
+}

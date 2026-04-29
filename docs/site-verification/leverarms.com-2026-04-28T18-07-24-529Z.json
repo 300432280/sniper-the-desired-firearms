@@ -1,0 +1,265 @@
+{
+  "siteId": "cmltxz6ll000789xazdnuh63l",
+  "domain": "leverarms.com",
+  "timestamp": "2026-04-28T18:07:24.528Z",
+  "durationMs": 37044,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "6 URLs, each returning ≥1 product",
+      "actual": "6/6 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/guns/",
+            "status": 200,
+            "productCount": 14,
+            "sampleSlugs": [
+              "mossberg-patriot-synthetic-stock-vortex-scoped-combo-308",
+              "chinese-type-56-sks-rifle-pre-65-blade-bayo-cal-7-62x39",
+              "ruger-10-22-wood-stock"
+            ]
+          },
+          {
+            "url": "/product-category/ammo/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "chinese-surplus-7-62x39mm-fmj-50rds",
+              "chinese-surplus-9mm-luger-ball-1050-rnd-spam-can-copy",
+              "chinese-surplus-7-62x51-nato-20rnds"
+            ]
+          },
+          {
+            "url": "/product-category/all-surplus/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "chinese-surplus-7-62x39mm-fmj-50rds",
+              "chinese-surplus-9mm-luger-ball-1050-rnd-spam-can-copy",
+              "chinese-surplus-7-62x51-nato-20rnds"
+            ]
+          },
+          {
+            "url": "/product-category/kit/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "lever-arms-trigger-lock",
+              "chinese-military-sks-ammunition-bandolier",
+              "lever-arms-combination-lock"
+            ]
+          },
+          {
+            "url": "/product-category/all-product/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "chinese-surplus-7-62x39mm-fmj-50rds",
+              "chinese-surplus-9mm-luger-ball-1050-rnd-spam-can-copy",
+              "chinese-surplus-7-62x51-nato-20rnds"
+            ]
+          },
+          {
+            "url": "/product-category/food/",
+            "status": 200,
+            "productCount": 11,
+            "sampleSlugs": [
+              "peak-refuel-breakfast-skillet-meal",
+              "peak-refuel-mountain-berry-granola",
+              "peak-refuel-beef-bean-chili-mac"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page2 returns 200",
+      "actual": "HTTP 404",
+      "evidence": {
+        "page1Url": "https://www.leverarms.com/product-category/guns/",
+        "page2Url": "https://www.leverarms.com/product-category/gunspage/2/",
+        "page1First3": [
+          "mossberg-patriot-synthetic-stock-vortex-scoped-combo-308",
+          "chinese-type-56-sks-rifle-pre-65-blade-bayo-cal-7-62x39",
+          "ruger-10-22-wood-stock"
+        ],
+        "page2First3": [],
+        "overlapCount": 0
+      },
+      "reason": "Page 2 returned HTTP 404"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.leverarms.com/product-category/guns/?orderby=date",
+        "withoutSortUrl": "https://www.leverarms.com/product-category/guns/",
+        "withSortFirst": "chiappa-ca612-12-ga-3-semi-auto-shotgun-un00694",
+        "withoutSortFirst": "mossberg-patriot-synthetic-stock-vortex-scoped-combo-308",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 965,
+      "actual": 964,
+      "evidence": {
+        "storedCount": 965,
+        "actualCount": 964,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 0
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f3801a40db79dab-YYZ",
+          "set-cookie": "__cf_bm=ZibP.9BlCifBr7faqd_hcen9n0lRYlirRtw7AJYbAgY-1777399644.8020508-1.0.1.1-JndAnH.VVbg7p4pm.3XID8ugWnryuCRjX7wcOH5dNoTCHLJk6pnitsuviFA79P4VIKsCaqAwAiP9bARo5LahqrTPxhdk.t6CqnM7RYjzKsrs9Nq6n9oEdORSdBG2JYSU; HttpOnly; Secure; Path=/; Domain=leverarms.com; Expires=Tue, 28 Apr 2026 18:37:24 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Lever Arms",
+    "notes": "woocommerce site. Uses default adapter behavior (no custom URLs). | 2026-04-12: wafType sucuri���cloudflare-passive (Mistake 35, 4/4 wrong Sucuri). needsPlaywright true→false (CF passive, no challenge). Count 962→965. perPage 20→16. 6 catalogUrls added. Date filter modified_after monotonic (40/94/965).",
+    "budget": 60,
+    "domain": "leverarms.com",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 16,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/guns/",
+      "/product-category/ammo/",
+      "/product-category/all-surplus/",
+      "/product-category/kit/",
+      "/product-category/all-product/",
+      "/product-category/food/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-12",
+    "siteCategory": "retailer",
+    "sortVerified": true,
+    "t1IntervalMin": 17,
+    "sortVerifiedAt": "2026-04-12",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive, rule-selective (blocks SQLi/XSS, passes all normal)",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-12",
+    "wafProbeEvidence": {
+      "cfRay": true,
+      "server": "cloudflare",
+      "xss403": true,
+      "sqli403": true,
+      "noChallenge": true
+    },
+    "paginationPattern": {
+      "type": "path",
+      "template": "page/{N}/"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product",
+      "wpRestTotal": 965,
+      "storeApiTotal": 357
+    },
+    "expectedInStockCount": 357,
+    "expectedProductCount": 965
+  }
+}

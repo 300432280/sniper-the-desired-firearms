@@ -1,0 +1,250 @@
+{
+  "siteId": "cmltxz8yk002889xalsez9158",
+  "domain": "northprosports.com",
+  "timestamp": "2026-04-28T18:10:40.997Z",
+  "durationMs": 47913,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "6 URLs, each returning ≥1 product",
+      "actual": "6/6 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/index.php?route=product/category&path=28",
+            "status": 200,
+            "productCount": 100,
+            "sampleSlugs": [
+              "index.php",
+              "index.php",
+              "index.php"
+            ]
+          },
+          {
+            "url": "/index.php?route=product/category&path=766",
+            "status": 200,
+            "productCount": 100,
+            "sampleSlugs": [
+              "index.php",
+              "index.php",
+              "index.php"
+            ]
+          },
+          {
+            "url": "/index.php?route=product/category&path=552",
+            "status": 200,
+            "productCount": 100,
+            "sampleSlugs": [
+              "index.php",
+              "index.php",
+              "index.php"
+            ]
+          },
+          {
+            "url": "/index.php?route=product/category&path=267",
+            "status": 200,
+            "productCount": 100,
+            "sampleSlugs": [
+              "index.php",
+              "index.php",
+              "index.php"
+            ]
+          },
+          {
+            "url": "/index.php?route=product/category&path=425",
+            "status": 200,
+            "productCount": 100,
+            "sampleSlugs": [
+              "index.php",
+              "index.php",
+              "index.php"
+            ]
+          },
+          {
+            "url": "/index.php?route=product/category&path=666",
+            "status": 200,
+            "productCount": 35,
+            "sampleSlugs": [
+              "index.php",
+              "index.php",
+              "index.php"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "3 overlap",
+      "evidence": {
+        "page1Url": "https://www.northprosports.com/index.php?route=product/category&path=28",
+        "page2Url": "https://www.northprosports.com/index.php?route=product%2Fcategory&path=28&page=2",
+        "page1First3": [
+          "index.php",
+          "index.php",
+          "index.php"
+        ],
+        "page2First3": [
+          "index.php",
+          "index.php",
+          "index.php"
+        ],
+        "overlapCount": 3
+      },
+      "reason": "All page2 first-3 slugs match page1 — pagination silently ignored (Mistake 26)"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "FAIL",
+      "expected": "first product slug differs with sort",
+      "actual": "same (sort has no effect)",
+      "evidence": {
+        "withSortUrl": "https://www.northprosports.com/index.php?route=product%2Fcategory&path=28&sort=p.date_added&order=DESC",
+        "withoutSortUrl": "https://www.northprosports.com/index.php?route=product%2Fcategory&path=28",
+        "withSortFirst": "index.php",
+        "withoutSortFirst": "index.php",
+        "counterControlUrl": "https://www.northprosports.com/index.php?route=product%2Fcategory&path=28&sort=p.price&order=ASC",
+        "counterControlFirst": "index.php"
+      },
+      "reason": "Sort parameter and counter-control both return same first product — sort may be silently ignored"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 1642,
+      "actual": null,
+      "evidence": {
+        "storedCount": 1642,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "WARN",
+      "expected": null,
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": null,
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f38066b8eac34dc-YYZ",
+          "set-cookie": "OCSESSID=c2acc600e5712e459f1f761813; path=/,OCSESSID=f76481391f763e2d9779fd26e3; path=/,language=en-gb; expires=Thu, 28-May-2026 18:10:40 GMT; Max-Age=2592000; path=/; domain=www.northprosports.com,currency=CAD; expires=Thu, 28-May-2026 18:10:40 GMT; Max-Age=2592000; path=/; domain=www.northprosports.com"
+        },
+        "httpStatus": 200
+      },
+      "reason": "No wafType stored but detected 'cloudflare-passive'"
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "North Pro Sports",
+    "notes": "OpenCart 2.x/3.x stock. Plain axios works (no WAF despite stale hasWaf=true flag). Sort dropdown shows only sort_order/name/price/model, but server accepts sort=p.date_added&order=DESC (verified: newest first product_id=24005 vs default 22944). Pagination via ?page=N. perPage=100. 6 parent categories cover ~1642 unique products (within 5% of notes-stated totals). Production GenericRetailAdapter extractCatalogProducts works via [class*=\"product-thumb\"] / [class*=\"product-layout\"] selectors already in place.",
+    "budget": 40,
+    "domain": "northprosports.com",
+    "hasWaf": false,
+    "adapter": "generic-retail",
+    "perPage": 100,
+    "timeout": 30000,
+    "wafType": null,
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "opencart",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "sort=p.date_added&order=DESC",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/index.php?route=product/category&path=28",
+      "/index.php?route=product/category&path=766",
+      "/index.php?route=product/category&path=552",
+      "/index.php?route=product/category&path=267",
+      "/index.php?route=product/category&path=425",
+      "/index.php?route=product/category&path=666"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": null,
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "no-waf-confirmed-apache-direct",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-08T06:14:49Z",
+    "wafProbeEvidence": {
+      "note": "OpenCart on direct Apache — no proxy WAF in front. Previous single-shot audit was correct by luck.",
+      "botUaBlocked": false,
+      "serverHeader": "Apache",
+      "xssRuleFired": false,
+      "sqliRuleFired": false,
+      "multiUaAllowed": true,
+      "rapidBurstStatus": "10/10 HTTP 200, 1100-1370ms, no rate limit",
+      "cfHeadersDetected": false,
+      "honeypotPathsBlocked": false,
+      "sucuriHeadersDetected": false
+    },
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "productCountMethod": {
+      "method": "catalog-walk"
+    },
+    "expectedProductCount": 1642
+  }
+}

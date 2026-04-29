@@ -1,0 +1,336 @@
+{
+  "siteId": "cmm0hekpc000010nd1t0oo5p3",
+  "domain": "greatnorthgunco.ca",
+  "timestamp": "2026-04-28T17:54:13.456Z",
+  "durationMs": 93346,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "14 URLs, each returning ≥1 product",
+      "actual": "14/14 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/shop/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "ross-rifle-pat-1907-bayonet-with-leather-scabbard-2",
+              "ross-rifle-pat-1907-bayonet-with-leather-scabbard",
+              "smith-khama-gunworks-birmingham-sxs-in-12ga"
+            ]
+          },
+          {
+            "url": "/product-category/used-firearms/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "smith-khama-gunworks-birmingham-sxs-in-12ga",
+              "remington-700-in-30-06-12",
+              "jj-sarasqueta-amazon-sxs-in-12ga"
+            ]
+          },
+          {
+            "url": "/product-category/new-firearms/",
+            "status": 200,
+            "productCount": 10,
+            "sampleSlugs": [
+              "knight-bighorn-western-thumbhole-ss-50",
+              "knight-mountaineer-ss-50-shadow-grey",
+              "knight-mountaineer-ss-50-nutmeg"
+            ]
+          },
+          {
+            "url": "/product-category/new-shotguns/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "iron-horse-sentry-12ga-pump-action-10-5-nr"
+            ]
+          },
+          {
+            "url": "/product-category/surplus/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "swiss-k31-10",
+              "argentine-mauser-model-1909-in-30-06",
+              "polish-mosin-nagant-m44-3"
+            ]
+          },
+          {
+            "url": "/product-category/new-scopes/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "bushnell-elite-4500-1-4x24-riflescope-multi-x",
+              "riton-3-primal-4-16x44",
+              "nikko-stirling-meteor-3-12x56"
+            ]
+          },
+          {
+            "url": "/product-category/used-scopes/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "vortex-viper-pst-gen-ii-2-10x32",
+              "pecar-berlin-variable-1-5-4-4",
+              "pecar-berlin-2-75x-2"
+            ]
+          },
+          {
+            "url": "/product-category/accessories-parts/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "muzzle-protector-for-schmidt-rubin-k11-k31",
+              "swiss-muzzle-protector-for-1889-1911-9611-1911-and-k11",
+              "lee-enfield-sling-2"
+            ]
+          },
+          {
+            "url": "/product-category/accessoriesparts/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "surplus-lee-enfield-303-stripper-clips",
+              "marlin-795-promag-25-round-magazine",
+              "pmag-m2-5-56-ar-magazine"
+            ]
+          },
+          {
+            "url": "/product-category/new-knives/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "civivi-brazen-flipper-folding-knife-d2-black-g10-black-2023c",
+              "civivi-mini-praxis-g10-black-c18026c-2",
+              "ruger-all-cylinders-folding-knife-g10-black-r2001k-crktr2001k"
+            ]
+          },
+          {
+            "url": "/product-category/bayonets/",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "ross-rifle-pat-1907-bayonet-with-leather-scabbard-2",
+              "ross-rifle-pat-1907-bayonet-with-leather-scabbard",
+              "m1-garand-bayonet-repro-with-m7-scabbard"
+            ]
+          },
+          {
+            "url": "/product-category/lee-enfield-parts/",
+            "status": 200,
+            "productCount": 17,
+            "sampleSlugs": [
+              "pro-mag-10-rd-magazine-enfield-1-mkii-303",
+              "lee-enfield-no4-handguard-combo",
+              "enfield-no1-safety-spring-screw"
+            ]
+          },
+          {
+            "url": "/product-category/mauser-parts/",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "swedish-mauser-trigger",
+              "swedish-mauser-cocking-piece",
+              "swedish-mauser-magazine-spring"
+            ]
+          },
+          {
+            "url": "/product-category/ljungman-parts/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "ljungman-ag-42-rear-band"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.greatnorthgunco.ca/shop/",
+        "page2Url": "https://www.greatnorthgunco.ca/shop/page/2",
+        "page1First3": [
+          "ross-rifle-pat-1907-bayonet-with-leather-scabbard-2",
+          "ross-rifle-pat-1907-bayonet-with-leather-scabbard",
+          "smith-khama-gunworks-birmingham-sxs-in-12ga"
+        ],
+        "page2First3": [
+          "antonio-zoli-model-1900-in-30-06-2",
+          "brno-sxs-in-12-gauge-6",
+          "baikal-ij-58ma-sxs-12ga-27"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://www.greatnorthgunco.ca/shop/?orderby=date",
+        "withoutSortUrl": "https://www.greatnorthgunco.ca/shop/",
+        "withSortFirst": "ross-rifle-pat-1907-bayonet-with-leather-scabbard-2",
+        "withoutSortFirst": "ross-rifle-pat-1907-bayonet-with-leather-scabbard-2",
+        "counterControlUrl": "https://www.greatnorthgunco.ca/shop/?orderby=price",
+        "counterControlFirst": "enfield-no1-safety-screw"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 4201,
+      "actual": 4250,
+      "evidence": {
+        "storedCount": 4201,
+        "actualCount": 4250,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "WARN",
+      "expected": "none",
+      "actual": null,
+      "evidence": {
+        "storedWafType": "none",
+        "detectedWafType": null,
+        "headers": {
+          "server": "LiteSpeed"
+        },
+        "httpStatus": 200
+      },
+      "reason": "Stored wafType='none' but HEAD probe detected no WAF vendor headers"
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Great North Gun Co.",
+    "notes": "woocommerce site. 2026-04-03: 3691 products wrongly deactivated by Store API verify (not-found false positives). Reactivated. Switched to detail-page verification. 2026-04-07 audit: WP REST x-wp-total=4201 (authoritative). HTML /shop/ exposes only ~480 products (20 pages * 24/page) due to catalog_visibility settings — bootstrap/T1 uses WP REST API which sees all 4201; catalogUrls are HTML fallback only. Pagination verified path-type (/shop/page/2/, /shop/page/3/ return distinct products; lastPage marker = 20). Sort <select> options: popularity, date, price, price-desc; orderby=date is the date sort (Woo default order is desc). api-date-since-watermark verified working (?after=2026-01-01 returns x-wp-total). productCountMethod wp-rest-header verified.",
+    "budget": 90,
+    "domain": "greatnorthgunco.ca",
+    "hasWaf": false,
+    "adapter": "woocommerce",
+    "perPage": 24,
+    "timeout": 15000,
+    "wafType": "none",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page",
+        "verifyBehavior": {
+          "notes": "Store API unreliable for this site — switched to detail-page verification. Products are verified by visiting actual URL.",
+          "onFound": "update-all-fields",
+          "canDetectDeletion": true
+        }
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/shop/",
+      "/product-category/used-firearms/",
+      "/product-category/new-firearms/",
+      "/product-category/new-shotguns/",
+      "/product-category/surplus/",
+      "/product-category/new-scopes/",
+      "/product-category/used-scopes/",
+      "/product-category/accessories-parts/",
+      "/product-category/accessoriesparts/",
+      "/product-category/new-knives/",
+      "/product-category/bayonets/",
+      "/product-category/lee-enfield-parts/",
+      "/product-category/mauser-parts/",
+      "/product-category/ljungman-parts/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": null,
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "path",
+      "perPage": 24,
+      "template": "/page/{N}"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product"
+    },
+    "expectedProductCount": 4201
+  }
+}

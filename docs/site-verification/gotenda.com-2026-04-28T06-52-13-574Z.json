@@ -1,0 +1,253 @@
+{
+  "siteId": "cmltxz6ca000089xa8f29w3yz",
+  "domain": "gotenda.com",
+  "timestamp": "2026-04-28T06:52:13.574Z",
+  "durationMs": 225850,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "8 URLs, each returning ≥1 product",
+      "actual": "0/8 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/firearms/",
+            "status": 307,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/ammunition/",
+            "status": 307,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/accessories/",
+            "status": 307,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/reloading/",
+            "status": 307,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/optic/",
+            "status": 307,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/knives/",
+            "status": 307,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/product-category/hunting-outdoor/",
+            "status": 307,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/shop/",
+            "status": 307,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "8/8 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 16440,
+      "actual": 16590,
+      "evidence": {
+        "storedCount": 16440,
+        "actualCount": 16590,
+        "methodUsed": "sitemap",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "sucuri",
+      "actual": "sucuri",
+      "evidence": {
+        "storedWafType": "sucuri",
+        "detectedWafType": "sucuri",
+        "headers": {
+          "server": "Sucuri/Cloudproxy",
+          "x-sucuri-id": "14017"
+        },
+        "httpStatus": 307
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "GoTenda",
+    "notes": "WooCommerce 16,268 products (WP REST + Store API x-wp-total verified 2026-04-07). Sitemap-index returns 16,269 (essentially identical, 1-product drift). DB has 16,303 active — slight excess vs live count is the ~35-product churn between sitemap regen and DB cleanup (the notes about 1,240 \"maintenance page\" discontinued products refer to entries that show out-of-stock template — the maintain crawler verifies them via Store API and skips deletion since canDetectDeletion=false; Playwright detail-page visit is the only authority). Sucuri WAF: cookie-cache flow works perfectly — Playwright solves challenge once, cookies cached in Redis 30min, all subsequent HTTP+API calls reuse them. Pagination VERIFIED 2026-04-07: path-style /page/N/ — ?page=N is silently ignored by the theme (returns page 1 content, classic WP wrap-around bug). Sort VERIFIED 2026-04-07: default category listing is already date-desc; sortParam set to ?orderby=date&order=desc explicitly for navigate-from-watermark safety. ?after= filter on /wp-json/wp/v2/product confirmed working (returned x-wp-total=840 for after=2026-01-01) — api-date-since-watermark is the authoritative T1 path; HTML catalog walking is fallback only. catalogUrls: 7 firearm-relevant categories + /shop/ retained as safety net. /shop/ overlap test was inconclusive (above-the-fold lazy-load only exposes 5-6 product hrefs per category page from server-rendered HTML), so /shop/ kept to guarantee coverage of any uncategorized products on a 16k-product site.",
+    "budget": 180,
+    "domain": "gotenda.com",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 100,
+    "timeout": 30000,
+    "wafType": "sucuri",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API",
+          "notes": "Uses include=<ids>, needs WAF cookies, 30s timeout",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date&order=desc",
+    "hasCaptcha": true,
+    "catalogUrls": [
+      "/product-category/firearms/",
+      "/product-category/ammunition/",
+      "/product-category/accessories/",
+      "/product-category/reloading/",
+      "/product-category/optic/",
+      "/product-category/knives/",
+      "/product-category/hunting-outdoor/",
+      "/shop/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Store API works with cached Sucuri cookies. No Playwright needed per-request.",
+      "steps": [
+        "Solve Sucuri JS challenge via Playwright once",
+        "Cache cookies in Redis (key: waf-cookies:{domain})",
+        "Reuse cookies for all HTTP/API calls",
+        "Re-solve on 403 or cookie expiry"
+      ],
+      "method": "cookie-cache",
+      "cookieTtlMinutes": 30,
+      "storeApiAvailable": true
+    },
+    "needsPlaywright": true,
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}"
+    },
+    "productCountMethod": {
+      "urls": [
+        "/product-sitemap.xml",
+        "/product-sitemap2.xml",
+        "/product-sitemap3.xml",
+        "/product-sitemap4.xml",
+        "/product-sitemap5.xml",
+        "/product-sitemap6.xml",
+        "/product-sitemap7.xml",
+        "/product-sitemap8.xml",
+        "/product-sitemap9.xml",
+        "/product-sitemap10.xml",
+        "/product-sitemap11.xml",
+        "/product-sitemap12.xml",
+        "/product-sitemap13.xml",
+        "/product-sitemap14.xml",
+        "/product-sitemap15.xml",
+        "/product-sitemap16.xml",
+        "/product-sitemap17.xml"
+      ],
+      "method": "sitemap-index"
+    },
+    "enrichmentChunkSize": 50,
+    "expectedProductCount": 16440
+  }
+}

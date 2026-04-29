@@ -1,0 +1,284 @@
+{
+  "siteId": "cmlvesqzl000y1a426cxtl783",
+  "domain": "irunguns.ca",
+  "timestamp": "2026-04-28T18:04:13.600Z",
+  "durationMs": 49649,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "11 URLs, each returning ≥1 product",
+      "actual": "11/11 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product.php?departments=Rifles",
+            "status": 200,
+            "productCount": 13,
+            "sampleSlugs": [
+              "product_detail.php",
+              "product_detail.php",
+              "product_detail.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Handguns",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "content.php",
+              "content.php",
+              "content.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Shotgun",
+            "status": 200,
+            "productCount": 16,
+            "sampleSlugs": [
+              "product_detail.php",
+              "product_detail.php",
+              "product_detail.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Previously_Enjoyed_Guns_AND_Accessories",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "product_detail.php",
+              "product_detail.php",
+              "product_detail.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Ammunition",
+            "status": 200,
+            "productCount": 7,
+            "sampleSlugs": [
+              "product_detail.php",
+              "product_detail.php",
+              "product_detail.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Optics",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "product_detail.php",
+              "product_detail.php",
+              "product_detail.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Parts_AND_Gear",
+            "status": 200,
+            "productCount": 28,
+            "sampleSlugs": [
+              "product_detail.php",
+              "product_detail.php",
+              "product_detail.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Magazines",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "product_detail.php",
+              "product_detail.php",
+              "product_detail.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Knives",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "content.php",
+              "content.php",
+              "content.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Clothing",
+            "status": 200,
+            "productCount": 8,
+            "sampleSlugs": [
+              "product_detail.php",
+              "product_detail.php",
+              "product_detail.php"
+            ]
+          },
+          {
+            "url": "/product.php?departments=Custom_Engraving",
+            "status": 200,
+            "productCount": 4,
+            "sampleSlugs": [
+              "content.php",
+              "content.php",
+              "content.php"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "FAIL",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "3 overlap",
+      "evidence": {
+        "page1Url": "https://www.irunguns.ca/product.php?departments=Rifles",
+        "page2Url": "https://www.irunguns.ca/product.php?departments=Rifles&page=2",
+        "page1First3": [
+          "product_detail.php",
+          "product_detail.php",
+          "product_detail.php"
+        ],
+        "page2First3": [
+          "product_detail.php",
+          "product_detail.php",
+          "product_detail.php"
+        ],
+        "overlapCount": 3
+      },
+      "reason": "All page2 first-3 slugs match page1 — pagination silently ignored (Mistake 26)"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "sortParam defined",
+      "actual": "empty/missing",
+      "evidence": {},
+      "reason": "No sortParam in siteProfile"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 84,
+      "actual": null,
+      "evidence": {
+        "storedCount": 84,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "FAIL",
+      "expected": "sucuri-passive",
+      "actual": "sucuri",
+      "evidence": {
+        "storedWafType": "sucuri-passive",
+        "detectedWafType": "sucuri",
+        "headers": {
+          "server": "Sucuri/Cloudproxy",
+          "x-sucuri-id": "20010",
+          "set-cookie": "sitevisited=web; expires=Tue, 28 Apr 2026 19:04:13 GMT; Max-Age=3600; path=/,PHPSESSID=023fac2ce20d61312d67e228b62ec8af; expires=Wed, 29 Apr 2026 18:04:13 GMT; Max-Age=86400; path=/"
+        },
+        "httpStatus": 200
+      },
+      "reason": "WAF vendor mismatch: stored='sucuri-passive', detected='sucuri' (Mistake 35)"
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "iRunGuns",
+    "notes": "Custom PHP catalog (irg_products MySQL backend exposed via product.php?departments=X). Categories render the FULL result set server-side into <ul id=\"content\"> and use jPages client-side pagination (perPage:12) — there is NO server-side pagination via URL params (paginationPattern: null, perPage: 100 so crawler never tries next-page). No sitemap, no JSON API. Plain axios GET with rotated desktop UA returns 200 + full HTML for all department URLs — no Playwright needed, no captcha, Sucuri is passive (server: Sucuri/Cloudproxy, x-sucuri-id: 20010). Sort: there is NO <select> for sort or order on category pages — only filter selects (department/category/manufacturer/model/calibre/classes). No URL sort param exists (sortParam: null). BUT natural DOM order on /product.php?departments=X is p.id DESC (newest first). Verified on 2026-04-07 by cross-referencing: GET DOM first product slug on Rifles = \"glenfield-model-a-moss-green-308-win-20-barrel-4-rounds\" matches the previously-captured POST /product_filter.php endpoint baseline first slug (which had no ORDER BY and therefore used the server-side default = p.id DESC). Same first slug on both paths → same ordering → newest-first proven. Because page 1 is newest-first via natural order, crawlers.watermark.method = navigate-from-watermark. The T1 cursor is the URL slug of the first product on page 1 of each catalog URL (stored in lastWatermarkUrl). GET path was chosen over the embedded POST /product_filter.php endpoint because plain GET already returns every in-stock product — see playbook Mistake 16 (do not follow embedded AJAX/SQL if GET already works). The ~1,760 OOS-only products that only a modified POST-SQL can see are irrelevant for this app (no back-in-stock alerts possible for products never catalogued). Cursor based on p.id was rejected because p.id is server-side only — iRunGuns product URLs are /product_detail.php?p=<slug> where p is a string slug not a numeric id. See playbook Mistake 17. subcategory.php?parent=Firearms is a NAVIGATION/landing page (sub-category links only, 0 product cards) — NOT a product listing. Not in catalogUrls. In-stock counts per dept verified 2026-04-07 via \"Showing N result\" markers: Rifles=11, Handguns=0, Shotgun=12, Previously_Enjoyed=3, Ammunition=3, Optics=4, Parts_AND_Gear=24, Magazines=22, Clothing=4, Knives=0, Custom_Engraving=0 → 83 total. Production GenericRetailAdapter extracts 87 unique URLs across all 11 dept pages (slight overcount from related/featured blocks is expected and acceptable). Site filters by location_id=2 and pi.quantity>0 in embedded SQL — only in-stock items at that warehouse appear.",
+    "budget": 20,
+    "domain": "irunguns.ca",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 100,
+    "timeout": 30000,
+    "wafType": "sucuri-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "custom-php",
+    "searchUrl": "/product.php?product_name={keyword}",
+    "sortParam": null,
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product.php?departments=Rifles",
+      "/product.php?departments=Handguns",
+      "/product.php?departments=Shotgun",
+      "/product.php?departments=Previously_Enjoyed_Guns_AND_Accessories",
+      "/product.php?departments=Ammunition",
+      "/product.php?departments=Optics",
+      "/product.php?departments=Parts_AND_Gear",
+      "/product.php?departments=Magazines",
+      "/product.php?departments=Knives",
+      "/product.php?departments=Clothing",
+      "/product.php?departments=Custom_Engraving"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Sucuri Cloudproxy in passive mode (server: Sucuri/Cloudproxy, x-sucuri-id present) but no challenge — plain axios with default UA returns 200 with full HTML for all category pages.",
+      "method": "none-required"
+    },
+    "needsPlaywright": false,
+    "paginationPattern": null,
+    "productCountMethod": {
+      "notes": "Sum the \"Showing N result\" string from each dept page; HTML is fully server-rendered.",
+      "method": "sum-showing-result-markers"
+    },
+    "expectedProductCount": 84
+  }
+}

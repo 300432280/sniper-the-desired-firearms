@@ -1,0 +1,367 @@
+{
+  "siteId": "cmltxz77r000q89xaoawg2lsl",
+  "domain": "canadafirstammo.ca",
+  "timestamp": "2026-04-28T07:09:55.390Z",
+  "durationMs": 42137,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "10 URLs, each returning ≥1 product",
+      "actual": "10/10 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/product-category/shop-all/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "atrs-custom-338-lapua-ackley-improved",
+              "barnaul-55-gr-223-20-rounds",
+              "barnes-defense-buckshot-20-gauge"
+            ]
+          },
+          {
+            "url": "/product-category/clearance/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "barnaul-55-gr-223-20-rounds",
+              "barnes-defense-buckshot-20-gauge",
+              "barnes-vor-tx-450-bushmaster"
+            ]
+          },
+          {
+            "url": "/product-category/accessories/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "beretta-eyes-ears-combo",
+              "canadian-handmade-bow-slings",
+              "canadian-handmade-hunting-totes-lanyards"
+            ]
+          },
+          {
+            "url": "/product-category/ammunition/",
+            "status": 200,
+            "productCount": 11,
+            "sampleSlugs": [
+              "barnaul-55-gr-223-20-rounds",
+              "barnes-defense-buckshot-20-gauge",
+              "barnes-vor-tx-450-bushmaster"
+            ]
+          },
+          {
+            "url": "/product-category/accessoriesoptics/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "gsci-crf-1200a-compact-laser-rangefinder",
+              "gsci-hmd-800-mod-ultra-portable-head-mounted-display",
+              "gsci-j-arm-adapter"
+            ]
+          },
+          {
+            "url": "/product-category/firearms/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "atrs-custom-338-lapua-ackley-improved",
+              "bear-arms-grizz-lever-action-12-gauge",
+              "bergara-b-14-timber"
+            ]
+          },
+          {
+            "url": "/product-category/plates-apparel/",
+            "status": 200,
+            "productCount": 9,
+            "sampleSlugs": [
+              "canada-first-ammo-hat",
+              "canada-first-ammo-patch",
+              "canada-first-hoodie"
+            ]
+          },
+          {
+            "url": "/product-category/reloading/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "harvey-deprimer-extra-pin",
+              "unis-ginex-4-5-3-p1-small-pistol-primers",
+              "unis-ginex-4-5-3-p3-small-rifle-primers"
+            ]
+          },
+          {
+            "url": "/product-category/apparel/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "no-name-plate-carrier-size-small-colour-black",
+              "used-tag-fde-plate-carrier-l-xl"
+            ]
+          },
+          {
+            "url": "/product-category/training/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "shooting-fundamentals-course-1",
+              "used-tag-fde-plate-carrier-l-xl"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.canadafirstammo.ca/product-category/shop-all/",
+        "page2Url": "https://www.canadafirstammo.ca/product-category/shop-all/page/2/",
+        "page1First3": [
+          "atrs-custom-338-lapua-ackley-improved",
+          "barnaul-55-gr-223-20-rounds",
+          "barnes-defense-buckshot-20-gauge"
+        ],
+        "page2First3": [
+          "canadian-handmade-bow-slings",
+          "canadian-handmade-hunting-totes-lanyards",
+          "canadian-handmade-paracord-slings"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.canadafirstammo.ca/product-category/shop-all/?orderby=date",
+        "withoutSortUrl": "https://www.canadafirstammo.ca/product-category/shop-all/",
+        "withSortFirst": "used-tag-fde-plate-carrier-l-xl",
+        "withoutSortFirst": "atrs-custom-338-lapua-ackley-improved",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 962,
+      "actual": 962,
+      "evidence": {
+        "storedCount": 962,
+        "actualCount": 962,
+        "methodUsed": "wp-rest-header",
+        "driftPct": 0
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f343e85a80092c6-YYZ",
+          "set-cookie": "zinrelo_cookie=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZW1iZXJfaWQiOmZhbHNlLCJlbWFpbF9hZGRyZXNzIjpmYWxzZSwiZmlyc3RfbmFtZSI6ZmFsc2UsImxhc3RfbmFtZSI6ZmFsc2UsInBob25lX251bWJlciI6IiIsInByZWZlcnJlZF9sYW5ndWFnZSI6ImVuZ2xpc2giLCJhZGRyZXNzIjp7ImxpbmUxIjpmYWxzZSwibGluZTIiOmZhbHNlLCJjaXR5IjpmYWxzZSwic3RhdGUiOmZhbHNlLCJjb3VudHJ5IjpmYWxzZSwicG9zdGFsX2NvZGUiOmZhbHNlfSwiY3VzdG9tX2F0dHJpYnV0ZXMiOnsiTGFzdCB3ZWJzaXRlIHZpc2l0IHRpbWVzdGFtcCI6IjA0LzI4LzIwMjYiLCJFeHRlcm5hbCBtZW1iZXIgaWQiOjB9LCJleHAiOjE3NzczNTc2MzM0MDR9.ajq_nzbWsMlnpRJau8JjdG9Urlx6VlUPTCdXPM4jCoA; expires=Tue, 28 Apr 2026 06:32:13 GMT; Max-Age=300; path=/"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Canada First Ammo",
+    "notes": "WooCommerce site with Cloudflare passive (not Sucuri). API works without cookies. Dual API (WP REST + Store API) both accessible. Shop page redirects to /shop-2/. HTML perPage=12. Theme: Minimog.",
+    "budget": 60,
+    "domain": "canadafirstammo.ca",
+    "hasWaf": true,
+    "adapter": "woocommerce",
+    "perPage": 12,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "store-api",
+        "verifyBehavior": {
+          "notes": "Store API may not return all products due to pagination limits, caching, or visibility filters. Only Playwright detail-page visit can confirm deletion (HTTP 404).",
+          "onFound": "update-price-stock-thumbnail",
+          "onNotFound": "skip-leave-for-playwright",
+          "canDetectDeletion": false
+        },
+        "verifyEndpoint": "/wp-json/wc/store/v1/products"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": {
+          "priceEnrichment": "/wp-json/wc/store/v1/products",
+          "productDiscovery": "/wp-json/wp/v2/product"
+        },
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "WP REST API /wp-json/wp/v2/product",
+          "notes": "NO price or stock",
+          "provides": [
+            "title",
+            "url",
+            "thumbnail",
+            "categories",
+            "sourceId"
+          ]
+        },
+        {
+          "api": "WC Store API /wp-json/wc/store/v1/products",
+          "notes": "Enrichment step",
+          "provides": [
+            "price",
+            "regularPrice",
+            "stockStatus"
+          ]
+        }
+      ]
+    },
+    "platform": "woocommerce",
+    "searchUrl": "/?s={keyword}&post_type=product",
+    "sortParam": "?orderby=date",
+    "crawlPhase": "maintain",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/product-category/shop-all/",
+      "/product-category/clearance/",
+      "/product-category/accessories/",
+      "/product-category/ammunition/",
+      "/product-category/accessoriesoptics/",
+      "/product-category/firearms/",
+      "/product-category/plates-apparel/",
+      "/product-category/reloading/",
+      "/product-category/apparel/",
+      "/product-category/training/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-11",
+    "siteCategory": "retailer",
+    "sortVerified": {
+      "notes": "Sort honored on ALL tested category pages. Default != date on most pages. Price counter-control confirms different ordering.",
+      "method": "id-jump-3-outcome",
+      "results": {
+        "optics": {
+          "date": "12991",
+          "price": "12704",
+          "default": "12901",
+          "outcome": "honored"
+        },
+        "shop-2": {
+          "date": "30620",
+          "price": "8942",
+          "default": "10319",
+          "outcome": "honored"
+        },
+        "firearms": {
+          "date": "13296",
+          "price": "11997",
+          "default": "10319",
+          "outcome": "honored"
+        },
+        "ammunition": {
+          "date": "13365",
+          "price": "12527",
+          "default": "6922",
+          "outcome": "honored"
+        },
+        "accessories": {
+          "date": "30620",
+          "price": "?",
+          "default": "30620",
+          "outcome": "honored (default=newest for accessories)"
+        }
+      },
+      "verifiedAt": "2026-04-11"
+    },
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Cloudflare passive only. API endpoints and HTML pages all accessible without cookies or Playwright. No active WAF blocking detected.",
+      "method": "none",
+      "storeApiAvailable": true
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "cloudflare-passive",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-11",
+    "wafProbeEvidence": "server:cloudflare + cf-ray on ALL probes. No Sucuri headers found. All 8 batches returned 200. No active blocking detected.",
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}/",
+      "verified": "2026-04-11",
+      "firstPageHasParam": false
+    },
+    "paginationVerified": {
+      "method": "page1-vs-page2-first-product",
+      "results": {
+        "clearance": {
+          "overlap": false,
+          "page1First": "30620",
+          "page2First": "12476"
+        },
+        "ammunition": {
+          "overlap": false,
+          "page1First": "13365",
+          "page2First": "11833"
+        },
+        "accessories": {
+          "overlap": false,
+          "page1First": "30620",
+          "page2First": "13178"
+        }
+      },
+      "verifiedAt": "2026-04-11"
+    },
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product",
+      "verified": "2026-04-11",
+      "storeApiNote": "Store API returns in-stock only (132 vs 962 total)",
+      "storeApiTotal": 132
+    },
+    "expectedProductCount": 962
+  }
+}

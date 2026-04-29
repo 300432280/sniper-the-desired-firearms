@@ -1,0 +1,183 @@
+{
+  "siteId": "cmltxz8fb001s89xad0gg9exc",
+  "domain": "lockharttactical.com",
+  "timestamp": "2026-04-28T18:08:11.018Z",
+  "durationMs": 23043,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "1/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/recent",
+            "status": 200,
+            "productCount": 41,
+            "sampleSlugs": [
+              "ltac-conspiracy-stripped-lower-receiver",
+              "real-kit-cz-hk",
+              "real-kit-cz-beretta"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.lockharttactical.com/recent",
+        "page2Url": "https://www.lockharttactical.com/recent?limitstart=40",
+        "page1First3": [
+          "ltac-conspiracy-stripped-lower-receiver",
+          "real-kit-cz-hk",
+          "real-kit-cz-beretta"
+        ],
+        "page2First3": [
+          "select-safety-selector",
+          "select-trigger",
+          "select-handguard-length"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "sortParam defined",
+      "actual": "empty/missing",
+      "evidence": {},
+      "reason": "No sortParam in siteProfile"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 2460,
+      "actual": null,
+      "evidence": {
+        "storedCount": 2460,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f3802c4ad1f61e9-YYZ",
+          "set-cookie": "92215371ac5eadfccb1358f626f8ace2=175b956f6ae188a466277e0789cf7294; path=/; secure; HttpOnly"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Lockhart Tactical",
+    "notes": "HikaShop (Joomla) on Cloudflare passive (cf-ray, no challenge). Plain HTTP works with desktop UA — no Playwright needed. Sort discovery: HikaShop sort form is POST-only with hidden filter_order_* fields keyed by Itemid; default sort is product_hit DESC (popularity), not date. GET sort params are ignored. RSS feed at /products/type-rss?format=feed confirmed newest-first by created date. KEY FINDING: site itself exposes /recent (\"Newest Releases\") which is a HikaShop listing pre-configured by created DESC — first slug matches RSS first slug exactly. This makes /recent the canonical T1 watermark stream with no sortParam needed. Pagination: offset-query via ?limitstart=N (perPage 40 default, last offset=2440 + 20 final products = 2460 expected). Product link patterns: /recent/product/SLUG, /products/product/SLUG, /clearance/product/SLUG.",
+    "budget": 40,
+    "domain": "lockharttactical.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 40,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "/recent is the date-sorted listing — DOM is created DESC. No sortParam needed.",
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "hikashop-joomla",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": null,
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/recent"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Cloudflare passive only — no challenge. Standard desktop UA works.",
+      "steps": [
+        "Use desktop Chrome UA",
+        "No cookies needed",
+        "No Playwright needed"
+      ],
+      "method": "plain-http-desktop-ua"
+    },
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "offset-query",
+      "perPage": 40,
+      "template": "limitstart"
+    },
+    "userAgentOverride": null,
+    "productCountMethod": {
+      "notes": "Last offset on /recent = 2440, last page has 20 items → 2460 total.",
+      "method": "pagination-tail-probe"
+    },
+    "expectedProductCount": 2460
+  }
+}

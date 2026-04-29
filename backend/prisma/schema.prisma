@@ -285,6 +285,7 @@ model SiteHealthCheck {
   id             String        @id @default(cuid())
   siteId         String
   site           MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  checkType      String        @default("connectivity") // "connectivity" | "watchdog"
   isReachable    Boolean
   canScrape      Boolean
   responseTimeMs Int?

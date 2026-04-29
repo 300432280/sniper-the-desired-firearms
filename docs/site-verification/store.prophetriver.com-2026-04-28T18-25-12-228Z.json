@@ -1,0 +1,331 @@
+{
+  "siteId": "cmlvesq6b00081a4294m07gwr",
+  "domain": "store.prophetriver.com",
+  "timestamp": "2026-04-28T18:25:12.228Z",
+  "durationMs": 84941,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "12 URLs, each returning ≥1 product",
+      "actual": "12/12 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/rifles/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "consign-boyds-pro-varmint-stock-only-remington-700-long-action-textured-black-finish",
+              "consign-mdt-xrs-stock-only-remington-700-long-action-black-finish",
+              "consign-browning-243win-x-bolt-stainless-stalker-black-polymer-stock-matte-stainless-22barrel-c-w-sig-sauer-sierra-3bdx-4-5-14x44"
+            ]
+          },
+          {
+            "url": "/shotguns/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "beretta-ax800-suprema-waterproof-gun-case-54-peat-brun-fo971t260109om",
+              "beretta-ax800-suprema-gun-sling-w-swivels-peat-brun-sl241t260109om",
+              "rizzini-20ga-3-28-br110-limited-grade-2-5-turkish-walnut-stock-w-pistol-grip-bottom-game-scene-engraved-receiver-pheasant-black-cerakote-box-lock-automatic-ejectors-single-selective-trigger-s-n-133563"
+            ]
+          },
+          {
+            "url": "/ammunition/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "kent-20-ga-2-75-7-8oz-shot-6-steel-dove-precision-steel-25ct-k20sd24-6",
+              "kent-12-ga-2-75-1oz-shot-6-steel-dove-precision-steel-25ct-k12sd28-6",
+              "kent-410-ga-3-11-16oz-shot-7-5-ultimate-fastlead-high-performance-diamond-shot-25ct-k4103ufl19-7-5"
+            ]
+          },
+          {
+            "url": "/accessories/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "magpul-ms1-lite-sling-coyote-mag1312-coy",
+              "magpul-ms1-lite-sling-black-mag1312-blk",
+              "magpul-ms1-sling-multi-mission-sling-system-stealth-grey-mag513-gry"
+            ]
+          },
+          {
+            "url": "/optics-accessories/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "sightmark-laser-boresight-22lr-sm39021",
+              "sightmark-laser-boresight-12ga-sm39007",
+              "sightmark-laser-boresight-243-winchester-308-winchester-7-62x51-nato-sm39005"
+            ]
+          },
+          {
+            "url": "/rifle-scopes/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "zeiss-conquest-v4-1-4x24mm-sfp-capped-elevation-turret-30mm-tube-illuminated-60-plex-ret-522905-9960-000",
+              "used-athlon-midas-tac-6-24x50mm-dd-sf-30mm-aplr4-ffp-moa-riflescope-mfg-213076-new-in-box",
+              "hawke-optics-vantage-hd-30-1-8x24mm-sfp-30mm-tube-illum-circle-dot-ret-8x-14-311"
+            ]
+          },
+          {
+            "url": "/other-optics/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "sightmark-shade-3-5-28x30-thermal-riflescope-sm17005",
+              "sightmark-shade-2-16x15-thermal-riflescope-sm17004",
+              "pulsar-talion-xq35-pro-thermal-imaging-riflescope-pl76566u"
+            ]
+          },
+          {
+            "url": "/stocks/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "celik-arms-223rem-chimera-pb-223-adjustable-rear-stock-kit-ff-pb223-stock",
+              "bell-and-carlson-howa-mini-action-target-competition-w-adjustable-cheek-piece-olive-green-w-black-spider-webbing",
+              "bell-and-carlson-detachable-magazine-housing-for-tikka-rifles-0060-00"
+            ]
+          },
+          {
+            "url": "/reloading-components/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "starline-22-creedmoor-large-rifle-primer-100ct-3320",
+              "starline-25-06-remington-100ct-2630",
+              "starline-35-whelen-100ct-2640"
+            ]
+          },
+          {
+            "url": "/reloading-equipment/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "hornady-full-length-dies-50-alaskan-3-die-set-546586",
+              "hornady-full-length-dies-50-70-gov-t-3-die-set-546462",
+              "hornady-full-length-dies-470-nitro-express-3-1-4-546434"
+            ]
+          },
+          {
+            "url": "/knives/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "kershaw-bel-air-3-1-blade-cpm-cru-wear-micarta-handle-6105mc",
+              "rapala-essential-combo-pack-rtc-6p136c",
+              "rapala-combo-pack-rtc-6pfsc"
+            ]
+          },
+          {
+            "url": "/apparel/",
+            "status": 200,
+            "productCount": 20,
+            "sampleSlugs": [
+              "prophet-river-logo-trucker-hat-navy-w-caramel-mesh-caramel-logo",
+              "browning-cap-bold-black-with-gold-308058721",
+              "browning-cap-720-navy-308790951"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://store.prophetriver.com/rifles/",
+        "page2Url": "https://store.prophetriver.com/rifles/?page=2",
+        "page1First3": [
+          "consign-boyds-pro-varmint-stock-only-remington-700-long-action-textured-black-finish",
+          "consign-mdt-xrs-stock-only-remington-700-long-action-black-finish",
+          "consign-browning-243win-x-bolt-stainless-stalker-black-polymer-stock-matte-stainless-22barrel-c-w-sig-sauer-sierra-3bdx-4-5-14x44"
+        ],
+        "page2First3": [
+          "weatherby-300win-vanguard-stainless-arca-smu-black-polymer-monte-carlo-stock-with-grey-white-accents-stainless-24threaded-barrel-peak-44-arca-pic-rail-mfg-vc44300nr4t",
+          "weatherby-30-06sprg-vanguard-stainless-arca-smu-black-polymer-monte-carlo-stock-with-grey-white-accents-stainless-22threaded-barrel-peak-44-arca-pic-rail-mfg-vc44306sr2t",
+          "weatherby-270win-vanguard-stainless-arca-smu-black-polymer-monte-carlo-stock-with-grey-white-accents-stainless-24threaded-barrel-peak-44-arca-pic-rail-mfg-vc44270nr4t"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "first product slug differs with sort",
+      "actual": "same (honored-default-is-newest)",
+      "evidence": {
+        "withSortUrl": "https://store.prophetriver.com/rifles/?sort=newest",
+        "withoutSortUrl": "https://store.prophetriver.com/rifles/",
+        "withSortFirst": "consign-boyds-pro-varmint-stock-only-remington-700-long-action-textured-black-finish",
+        "withoutSortFirst": "consign-boyds-pro-varmint-stock-only-remington-700-long-action-textured-black-finish",
+        "counterControlUrl": "https://store.prophetriver.com/rifles/?sort=alphaasc",
+        "counterControlFirst": "accuracy-international-aics-magazine-338-lapua-5rnd"
+      },
+      "reason": "Sort honored — default ordering already equals newest (Mistake 29 honored-default-is-newest)"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 13766,
+      "actual": 13839,
+      "evidence": {
+        "storedCount": 13766,
+        "actualCount": 13839,
+        "methodUsed": "sitemap",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f381bb25a0c36d7-YYZ",
+          "set-cookie": "SF-CSRF-TOKEN=a4117b9e-127b-4924-86bc-a5decb99a88f; Path=/; Secure; SameSite=Strict,fornax_anonymousId=6b31a300-9869-467e-862e-9065305a2bd6; Expires=Thu, 27 Apr 2028 18:25:12 GMT; Path=/; Secure; SameSite=None,athena_short_visit_id=2773e7c4-f67d-4846-b84d-b2d90ce4e444:1777400712; Expires=Tue, 28 Apr 2026 18:55:12 GMT; Path=/; Secure; HttpOnly; SameSite=None,Shopper-Pref=8AC889A1A26E0F61CF07BFEDF4874F8C032A4CBB-1778005512448-x%7B%22cur%22%3A%22CAD%22%2C%22funcConsent%22%3Afalse%7D; Path=/; Secure; HttpOnly,SHOP_SESSION_TOKEN=30df6c8a-2a07-4e47-85d7-9afda6cd8ca4; Path=/; Secure; HttpOnly; SameSite=None,__cf_bm=S8ZMEiUXO6bdZiTnC20uUEoQAUyFKw7EnkR7wkIK4Vc-1777400712.0585885-1.0.1.1-4iSFw.jghUJQQwJ20MO75ocQnsyJXR8KRZ.GxySCYATN0lTpy2XD5CRlqBZt79gVT8jJUX7YaNH76pr4AhxhD0SO.9CS1tQsi_uO.gY.0EQxGoV_YKK1JqUovQdU2..2; HttpOnly; Secure; Path=/; Domain=store.prophetriver.com; Expires=Tue, 28 Apr 2026 18:55:12 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Prophet River",
+    "notes": "BigCommerce Stencil. Store ID s-dcynby20nc. 12 productive category streams covering ~13,766 products (sitemap ground truth). /categories.php is a category directory landing page with ~120 featured products — NOT a universal product endpoint. /new-products/ and /back-in-stock-price-drops/ render 0 products via static HTML (JS-hydrated widgets) — dropped.",
+    "budget": 40,
+    "domain": "store.prophetriver.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 20,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "bigcommerce-stencil",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "?sort=newest",
+    "crawlPhase": "bootstrap",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/rifles/",
+      "/shotguns/",
+      "/ammunition/",
+      "/accessories/",
+      "/optics-accessories/",
+      "/rifle-scopes/",
+      "/other-optics/",
+      "/stocks/",
+      "/reloading-components/",
+      "/reloading-equipment/",
+      "/knives/",
+      "/apparel/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Cloudflare passive (cf-ray present on all 200s) — no challenges triggered by 8-batch probe. Static HTTP sufficient.",
+      "steps": [
+        "Direct HTTPS GET with standard browser UA",
+        "Playwright fallback available if 403/challenge later"
+      ],
+      "method": "direct-http"
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "passive-cloudflare-no-challenge",
+    "needsPlaywright": false,
+    "wafLastProbedAt": "2026-04-08T20:27:38Z",
+    "wafProbeEvidence": {
+      "cfRay": "9e94039e1f9692c6-YYZ",
+      "noUaOk": true,
+      "burstOk": "10x200",
+      "allBatches200": true,
+      "honeypotBlocks": "/wp-admin/,/.env,/.git/config all 403 (path-selective, pre-origin)",
+      "sqliXssNoBlock": true
+    },
+    "paginationPattern": {
+      "type": "query",
+      "template": "page"
+    },
+    "productCountMethod": {
+      "url": "https://store.prophetriver.com/xmlsitemap.php",
+      "pages": [
+        {
+          "url": "/xmlsitemap.php?type=products&page=1",
+          "urls": 10000
+        },
+        {
+          "url": "/xmlsitemap.php?type=products&page=2",
+          "urls": 3766
+        }
+      ],
+      "method": "sitemap-xml",
+      "overlapPct": 1.1,
+      "lastMeasuredAt": "2026-04-08",
+      "walkedTotalEst": 13916
+    },
+    "expectedProductCount": 13766
+  }
+}

@@ -1,0 +1,421 @@
+{
+  "siteId": "cmlvesqv4000v1a422uagtvc0",
+  "domain": "gagnonsports.com",
+  "timestamp": "2026-04-28T17:48:53.334Z",
+  "durationMs": 77482,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "22 URLs, each returning ≥1 product",
+      "actual": "22/22 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/hunting/ammunition/centerfire-ammo/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "browning-30-30-max-point-150-gr-ammunition.html",
+              "hornady-65-prc-143gr-eld-x-precision-hunter-ammo.html",
+              "usa-ready-223-rem-62-gr-open-tip-20rd.html"
+            ]
+          },
+          {
+            "url": "/hunting/ammunition/handgun/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "hornady-leverevolution-45-70-govt-ammo-250gr-monof.html",
+              "cci-independence-40-s-w-180gr-fmj-bulk-500-count.html",
+              "hor-40sw-180gr-jhp-xtp.html"
+            ]
+          },
+          {
+            "url": "/hunting/ammunition/rimfire-ammo/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "hornady-17-hmr-155-grain-ntx-lead-free-2525-fps-50.html",
+              "cci-17-hmr-gamepoint-jacketed-soft-point-20gr-2375.html",
+              "cci-22-long-rifle-green-tag-precision-rimfire-ammu.html"
+            ]
+          },
+          {
+            "url": "/hunting/ammunition/shotgun-ammo/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "copy-of-winchester-aa-target-load-28-ga-2-3-4-9-ca.html",
+              "remington-10ga-nitro-steel-2-35-1-3-4-oz-box-of-25.html",
+              "federal-f103f-rs-10ga-power-shok-rifled-slug-box-o.html"
+            ]
+          },
+          {
+            "url": "/hunting/optics/scopes-binoculars/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "vortex-crossfire-hd-6-18x50-mm-1-in-tube-rifle-sco.html",
+              "vortex-defender-xl-2-moa-red-dot.html",
+              "vortex-viper-shotgun-enclosed-micro-red-dot-3-moa.html"
+            ]
+          },
+          {
+            "url": "/hunting/optics/accessories/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "hawke-1-extension-rings-30mm-high.html",
+              "warne-1-piece-mountain-tech-tactical-rail-savage-l.html",
+              "warne-1-piece-mountain-tech-tactical-rail-savage-s.html"
+            ]
+          },
+          {
+            "url": "/hunting/shooting-accessories/ammo-storage/",
+            "status": 200,
+            "productCount": 6,
+            "sampleSlugs": [
+              "ammo-box.html",
+              "plano-fall-deep-field-tactical-case.html",
+              "midwest-industries-inc-lever-stock-shell-holder-pl.html"
+            ]
+          },
+          {
+            "url": "/hunting/shooting-accessories/dog-training-supplies/",
+            "status": 200,
+            "productCount": 3,
+            "sampleSlugs": [
+              "hallmark-launcher-blank-ammo-green-light-load-150.html",
+              "mud-river-canvas-3-dog-bumper-white-3-pack.html",
+              "acme-silent-dog-whistle.html"
+            ]
+          },
+          {
+            "url": "/hunting/shooting-accessories/eye-ear-protection/",
+            "status": 200,
+            "productCount": 21,
+            "sampleSlugs": [
+              "copy-of-walkers-digital-razor-atacs-ix-camo-electr.html",
+              "walkers-gwp-drsem-aix-digital-razor-atacs-ix-camo.html",
+              "walker-gwp-rsem-carb-razor-slim.html"
+            ]
+          },
+          {
+            "url": "/hunting/shooting-accessories/gun-accessories/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "weaver-48504-base-61m.html",
+              "gamo-10x-gen2-quick-shot-air-rifle-magazine-177-ca.html",
+              "savage-116c-bottom-release-latch-long-action-magaz.html"
+            ]
+          },
+          {
+            "url": "/hunting/shooting-accessories/gun-maintenance/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "remington-premier-universal-lever-action-cleaning.html",
+              "g96-products-rifle-bore-cleaner-4-fl-oz-can.html",
+              "remington-sportsman-27pc-gun-cleaning-kit.html"
+            ]
+          },
+          {
+            "url": "/hunting/shooting-accessories/gun-parts/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "mossberg-front-sight-threaded.html",
+              "williams-3-gold-metal-shotgun-sight-46854940.html",
+              "williams-3-gold-metal-shotgun-sight.html"
+            ]
+          },
+          {
+            "url": "/hunting/shooting-accessories/gun-storage/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "axiom-30-mm-short-cable-loop-padlock-black.html",
+              "copy-of-nanuk-909-case-w-foam-yellow-1264-x-90-x-4.html",
+              "copy-of-nanuk-909-case-w-foam-black-1264-x-90-x-43.html"
+            ]
+          },
+          {
+            "url": "/hunting/shooting-accessories/miscellaneous-shooting-accessories/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "truglo-tru-see-splatter-target-turkey-12x12-6-pack.html",
+              "hunters-specialties-turkey-target-12-pack.html",
+              "hunter-specialties-turkey-tail-and-beard-mounting.html"
+            ]
+          },
+          {
+            "url": "/hunting/decoys/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "tanglefree-3d-slammer-sock-drake-mallard-12-pack-8.html",
+              "primos-69068-photoform-hen-turkey-decoy.html",
+              "avian-x-lcd-look-out-hen-decoy.html"
+            ]
+          },
+          {
+            "url": "/hunting/game-calls/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "quaker-boy-13611-magic-touch-glass.html",
+              "quaker-boy-13710-triplet-slate-call.html",
+              "hunters-specialties-box-call-chalk.html"
+            ]
+          },
+          {
+            "url": "/hunting/knives-tools/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "kershaw-camp-10-10-black-powder-coated-65mn-carbon.html",
+              "grohmann-1-original-design-stainless-blade-with-sh.html",
+              "grohmann-100-large-skinner-outdoor-dream-stainless.html"
+            ]
+          },
+          {
+            "url": "/hunting/reloading/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "sierra-22cal-224-dia-53gr-hollow-point-match-bulle.html",
+              "nosler-accubond-65mm-264-140gr-ab-spitzer-point-50.html",
+              "ramrod-accessories-pack-50-caliber-5-popular-tips.html"
+            ]
+          },
+          {
+            "url": "/archery/bows/",
+            "status": 200,
+            "productCount": 21,
+            "sampleSlugs": [
+              "bear-archery-titan-60-bow-set-25-29-gray.html",
+              "ragim-black-bear-recurve-58-30-rh.html",
+              "excalibur-crossbow-mag-max-350-with-tact-hunter-sc.html"
+            ]
+          },
+          {
+            "url": "/archery/arrows-accessories/",
+            "status": 200,
+            "productCount": 23,
+            "sampleSlugs": [
+              "excalibur-s5-replacement-pads.html",
+              "sevr-titanium-175-hybrid-broadhead-4bl-125gr-1pk.html",
+              "100-gr-exact-expandable-broadheads-3-pk.html"
+            ]
+          },
+          {
+            "url": "/sale/hunting-super-specials/new-used-guns/",
+            "status": 200,
+            "productCount": 24,
+            "sampleSlugs": [
+              "henry-repeating-arms-big-boy-all-weather-lever-act.html",
+              "beretta-a400-xtreme-plus-synthetic-20gax3-28bbl-se.html",
+              "copy-of-winchester-sx4-12ga-cantilever-buck-synthe.html"
+            ]
+          },
+          {
+            "url": "/previously-owned-merchandise/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "wildgame-encounter-xt-cellular-camera-34-mp-wgi-en.html"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.gagnonsports.com/hunting/ammunition/centerfire-ammo/",
+        "page2Url": "https://www.gagnonsports.com/hunting/ammunition/centerfire-ammo/page2.html?sort=newest",
+        "page1First3": [
+          "browning-30-30-max-point-150-gr-ammunition.html",
+          "hornady-65-prc-143gr-eld-x-precision-hunter-ammo.html",
+          "usa-ready-223-rem-62-gr-open-tip-20rd.html"
+        ],
+        "page2First3": [
+          "hornady-match-223-rem-73-gr-eld-match.html",
+          "hornady-82162-300-prc-225gr-eld-match-rifle-ammo.html",
+          "hornady-65-creedmore-143-gr-eld-x-precision-hunter.html"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.gagnonsports.com/hunting/ammunition/centerfire-ammo/?sort=newest",
+        "withoutSortUrl": "https://www.gagnonsports.com/hunting/ammunition/centerfire-ammo/",
+        "withSortFirst": "hornady-precision-hunter-300-win-mag-178gr-eldx-am.html",
+        "withoutSortFirst": "browning-30-30-max-point-150-gr-ammunition.html",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 2613,
+      "actual": 14711,
+      "evidence": {
+        "storedCount": 2613,
+        "actualCount": 14711,
+        "methodUsed": "sitemap",
+        "driftPct": 463
+      },
+      "reason": "Count drifted 463% (stored=2613, actual=14711)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37e681b968ebbc-YYZ",
+          "set-cookie": "session_id=09f1f54d990981f3d191094464bc3e7b; expires=Tue, 28-Apr-2026 18:18:48 GMT; Max-Age=1795; path=/; secure; HttpOnly; SameSite=none,COOKIELAW=optin; expires=Wed, 28-Apr-2027 17:48:53 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_SOCIAL=1; expires=Wed, 28-Apr-2027 17:48:53 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_STATS=1; expires=Wed, 28-Apr-2027 17:48:53 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_ADS=1; expires=Wed, 28-Apr-2027 17:48:53 GMT; Max-Age=31536000; path=/; secure; SameSite=none,__cf_bm=zn736z_WYrI_LasI3GiPRUjOGxpFURCilBD7EtOPivg-1777398533.3985186-1.0.1.1-T3lQzVhdt6s7hnyUfcZCQ3zDP5JLUsJ66fuwCnsztgzm41xbfR0FcgSB0KhAPa2M5LFCQ8N5Dg.25zDdrJo7s.8ChOwHjUdtnpQm16rhYHyPeVar8tqxuuLkJpbf3se4; HttpOnly; Secure; Path=/; Domain=www.gagnonsports.com; Expires=Tue, 28 Apr 2026 18:18:53 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Gagnon Sports",
+    "notes": "LightSpeed Classic (InStijl Dream Theme on Lightspeed Netherlands B.V.). Cloudflare passive — mobile iPhone Safari UA bypasses without challenge. Generator: shoplightspeed (cdn.shoplightspeed.com). Pagination is suffix-replace pageN.html (NOT ?page=N, which is silently ignored). Per-page = 24. ?sort=newest works AND survives pagination (verified page1 vs page2 sorted IDs differ from default). Site nav: parent categories (/hunting/, /hunting/ammunition/, /hunting/optics/, /hunting/shooting-accessories/, /archery/) all return 0 products — products live ONLY in leaf subcategories. Must enumerate leaves explicitly. No /firearms/ category exists. Firearm SKUs come from /sale/hunting-super-specials/new-used-guns/ (46) and /previously-owned-merchandise/ (1). All other firearm-relevant inventory is parts/accessories/ammo/optics under /hunting/. Whole-store sitemap = 15,280 entries (all departments incl. fishing/ice-fishing). Firearm-relevant walk = 2,613 unique products across 22 leaf catalogUrls. /hunting/ammunition/collectors-cartridges/ exists in nav but returned 0 products on walk — dropped. lastVerified 2026-04-07.\n\n[2026-04-09] Retro-checked for Mistake 26 (LightSpeed ?page=N silent ignore). CONFIRMED AFFECTED: ?page=2 returns page-1 products. Fixed paginationPattern.match from \".html\" to \"?sort=newest\" with template \"page{N}.html?sort=newest\". Verified page2.html?sort=newest returns different products from page 1 with zero overlap.",
+    "budget": 40,
+    "domain": "gagnonsports.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 24,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "lightspeed-ecom",
+    "searchUrl": "/search/{keyword}/",
+    "sortParam": "?sort=newest",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/hunting/ammunition/centerfire-ammo/",
+      "/hunting/ammunition/handgun/",
+      "/hunting/ammunition/rimfire-ammo/",
+      "/hunting/ammunition/shotgun-ammo/",
+      "/hunting/optics/scopes-binoculars/",
+      "/hunting/optics/accessories/",
+      "/hunting/shooting-accessories/ammo-storage/",
+      "/hunting/shooting-accessories/dog-training-supplies/",
+      "/hunting/shooting-accessories/eye-ear-protection/",
+      "/hunting/shooting-accessories/gun-accessories/",
+      "/hunting/shooting-accessories/gun-maintenance/",
+      "/hunting/shooting-accessories/gun-parts/",
+      "/hunting/shooting-accessories/gun-storage/",
+      "/hunting/shooting-accessories/miscellaneous-shooting-accessories/",
+      "/hunting/decoys/",
+      "/hunting/game-calls/",
+      "/hunting/knives-tools/",
+      "/hunting/reloading/",
+      "/archery/bows/",
+      "/archery/arrows-accessories/",
+      "/sale/hunting-super-specials/new-used-guns/",
+      "/previously-owned-merchandise/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Cloudflare cf-ray present but passive — no JS challenge. Mobile iPhone Safari UA returns full HTML over HTTP. Playwright not required.",
+      "steps": [
+        "Use iPhone Safari UA (userAgentOverride)",
+        "Plain HTTPS axios works for sitemap, category pages, product pages",
+        "No cookies / referer required"
+      ],
+      "method": "mobile-ua"
+    },
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "suffix-replace",
+      "match": "?sort=newest",
+      "notes": "[2026-04-09 Mistake 26 retro-fix] LightSpeed silently ignores ?page=N. Pagination ONLY works via pageN.html suffix. When sortParam (?sort=newest) is appended by getNewArrivalsUrls, the match must anchor on the sort segment so buildPaginatedUrl strips and re-adds it correctly. Prior match was \".html\" which failed when URL ended with \"?sort=newest\". Verified: ?page=2 returns page-1 products (silent ignore), page2.html?sort=newest returns correct page-2 products. | Original notes: LightSpeed Classic. Baseurl /category/ + page{N}.html suffix → /category/page2.html. Uses buildPaginatedUrl fallback branch (baseUrl does not end with .html, so template is appended directly). Verified 2026-04-07: page2.html returns different first product (\"Airgun Pointed Pellets\") from page1 (\"Browning 30-30\"). ?page=N, ?p=N, /page/2/ all silently return page 1 — do NOT use.",
+      "perPage": 24,
+      "template": "page{N}.html?sort=newest"
+    },
+    "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+    "productCountMethod": {
+      "notes": "Sitemap.xml is a single flat XML. Products are root-level slugs (single segment ending .html). 15,280 entries match — includes ALL departments (fishing, ice-fishing, hunting, archery, etc.). For firearm-relevant sweep, walk catalogUrls and dedupe instead.",
+      "method": "sitemap-flat",
+      "sitemapUrl": "/sitemap.xml",
+      "productPattern": "^/[^/]+\\.html$"
+    },
+    "expectedProductCount": 2613
+  }
+}

@@ -1,0 +1,275 @@
+{
+  "siteId": "cmm3v7tr20016o7a30d7xtkfx",
+  "domain": "fulcrum-outdoors.shoplightspeed.com",
+  "timestamp": "2026-04-28T17:46:41.882Z",
+  "durationMs": 42796,
+  "overallVerdict": "PASS",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "9 URLs, each returning ≥1 product",
+      "actual": "9/9 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/firearms/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "adler-rf224-tactical-22-lr-odg-117-barrel.html",
+              "crusader-arms-pnd-556-rifle-186-barrel-black.html",
+              "brigade-mfg-makasi-mk-15-556-nato-186-barrel-short.html"
+            ]
+          },
+          {
+            "url": "/shooting/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "federal-premium-7mm-prc-170-gr-terminal-ascent.html",
+              "mdt-feild-stock.html",
+              "bergara-b14-short-action-conv-kit.html"
+            ]
+          },
+          {
+            "url": "/fire-arm-accessories/",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "fenix-gl06-tactical-pistol-light.html",
+              "fenix-gl23r-green-laser-tactical-gun-light.html"
+            ]
+          },
+          {
+            "url": "/optics/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "athlon-helos-btr-gen2-4-20x50-aprs6-ffp-ir-mil-sco.html",
+              "athlon-midas-hmr-gen2-25-15x50-aplr-h2-sfp-ir.html",
+              "athlon-forerunner-6-24x50-ahlr1-ffp-moa.html"
+            ]
+          },
+          {
+            "url": "/custom-rifle-building/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "mdt-feild-stock.html",
+              "bergara-b14-short-action-conv-kit.html",
+              "pristine-midweight-sa-rh-480-bolt-face-stainless.html"
+            ]
+          },
+          {
+            "url": "/hunting/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "kcs-gopher-call.html",
+              "ete-combat-breaching-tool.html",
+              "primos-3-call-lanyard.html"
+            ]
+          },
+          {
+            "url": "/archery/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "barnett-tomcat-g3-red-youth-compound-bow.html",
+              "barnett-wildhawk-g3-green-youth-compound-bow.html",
+              "allen-vapor-rear-deploying-broadhead.html"
+            ]
+          },
+          {
+            "url": "/cool-stuff/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "umarex-secure-68p-68-cal-self-defense-air-pistol.html",
+              "crosman-airsoft-glow-in-the-dark-bbs-2000ct.html",
+              "byrna-sd-launcher.html"
+            ]
+          },
+          {
+            "url": "/camping/",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "bear-arms-stun-baton.html",
+              "skre-ridgeline-frame-pack.html",
+              "skre-timberline-pack.html"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://fulcrum-outdoors.shoplightspeed.com/firearms/",
+        "page2Url": "https://fulcrum-outdoors.shoplightspeed.com/firearms/page2.html?sort=newest",
+        "page1First3": [
+          "adler-rf224-tactical-22-lr-odg-117-barrel.html",
+          "crusader-arms-pnd-556-rifle-186-barrel-black.html",
+          "brigade-mfg-makasi-mk-15-556-nato-186-barrel-short.html"
+        ],
+        "page2First3": [
+          "weatherby-vanguard-stainless-arca-7mm-prc-24-barre.html",
+          "akdas-alcor-223-semi-auto-rifle-synthetic.html",
+          "savage-axis-2-gray-synthetic-stock-22-270-win.html"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://fulcrum-outdoors.shoplightspeed.com/firearms/?sort=newest",
+        "withoutSortUrl": "https://fulcrum-outdoors.shoplightspeed.com/firearms/",
+        "withSortFirst": "ruger-american-gen-2-204-ruger-burnt-bronze-and-gr.html",
+        "withoutSortFirst": "adler-rf224-tactical-22-lr-odg-117-barrel.html",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 3631,
+      "actual": 3652,
+      "evidence": {
+        "storedCount": 3631,
+        "actualCount": 3652,
+        "methodUsed": "sitemap",
+        "driftPct": 1
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37e34bbd9cab34-YYZ",
+          "set-cookie": "session_id=5363ac239bd8fd96d80045740c974d16; expires=Tue, 28-Apr-2026 18:16:36 GMT; Max-Age=1795; path=/; secure; HttpOnly; SameSite=none,COOKIELAW=optin; expires=Wed, 28-Apr-2027 17:46:42 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_SOCIAL=1; expires=Wed, 28-Apr-2027 17:46:42 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_STATS=1; expires=Wed, 28-Apr-2027 17:46:42 GMT; Max-Age=31536000; path=/; secure; SameSite=none,COOKIELAW_ADS=1; expires=Wed, 28-Apr-2027 17:46:42 GMT; Max-Age=31536000; path=/; secure; SameSite=none,__cf_bm=y54LLfhXhAcZkM6k_hvZQ9KtdEvxIy.jlezwHhOqivM-1777398401.8775747-1.0.1.1-zt1GDNjh.9KTBk._NZbBXcu6iEMa8cjSHwW.MNcDqJn.wE70HVAZKnmZ0Qd7M7e6X43UddDiZ1d.w2KmlKQpXEY6MaPO6UHR7AaC6X3wHbJMpW1ienwWFnXDH8SRulma; HttpOnly; Secure; Path=/; Domain=shoplightspeed.com; Expires=Tue, 28 Apr 2026 18:16:42 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Fulcrum Outdoors",
+    "notes": "LightSpeed eCom (hosted on shoplightspeed.com). No active WAF: plain HTTP with default desktop Chrome UA returns 200 on category, product, and sitemap pages. Cloudflare is passive CDN only (cf-ray header present, no challenge). | Product count source: /sitemap.xml filtered to ^/<slug>.html$ = 3631 products (sitemap has 4456 total locs including categories/brands). 5 random HEAD samples all 200. | Pagination: suffix-replace — /firearms/ → /firearms/page2.html → /firearms/page3.html ... Real anchor hrefs in the <nav class=\"pagination\"> block confirm this is the ONLY working pagination form. Query-style ?page= is silently ignored. | perPage verified = 12 products per category page. | Sort parameter: READ from actual HTML <select name=\"sort\" id=\"sortselect\">. Options: default, popular, newest, lowest, highest, asc, desc. Using value=\"newest\" → first 5 products on /firearms/ change from {crusader, akdas, adler-rf224, sks, adler-rf224} to {adler-ad500, weatherby-vanguard, akdas-alcor, savage-axis, savage-revel} — proves sort works. Sort also survives pagination: /firearms/page2.html?sort=newest first 5 differ from both unsorted page 2 AND sorted page 1. | CatalogUrls: final minimum-overlap list of 8 firearm-relevant categories. Walked with production GenericRetailAdapter — unique dedupe total = 1665 products. Per-category raw counts: firearms=355, shooting=720, fire-arm-accessories=2 (mostly-dead legacy category), optics=295, custom-rifle-building=59 (28 new — heavy overlap with shooting), hunting=186, archery=61, cool-stuff=18 (contains Byrna launcher + tactical items). | DROPPED categories (with reasons): /apparel/ (49, hunting clothing not firearm-relevant), /camping/ (286, general camping), /e-bikes/ (20, bikes), /smokers/ (25, BBQ pellet grills), /fishing/ (590, fishing), /clearance/ (0 products — empty overlay). Dropping these brings GRAND UNIQUE from 2612 (all 14) down to 1665 (firearm-relevant only). The gap to sitemap 3631 is primarily fishing+camping+apparel+smokers+ebikes (~970) which are intentionally excluded per project priorities. | Watermark method: navigate-from-watermark — sort=newest works end-to-end. | Previous DB count of 50 products vs expected 3631 (1.4%) was due to broken pagination (suffix-replace was never configured) combined with wrong productCountMethod (stream-page-count) and needsPlaywright:true forcing unnecessary Playwright fetches. All four are now corrected.\n\n[2026-04-07] Re-added /camping/ to catalogUrls after inspecting the 6 originally-dropped categories for firearm-adjacent products. /camping/ contains 2 unique firearm-related products not present in any other kept category: \"Streamlight TRL-1 HL Gun Light\" (weapon-mounted tactical light) and \"Bakcou Gun/Bow Rack\" (gun storage rack). The other 284 products are general camping gear, but walking the full category once per T1 cycle is the only reliable way to discover these 2 products. Other dropped categories (/apparel/, /e-bikes/, /smokers/, /fishing/, /clearance/) were re-verified to contain 0 unique firearm-related products (the /fishing/ \"sling/rod/barrel\" keyword matches were all fishing-specific false positives — fishing sling packs, fly rod holders, barrel swivels for tackle). /apparel/ is purely clothing (boots, jackets, gloves, socks) with 0 firearm items.\n\n[2026-04-09] Retro-checked for Mistake 26 (LightSpeed ?page=N silent ignore). CONFIRMED AFFECTED: ?page=2 returns page-1 products. Fixed paginationPattern.match from \".html\" to \"?sort=newest\" with template \"page{N}.html?sort=newest\". Verified page2.html?sort=newest returns different products from page 1 with zero overlap.",
+    "budget": 20,
+    "domain": "fulcrum-outdoors.shoplightspeed.com",
+    "hasWaf": false,
+    "adapter": "generic-retail",
+    "perPage": 12,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "lightspeed-ecom",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "?sort=newest",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/firearms/",
+      "/shooting/",
+      "/fire-arm-accessories/",
+      "/optics/",
+      "/custom-rifle-building/",
+      "/hunting/",
+      "/archery/",
+      "/cool-stuff/",
+      "/camping/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-07",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Cloudflare present as CDN only (cf-ray header) — no active challenge. Plain axios with default desktop Chrome UA returns 200 with full HTML on category pages, product pages, and sitemap.xml.",
+      "steps": [
+        "Use default desktop Chrome UA over HTTPS",
+        "No cookies, no JS challenge, no Playwright required"
+      ],
+      "method": "http-only"
+    },
+    "needsPlaywright": false,
+    "paginationPattern": {
+      "type": "suffix-replace",
+      "match": "?sort=newest",
+      "notes": "[2026-04-09 Mistake 26 retro-fix] LightSpeed silently ignores ?page=N. Pagination ONLY works via pageN.html suffix. When sortParam (?sort=newest) is appended by getNewArrivalsUrls, the match must anchor on the sort segment so buildPaginatedUrl strips and re-adds it correctly. Prior match was \".html\" which failed when URL ended with \"?sort=newest\". Verified: ?page=2 returns page-1 products (silent ignore), page2.html?sort=newest returns correct page-2 products.",
+      "template": "page{N}.html?sort=newest"
+    },
+    "productCountMethod": {
+      "notes": "Single flat sitemap.xml contains 4456 <loc> entries. Filter to ^/<slug>.html$ yields product pages. HEAD-tested 5 random samples → all 200.",
+      "filter": "product URLs match /^\\/[^/]+\\.html$/ (flat slug at root, .html suffix)",
+      "method": "sitemap-filtered",
+      "endpoint": "/sitemap.xml"
+    },
+    "expectedProductCount": 3631
+  }
+}

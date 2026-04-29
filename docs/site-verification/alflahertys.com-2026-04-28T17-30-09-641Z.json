@@ -1,0 +1,243 @@
+{
+  "siteId": "cmltxz6fp000289xar53h1vkf",
+  "domain": "alflahertys.com",
+  "timestamp": "2026-04-28T17:30:09.641Z",
+  "durationMs": 45470,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "WARN",
+      "expected": "6 URLs, each returning ≥1 product",
+      "actual": "0/6 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/shooting-supplies-firearms-and-ammunition/firearms/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/shooting-supplies-firearms-ammunition/ammunition/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/optics/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/shooting-supplies-firearms-and-ammunition/stocks-parts-barrels-kits/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/shooting-supplies-and-firearms/storage-transportation/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          },
+          {
+            "url": "/als-bargains/",
+            "status": 200,
+            "productCount": 0,
+            "sampleSlugs": []
+          }
+        ]
+      },
+      "reason": "6/6 URLs returned 0 products (possible sub-cat tile page)"
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 differ",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned products in check 1; cannot test pagination"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "n/a (method C)",
+      "actual": "full-catalog-sweep",
+      "evidence": {},
+      "reason": "not-applicable-method-c"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "PASS",
+      "expected": 5262,
+      "actual": 5263,
+      "evidence": {
+        "storedCount": 5262,
+        "actualCount": 5263,
+        "methodUsed": "sitemap",
+        "driftPct": 0
+      }
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37cb125e6944b0-YYZ",
+          "set-cookie": "SF-CSRF-TOKEN=7131a8d4-1411-4e2a-a454-76ceb4ac3c6f; Path=/; Secure; SameSite=Strict,fornax_anonymousId=a32a8006-0a19-42f4-a16f-91c60b36a7cc; Expires=Thu, 27 Apr 2028 17:30:09 GMT; Path=/; Secure; SameSite=None,athena_short_visit_id=6ea9c529-8173-4572-9206-1c4d4ef4abba:1777397409; Expires=Tue, 28 Apr 2026 18:00:09 GMT; Path=/; Secure; HttpOnly; SameSite=None,Shopper-Pref=E2B503E531F7E39BD992E30EFAE144F81D26D743-1778002209948-x%7B%22cur%22%3A%22CAD%22%2C%22funcConsent%22%3Atrue%7D; Expires=Tue, 05 May 2026 17:30:09 GMT; Path=/; Secure; HttpOnly,SHOP_SESSION_TOKEN=08e89fdb-b3b0-420b-81ed-a9af417603ee; Expires=Tue, 05 May 2026 17:30:09 GMT; Path=/; Secure; HttpOnly; SameSite=None,__cf_bm=gqISQ_XKBoy9Bdplxcmj6WqBbNwpUaedcuhikNm2fKI-1777397409.6595435-1.0.1.1-R.qF1EnbhxDcs0UHfDTJJon3k9mwcVRnIEi1pAy7oJLVUyfW05EdXV3bVtHogA5XzXX6GVJgexpDbK58nByCf8unBs6JkF2R1DfUKFhW6XrGUm3gfQ7wSu83pQCJQmGu; HttpOnly; Secure; Path=/; Domain=alflahertys.com; Expires=Tue, 28 Apr 2026 18:00:09 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Al Flaherty's",
+    "notes": "BigCommerce + Klevu JS overlay. Products rendered by Klevu, not server-side HTML. Klevu API key in page source.",
+    "budget": 120,
+    "domain": "alflahertys.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 20,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "No date-based sort available on this site (verified). T1 walks all catalogUrls every cycle and dedupes against DB.",
+        "method": "full-catalog-sweep"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "Klevu Search API",
+          "notes": "BigCommerce category pages are empty shells; products are JS-rendered via Klevu. Crawler uses apiConfig.klevuApiKey + klevuCategoryPaths to fetch products directly.",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail",
+            "sourceId",
+            "category"
+          ]
+        },
+        {
+          "api": "Klevu Count API",
+          "notes": "productCountMethod=klevu-api-count returns total product count (~5256).",
+          "provides": [
+            "totalCount"
+          ]
+        }
+      ]
+    },
+    "platform": "bigcommerce-stencil",
+    "apiConfig": {
+      "klevuApiKey": "klevu-170966446878517137",
+      "klevuEndpoint": "https://uscs33v2.ksearchnet.com/cs/v2/search",
+      "klevuCategoryPaths": [
+        {
+          "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Rifles",
+          "slug": "rifles"
+        },
+        {
+          "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Shotguns",
+          "slug": "shotguns"
+        },
+        {
+          "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Long Range Precision",
+          "slug": "long-range-precision"
+        },
+        {
+          "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Used Firearms",
+          "slug": "used-firearms"
+        },
+        {
+          "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Airguns 500FPS or More - PAL Required",
+          "slug": "airguns"
+        },
+        {
+          "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Centerfire Ammunition",
+          "slug": "centerfire-ammunition"
+        },
+        {
+          "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Rimfire Ammunition",
+          "slug": "rimfire-ammunition"
+        },
+        {
+          "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Shotgun Ammunition",
+          "slug": "shotgun-ammunition"
+        }
+      ]
+    },
+    "searchUrl": "/search.php?search_query={keyword}",
+    "sortParam": "?sort=newest",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/shooting-supplies-firearms-and-ammunition/firearms/",
+      "/shooting-supplies-firearms-ammunition/ammunition/",
+      "/optics/",
+      "/shooting-supplies-firearms-and-ammunition/stocks-parts-barrels-kits/",
+      "/shooting-supplies-and-firearms/storage-transportation/",
+      "/als-bargains/"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-06",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 15,
+    "wafWorkaround": {
+      "notes": "Sucuri WAF. Playwright solves challenge once, cookies cached and reused for subsequent requests.",
+      "steps": [
+        "fetchWithPlaywright resolves Sucuri JS challenge",
+        "WafCookieManager caches cookies under domain",
+        "Subsequent HTTP requests reuse cached cookies"
+      ],
+      "method": "sucuri-cookie-cache"
+    },
+    "needsPlaywright": true,
+    "productCountMethod": {
+      "apiKey": "klevu-170966446878517137",
+      "method": "klevu-api-count",
+      "endpoint": "https://uscs33v2.ksearchnet.com/cs/v2/search"
+    },
+    "expectedProductCount": 5262
+  }
+}

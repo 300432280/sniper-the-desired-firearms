@@ -1,0 +1,133 @@
+{
+  "siteId": "cmltxz70w000k89xas702x05d",
+  "domain": "thegundealer.ca",
+  "timestamp": "2026-04-28T18:31:02.203Z",
+  "durationMs": 24367,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "1 URLs, each returning ≥1 product",
+      "actual": "1/1 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "https://thegundealer.ca/shop/",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "ruger-american-rifle-gen-ii-go-wild-308-win"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://thegundealer.ca/shop/",
+        "page2Url": "https://thegundealer.ca/shop/page/2/",
+        "page1First3": [
+          "ruger-american-rifle-gen-ii-go-wild-308-win"
+        ],
+        "page2First3": [],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "WARN",
+      "expected": "catalogUrl with ≥3 products to test sort",
+      "actual": null,
+      "evidence": {},
+      "reason": "No catalogUrl returned ≥3 products; cannot test sort"
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 11044,
+      "actual": null,
+      "evidence": {
+        "storedCount": 11044,
+        "actualCount": null,
+        "methodUsed": "none-succeeded",
+        "driftPct": null
+      },
+      "reason": "Could not re-derive product count via any method"
+    },
+    {
+      "name": "wafType",
+      "verdict": "FAIL",
+      "expected": "siteground-sgcaptcha",
+      "actual": "sgcaptcha",
+      "evidence": {
+        "storedWafType": "siteground-sgcaptcha",
+        "detectedWafType": "sgcaptcha",
+        "headers": {
+          "server": "nginx",
+          "sg-captcha": "challenge",
+          "set-cookie": "nevercache-b39818=Y;Max-Age=-1"
+        },
+        "httpStatus": 202
+      },
+      "reason": "WAF vendor mismatch: stored='siteground-sgcaptcha', detected='sgcaptcha' (Mistake 35)"
+    }
+  ],
+  "rawSiteProfile": {
+    "notes": "SiteGround sgcaptcha WAF (NEW type, first in fleet). Bypass: iPhone UA via userAgentOverride + cookies cached via waf-cookie-manager. Desktop UA gets 403 post-challenge even with valid session cookie — iPhone UA is LOAD-BEARING. Store API primary: deep pagination (page=1/50/110) verified 200 via plain axios with cached cookies. HTML fallback /shop/page/N/ also works via cached cookies (safety net). Date filter verified monotonic: no_filter=11044, 14d=224, 1d=20. Same precedent as doctordeals.ca (Sucuri). Wait-strategy fix applied to waf-cookie-manager.ts (line ~113): wait for URL to leave /.well-known/sgcaptcha/ | /cdn-cgi/challenge-platform/ | /_Incapsula_Resource before extracting cookies. Regression-tested against Sucuri + Cloudflare — no regressions.",
+    "domain": "thegundealer.ca",
+    "hasWaf": true,
+    "perPage": 24,
+    "wafType": "siteground-sgcaptcha",
+    "crawlers": {
+      "watermark": {
+        "method": "api-date-since-watermark"
+      }
+    },
+    "platform": "woocommerce",
+    "siteType": "js-rendered",
+    "sortParam": "?orderby=date&order=desc",
+    "catalogUrls": [
+      "https://thegundealer.ca/shop/"
+    ],
+    "lastVerified": "2026-04-09",
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "Cookie reuse CONFIRMED WORKING via production waf-cookie-manager path after fix. solveCookies returns valid cookies; direct axios re-verify returns 200 + x-wp-total=11039; date filter after=2026-04-08 returns 15.",
+    "needsPlaywright": true,
+    "wafLastProbedAt": "2026-04-09T07:16:57.719Z",
+    "wafProbeEvidence": {
+      "batches": "all 8 returned HTTP 202 + sg-captcha:challenge + meta-refresh",
+      "uaBypass": "iPhone UA string alone via userAgentOverride",
+      "sgCaptchaHeader": "challenge",
+      "verifiedXWpTotal": 11039,
+      "cfHeadersDetected": false,
+      "cookieReuseBypass": true,
+      "cookieReuseFixNote": "Required waf-cookie-manager fix: wait for URL to leave /.well-known/sgcaptcha/ before extracting cookies. networkidle fires mid-challenge.",
+      "sucuriHeadersDetected": false,
+      "verifiedSolveCookiesStatus": 200
+    },
+    "paginationPattern": {
+      "type": "path",
+      "template": "/page/{N}/"
+    },
+    "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+    "productCountMethod": {
+      "header": "x-wp-total",
+      "method": "wc-store-api-header",
+      "endpoint": "/wp-json/wc/store/v1/products?per_page=1",
+      "filterSupported": true,
+      "filterTestEvidence": {
+        "1d_ago": 20,
+        "14d_ago": 224,
+        "no_filter": 11044,
+        "tested_at": "2026-04-09"
+      }
+    },
+    "expectedProductCount": 11044,
+    "totalSiteProductCount": 11044
+  }
+}

@@ -1,0 +1,348 @@
+{
+  "siteId": "cmltxz6kf000689xaoqvq5y9r",
+  "domain": "reliablegun.com",
+  "timestamp": "2026-04-28T18:19:08.843Z",
+  "durationMs": 117017,
+  "overallVerdict": "FAIL",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "15 URLs, each returning ≥1 product",
+      "actual": "15/15 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/firearms",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "pre-order-deposit-for-brigade-arms-makasi-mk-15-semi-automatic-rifle-556mm-186-barrel-3-prong-flash-hider-short-stroke-piston-side-folding-stock-12-m-lok-handguard-5-round-magazine-brigade-makasi-mk-1",
+              "adler-arms-citadel-ad500-semi-auto-rifle-citad500sblk",
+              "aimpoint-red-dot-sights-200499"
+            ]
+          },
+          {
+            "url": "/ammunition",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "aguila-pistol-ammunition-1e802110",
+              "barnaulmfs-rifle-ammunition-mfs-2312877",
+              "barnes-harvest-hunting-rifle-ammunition-243-win-90gr-sierra-tipped-gameking-20rd-box-32398-2"
+            ]
+          },
+          {
+            "url": "/optics",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "aimpoint-acro-s-2-shotgun-red-dot-sights-200907",
+              "aimpoint-red-dot-sights-200499",
+              "aimpoint-red-dot-sights-200715"
+            ]
+          },
+          {
+            "url": "/accessories",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "1st-choice-bore-cleaner-pop-10",
+              "1st-choice-bore-cleaner-pop-10-2",
+              "3d-gunworks-accessories-rmcblk"
+            ]
+          },
+          {
+            "url": "/reloading",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "adg-brass-300prc1-orb",
+              "adg-brass-7prc1-0rb",
+              "adg-brass-300wsm1-orb"
+            ]
+          },
+          {
+            "url": "/gun-parts",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "alcor-accessories-alcor-870-adpt",
+              "allen-shooting-accessories-plugs-1985",
+              "allen-shooting-accessories-shooting-bags-triumph-double-compartment-range-shell-bag-blackmo-bottomland-camo-8326-3"
+            ]
+          },
+          {
+            "url": "/air-guns",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "gamo-wildcat-storm-break-barrel-air-rifle-177-caliber-45mm-495fps-w4x32mm-riflescope-6110067847"
+            ]
+          },
+          {
+            "url": "/shooting-accessories",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "allen-company-shadow-hyperlite-sling-8535",
+              "allen-cortez-nylon-pistol-holster-44503",
+              "allen-ez-aim-hardrock-ar500-spinner-target-stand-7375w-x-23h-4-top-5-bottom-target-15366"
+            ]
+          },
+          {
+            "url": "/safes-and-cases",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "allen-daytona-46-rifle-case-black-221-46",
+              "allen-company-range-bags-8329",
+              "allen-competitor-52-shotgun-case-gray-831-52"
+            ]
+          },
+          {
+            "url": "/hunting",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "alaska-game-bags-alaska-deer-sock-ads1272",
+              "alaska-game-bags-quarter-bag-ngb460",
+              "alaska-game-bags-quarter-bag-dsc148"
+            ]
+          },
+          {
+            "url": "/camping",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "bens-tick-insect-repellent-0007-7178",
+              "bens-tick-insect-repellent-0007-7190",
+              "enercheez-782285"
+            ]
+          },
+          {
+            "url": "/clothing",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "allen-ace-shooting-vest-22611",
+              "allen-company-competitor-shooting-vest-7910",
+              "allen-company-competitor-shooting-vest-7911"
+            ]
+          },
+          {
+            "url": "/clearance",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "blackhawk-holsters-duty-gear-37fs23bk",
+              "blackhawk-holsters-duty-gear-37fs41bk",
+              "blackhawk-holsters-duty-gear-37fs47bk"
+            ]
+          },
+          {
+            "url": "/used",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "beretta-clothing-vests-gt951t155305azl",
+              "beretta-shooting-vest-full-mesh-green-moss-xl-gt671t155307aaxl",
+              "beretta-shooting-vest-silver-pigeon-evo-greenchocolate-brown-xl-gt781t155307abxl"
+            ]
+          },
+          {
+            "url": "/sale",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "ar-15-magazines-stripperclip-556",
+              "magpul-accessories-mag417-odg",
+              "sellier-bellot-rifle-ammunition-332682"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "PASS",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "0 overlap",
+      "evidence": {
+        "page1Url": "https://www.reliablegun.com/firearms",
+        "page2Url": "https://www.reliablegun.com/firearms?pagenumber=2",
+        "page1First3": [
+          "pre-order-deposit-for-brigade-arms-makasi-mk-15-semi-automatic-rifle-556mm-186-barrel-3-prong-flash-hider-short-stroke-piston-side-folding-stock-12-m-lok-handguard-5-round-magazine-brigade-makasi-mk-1",
+          "adler-arms-citadel-ad500-semi-auto-rifle-citad500sblk",
+          "aimpoint-red-dot-sights-200499"
+        ],
+        "page2First3": [
+          "akkar-churchill-612-synthetic-pump-action-shotgun-a13387",
+          "allen-xcelerator-claymaster-target-223-2",
+          "anschutz-1761-d-hb-monte-carlo-bolt-action-rifle-015930"
+        ],
+        "overlapCount": 0
+      }
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://www.reliablegun.com/firearms?orderby=15&pagesize=48",
+        "withoutSortUrl": "https://www.reliablegun.com/firearms",
+        "withSortFirst": "browning-b25-100th-anniversary-0911100",
+        "withoutSortFirst": "pre-order-deposit-for-brigade-arms-makasi-mk-15-semi-automatic-rifle-556mm-186-barrel-3-prong-flash-hider-short-stroke-piston-side-folding-stock-12-m-lok-handguard-5-round-magazine-brigade-makasi-mk-1",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "FAIL",
+      "expected": 4785,
+      "actual": 88,
+      "evidence": {
+        "storedCount": 4785,
+        "actualCount": 88,
+        "methodUsed": "sitemap",
+        "driftPct": 98
+      },
+      "reason": "Count drifted 98% (stored=4785, actual=88)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "FAIL",
+      "expected": "cloudflare-active",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-active",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f3812cbbf6cdeef-YYZ",
+          "set-cookie": "AWSALBTG=HNtSbAi/1wVSV3LIRX3qiGxkZY23b4DmC1Tc4zKwMGmYIuyVLddtdCs9NV/kOQB8t9yivy2mpA2QzJpwTATT819x6siAi576Xq0RmmyFnl5u0pEiIFHMxm1LUIAJLND4e7ZWENzInz+zO7P10dxdmZJJTowkzBiX8VzXrX+5oNvTBkaztt0=; Expires=Tue, 05 May 2026 18:19:07 GMT; Path=/,AWSALBTGCORS=HNtSbAi/1wVSV3LIRX3qiGxkZY23b4DmC1Tc4zKwMGmYIuyVLddtdCs9NV/kOQB8t9yivy2mpA2QzJpwTATT819x6siAi576Xq0RmmyFnl5u0pEiIFHMxm1LUIAJLND4e7ZWENzInz+zO7P10dxdmZJJTowkzBiX8VzXrX+5oNvTBkaztt0=; Expires=Tue, 05 May 2026 18:19:07 GMT; Path=/; SameSite=None; Secure,AWSALB=H6ZNhaPz8D3wwpAm/VvgbkJ2eTNdZoPx4L9ubkD/fkLEjhyf6AWWraO7u1Jpn96XNH+z+IwPQA9fuNzKj8GvNcEBtGu54iYnn1OnSBhegbpOA/7RRkTdSffHCcuM; Expires=Tue, 05 May 2026 18:19:07 GMT; Path=/,AWSALBCORS=H6ZNhaPz8D3wwpAm/VvgbkJ2eTNdZoPx4L9ubkD/fkLEjhyf6AWWraO7u1Jpn96XNH+z+IwPQA9fuNzKj8GvNcEBtGu54iYnn1OnSBhegbpOA/7RRkTdSffHCcuM; Expires=Tue, 05 May 2026 18:19:07 GMT; Path=/; SameSite=None; Secure,Nop.customer=59eff0ad-7ba6-4176-ac7c-f54cccb7b748; expires=Wed, 28-Apr-2027 18:19:06 GMT; path=/; HttpOnly"
+        },
+        "httpStatus": 200
+      },
+      "reason": "WAF vendor mismatch: stored='cloudflare-active', detected='cloudflare-passive' (Mistake 35)"
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Reliable Gun",
+    "notes": "nopCommerce. Top-level categories paginate through all subcategory products. Active Cloudflare (browser UA bypass). ?orderby=15 = Created on DESC. ?pagesize=48 max. Pagination via &pagenumber. 15 catalog streams cover full catalog (clearance/used/sale overlap).",
+    "budget": 20,
+    "domain": "reliablegun.com",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 48,
+    "timeout": 30000,
+    "wafType": "cloudflare-active",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "Use ?orderby=15&pagesize=48 (Created on DESC). Pagination via &pagenumber=N.",
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "nopcommerce",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "?orderby=15&pagesize=48",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/firearms",
+      "/ammunition",
+      "/optics",
+      "/accessories",
+      "/reloading",
+      "/gun-parts",
+      "/air-guns",
+      "/shooting-accessories",
+      "/safes-and-cases",
+      "/hunting",
+      "/camping",
+      "/clothing",
+      "/clearance",
+      "/used",
+      "/sale"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-08",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Active Cloudflare. Browser UA + realistic headers clears it. Playwright fallback fires when static HTML 0 products or blocked.",
+      "steps": [
+        "Use realistic desktop browser User-Agent (Chrome/Firefox)",
+        "On 403 or challenge HTML, fall back to Playwright",
+        "Honour robots.txt Crawl-delay: 10"
+      ],
+      "method": "playwright-fallback"
+    },
+    "wafProbeMethod": "heavy-8-batch",
+    "wafProbeResult": "active-cloudflare",
+    "needsPlaywright": true,
+    "wafLastProbedAt": "2026-04-08T16:25:35.816Z",
+    "wafProbeEvidence": "apex reliablegun.com -> 301 www (Microsoft-IIS origin); www behind Cloudflare (server: cloudflare, cf-ray). Browser UA = 200; curl/bot/no-UA = 403. Honeypot paths /wp-admin /wp-login /.env /phpinfo = 403. Multi-UA: desktop/mobile 200, bot/curl 403. Rapid burst x10 with browser UA all 200. CSP header present. Conclusion: active Cloudflare with UA-based bot filter + path-selective blocks.",
+    "paginationPattern": {
+      "type": "query",
+      "notes": "nopCommerce. Select value for pagesize max is 48. pagenumber query param. Verified via last-page ID/slug contrast.",
+      "perPage": 48,
+      "startsAt": 1,
+      "template": "pagenumber"
+    },
+    "productCountMethod": {
+      "url": "/sitemap.xml",
+      "notes": "nopCommerce /sitemap.xml; filter out nav + top-level/subcategory paths to count product slugs",
+      "method": "sitemap"
+    },
+    "expectedProductCount": 4785
+  }
+}

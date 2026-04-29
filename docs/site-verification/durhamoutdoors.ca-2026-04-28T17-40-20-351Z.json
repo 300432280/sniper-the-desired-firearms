@@ -1,0 +1,249 @@
+{
+  "siteId": "cmltxz7ss001989xaoiqb9kni",
+  "domain": "durhamoutdoors.ca",
+  "timestamp": "2026-04-28T17:40:20.351Z",
+  "durationMs": 38349,
+  "overallVerdict": "WARN",
+  "checks": [
+    {
+      "name": "catalogUrls",
+      "verdict": "PASS",
+      "expected": "8 URLs, each returning ≥1 product",
+      "actual": "8/8 returned products",
+      "evidence": {
+        "perUrl": [
+          {
+            "url": "/Surplus-and-collection_c_33.html",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "SURPLUS-RIFLE-CARCANO-65-X-52_p_3004.html"
+            ]
+          },
+          {
+            "url": "/Shotgun_c_14.html",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "Chiappa-12GA-Triple-Crown-shotgun-12-BRL_p_115.html",
+              "CHURCHILL-PUMP-12ga-3-15-BRL-SHOCKWAVE-GRIP-FREE-SCABBARD-Non-restricted-_p_167.html",
+              "Churchill-Pump-Shotgun-12ga-3-185-Barrel-A17174_p_168.html"
+            ]
+          },
+          {
+            "url": "/NON-RESTRICTED_c_16.html",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "CHIAPPA-1892-ALASKAN-TAKEDOWN-20-44-MAG-920312_p_121.html",
+              "CHIAPPA-1892-Alaskan-TD-16-Chrome-357Mag-920349_p_123.html",
+              "CHIAPPA-1892-COWBOY-ACTION-357-MAG-16FOCTBARREL-8-SHOT_p_125.html"
+            ]
+          },
+          {
+            "url": "/Pistols_c_18.html",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "Hammerli-AP20-Pro-air-pistol_p_3554.html"
+            ]
+          },
+          {
+            "url": "/Rifles_c_17.html",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "CHIAPPA-17HMR-LITTLE-BADGER-RIFLE-17HMR-165-non-restricted_p_117.html",
+              "Chiappa-1886-Ridge-Runner-12-45-70-take-down_p_120.html",
+              "CHIAPPA-1892-ALASKAN-TAKEDOWN-20-44-MAG-920312_p_121.html"
+            ]
+          },
+          {
+            "url": "/Used-Consignment_c_20.html",
+            "status": 200,
+            "productCount": 1,
+            "sampleSlugs": [
+              "Consignment-sale-DSR-Precision-DSR-3-package-_p_3463.html"
+            ]
+          },
+          {
+            "url": "/Accessories_c_11.html",
+            "status": 200,
+            "productCount": 12,
+            "sampleSlugs": [
+              "BLACK-ACE-MOSSBERG-500-590-MAV88-BARREL-HEAT-SHIELD-BAT-MS500-_p_75.html",
+              "Caesar-Guerini-srl-Pull-Pull-Trigger_p_107.html",
+              "CHIAPPA-LITTLE-BADGER-GRIP_p_136.html"
+            ]
+          },
+          {
+            "url": "/Optics_c_19.html",
+            "status": 200,
+            "productCount": 2,
+            "sampleSlugs": [
+              "RM01-33-Trijicon-RMR-Sight-325-MOA-LED-Red-Dot-w-RM33-Picatinny-rail-mount_p_773.html",
+              "TANGENT-THETA-5-25X56MM-TT525P_p_1025.html"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "paginationPattern",
+      "verdict": "WARN",
+      "expected": "page1 vs page2 first-3 slugs differ",
+      "actual": "1 overlap",
+      "evidence": {
+        "page1Url": "https://durhamoutdoors.ca/Surplus-and-collection_c_33.html",
+        "page2Url": "https://durhamoutdoors.ca/Surplus-and-collection_c_33-2.html",
+        "page1First3": [
+          "SURPLUS-RIFLE-CARCANO-65-X-52_p_3004.html"
+        ],
+        "page2First3": [
+          "SURPLUS-RIFLE-CARCANO-65-X-52_p_3004.html"
+        ],
+        "overlapCount": 1
+      },
+      "reason": "1/1 slugs overlap (small category possible)"
+    },
+    {
+      "name": "sortParam",
+      "verdict": "PASS",
+      "expected": "first product slug differs with sort",
+      "actual": "differs",
+      "evidence": {
+        "withSortUrl": "https://durhamoutdoors.ca/Shotgun_c_14.html?sortby=4",
+        "withoutSortUrl": "https://durhamoutdoors.ca/Shotgun_c_14.html",
+        "withSortFirst": "MOSSBERG-590A1-NFA-12-GA-14-4-SHELL-HOLDER-STOCK_p_3558.html",
+        "withoutSortFirst": "Chiappa-12GA-Triple-Crown-shotgun-12-BRL_p_115.html",
+        "counterControlUrl": null,
+        "counterControlFirst": null
+      }
+    },
+    {
+      "name": "expectedProductCount",
+      "verdict": "WARN",
+      "expected": 388,
+      "actual": 439,
+      "evidence": {
+        "storedCount": 388,
+        "actualCount": 439,
+        "methodUsed": "sitemap",
+        "driftPct": 13
+      },
+      "reason": "Count drifted 13% (stored=388, actual=439)"
+    },
+    {
+      "name": "wafType",
+      "verdict": "PASS",
+      "expected": "cloudflare-passive",
+      "actual": "cloudflare-passive",
+      "evidence": {
+        "storedWafType": "cloudflare-passive",
+        "detectedWafType": "cloudflare-passive",
+        "headers": {
+          "server": "cloudflare",
+          "cf-ray": "9f37d9f48fb239f6-YYZ",
+          "set-cookie": "__cf_bm=PHUnP.6RtsW8Ht8S3Yc4ddvV7AwbOzD7fZuXSi6ekvs-1777398019.2808578-1.0.1.1-j8KS6KT7jELx0jt_ATJOtCmIUk9IdtnMo175lIjOyYkMWLqTMA.O_JqRkK9Wnsb8wj6fKs6qalqDsL3.gA0atouDD8TVI5j94Zn8Zc69roDNwRwZb.EqukdwmvUAJYCX; HttpOnly; Secure; Path=/; Domain=durhamoutdoors.ca; Expires=Tue, 28 Apr 2026 18:10:20 GMT"
+        },
+        "httpStatus": 200
+      }
+    }
+  ],
+  "rawSiteProfile": {
+    "name": "Durham Outdoors",
+    "notes": "CORRECTION (2026-04-06): Earlier claim 'no date sort exists' was WRONG. The category page has <select id=\"sortby\"> with <option value=\"4\">Newest</option>. Verified live on /Rifles_c_17.html: ?sortby=4 changes first product from CHIAPPA-17HMR (_p_117) to ADLER-RF224 (_p_3593). JS handler doSortBy() builds URL view_category.asp?cat=N&sortby=4&page=N but the pretty URL also accepts ?sortby=4 directly. Pagination template -{N}.html is independent of sort and works with the sort param appended.",
+    "budget": 40,
+    "domain": "durhamoutdoors.ca",
+    "hasWaf": true,
+    "adapter": "generic-retail",
+    "perPage": 12,
+    "timeout": 30000,
+    "wafType": "cloudflare-passive",
+    "crawlers": {
+      "maintain": {
+        "method": "db-verification",
+        "cooldowns": {
+          "t2": 3,
+          "t3": 5,
+          "t4": 9
+        },
+        "tierShares": {
+          "t2": 42.5,
+          "t3": 32.5,
+          "t4": 25
+        },
+        "tierWindows": {
+          "t2": [
+            1,
+            7
+          ],
+          "t3": [
+            8,
+            20
+          ],
+          "t4": [
+            21,
+            null
+          ]
+        },
+        "verifyMethod": "detail-page"
+      },
+      "bootstrap": {
+        "method": "single-continuous",
+        "apiEndpoints": null,
+        "htmlFallback": true
+      },
+      "watermark": {
+        "notes": "Site supports date sort via ?sortby=4 (option 'Newest' in <select id=sortby>). Combine with -{N}.html pagination for newest-first walk.",
+        "method": "navigate-from-watermark"
+      }
+    },
+    "dataFlow": {
+      "steps": [
+        {
+          "api": "HTML scraping",
+          "notes": "Extracted from listing page HTML cards",
+          "provides": [
+            "title",
+            "url",
+            "price",
+            "thumbnail"
+          ]
+        }
+      ]
+    },
+    "platform": "custom",
+    "searchUrl": "/search?q={keyword}",
+    "sortParam": "?sortby=4",
+    "hasCaptcha": false,
+    "catalogUrls": [
+      "/Surplus-and-collection_c_33.html",
+      "/Shotgun_c_14.html",
+      "/NON-RESTRICTED_c_16.html",
+      "/Pistols_c_18.html",
+      "/Rifles_c_17.html",
+      "/Used-Consignment_c_20.html",
+      "/Accessories_c_11.html",
+      "/Optics_c_19.html"
+    ],
+    "hasRateLimit": false,
+    "lastVerified": "2026-04-06T21:36:15.733Z",
+    "siteCategory": "retailer",
+    "t1IntervalMin": 17,
+    "wafWorkaround": {
+      "notes": "Cloudflare is in front (cf-ray header) but does not challenge or block. Plain HTTP with desktop Chrome UA works. hasWaf=true is kept defensively in case CF ever starts challenging.",
+      "method": "none-required"
+    },
+    "needsPlaywright": true,
+    "paginationPattern": {
+      "type": "suffix-replace",
+      "match": ".html",
+      "template": "-{N}.html"
+    },
+    "productCountMethod": {
+      "method": "stream-page-count"
+    },
+    "expectedProductCount": 388
+  }
+}
