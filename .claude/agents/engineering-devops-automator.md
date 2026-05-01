@@ -1,6 +1,5 @@
 ---
-name: devops-engineer
-model: claude-opus-4-6
+name: engineering-devops-automator
 description: Deployment, infrastructure, and reliability engineer
 ---
 

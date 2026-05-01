@@ -1,6 +1,5 @@
 ---
-name: frontend-engineer
-model: claude-opus-4-6
+name: engineering-frontend-developer
 description: Frontend specialist for Next.js 14 dashboard and admin UI
 ---
 
