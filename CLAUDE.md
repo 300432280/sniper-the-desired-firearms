@@ -71,18 +71,21 @@ Each adapter handles search + catalog extraction for a site type:
 - `dashboard/alerts/` — user alert management
 - `dashboard/history/` — match history
 
-## Skills & Agents
+## Skills, Agents, and Personas
 - Always follow the `using-superpowers` skill at conversation start.
-- Check `~/.claude/agents/agency-agents/` for general-purpose agent personas.
-- Project-specific agents in `.claude/agents/`:
-  - `backend-engineer` — Node/Express/Prisma/BullMQ infrastructure
-  - `frontend-engineer` — Next.js 14 dashboard and admin UI
-  - `crawler-specialist` — adapter development, scraping, stream/tier logic
-  - `sre-reliability` — crawler uptime, job health, self-healing, diagnostics
-  - `devops-engineer` — deployment (Vercel/Railway), infra, reliability
-  - `code-reviewer` — correctness, security, regression prevention
-- Use project agents first; fall back to general agents for broader tasks.
-- **MANDATORY: When spawning a subagent, ALWAYS read the matching `.claude/agents/*.md` persona file and include its content in the subagent prompt.** The persona files contain accumulated lessons from real mistakes. A subagent without its persona will repeat past mistakes. No exceptions.
+- **Agents** (the entities that do work) live outside this repo:
+  - `~/.claude/agents/agency-agents-main/` — 200+ general-purpose agency agents
+  - `~/.claude/plugins/cache/.../agents/` — plugin-shipped agents (e.g. `code-reviewer` from superpowers)
+- **Personas** (project-specific context **injected into** an agent's spawn prompt — NOT standalone agents) live in `.claude/agents/`. Each filename matches the agency-agent it's auto-loaded for:
+  - `engineering-backend-architect.md` — Express/Prisma/BullMQ + adapter framework + platform-specific extraction quirks
+  - `engineering-frontend-developer.md` — Next.js 14 dashboard and admin UI
+  - `engineering-security-engineer.md` — WAF bypass (Sucuri/Cloudflare/SiteGround), heavy probe, security research
+  - `engineering-sre.md` — crawler uptime, job health, self-healing
+  - `engineering-devops-automator.md` — deployment (Vercel/Railway), infrastructure
+  - `engineering-code-reviewer.md` — correctness, security, regression prevention
+  - `testing-api-tester.md` — SPA API discovery, live UI driving, pre-bootstrap probe development
+  - `crawler-specialist.md` — TOC pointing to the 3 split personas above (use when you want "everything")
+- **MANDATORY: When spawning an agent (any source) whose basename matches a persona file in `.claude/agents/`, ALWAYS read that persona file and include its content in the agent's spawn prompt.** The persona files contain accumulated lessons from real mistakes. An agent spawned without its matching persona will repeat past mistakes. No exceptions.
 
 ### Persona File Management
 - **Before adding a lesson:** Read the persona file first. Check for duplicates or contradictions.
@@ -112,20 +115,22 @@ Each adapter handles search + catalog extraction for a site type:
 | `find-skills` | `~/.claude/skills/find-skills/` | Search and install skills from the open ecosystem | pre-existing |
 | `ui-ux-pro-max` | `~/.claude/skills/ui-ux-pro-max/` | UI/UX design intelligence: styles, palettes, fonts, a11y | pre-existing |
 
-### Installed Agent Personas (project-specific)
-| Agent | File | Purpose | Created |
-|-------|------|---------|---------|
-| `backend-engineer` | `.claude/agents/backend-engineer.md` | Express/Prisma/BullMQ infrastructure | 2026-03-22 |
-| `frontend-engineer` | `.claude/agents/frontend-engineer.md` | Next.js 14 dashboard UI | 2026-03-22 |
-| `crawler-specialist` | `.claude/agents/crawler-specialist.md` | Adapter dev, scraping, stream/tier logic | 2026-03-22 |
-| `sre-reliability` | `.claude/agents/sre-reliability.md` | Crawler uptime, job health, self-healing | 2026-03-22 |
-| `devops-engineer` | `.claude/agents/devops-engineer.md` | Deployment, infra, reliability | 2026-03-22 |
-| `code-reviewer` | `.claude/agents/code-reviewer.md` | Correctness, security, regression prevention | 2026-03-22 |
+### Installed Personas (project-specific)
+| Persona | File | Auto-loads for agency-agent | Purpose |
+|---|---|---|---|
+| `engineering-backend-architect` | `.claude/agents/engineering-backend-architect.md` | `engineering-backend-architect` | Express/Prisma/BullMQ + adapter framework + platform quirks |
+| `engineering-frontend-developer` | `.claude/agents/engineering-frontend-developer.md` | `engineering-frontend-developer` | Next.js 14 dashboard UI |
+| `engineering-security-engineer` | `.claude/agents/engineering-security-engineer.md` | `engineering-security-engineer` | WAF bypass / probe security |
+| `engineering-sre` | `.claude/agents/engineering-sre.md` | `engineering-sre` | Crawler uptime, job health, self-healing |
+| `engineering-devops-automator` | `.claude/agents/engineering-devops-automator.md` | `engineering-devops-automator` | Deployment, infra, reliability |
+| `engineering-code-reviewer` | `.claude/agents/engineering-code-reviewer.md` | `engineering-code-reviewer` | Correctness, security, regression prevention |
+| `testing-api-tester` | `.claude/agents/testing-api-tester.md` | `testing-api-tester` | SPA API discovery, live UI driving, probe development |
+| `crawler-specialist` | `.claude/agents/crawler-specialist.md` | `crawler-specialist` (project) | Master TOC pointing to the 3 split personas |
 
 ### Global Agent Collection
 | Collection | Location | Count | Source |
 |------------|----------|-------|--------|
-| `agency-agents` | `~/.claude/agents/agency-agents/` | 100+ | [github.com/obra/superpowers](https://github.com/obra/superpowers) |
+| `agency-agents-main` | `~/.claude/agents/agency-agents-main/` | 200+ | [github.com/obra/superpowers](https://github.com/obra/superpowers) |
 
 ### Global Settings
 | Setting | Value | File |
@@ -144,6 +149,16 @@ Each adapter handles search + catalog extraction for a site type:
 | Run `/simplify` after every implementation session before committing | Dead scripts, unused imports, duplicated logic accumulate fast; simplify skill catches them | 2026-03-24 |
 | Use professional agents for complex work | Software Architect for design, Code Reviewer for audit — don't do everything directly | 2026-03-24 |
 | Stale detection only via cross-tier cycle completion | Never use time-based thresholds alone; all tiers must have completed a sweep before flagging products | 2026-03-24 |
+
+## Past lessons — don't repeat
+
+Real incidents from earlier work on this project. Cited so future sessions don't re-derive them.
+
+- **API failures don't mean "impossible".** Multiple Store API failures turned out to be solvable via Playwright HTML. If a human can see it in their browser, Playwright can scrape it. Try HTML before declaring an API-only failure.
+- **WAFs aren't always the cause.** Several "WAF blocked" claims were actually wrong URLs or skipping the existing `waf-cookie-manager` infrastructure. Test that path + Playwright cookies before claiming a WAF can't be bypassed.
+- **Don't add site-specific workarounds without testing the generic adapter first.** Recurring incidents of bespoke code added when the generic approach already worked.
+- **Weeks of "WAF limitation" claims** turned out to be wrong URLs. Verify the URL is correct before blaming the WAF.
+- **WAF rate-limit delays exist for a reason.** The 800ms inter-request delay was added to prevent rate limiting. Don't remove it on a "speed" recommendation without first confirming rate limits are no longer a risk.
 
 ## Gotchas
 - On Windows: bash escapes `$disconnect` in inline node `-e` commands. Write `.js` script files instead.
