@@ -1,13 +1,13 @@
 // backend/scripts/probe/shared/extract.ts
 // Platform-aware wrapper around production catalog extractors.
-// All rooms must extract via this — never write probe-specific selectors.
+// All probe stages must extract via this — never write probe-specific selectors.
 //
-// Re-exports CatalogProduct as ExtractedProduct so consumers (Room 3 walk-verify,
-// Room 5 indexing) get every field the production extractor populates: url, title,
+// Re-exports CatalogProduct as ExtractedProduct so consumers (Geography & Count walk-verify,
+// downstream indexing) get every field the production extractor populates: url, title,
 // price, regularPrice, stockStatus, thumbnail, sourceId, postDate, tags,
 // productType, sourceCategory, category, closingAt.
 //
-// Dispatch table by platform tag (the `id` from a Room 2 detector):
+// Dispatch table by platform tag (the `id` from an access-identity detector):
 //   drupal-commerce  → GunpostAdapter (Drupal-classifieds-generic selectors:
 //                      node--type-classified, gunpost-teaser, listing-item,
 //                      article[class*="classified"]). Despite the file name,

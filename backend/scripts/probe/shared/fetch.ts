@@ -7,6 +7,7 @@
 import axios, { AxiosError } from 'axios';
 import * as https from 'https';
 import * as http from 'http';
+import { spawn } from 'child_process';
 import { fetchWithPlaywright } from '../../../src/services/scraper/playwright-fetcher';
 import { getCachedCookies } from './redis-cookies';
 import { UA_DESKTOP, UA_IPHONE, pickUaForWaf } from './ua';
@@ -31,11 +32,81 @@ export type FetchResult = {
   body: string;
   bodyBytes: number;
   durationMs: number;
-  method: 'axios' | 'native-fetch' | 'playwright' | 'playwright-cookies';
+  method: 'axios' | 'native-fetch' | 'curl-subprocess' | 'playwright' | 'playwright-cookies';
   cookiesUsed?: string;
 };
 
 const DEFAULT_TIMEOUT_MS = 30000;
+
+/**
+ * Last-resort fallback for servers whose headers violate RFC 7230 in ways
+ * BOTH the Node http parser (axios) AND undici reject — e.g. Celerant ColdFusion
+ * sites that emit `X-Frame-Options : SAMEORIGIN` (space before colon).
+ * Curl's parser is more permissive and round-trips these responses cleanly.
+ * Mistake 36 — see `.claude/catalog-url-discovery-playbook.md`.
+ */
+async function curlSubprocessFetch(url: string, opts: FetchOptions): Promise<FetchResult> {
+  const start = Date.now();
+  const timeoutSec = Math.ceil((opts.timeoutMs ?? DEFAULT_TIMEOUT_MS) / 1000);
+  const args: string[] = ['-sS', '-i', '-L', '--max-time', String(timeoutSec)];
+  args.push('-A', opts.ua ?? UA_DESKTOP);
+  for (const [k, v] of Object.entries(opts.headers ?? {})) {
+    args.push('-H', `${k}: ${v}`);
+  }
+  if (opts.method === 'HEAD') args.push('-I');
+  else if (opts.method === 'POST') {
+    args.push('-X', 'POST');
+    if (opts.body) args.push('--data-binary', opts.body);
+  }
+  args.push(url);
+
+  return await new Promise<FetchResult>((resolve, reject) => {
+    const child = spawn('curl', args, { windowsHide: true });
+    const stdoutChunks: Buffer[] = [];
+    let stderr = '';
+    child.stdout.on('data', (c: Buffer) => stdoutChunks.push(c));
+    child.stderr.on('data', (c: Buffer) => { stderr += c.toString('utf-8'); });
+    child.on('error', reject);
+    child.on('close', code => {
+      if (code !== 0) {
+        return reject(new Error(`curl exit ${code}: ${stderr.slice(0, 200)}`));
+      }
+      const raw = Buffer.concat(stdoutChunks).toString('utf-8');
+      // Split into hops on blank line; the LAST HTTP/N.N hop is the final response
+      const hops = raw.split(/\r?\n\r?\n/);
+      let finalIdx = -1;
+      for (let i = hops.length - 1; i >= 0; i--) {
+        if (/^HTTP\/[\d.]+\s+\d/.test(hops[i])) { finalIdx = i; break; }
+      }
+      if (finalIdx < 0) {
+        return reject(new Error('curl output had no HTTP status line'));
+      }
+      const headerBlock = hops[finalIdx];
+      const body = hops.slice(finalIdx + 1).join('\r\n\r\n');
+      const lines = headerBlock.split(/\r?\n/);
+      const m = /^HTTP\/[\d.]+\s+(\d+)/.exec(lines[0]);
+      const status = m ? parseInt(m[1], 10) : 0;
+      const headers: Record<string, string> = {};
+      for (const line of lines.slice(1)) {
+        const idx = line.indexOf(':');
+        if (idx <= 0) continue;
+        // Trim trailing whitespace from name to tolerate "X-Frame-Options : VAL"
+        const name = line.slice(0, idx).trim().toLowerCase();
+        const val = line.slice(idx + 1).trim();
+        if (headers[name]) headers[name] += ', ' + val;
+        else headers[name] = val;
+      }
+      resolve({
+        status,
+        headers,
+        body,
+        bodyBytes: body.length,
+        durationMs: Date.now() - start,
+        method: 'curl-subprocess',
+      });
+    });
+  });
+}
 
 async function nativeFetchText(url: string, opts: FetchOptions): Promise<FetchResult> {
   const start = Date.now();
@@ -101,9 +172,21 @@ async function axiosFetch(url: string, opts: FetchOptions): Promise<FetchResult>
     if (ae.code === 'HPE_HEADER_OVERFLOW' || /Header overflow/i.test(ae.message ?? '')) {
       return axiosLargeHeaderFetch(url, opts);
     }
-    // HPE_INVALID_HEADER_TOKEN — Celerant trailing-space headers — fall back to native fetch
+    // HPE_INVALID_HEADER_TOKEN — Celerant trailing-space headers (Mistake 36).
+    // Cascade: axios → undici (native fetch) → curl subprocess. Some Celerant sites
+    // (e.g. bullseyenorth.com — `X-Frame-Options : SAMEORIGIN` with space-before-colon)
+    // are rejected by BOTH llhttp (axios) and undici. Curl's parser is permissive.
     if (ae.code === 'HPE_INVALID_HEADER_TOKEN' || /Parse Error|Invalid header/i.test(ae.message ?? '')) {
-      return nativeFetchText(url, opts);
+      try {
+        return await nativeFetchText(url, opts);
+      } catch (nfErr) {
+        const nfMsg = (nfErr as Error).message ?? '';
+        const nfCauseMsg = ((nfErr as { cause?: Error }).cause)?.message ?? '';
+        if (/Invalid header|Parse Error/i.test(nfMsg) || /Invalid header|Parse Error/i.test(nfCauseMsg)) {
+          return await curlSubprocessFetch(url, opts);
+        }
+        throw nfErr;
+      }
     }
     throw err;
   }
@@ -228,5 +311,5 @@ export async function fetchUrl(url: string, opts: FetchOptions = {}): Promise<Fe
   return axiosFetch(url, opts);
 }
 
-// Alias used by room5-bootstrap modules
+// Alias kept for callers that prefer the safeFetch name
 export const safeFetch = fetchUrl;

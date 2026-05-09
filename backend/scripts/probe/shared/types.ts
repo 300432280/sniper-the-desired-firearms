@@ -1,8 +1,8 @@
 // backend/scripts/probe/shared/types.ts
 // Cumulative state types per spec §5.1.
-// Each room's output extends the previous room's output. No mutation.
+// Each stage's output extends the previous stage's output. No mutation.
 
-// ─── Room 1: Intake ──────────────────────────────────────────────────────────
+// ─── Intake stage ───────────────────────────────────────────────────────────
 export type IntakeState = {
   inputUrl: string;
   canonicalUrl: string;
@@ -10,7 +10,7 @@ export type IntakeState = {
   runId: string;
 };
 
-// ─── Room 2: Access & Identity ──────────────────────────────────────────────
+// ─── Access & Identity stage ────────────────────────────────────────────────
 export type WafType =
   | 'cloudflare-passive' | 'cloudflare-active'
   | 'sucuri' | 'sgcaptcha' | 'incapsula' | 'akamai' | 'malcare'
@@ -74,7 +74,7 @@ export type AccessIdentityState = IntakeState & {
   platformMarker: PlatformMarkerEvidence;  // single winner from detector registry (highest confidence)
 };
 
-// ─── Room 3: Geography & Count ──────────────────────────────────────────────
+// ─── Geography & Count stage ────────────────────────────────────────────────
 export type PaginationPattern = {
   type: 'query' | 'path' | 'offset-query' | 'suffix-replace' | null;
   template?: string;
@@ -122,7 +122,7 @@ export type GeographyCountState = AccessIdentityState & {
   };
 };
 
-// ─── Room 4: Navigation ─────────────────────────────────────────────────────
+// ─── Navigation stage ───────────────────────────────────────────────────────
 
 export type WatermarkMethod =
   | 'api-date-since-watermark'
@@ -158,7 +158,7 @@ export type NavigationState = GeographyCountState & {
   };
 };
 
-// ─── Room 5: Bootstrap ──────────────────────────────────────────────────────
+// ─── Bootstrap stage (folder deleted; type retained for backward type compat) ──
 export type BootstrapState = NavigationState & {
   productsIndexed: number;
   indexingStrategyUsed: 'api-walk' | 'html-walk' | 'hybrid';
@@ -185,13 +185,13 @@ export type BootstrapState = NavigationState & {
   };
 };
 
-// ─── Room failure ──────────────────────────────────────────────────────────
-export type RoomFailure = {
-  roomFailed: true;
-  roomNumber: 1 | 2 | 3 | 4 | 5;
+// ─── Stage failure ─────────────────────────────────────────────────────────
+export type StageFailure = {
+  stageFailed: true;
+  stageNumber: 1 | 2 | 3 | 4;
   reason: string;
   evidence: Record<string, unknown>;
   timestamp: string;
 };
 
-export type RoomResult<T> = T | RoomFailure;
+export type StageResult<T> = T | StageFailure;

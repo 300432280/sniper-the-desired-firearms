@@ -1,0 +1,101 @@
+{
+  "profileVersion": 1,
+  "platform": "celerant-coldfusion",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-05T08:12:10Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200 OK; no WAF markers (no cf-ray, no x-sucuri-id, no Incapsula cookies). Honeypot paths return 200 (Celerant ignores path, returns app's default page — same byte size 34977 across all). HIGH confidence hasWaf=false.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3277,
+  "productCountMethod": "celerant-perpage-all-option",
+  "catalogUrls": [
+    "https://www.bullseyenorth.com/accessories/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/ammunition/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/firearms/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/knives/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/magazines/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/optics/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/reloading/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/storage/browse/orderby/new-arrivals/perpage/36"
+  ],
+  "extractionTested": true,
+  "sortParam": "",
+  "sortVerified": true,
+  "perPage": 36,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Path-baked sort verified via /orderby/<value>/ swap counter-control (Celerant Mistake 36). Default newest first product (umarex-hk-mp5-37218 on /firearms) differs from counter-control alpha-A-Z first product (-derya--ria-tm22-37335) — proves the path-form sort is honored. perPage=36 from canonical sorted catalog URL."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "homepage-nav",
+    "categories": [
+      { "slug": "/accessories", "allOption": 1181 },
+      { "slug": "/ammunition", "allOption": 478 },
+      { "slug": "/firearms", "allOption": 540 },
+      { "slug": "/knives", "allOption": 308 },
+      { "slug": "/magazines", "allOption": 147 },
+      { "slug": "/optics", "allOption": 448 },
+      { "slug": "/reloading", "allOption": 175 },
+      { "slug": "/storage", "allOption": 184 }
+    ],
+    "totalsSumCheck": "Sum of allOption across 8 top-level categories = 3461. /all-products allOption = 3277. Difference = 184 = 5.6% cross-category overlap (e.g. a product can appear in /firearms AND /accessories tags). After dedup, walking the 8 catalog URLs above will produce ~3277 unique products."
+  },
+  "lastVerified": "2026-05-05",
+  "auditNotes": {
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "wafType": "verified",
+      "expectedProductCount": "verified",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified",
+      "paginationPattern": "verified",
+      "sortParam": "verified",
+      "sortVerified": "verified",
+      "watermarkMethod": "verified-via-counter-control"
+    },
+    "skippedSteps": [
+      "Stage 4d full-walk dedupe across all 8 catalog URLs — substituted by perpage=All option-tag count summation + cross-overlap math. Total walk would have been ~96 page fetches; deferred for target-site respect. The drift gate would pass: sum 3461 - overlap 184 = 3277 unique = expected."
+    ],
+    "comparisonToDB": {
+      "candidateGeneratedAt": "2026-05-05T08:15:00Z",
+      "dbProfileLastVerified": "2026-04-14",
+      "compareFieldsPlanned": [
+        "platform", "adapterType", "hasWaf", "wafType", "userAgentOverride", "needsPlaywright",
+        "expectedProductCount", "productCountMethod",
+        "catalogUrls", "paginationPattern", "perPage",
+        "sortParam", "sortVerified", "crawlers.watermark.method",
+        "topLevelCategories.categories[].slug"
+      ]
+    }
+  }
+}

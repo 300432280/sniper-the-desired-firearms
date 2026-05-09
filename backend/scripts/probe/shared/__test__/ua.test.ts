@@ -19,7 +19,7 @@ describe('pickUaForWaf', () => {
   it('picks iPhone for Sucuri with UA-filter (doctordeals precedent)', () => {
     expect(pickUaForWaf('sucuri')).toBe(UA_IPHONE);
   });
-  it('picks iPhone for Incapsula (matches Room 2 orchestrator policy)', () => {
+  it('picks iPhone for Incapsula (matches access-identity orchestrator policy)', () => {
     expect(pickUaForWaf('incapsula')).toBe(UA_IPHONE);
   });
   it('picks desktop for cloudflare-passive', () => {

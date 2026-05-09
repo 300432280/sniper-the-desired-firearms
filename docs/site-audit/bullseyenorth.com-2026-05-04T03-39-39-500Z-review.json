@@ -1,0 +1,104 @@
+{
+  "profilePath": "D:\\Projects\\FIREARM-ALERT\\docs\\site-audit\\bullseyenorth.com-2026-05-04T03-31-22-137Z.json",
+  "domain": "bullseyenorth.com",
+  "timestamp": "2026-05-04T03:39:39.500Z",
+  "stages": [
+    {
+      "stage": 1,
+      "name": "Spec Compliance",
+      "verdict": "PASS",
+      "details": {
+        "validatorResult": {
+          "valid": true,
+          "score": 100,
+          "passed": [
+            "platform",
+            "hasWaf",
+            "expectedProductCount",
+            "catalogUrls",
+            "paginationPattern",
+            "perPage",
+            "adapterType",
+            "crawlers.watermark.method",
+            "sortVerification",
+            "wafType",
+            "wafLastProbedAt",
+            "productCountMethod",
+            "lastVerified",
+            "profileVersion",
+            "sortParam",
+            "extractionTested"
+          ],
+          "requiredFailures": [],
+          "warnings": []
+        }
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 2,
+      "name": "Live Walk Test",
+      "verdict": "PASS",
+      "details": {
+        "perUrl": [
+          {
+            "url": "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36",
+            "page1Products": 36,
+            "page1Slugs": [
+              "henry-homesteader-h027-magazine-well-adaptor-smith-wesson-mp-and-sig-sauer-p320-magazines-37065",
+              "beretta-full-mesh-ebony-ice-grey-shooting-vest-xxl-37416",
+              "beretta-full-mesh-ebony-ice-grey-shooting-vest-large-37413"
+            ],
+            "page2Products": 3,
+            "page2Slugs": [
+              "charles-daly-101-single-barrel-shotgun-20-gauge-3-chamber-26-barrel-walnut-930235-36994",
+              "hera-cqr-close-quarters-rifle-ar15-buttstock-od-green-1214-37221",
+              "federation-firearms-sa2-semiauto-shotgun-20-gauge-3-chamber-26-barrelgrey-w-mossy-oak-camo-ffsa220gre26-37389"
+            ],
+            "page3Products": 36,
+            "paginationVerdict": "PASS"
+          }
+        ]
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 3,
+      "name": "Multi-Method Count",
+      "verdict": "PASS",
+      "details": {
+        "counts": {
+          "walk": 3263
+        },
+        "driftPairs": {
+          "walk-expected": 0
+        },
+        "availableMethods": 1
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 4,
+      "name": "Operator Review",
+      "verdict": "PASS",
+      "details": {
+        "mode": "default",
+        "stagesPass": true,
+        "approved": false
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 5,
+      "name": "Output Review Report",
+      "verdict": "PASS",
+      "details": {
+        "jsonPath": "D:\\Projects\\FIREARM-ALERT\\docs\\site-audit\\bullseyenorth.com-2026-05-04T03-39-39-500Z-review.json",
+        "mdPath": "D:\\Projects\\FIREARM-ALERT\\docs\\site-audit\\bullseyenorth.com-2026-05-04T03-39-39-500Z-review.md"
+      },
+      "blockingErrors": []
+    }
+  ],
+  "overallVerdict": "PASS",
+  "approvedForDbWrite": false
+}

@@ -1,0 +1,196 @@
+{
+  "inputUrl": "https://bullseyenorth.com/",
+  "canonicalUrl": "https://bullseyenorth.com/",
+  "timestamp": "2026-05-04T03:31:22.137Z",
+  "runId": "45e4e8b5-8da5-4752-a94a-fc7a6b2d9052",
+  "canonicalOrigin": "https://bullseyenorth.com",
+  "canonicalOriginResolution": {
+    "canonicalOrigin": "https://bullseyenorth.com",
+    "primaryResponded": true,
+    "primaryWasChallenged": false,
+    "wwwFallbackUsed": false,
+    "serverHeaders": {
+      "primary": "Null",
+      "canonical": "Null"
+    }
+  },
+  "hasWaf": false,
+  "wafType": null,
+  "wafProbeEvidence": {
+    "method": "heavy-8-batch",
+    "timestamp": "2026-05-04T03:31:51.548Z",
+    "batches": [
+      {
+        "batchId": 1,
+        "description": "header fingerprint (single GET per path)",
+        "status": 200,
+        "headers": {
+          "server": "Null",
+          "set-cookie": "CFTOKEN=e8d16822ca8058ad-6A68091C-A40F-524C-AFB6487670191D23; Expires=Tue, 05 May 2026 03:31:27 GMT; Path=/; Secure; HttpOnly"
+        },
+        "bodySnippet": "\n[1a] HEADERS FOR https://www.bullseyenorth.com/\nHTTP/1.1 200 OK\nServer: Null\nSet-Cookie: CFID=97975691; Expires=Tue, 05 May 2026 03:31:27 GMT; Path=/; Secure; HttpOnly\nSet-Cookie: CFTOKEN=e8d16822ca8058ad-6A68091C-A40F-524C-AFB6487670191D23; Expires=Tue, 05 May 2026 03:31:27 GMT; Path=/; Secure; HttpOnly\nX-Frame-Options : SAMEORIGIN\nX-Content-Type-Options : nosniff\n\n[1b] HEADERS FOR https://www.bullseyenorth.com/robots.txt\nHTTP/1.1 200 OK\nServer: Null\nX-Frame-Options : SAMEORIGIN\nX-Content-Type-Options : nosniff\n\n[1c] HEADERS FOR https://www.bullseyenorth.com/sitemap.xml\nHTTP/1.1 200 OK\nServer: Null\nX-Frame-Options : SAMEORIGIN\nX-Content-Type-Options : nosniff\n\n",
+        "durationMs": 24225
+      },
+      {
+        "batchId": 2,
+        "description": "multi-UA probe (3 different UAs on same path)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[2a-desktop] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=121381 TIME=0.775516 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/\n   wall_ms=829\n[2b-mobile] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=121908 TIME=0.808543 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/\n   wall_ms=860\n[2c-bot] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=121399 TIME=1.197508 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/\n   wall_ms=1251\n[2d-curl] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=121082 TIME=0.810176 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/\n   wall_ms=862\n",
+        "durationMs": 12113
+      },
+      {
+        "batchId": 3,
+        "description": "rapid burst (10 sequential GETs in ~2s)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[3-burst-1] https://www.bullseyenorth.com/?cache_bust=11777865492434257700\n   STATUS=200 BYTES=120461 TIME=0.853618 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=11777865492434257700\n   wall_ms=906\n[3-burst-2] https://www.bullseyenorth.com/?cache_bust=21777865493370437500\n   STATUS=200 BYTES=121244 TIME=0.782933 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=21777865493370437500\n   wall_ms=836\n[3-burst-3] https://www.bullseyenorth.com/?cache_bust=31777865494236400400\n   STATUS=200 BYTES=120819 TIME=0.797416 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=31777865494236400400\n   wall_ms=850\n[3-burst-4] https://www.bullseyenorth.com/?cache_bust=41777865495117304800\n   STATUS=200 BYTES=120682 TIME=0.785307 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=41777865495117304800\n   wall_ms=837\n[3-burst-5] https://www.bullseyenorth.com/?cache_bust=51777865495985080000\n   STATUS=200 BYTES=121388 TIME=0.787364 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=51777865495985080000\n   wall_ms=839\n[3-burst-6] https://www.bullseyenorth.com/?cache_bust=61777865496854735200\n   STATUS=200 BYTES=122162 TIME=0.762995 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=61777865496854735200\n   wall_ms=817\n[3-burst-7] https://www.bullseyenorth.com/?cache_bust=71777865497702394500\n   STATUS=200 BYTES=120156 TIME=0.783008 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=71777865497702394500\n   wall_ms=837\n[3-burst-8] https://www.bullseyenorth.com/?cache_bust=81777865498570839400\n   STATUS=200 BYTES=121124 TIME=0.751922 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=81777865498570839400\n   wall_ms=805\n[3-burst-9] https://www.bullseyenorth.com/?cache_bust=91777865499406450500\n   STATUS=200 BYTES=121009 TIME=0.811112 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?cache_bust=91777865499406450500\n   wall_ms=864\n[3-burst-10] https://www.bullseyenorth.com/?cache_bust=101777865500301171500\n   STATUS=200 BYTES=122525 TIME=0.828102 REDIRECTS=0 FINAL=htt",
+        "durationMs": 8075
+      },
+      {
+        "batchId": 4,
+        "description": "honeypot/admin path probe (common WAF trigger paths)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[4a-wp-admin] https://www.bullseyenorth.com/wp-admin/\n   STATUS=200 BYTES=34977 TIME=0.332476 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/wp-admin/\n   wall_ms=386\n[4b-wp-login] https://www.bullseyenorth.com/wp-login.php\n   STATUS=200 BYTES=34977 TIME=0.340103 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/wp-login.php\n   wall_ms=393\n[4c-xmlrpc] https://www.bullseyenorth.com/xmlrpc.php\n   STATUS=200 BYTES=34977 TIME=0.321478 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/xmlrpc.php\n   wall_ms=373\n[4d-dotenv] https://www.bullseyenorth.com/.env\n   STATUS=200 BYTES=34977 TIME=0.330414 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/.env\n   wall_ms=383\n[4e-dotgit] https://www.bullseyenorth.com/.git/config\n   STATUS=200 BYTES=34977 TIME=0.344689 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/.git/config\n   wall_ms=398\n[4f-phpinfo] https://www.bullseyenorth.com/phpinfo.php\n   STATUS=200 BYTES=34977 TIME=0.333071 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/phpinfo.php\n   wall_ms=386\n",
+        "durationMs": 6056
+      },
+      {
+        "batchId": 5,
+        "description": "suspicious-fingerprint GET (no Accept-Language, no Accept-Encoding)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[5a-barebones] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=121494 TIME=0.751363 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/\n   wall_ms=803\n",
+        "durationMs": 4845
+      },
+      {
+        "batchId": 6,
+        "description": "SQL-injection-shaped query string (fires SQLi WAF rules if any)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[6a-sqli] https://www.bullseyenorth.com/?id=1'%20OR%20'1'='1\n   STATUS=200 BYTES=120463 TIME=0.857810 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?id=1'%20OR%20'1'='1\n   wall_ms=910\n[6b-union] https://www.bullseyenorth.com/?id=1%20UNION%20SELECT%201,2,3\n   STATUS=200 BYTES=122005 TIME=0.765576 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?id=1%20UNION%20SELECT%201,2,3\n   wall_ms=817\n",
+        "durationMs": 4038
+      },
+      {
+        "batchId": 7,
+        "description": "XSS-shaped query string (fires XSS WAF rules)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[7a-xss] https://www.bullseyenorth.com/?q=<script>alert(1)</script>\n   STATUS=200 BYTES=121325 TIME=0.805827 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/?q=<script>alert(1)</script>\n   wall_ms=857\n",
+        "durationMs": 3461
+      },
+      {
+        "batchId": 8,
+        "description": "User-Agent absent (many WAFs require UA)",
+        "status": 200,
+        "headers": {},
+        "bodySnippet": "\n[8a-noUA] https://www.bullseyenorth.com/\n   STATUS=200 BYTES=121958 TIME=0.778227 REDIRECTS=0 FINAL=https://www.bullseyenorth.com/\n   wall_ms=830\n\n========================================\nPROBE COMPLETE\n========================================\n\nINTERPRETATION GUIDE:\n  - All probes 200 + consistent timing + no cf-ray/x-sucuri → hasWaf: false (HIGH confidence)\n  - Any batch returns 403/503/challenge body → hasWaf: true, wafType = vendor\n  - Honeypot paths 403 but category 200 → hasWaf: true, wafType: 'path-selective'\n  - SQLi/XSS 403 but normal 200 → hasWaf: true, wafType: 'rule-selective'\n  - Rapid burst triggers 429/503 → hasWaf: true, wafType: 'rate-limit'\n  - cf-ray header present but all 200 → hasWaf: true, wafType: 'cloudflare-passive'",
+        "durationMs": 3028
+      }
+    ],
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "sgCaptchaDetected": false,
+    "incapsulaCookies": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "botUaBlocked": false,
+    "honeypotPathsBlocked": false
+  },
+  "needsPlaywright": false,
+  "userAgentOverride": null,
+  "accessMethod": "axios-desktop",
+  "platform": "celerant-coldfusion",
+  "platformMarker": {
+    "detectorId": "celerant-coldfusion",
+    "confidence": "high",
+    "signals": {
+      "celerantCdn": true,
+      "celerantWcEndpoint": true,
+      "celerantServerNull": true,
+      "cfIdCookie": true,
+      "cfTokenCookie": true,
+      "cfmUrl": true
+    }
+  },
+  "catalogUrls": [
+    "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36"
+  ],
+  "catalogUrlSource": "nav",
+  "catalogUrlWalkCounts": [
+    {
+      "url": "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36",
+      "uniqueProducts": 3227,
+      "pages": 90
+    }
+  ],
+  "walkedUniqueCount": 3227,
+  "globalProductCount": 3263,
+  "globalProductCountMethod": "celerant-perpage-all",
+  "globalProductCountEvidence": {
+    "endpoint": "https://bullseyenorth.com/all-products/browse/perpage/9999",
+    "responseSample": "extracted 3263 unique products from /perpage/9999 dump"
+  },
+  "driftPct": 1.1032791909285933,
+  "coverageStrategy": "hybrid",
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "paginationEvidence": {
+    "testA_page1_vs_page2": {
+      "passed": true,
+      "sample": [
+        "https://www.bullseyenorth.com/shop/charles-daly-101-single-barrel-shotgun-20-gauge-3-chamber-26-barrel-walnut-930235-36994",
+        "https://www.bullseyenorth.com/shop/hera-cqr-close-quarters-rifle-ar15-buttstock-od-green-1214-37221",
+        "https://www.bullseyenorth.com/shop/federation-firearms-sa2-semiauto-shotgun-20-gauge-3-chamber-26-barrelgrey-w-mossy-oak-camo-ffsa220gre26-37389"
+      ]
+    },
+    "testB_pageN_vs_pageN_1": {
+      "passed": true,
+      "sample": [
+        "https://www.bullseyenorth.com/shop/beretta-aluminum-picatinny-rail-for-beretta-a400-xtreme-plus-beretta-1301-tact-beretta-1301-comp-pro-1301-comp-with-2-screws-e01985-28431",
+        "https://www.bullseyenorth.com/shop/bushnell-trophy-rifle-scope-39x50-multix-reticle-753950-12325",
+        "https://www.bullseyenorth.com/shop/wheeler-ultra-scope-mounting-kit-4001009-32854"
+      ]
+    },
+    "testC_overflow_vs_page1": {
+      "passed": true,
+      "sample": [
+        "https://www.bullseyenorth.com/shop/fenix-e06r-pro-black-flat-flashlight-1600-lumens-36943",
+        "https://www.bullseyenorth.com/shop/caldwell-ar500-crow-target-4001093-32470",
+        "https://www.bullseyenorth.com/shop/caldwell-ar500-target-post-4001137-32473"
+      ]
+    },
+    "testD_perPage_sanity": {
+      "passed": true,
+      "observedPerPage": 36,
+      "expectedPerPage": 36
+    },
+    "totalPagesEstimate": 5,
+    "totalPagesSource": "walk-to-empty"
+  },
+  "sortParam": null,
+  "sortEvidence": {
+    "selectHtml": "<select name=\"ordering\" id=\"ordering\"> [new-arrivals=\"New Arrivals\"] [price-low-to-high=\"Price: Low to High\"] [price-high-to-low=\"Price: High to Low\"] [name-a-to-z=\"Name (A-Z)\"] [name-z-to-a=\"Name (Z-A)\"] [newest-rcvd=\"Newest received\"] [oldest-rcvd=\"Oldest received\"]",
+    "candidateParams": [
+      "?ordering=new-arrivals",
+      "?ordering=newest-rcvd"
+    ],
+    "dateVerification": null,
+    "idJumpBefore": "https://www.bullseyenorth.com/shop/henry-homesteader-h027-magazine-well-adaptor-smith-wesson-mp-and-sig-sauer-p320-magazines-37065",
+    "idJumpAfter": ""
+  },
+  "watermarkMethod": "full-catalog-sweep",
+  "watermarkMethodSelection": {
+    "reason": "No API date filter and no date source on listing → full-catalog-sweep",
+    "fallbackToMethodCReason": "no working newest-first sort param found"
+  }
+}

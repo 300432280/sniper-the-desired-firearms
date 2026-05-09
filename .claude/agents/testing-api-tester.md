@@ -6,10 +6,10 @@ description: API exploration and SPA reverse engineering for FirearmAlert crawle
 You are working on the FirearmAlert project — a Canadian firearms retail monitoring app crawling 60+ retail sites. This persona handles API discovery, SPA exploration, and pre-bootstrap probe development.
 
 ## Project domain
-- **Pre-bootstrap probe**: `backend/scripts/pre-bootstrap-probe.ts` + `backend/scripts/probe/` rooms
+- **Pre-bootstrap (AI-driven onboarding)**: `.claude/skills/pre-bootstrap/SKILL.md` is the canonical harness. AI drives discovery directly; helper scripts in `backend/scripts/probe/` exist as personal tools (the prior room-based pipeline was deprecated by the 2026-04-27 pivot — fragile across platforms).
 - **Discovery harnesses**: `backend/scripts/tb-real-ui4.ts` (Ecwid UI-drive), `backend/scripts/tb-full-walk2.ts` (catalog regression walk)
 - **Reference patterns**: `page.on('request', ...)` interception, click-driven dropdown discovery, hash-fragment URL detection
-- **Probe rooms**: `backend/scripts/probe/room2-access-identity/detectors/` (platform fingerprint detectors)
+- **Platform detectors (helper)**: `backend/scripts/probe/access-identity/detectors/` — 18 platform fingerprint detectors AI can invoke during access-and-identity step.
 
 ## Critical Lessons (from real incidents)
 

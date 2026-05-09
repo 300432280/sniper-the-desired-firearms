@@ -1,18 +1,160 @@
 {
   "roomFailed": true,
   "roomNumber": 3,
-  "reason": "Drift 20.03% exceeds 5% hard-fail threshold (walked=3278, expected=2731)",
+  "reason": "Drift 28.83% exceeds 5% hard-fail threshold (walked=2321, expected=3261)",
   "evidence": {
     "walkCounts": [
       {
-        "url": "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36",
-        "uniqueProducts": 3278,
-        "pages": 92
+        "url": "https://bullseyenorth.com/all-products/browse",
+        "uniqueProducts": 1691,
+        "pages": 200
+      },
+      {
+        "url": "https://bullseyenorth.com/all-products/browse/brand/umarex/orderby/new-arrivals/perpage/36",
+        "uniqueProducts": 15,
+        "pages": 4
+      },
+      {
+        "url": "https://bullseyenorth.com/brand/federation-firearms",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://bullseyenorth.com/brand/charles-daly",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://bullseyenorth.com/all-products/browse/sale/yes",
+        "uniqueProducts": 20,
+        "pages": 11
+      },
+      {
+        "url": "https://bullseyenorth.com/all-products/browse/sale/yes/perpage/75",
+        "uniqueProducts": 497,
+        "pages": 15
+      },
+      {
+        "url": "https://bullseyenorth.com/all-products/browse/brand/vortex",
+        "uniqueProducts": 2,
+        "pages": 4
+      },
+      {
+        "url": "https://bullseyenorth.com/storage/browse/brand/savior-equipment/perpage/25",
+        "uniqueProducts": 5,
+        "pages": 3
+      },
+      {
+        "url": "https://bullseyenorth.com/knives/browse/perpage/75",
+        "uniqueProducts": 53,
+        "pages": 4
+      },
+      {
+        "url": "https://bullseyenorth.com/all-products/browse/brand/canuck/orderby/new-arrivals/perpage/50",
+        "uniqueProducts": 15,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/crusader-arms-akdas-sport-conversion-kit-stock-grip-adapter-w-mlok-handguard-for-the-akdas-alcor-223-hunting-rifle-35240",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/canuck-elite-tacop-12-gauge-semiauto-shotgun-3-186-barrel-black-gold-mlok-forend-35995",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/vortex-crossfire-ii-39x40-rifle-scope-dead-hold-bdc-reticle-cf231007-9380",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/cold-steel-39lsfc-leathernecksf-fixed-675-d2-black-powder-coated-blade-grivex-handles-secureex-sheath-17444",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/blue-line-pump-12-gauge-shotgun-185-51-accepts-870-furniture-23203",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/keltec-ks7-gen2-defender-shotgun-12-gauge-23-4-or-3-185-barrel-black-ks7blkdgen2-36324",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/preorder-canuck-elite-tacop-12-gauge-semiauto-shotgun-3-186-barrel-grey-gold-mlok-forend-35324",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/canuck-recon-3-pump-shotgun-12-gauge-12-barrel-bronze-crec3bz1212-35848",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/bleeding-control-kit-10-with-nar-black-cat-combat-application-tourniquet-36157",
+        "uniqueProducts": 3,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/fenix-e06r-pro-black-flat-flashlight-1600-lumens-36943",
+        "uniqueProducts": 3,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/custom-45-cal-smokeless-muzzleloader-24-carbon-barrel-black-muzzle-brake-35898",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/ruger-precision-rimfire-rifle-22-long-rifle-18-threaded-barrel-black-9910",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/derya-tm22-lever-action-rifle-22lr-18-threaded-red-laminate-34661",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/savage-rxr22-rifle-magazine-22-lr-10-rounds-35679",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/canuck-wrangler-blackout-tactical-rifle-357-mag-lever-action-165-barrel-cl35716sba-33921",
+        "uniqueProducts": 2,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/mossberg-maverick-88-slug-12-gauge-pump-action-shotgun-24-barrel-33117",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/savage-rxr22-rifle-22lr-165-threaded-barrel-fde-synthetic-stock-19779-35678",
+        "uniqueProducts": 0,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/canuck-elite-tacop-12-gauge-semiauto-shotgun-186-barrel-black-blue-bolt-37054",
+        "uniqueProducts": 1,
+        "pages": 1
+      },
+      {
+        "url": "https://www.bullseyenorth.com/shop/blue-line-pump-shotgun-12-gauge-28-barrel-29013",
+        "uniqueProducts": 0,
+        "pages": 1
       }
     ],
-    "globalCount": 2731,
-    "walkedCount": 3278,
-    "method": "celerant-perpage-all"
+    "globalCount": 3261,
+    "walkedCount": 2321,
+    "method": "celerant-perpage-all",
+    "setCoverCoverage": 0,
+    "sitemapTotal": 7
   },
-  "timestamp": "2026-04-26T21:21:24.210Z"
+  "timestamp": "2026-05-04T07:13:34.414Z"
 }

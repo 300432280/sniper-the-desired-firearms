@@ -11,6 +11,6 @@ SITES=(
 )
 for site in "${SITES[@]}"; do
   echo "=== START $site $(date +%H:%M:%S) ==="
-  timeout 600 npx tsx scripts/pre-bootstrap.ts "$site" 2>&1 | grep -E "^\[Room|HARD|FAIL|drift|walked|expected|wrote profile|catalogUrls=|globalProductCount" | head -30
+  timeout 600 npx tsx scripts/pre-bootstrap.ts "$site" 2>&1 | grep -E "^\[(Intake|Access&Identity|Geography&Count|Navigation)|HARD|FAIL|drift|walked|expected|wrote profile|catalogUrls=|globalProductCount" | head -30
   echo "=== END $site exit=${PIPESTATUS[0]} $(date +%H:%M:%S) ==="
 done

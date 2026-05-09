@@ -1,11 +1,12 @@
 // backend/scripts/pre-bootstrap.ts
-// Orchestrator. Composes Rooms 1-4. Writes profile JSON + human report. No detection logic.
+// Orchestrator. Composes Intake / Access&Identity / Geography&Count / Navigation stages.
+// Writes profile JSON + human report. No detection logic.
 // Bug R2-3 fix: explicit cleanup (Playwright browser + Redis) before exit.
 
-import { runRoom1 } from './probe/room1-intake';
-import { runRoom2 } from './probe/room2-access-identity';
-import { runRoom3 } from './probe/room3-geography-count';
-import { runRoom4 } from './probe/room4-navigation';
+import { runIntake } from './probe/intake';
+import { runAccessIdentity } from './probe/access-identity';
+import { runGeographyCount } from './probe/geography-count';
+import { runNavigation } from './probe/navigation';
 import { closeBrowser } from '../src/services/scraper/playwright-fetcher';
 import { redisConnection } from '../src/services/queue';
 import * as fs from 'fs/promises';
@@ -22,17 +23,17 @@ async function main() {
 
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
 
-  let state: any = await runRoom1(url);
-  if ('roomFailed' in state) return halt(state, url);
+  let state: any = await runIntake(url);
+  if ('stageFailed' in state) return halt(state, url);
 
-  state = await runRoom2(state);
-  if ('roomFailed' in state) return halt(state, url);
+  state = await runAccessIdentity(state);
+  if ('stageFailed' in state) return halt(state, url);
 
-  state = await runRoom3(state);
-  if ('roomFailed' in state) return halt(state, url);
+  state = await runGeographyCount(state);
+  if ('stageFailed' in state) return halt(state, url);
 
-  state = await runRoom4(state);
-  if ('roomFailed' in state) return halt(state, url);
+  state = await runNavigation(state);
+  if ('stageFailed' in state) return halt(state, url);
 
   const domain = new URL(state.canonicalOrigin).hostname;
   const profilePath = path.join(OUTPUT_DIR, `${domain}-profile.json`);
@@ -51,7 +52,7 @@ async function halt(failure: any, url: string) {
   const failPath = path.join(OUTPUT_DIR, `${safeName}-FAILURE.json`);
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
   await fs.writeFile(failPath, JSON.stringify(failure, null, 2));
-  console.error(`✗ Room ${failure.roomNumber} HARD FAIL: ${failure.reason}`);
+  console.error(`✗ Stage ${failure.stageNumber} HARD FAIL: ${failure.reason}`);
   console.error(`  evidence: ${failPath}`);
   await cleanup();
   process.exit(1);

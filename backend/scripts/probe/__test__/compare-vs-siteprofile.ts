@@ -1,8 +1,8 @@
 // backend/scripts/probe/__test__/compare-vs-siteprofile.ts
-// Per-Room validation harness: diff disk profile.json (output of new pipeline)
+// Per-stage validation harness: diff disk profile.json (output of new pipeline)
 // against MonitoredSite.siteProfile (DB validated ground truth).
 //
-// Per memory rule `feedback_per_room_ground_truth.md`: every Room must be
+// Per memory rule `feedback_per_room_ground_truth.md`: every stage must be
 // diffed against validated DB siteProfile WHEN completed. siteProfile is the
 // answer key — never modify it; investigate code when there's a mismatch.
 //

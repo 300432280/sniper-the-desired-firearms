@@ -1,5 +1,5 @@
 // backend/scripts/probe/__test__/dry-run-smoke.ts
-// Per spec §8.3 Tier-1 smoke. Run every commit that touches a room module.
+// Per spec §8.3 Tier-1 smoke. Run every commit that touches a probe-stage module.
 import { spawnSync } from 'child_process';
 
 const SITES = [

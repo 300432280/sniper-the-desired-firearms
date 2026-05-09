@@ -1,0 +1,78 @@
+{
+  "profileVersion": 1,
+  "platform": "celerant-coldfusion",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-04T03:31:22.137Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "all 8 batches 200 OK; no WAF markers (no cf-ray, no x-sucuri, no incapsula). HIGH confidence hasWaf=false.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "botUaBlocked": false,
+    "honeypotPathsBlocked": false,
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3263,
+  "productCountMethod": "celerant-perpage-all",
+  "catalogUrls": [
+    "https://bullseyenorth.com/all-products/browse/orderby/new-arrivals/perpage/36"
+  ],
+  "extractionTested": true,
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 36,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "Celerant path-style sort (Mistake 36): the catalogUrl already contains /orderby/new-arrivals/. The probe's sort-detect tested query-form (?ordering=...) against a URL whose path already pins orderby, so both candidates returned identical first products (predictable noop). Sort IS working — it's baked into the catalogUrl path — but date monotonicity was not verified. Method C is the safe choice; a future audit can promote to Method B (navigate-from-watermark) after manually verifying that /orderby/new-arrivals/ produces a strictly date-decreasing first page."
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    }
+  },
+  "wafWorkaround": {
+    "method": "undici-fallback",
+    "note": "Celerant emits malformed RFC-violating headers (space before colon, e.g. 'X-Frame-Options : SAMEORIGIN'). Production http-client.ts:344-347 cascades axios → native fetch on parse error. Probe path (probe/shared/fetch.ts) extended in this audit to axios → undici → curl-subprocess because the current undici release also rejects these headers. Reference: Mistake 36 in .claude/catalog-url-discovery-playbook.md."
+  },
+  "lastVerified": "2026-05-04",
+  "auditNotes": {
+    "probeRunId": "45e4e8b5-8da5-4752-a94a-fc7a6b2d9052",
+    "probeTimestamp": "2026-05-04T03:31:22.137Z",
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "wafType": "verified",
+      "expectedProductCount": "verified",
+      "catalogUrls": "inferred",
+      "paginationPattern": "verified",
+      "sortParam": "default",
+      "watermarkMethod": "inferred"
+    },
+    "watchdogPriorVerdict": "FAIL [WARN] sortParam, [FAIL] expectedProductCount (2026-04-28)",
+    "watchdogResolution": {
+      "expectedProductCount": "Re-derived from celerant-perpage-all dump: 3263 (was probably stored as a stale value from an earlier audit). Walk corroborates within 1.10% drift.",
+      "sortParam": "Confirmed null on probe; root cause is probe/Celerant path-form mismatch (Mistake 36). Production catalog crawl uses the catalogUrl as-is; sort is already baked into the path."
+    },
+    "knownLimitations": [
+      "Sitemap returns only 7 product URLs (severe lag); count via /perpage/9999 dump is authoritative.",
+      "totalPagesEstimate=5 in paginationEvidence is a sampling artifact; walked 90 pages (3227 products) is the real count."
+    ],
+    "fetchPathPatch": "This audit added a curl-subprocess third tier to probe/shared/fetch.ts after both axios and undici rejected the malformed Celerant headers. Patch is generic — fires only on Parse Error / Invalid header token after both prior tiers fail."
+  }
+}

@@ -1,5 +1,5 @@
 // backend/scripts/probe/shared/ua.ts
-// UA escalation ladder per spec §1.1 (Room 2 access method).
+// UA escalation ladder per spec §1.1 (access-identity access method).
 // Bot UAs (curl, python-requests) are for heavy-probe Batch 2 vendor detection ONLY,
 // never for site access — they guarantee WAF triggers on protected sites.
 
@@ -31,6 +31,6 @@ export const UA_LADDER: UaLadderStep[] = [
 export function pickUaForWaf(wafType: WafType): string {
   if (wafType === 'sgcaptcha') return UA_IPHONE;
   if (wafType === 'sucuri') return UA_IPHONE;     // doctordeals precedent
-  if (wafType === 'incapsula') return UA_IPHONE;  // matches Room 2 orchestrator policy
+  if (wafType === 'incapsula') return UA_IPHONE;  // matches access-identity orchestrator policy
   return UA_DESKTOP;
 }
