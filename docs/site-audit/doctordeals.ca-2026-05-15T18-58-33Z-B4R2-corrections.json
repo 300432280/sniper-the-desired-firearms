@@ -1,0 +1,162 @@
+{
+  "site": "doctordeals.ca",
+  "runId": "B4R2-2026-05-15T18-58-33Z",
+  "round": "R2-Live-Investigation",
+  "basedOn": "B4R1-2026-05-15T18-42-44Z",
+  "live": {
+    "probeMethod": "Playwright iPhone 13 + iOS Safari UA; sgcaptcha cleared via apex GET cookie cache",
+    "probeFiles": [
+      "_audit_tmp/doctordeals-b4r2-probe.js",
+      "_audit_tmp/doctordeals-b4r2-probe2.js"
+    ]
+  },
+  "corrections": [
+    {
+      "field": "catalogUrls",
+      "dbValue": [
+        "/product-category/gun-shop/firearms/",
+        "/product-category/gun-shop/parts/",
+        "/product-category/gun-shop/accessories/",
+        "/product-category/gun-shop/clothing-gun-related/",
+        "/product-category/gun-shop/defense/"
+      ],
+      "candidateValue": [
+        "/product-category/parts/",
+        "/product-category/accessories/",
+        "/product-category/firearms/",
+        "/product-category/mags-barrels/",
+        "/product-category/clothing-gun-related/",
+        "/product-category/defense/"
+      ],
+      "verdict": "candidate-correct",
+      "confidence": "high",
+      "evidence": [
+        "wp/v2/product_cat?parent=0 returns 6 categories (excluding uncategorized count=0): parts(389), accessories(263), firearms(109), mags-barrels(109), clothing-gun-related(44), defense(1). No `gun-shop` term at parent=0.",
+        "wp/v2/product_cat?slug=gun-shop returns no match (slug does not exist as a taxonomy term).",
+        "Live GET /product-category/gun-shop/ returns HTTP 202 sgcaptcha + 0 product cards + null canonical — this is the WordPress permalink rewrite alias root, not a real category page.",
+        "Both URL forms serve the SAME content for valid child slugs: alias and canonical each return 200 + 24 product cards (12 unique + 12 thumbnail duplicates) AND `<link rel=\"canonical\">` ALWAYS points to /product-category/<slug>/ form (never gun-shop). The canonical is the authoritative URL.",
+        "WP taxonomy API `link` field for each term points to canonical (no gun-shop prefix)."
+      ],
+      "action": "Replace 5 DB URLs with 6 canonical-form URLs; adds mags-barrels (109 products previously uncovered)."
+    },
+    {
+      "field": "catalogUrls (mags-barrels presence)",
+      "dbValue": "absent (DB notes claim magazines are children of accessories)",
+      "candidateValue": "/product-category/mags-barrels/ added",
+      "verdict": "candidate-correct",
+      "confidence": "high",
+      "evidence": [
+        "wp/v2/product_cat?slug=mags-barrels returns [{id:6294, slug:'mags-barrels', count:109, parent:0, link:'https://doctordeals.ca/product-category/mags-barrels/'}].",
+        "Live category page returns: HTTP 200, canonical self-points to /product-category/mags-barrels/, pagination text reads 'Showing 1-12 of 109 results'.",
+        "DB notes' claim that magazines live under accessories contradicts the taxonomy: accessories.id=199 has its own count=263; mags-barrels.id=6294 is a separate top-level term with count=109. The DB 5-URL set leaves all 109 mags-barrels products uncovered by HTML fallback (Mistake 12 violation)."
+      ],
+      "action": "Add /product-category/mags-barrels/ to catalogUrls. Update DB notes to remove the wrong magazines-under-accessories claim."
+    },
+    {
+      "field": "perPage",
+      "dbValue": 20,
+      "candidateValue": 12,
+      "verdict": "candidate-correct",
+      "confidence": "high",
+      "evidence": [
+        "8 distinct override variants tested: plain /shop/, ?per_page=20, ?per_page=50, ?posts_per_page=20, ?count=20, ?show=20, ?show=24, ?show=all - ALL return exactly 12 `.product-small.box` cards.",
+        "/shop/ ordering form HTML contains ONLY <select name=\"orderby\"> with 4 options (popularity, date, price, price-desc). No <select name=\"show\">, no perPage <select>, no perPage exposed control of any kind.",
+        "/product-category/mags-barrels/ pagination text 'Showing 1-12 of 109 results' confirms 12-per-page is server-locked by the Flatsome theme settings (Appearance > Customize > Shop > Product Catalog).",
+        "DB value 20 is dead config: it never matches what the HTML stream walker actually sees and would cause stride miscalculation in path-pagination crawls."
+      ],
+      "action": "Update perPage from 20 to 12."
+    },
+    {
+      "field": "expectedProductCount",
+      "dbValue": 965,
+      "candidateValue": 971,
+      "verdict": "candidate-correct",
+      "confidence": "high",
+      "evidence": [
+        "Sum of 6 top-level taxonomy counts = 389+263+109+109+44+1 = 915 (categorized products; some products span multiple categories).",
+        "Candidate cites WP REST `/wp-json/wp/v2/product?per_page=1` x-wp-total=971 + sitemap <loc> count=971 (exact match).",
+        "DB 965 is from 2026-04-06 verification - 39 days stale; 6 net new products is consistent with low-volume retailer drift."
+      ],
+      "action": "Refresh expectedProductCount from 965 to 971."
+    },
+    {
+      "field": "paginationPattern",
+      "dbValue": "absent",
+      "candidateValue": {
+        "type": "path",
+        "template": "/shop/page/{N}/",
+        "perPage": 12,
+        "firstPageHasParam": false,
+        "startPage": 1,
+        "zeroIndexed": false
+      },
+      "verdict": "candidate-correct",
+      "confidence": "high",
+      "evidence": [
+        "WooCommerce default permalink pagination on Flatsome themes uses /shop/page/N/ path form.",
+        "Candidate ran zero-overlap verification: page1 vs page2 distinct slug sets (12 + 12, no duplicates)."
+      ],
+      "action": "Add full paginationPattern object to siteProfile."
+    },
+    {
+      "field": "crawlers.maintain.verifyMethod",
+      "dbValue": "json-ld",
+      "candidateValue": "store-api",
+      "verdict": "candidate-correct",
+      "confidence": "high",
+      "evidence": [
+        "Site is WooCommerce. SKILL.md Stage 3 mapping table: platform=woocommerce -> verifyMethod=store-api.",
+        "/wp-json/wc/store/v1/products returns 200 with valid payload (already verified in candidate Stage 7 two-probe).",
+        "DB json-ld value forces per-product Playwright re-scrape - strictly slower than batch Store API."
+      ],
+      "action": "Switch verifyMethod from json-ld to store-api; add verifyEndpoint=/wp-json/wc/store/v1/products."
+    },
+    {
+      "field": "crawlers.maintain.verifyEndpoint",
+      "dbValue": "absent",
+      "candidateValue": "/wp-json/wc/store/v1/products",
+      "verdict": "candidate-correct",
+      "confidence": "high",
+      "evidence": [
+        "Companion to verifyMethod=store-api. Worker requires endpoint to construct batch requests."
+      ],
+      "action": "Add field."
+    }
+  ],
+  "noChangeFields": [
+    {
+      "field": "platform",
+      "value": "woocommerce",
+      "reason": "both DB and candidate agree; body.class=woocommerce-js + theme-flatsome + WC Store API responds 200."
+    },
+    {
+      "field": "hasWaf / wafType",
+      "value": "true / sgcaptcha",
+      "reason": "both DB and candidate agree; heavy-8-batch probe in B4R1 confirms every path returns 202 + SG-Captcha header."
+    },
+    {
+      "field": "needsPlaywright",
+      "value": "true",
+      "reason": "both agree; even iPhone UA over plain curl gets 202 until challenge JS runs."
+    },
+    {
+      "field": "sortParam",
+      "value": "?orderby=date",
+      "reason": "both agree; ordering form has 4 orderby options, date is selected by default; counter-control verified honored-default-is-newest in B4R1."
+    },
+    {
+      "field": "userAgentOverride",
+      "value": "iOS 17.x Safari iPhone",
+      "reason": "cosmetic version drift (17.2 vs 17.0); either bypasses sgcaptcha identically."
+    }
+  ],
+  "summary": {
+    "totalCorrections": 7,
+    "highConfidenceCorrections": 7,
+    "topRiskFieldsResolved": [
+      "catalogUrls URL form (alias vs canonical) - RESOLVED canonical (/product-category/<slug>/)",
+      "mags-barrels top-level taxonomy presence - RESOLVED present at parent=0 with 109 products",
+      "perPage override probe - RESOLVED 12 is server-locked, no override honored"
+    ]
+  }
+}

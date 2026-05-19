@@ -1,0 +1,217 @@
+{
+  "site": "oleysarmoury.com",
+  "round": "R2",
+  "auditedAt": "2026-05-15T09:25:00Z",
+  "basis": "R1 candidate + DB siteProfile + live independent re-tests with different methods. NO DB writes.",
+  "corrections": [
+    {
+      "field": "apiAlternative",
+      "verdict": "R1 WRONG -> DB CORRECT (with refinement)",
+      "r1Value": "not emitted (R1 claimed 'token is JS-injected today; static fetch won't catch it')",
+      "dbValue": {
+        "type": "bigcommerce-graphql",
+        "graphqlUrl": "/graphql",
+        "currencyCode": "CAD",
+        "tokenScrapeUrl": "/firearms/",
+        "tokenCacheTtlMs": 3600000
+      },
+      "r2Verdict": {
+        "type": "bigcommerce-graphql",
+        "graphqlUrl": "/graphql",
+        "currencyCode": "CAD",
+        "tokenScrapeUrl": "/firearms/",
+        "tokenCacheTtlMs": 3600000
+      },
+      "evidence": [
+        "Static-fetch axios on /firearms/ contains JWT matching regex /eyJ[a-zA-Z0-9_-]{20,}\\.[a-zA-Z0-9_-]+\\.[a-zA-Z0-9_-]+/ - the EXACT regex used at runtime generic-retail.ts:895. R1's claim 'token is JS-injected today; static fetch won't catch it' is false.",
+        "Playwright headless on https://oleysarmoury.com/firearms/ found JWT-matches-count=1 with the SAME token as static-fetch (no JS-injection difference). All page.on('request') intercepts captured ZERO graphql/storefront XHRs - the token is in the SSR'd HTML, not fetched at runtime.",
+        "Decoded JWT payload: { cid:[1], cors:['https://oleysarmoury.com'], iat:1778753520 (2026-05-14T10:12:00Z), eat:1778926320 (2026-05-16T10:12:00Z), sid:1000335807, sub:'BC', token_type:1 }. CORS origin = oleysarmoury.com -> graphqlOrigin = same origin.",
+        "Live POST https://oleysarmoury.com/graphql with Authorization:Bearer <JWT> + Origin header: status=200, response data.site.newestProducts.edges[0..2] = [{entityId:10151,name:'REMINGTON 7600 Rear Sight Slide...',path:'/remington-7600-rear-sight-slide-new-reproduction/',createdAt.utc:'2026-05-14T19:33:25Z',prices.price.value:49.99,currencyCode:'CAD'}, {entityId:10150}, {entityId:10149}]. Monotonic-DESC entityIds confirm newestProducts ordering.",
+        "Note on token TTL: actual JWT eat-iat span is 48h. DB tokenCacheTtlMs=3600000 (1h) is a conservative re-scrape cache (re-fetch every hour even though JWT itself valid 48h) - safe but could be raised to ~36000000 (10h) without expiry risk."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "KEEP DB block as-is. R1 must ADD this apiAlternative block - skipping it falls back to HTML and loses the date-stamped GraphQL stream the watermark crawler can use."
+    },
+    {
+      "field": "productCountMethod",
+      "verdict": "R1 WRONG (full-URL would break runtime) AND DB WRONG (method label not in runtime switch) -> R2-correct shape",
+      "r1Value": { "method": "sitemap", "url": "https://oleysarmoury.com/xmlsitemap.php?type=products&page=1" },
+      "dbValue": { "method": "bc-xmlsitemap", "endpoint": "/xmlsitemap.php?type=products&page=1", "sitemapTotal": 3368, "categoryWalkTotal": 3388 },
+      "r2Verdict": { "method": "sitemap", "url": "/xmlsitemap.php?type=products&page=1" },
+      "evidence": [
+        "Runtime at backend/src/services/product-count-probe.ts:205: const url = `${origin}${m.url}`; - simple string concatenation. R1's full-URL value would produce 'https://oleysarmoury.comhttps://oleysarmoury.com/xmlsitemap.php...' -> non-resolving host -> axios DNS fail -> returns null.",
+        "DB's method label 'bc-xmlsitemap' is NOT in the runtime switch (backend/src/services/product-count-probe.ts:87-103 type union; line 204 'sitemap' is the canonical name). Unknown method falls through default and returns null - silent disablement.",
+        "Canonical fix: method='sitemap' (matches the switch at line 204) AND url MUST be path-only ('/xmlsitemap.php?type=products&page=1').",
+        "R2-correct shape verified: fresh GET https://oleysarmoury.com/xmlsitemap.php?type=products&page=1 -> 200 OK, 398262 bytes, <loc> count = 3505."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "FIX label drift: method='bc-xmlsitemap' -> 'sitemap'; rename 'endpoint' -> 'url'; refresh sitemapTotal=3505. R1 must change url to path-only."
+    },
+    {
+      "field": "expectedProductCount",
+      "verdict": "R1 CORRECT, DB STALE",
+      "r1Value": 3505,
+      "dbValue": 3368,
+      "r2Verdict": 3505,
+      "evidence": [
+        "Fresh sitemap fetch /xmlsitemap.php?type=products&page=1 -> 3505 <loc> entries (2026-05-15T09:19Z).",
+        "Independent verification: deduped union of 15-category walk = 3505 unique product IDs, exactly matching sitemap.",
+        "DB count (3368) is 33 days stale; net +137 products since 2026-04-12."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "UPDATE to 3505."
+    },
+    {
+      "field": "hasWaf",
+      "verdict": "R1 CORRECT, DB WRONG (internally inconsistent)",
+      "r1Value": false,
+      "dbValue": true,
+      "r2Verdict": false,
+      "evidence": [
+        "Heavy 8-batch reprobe today (2026-05-15T09:21:02Z): apex 200 (CF-RAY: 9fc111f7caba7769-YYZ present, Server: cloudflare, __cf_bm cookie), XSS path 200, honeypot /wp-admin/ 403 (BC native block, not CF mitigated), bot UA python-requests 200, empty UA 200, rapid burst 5x all 200.",
+        "No active CF challenge anywhere: no 'just a moment' page, no cf-mitigated header, no Server-Timing cfWafRule entry.",
+        "Runtime impact of hasWaf=true (catalog-crawler.ts:290, :390, :447, :841 and watermark-crawler.ts:79, :144): (a) drops default perPage 50 -> 20 (moot here, profile sets 100), (b) FORCES Playwright instead of axios for every HTML page, (c) adds Playwright retry on 0-products. On a passive-CF BC Stencil site this makes the crawler ~10x slower with no benefit.",
+        "Decision rule from pre-bootstrap skill: cf-ray present + all batches 200 + no plugin markers = Cloudflare-passive = hasWaf:false. wafType='cloudflare-passive' is documentation; hasWaf is operational."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "FLIP DB hasWaf from true -> false. Significant crawler-speed win."
+    },
+    {
+      "field": "wafProbeResult",
+      "verdict": "BOTH partially wrong - update with R2 facts",
+      "r1Value": "no-waf: all 8 batches 200 (or 404 on honeypot path with no Cloudflare challenge); cf-ray header not present on direct GET; Cloudflare is in front (__cf_bm cookie + Server: cloudflare) but does not actively challenge requests",
+      "dbValue": "cloudflare-passive (cf-ray on all, honeypot 403s, no active challenges)",
+      "r2Verdict": "cloudflare-passive: CF-RAY header IS present on apex GET (9fc111f7caba7769-YYZ); Server: cloudflare; __cf_bm cookie set; honeypot /wp-admin/ -> 403 (BC native block, not CF mitigated); bot UA + empty UA + rapid 5x burst all 200; XSS probe 200; SQLi probe failed locally on curl URL malformation (probe-side limitation, not site-side).",
+      "evidence": [
+        "R1 said 'cf-ray header not present' - R2 reprobe at 2026-05-15T09:21Z shows CF-RAY: 9fc111f7caba7769-YYZ present. Likely R1 hit a CDN edge variant or had cached probe output.",
+        "DB description 'cf-ray on all, honeypot 403s' is closer to today's reality. Honeypot returns 403 but it's BC Stencil's own admin-path block, not a CF mitigation."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "UPDATE wafProbeResult text to reflect cf-ray-present + honeypot-403 + no-challenges."
+    },
+    {
+      "field": "wafLastProbedAt",
+      "verdict": "TIMESTAMP REFRESH",
+      "r1Value": "2026-05-15T08:46:06Z",
+      "dbValue": "2026-04-12",
+      "r2Verdict": "2026-05-15T09:21:02Z",
+      "evidence": ["Heavy 8-batch reprobe completed at 2026-05-15T09:21:02Z."],
+      "confidence": "HIGH",
+      "actionForDB": "UPDATE."
+    },
+    {
+      "field": "catalogUrls",
+      "verdict": "R1 mostly correct + one optional category choice",
+      "r1Value": "14 absolute URLs incl. consignment-non-firearm (with ?limit=100&sort=newest baked in)",
+      "dbValue": "13 relative paths (drops consignment-non-firearm AND drops clearance)",
+      "r2Verdict": "13 paths achieve 100% coverage TODAY: sitemap=3505, union(13 retained incl /swag/, excl /clearance/ and /consignment-non-firearm/) = 3505 = sitemap exact match. consignment-non-firearm is 0-products today; per Rule C may have products tomorrow.",
+      "evidence": [
+        "Per-category uniqueHere from fresh walk of all 15 categories:",
+        "  /swag/: total=64, uniqueHere=64 -> MUST KEEP (DB does; R1 does)",
+        "  /clearance/: total=142, uniqueHere=0 -> DROP redundant (DB does; R1 does)",
+        "  /consignment-non-firearm/: total=0 (200 OK + 0 products) -> KEEP-or-DROP both acceptable",
+        "  All other 12 categories: substantial uniqueHere contributions (firearms 523, ammunition 826, accessories 1245, optics 375, bargain-bin 218, etc.)",
+        "Union math: union(13 retained, with /swag/, excluding /clearance/ + /consignment-non-firearm/) = 3505 = sitemap exact. consignment-non-firearm currently adds 0 IDs but R1's Rule-C 'keep empty 200 categories' rationale is defensible.",
+        "Tier-4 stream state in DB confirms consignment-non-firearm has been 0 products for 2+ weeks (no stream entry for it), so dropping it is also defensible."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "EITHER: keep 13 as-is (current DB shape works), OR add consignment-non-firearm for future-pickup. Either way KEEP /swag/, DROP /clearance/."
+    },
+    {
+      "field": "categoryWalkTotal in productCountMethod",
+      "verdict": "DB STALE",
+      "r1Value": "n/a (not emitted)",
+      "dbValue": 3388,
+      "r2Verdict": "3505 (matches sitemap exactly; 0 drift since both methods now agree)",
+      "evidence": ["Walked union ID-deduped across 15 categories = 3505 = sitemap exact match."],
+      "confidence": "HIGH",
+      "actionForDB": "UPDATE categoryWalkTotal to 3505 if kept in productCountMethod."
+    },
+    {
+      "field": "bcStoreId",
+      "verdict": "BOTH agree on value, R1 just didn't emit",
+      "r1Value": "not emitted (mentioned 's-6j8taxjw04' in prose)",
+      "dbValue": 1000335807,
+      "r2Verdict": 1000335807,
+      "evidence": [
+        "JWT payload sid=1000335807.",
+        "Response header X-Bc-Store-Id: 1000335807 on apex GET.",
+        "(Note: storeHash 's-6j8taxjw04' is a different identifier - the CDN/storefront URL segment. Both are needed: bcStoreId is the integer used in BC's Storefront API URLs; storeHash is in cdn11.bigcommerce.com asset URLs.)"
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "KEEP as 1000335807. R1 should add this field."
+    },
+    {
+      "field": "storeHash",
+      "verdict": "BOTH agree on value, R1 just didn't emit",
+      "r1Value": "not emitted (mentioned in prose)",
+      "dbValue": "s-6j8taxjw04",
+      "r2Verdict": "s-6j8taxjw04",
+      "evidence": [
+        "Link header on apex: <https://cdn11.bigcommerce.com/s-6j8taxjw04>; rel=preconnect.",
+        "Confirmed in BC Stencil bundle URLs and link headers."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "KEEP. R1 should add."
+    },
+    {
+      "field": "searchUrl",
+      "verdict": "DB CORRECT, R1 missing",
+      "r1Value": "not emitted (R1 diff notes 'observed but did not formally output')",
+      "dbValue": "/search.php?search_query={keyword}",
+      "r2Verdict": "/search.php?search_query={keyword}",
+      "evidence": [
+        "HTML form: <form class='form' action='/search.php'> with input name='search_query' (verified in /firearms/ HTML).",
+        "Live test: GET https://oleysarmoury.com/search.php?search_query=glock -> 200 OK, 504870 bytes (returns results page)."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "KEEP. R1 must add."
+    },
+    {
+      "field": "paginationPattern",
+      "verdict": "R1 more complete (fills documented defaults)",
+      "r1Value": { "type": "query", "template": "page", "perPage": 100, "firstPageHasParam": false, "startPage": 1, "zeroIndexed": false },
+      "dbValue": { "type": "query", "template": "page", "firstPageHasParam": false },
+      "r2Verdict": { "type": "query", "template": "page", "perPage": 100, "firstPageHasParam": false, "startPage": 1, "zeroIndexed": false },
+      "evidence": [
+        "Fresh walk shows ?page=2 returns 100 unique IDs not overlapping page 1.",
+        "?limit=250 caps at 100 (BC Stencil limit) - perPage:100 confirmed.",
+        "Page 1 has NO ?page param in URL (firstPageHasParam=false)."
+      ],
+      "confidence": "HIGH",
+      "actionForDB": "Optional enhancement - DB shape works at runtime; R1's shape is documentation-complete."
+    },
+    {
+      "field": "crawlers.bootstrap",
+      "verdict": "DB shape is runtime-correct; R1 apiEndpoints object is informational only",
+      "r1Value": { "apiEndpoints": { "sitemap": "...", "catalogPages": "..." } },
+      "dbValue": { "method": "single-continuous", "apiEndpoints": null, "htmlFallback": true },
+      "r2Verdict": "Keep DB shape - method/htmlFallback are functional fields the bootstrap worker reads. R1's apiEndpoints object is documentation, not consumed by the worker.",
+      "evidence": ["The bootstrap worker dispatches on crawlers.bootstrap.method; apiEndpoints is currently informational only."],
+      "confidence": "MEDIUM",
+      "actionForDB": "Keep DB shape."
+    }
+  ],
+  "agreements": [
+    "platform = bigcommerce-stencil",
+    "adapterType = generic-retail",
+    "needsPlaywright = false (BC Stencil renders products in plain HTML)",
+    "ageGate = none",
+    "hasCaptcha = false",
+    "wafType = cloudflare-passive",
+    "wafProbeMethod = heavy-8-batch",
+    "perPage = 100",
+    "sortParam = ?sort=newest, sortVerified=true (3-outcome cache-busted confirms default==newest, alphaasc counter-control differs)",
+    "crawlers.watermark.method = navigate-from-watermark",
+    "crawlers.maintain.verifyMethod = detail-page"
+  ],
+  "summaryStats": {
+    "correctionsCount": 13,
+    "agreementsCount": 11,
+    "r2NetBiggestChanges": [
+      "Restore apiAlternative.bigcommerce-graphql block (R1 missed; DB has; live-proven via Playwright+axios+GraphQL POST)",
+      "Flip hasWaf true -> false (DB internally inconsistent; saves ~10x crawl cost on every page)",
+      "Fix productCountMethod label drift bc-xmlsitemap -> sitemap AND keep url path-only (both R1 and DB shapes break the runtime in different ways)"
+    ]
+  }
+}

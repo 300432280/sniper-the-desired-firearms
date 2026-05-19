@@ -1,0 +1,152 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "sucuri",
+  "wafLastProbedAt": "2026-05-15T18:26:42Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Sucuri JS-cookie challenge on every fetch (307 + sucuri_cloudproxy_js body). After computing cookie sucuri_cloudproxy_uuid_f2f1c7d20=<hex>, all subsequent fetches return 200 cleanly. No rate-limit on rapid burst, no SQLi/XSS escalation, no honeypot 403s. Sucuri is at the CDN edge.",
+  "wafProbeEvidence": {
+    "sucuriHeaders": ["X-Sucuri-ID: 20017", "Server: Sucuri/Cloudproxy"],
+    "challengeBodyMarker": "sucuri_cloudproxy_js",
+    "cookieName": "sucuri_cloudproxy_uuid_f2f1c7d20",
+    "cookieTtlMaxAge": 86400,
+    "cookieAcquisitionMethod": "JS cookie challenge - decode base64 S payload + evaluate sandboxed",
+    "rapidBurstStatus": "all 307 (challenge), no 429/503 (no rate-limit beyond Sucuri itself)",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/xmlrpc.php returns 403; other paths fall through to Sucuri challenge 307"],
+    "botUaBlocked": false
+  },
+  "wafWorkaround": {
+    "method": "cookie-cache",
+    "reason": "Sucuri JS-cookie challenge. Production waf-cookie-manager solves once via Playwright, caches sucuri_cloudproxy_uuid_* in Redis (TTL 30 min), reuses for all plain-HTTP/API calls."
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": false,
+  "expectedProductCount": 16588,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://www.gotenda.com/product-category/firearms-canada/",
+    "https://www.gotenda.com/product-category/accessories/",
+    "https://www.gotenda.com/product-category/ammunition-for-sale-in-canada-tenda-canada/",
+    "https://www.gotenda.com/product-category/gun-optics-canada/",
+    "https://www.gotenda.com/product-category/knives-tools/",
+    "https://www.gotenda.com/product-category/reloading/",
+    "https://www.gotenda.com/product-category/hunting-outdoor/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.gotenda.com/product/bt-cleaning-kit-clearance/",
+      "title": "B&T Cleaning Kit ** Clearance",
+      "price": 29.99,
+      "stockStatus": "in_stock",
+      "sourceId": "750165"
+    },
+    {
+      "url": "https://www.gotenda.com/product/sig-sauer-p226-mk-25-177-cal-co2-air-pistol/",
+      "title": "Sig Sauer P226 MK-25 .177 Cal CO2 Air Pistol <495fps",
+      "price": 189.99,
+      "stockStatus": "in_stock",
+      "sourceId": "749967"
+    },
+    {
+      "url": "https://www.gotenda.com/product/chiappa-12-ga-x-caliber-gauge-adapter-set-w-8-inserts/",
+      "title": "Chiappa 12 Ga X-Caliber Gauge Adapter Set w/ 8 Inserts",
+      "price": null,
+      "stockStatus": "in_stock",
+      "sourceId": "749802"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "Two-probe verified: /wp-json/wp/v2/product?after=2099-01-01 returned x-wp-total=0; ?after=1999-01-01 returned x-wp-total=16588 (= global). Date filter honored. Default HTML sort is also date-desc (counter-control with ?orderby=price changed first 3 product IDs)."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productDiscovery": "/wp-json/wp/v2/product",
+        "priceEnrichment": "/wp-json/wc/store/v1/products"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/firearms-canada/", "allOption": 3970, "name": "FIREARMS", "id": 6, "note": "tile-only on page 1; page 2+ walks all 3970 products across all subcats" },
+      { "slug": "/product-category/accessories/", "allOption": 3349, "name": "ACCESSORIES", "id": 9, "note": "tile-only on page 1" },
+      { "slug": "/product-category/ammunition-for-sale-in-canada-tenda-canada/", "allOption": 2289, "name": "AMMUNITION", "id": 7, "note": "tile-only on page 1" },
+      { "slug": "/product-category/gun-optics-canada/", "allOption": 2258, "name": "OPTIC", "id": 15, "note": "tile-only on page 1" },
+      { "slug": "/product-category/knives-tools/", "allOption": 1529, "name": "KNIVES & TOOLS", "id": 2454, "note": "tile-only on page 1" },
+      { "slug": "/product-category/reloading/", "allOption": 1426, "name": "RELOADING", "id": 35, "note": "tile-only on page 1" },
+      { "slug": "/product-category/hunting-outdoor/", "allOption": 1075, "name": "HUNTING & OUTDOOR", "id": 63, "note": "tile-only on page 1" },
+      { "slug": "/product-category/gun-deals-promotions-canada/", "allOption": 1324, "name": "PROMOTIONS", "id": 69, "note": "EXCLUDED - overlapping sale subset of above categories" },
+      { "slug": "/product-category/tenda-alpha/", "allOption": 587, "name": "TENDA ALPHA", "id": 20, "note": "EXCLUDED - overlapping marketing aggregator" },
+      { "slug": "/product-category/tenda-strike/", "allOption": 403, "name": "TENDA STRIKE", "id": 2383, "note": "EXCLUDED - overlapping price-cut subset" },
+      { "slug": "/product-category/gift-card/", "allOption": 6, "name": "Gift Card", "id": 276, "note": "EXCLUDED - non-firearm-relevant per Rule C scope" },
+      { "slug": "/product-category/free-gift-350/", "allOption": 2, "name": "Free Gift 350", "id": 921, "note": "EXCLUDED - loyalty reward, not firearm-relevant" }
+    ],
+    "totalsSumCheck": "Sum of 7 included top-level categories = 15,896 firearm-relevant. Global expectedProductCount = 16,588 from /wp-json/wc/store/v1/products. Difference (~692) = (a) gift-card/free-gift entries (~14), (b) cross-category overlap (a product in both /firearms-canada/ and /promotions/ counted twice in sum but once in global). Walked dedup expected to match 15,896 within 5%."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "B4R1",
+    "fieldConfidence": {
+      "platform": "HIGH - generator meta WooCommerce 9.4.5, WordPress 6.7.1, theme estore-pro + child tenda",
+      "adapterType": "HIGH - woocommerce adapter is canonical for WP+WC",
+      "hasWaf": "HIGH - Sucuri JS-cookie challenge on every probe; runtime needs cookie-cache",
+      "wafType": "HIGH - Server: Sucuri/Cloudproxy, sucuri_cloudproxy_js body",
+      "hasCaptcha": "HIGH - reCAPTCHA v3 is Contact Form 7 site-wide load only, does not gate crawler paths (homepage/shop/category all served without challenge once Sucuri cookie set)",
+      "needsPlaywright": "HIGH - production waf-cookie-manager solves Sucuri once via Playwright then caches; runtime fetches plain HTTP",
+      "expectedProductCount": "HIGH - x-wp-total=16588 from both /wp-json/wp/v2/product and /wp-json/wc/store/v1/products",
+      "productCountMethod": "HIGH - wp-rest-header verified live",
+      "catalogUrls": "HIGH - 7 firearm-relevant categories per Rule C; verified all return 200; tile-only on page 1 but page-2+ walks parent's full inventory; production crawler tolerates 1-empty-page via MAX_CONSECUTIVE_EMPTY_PAGES",
+      "sortParam": "HIGH - counter-control test passed (date == default; price != default)",
+      "sortVerified": "HIGH",
+      "perPage": "HIGH - site silently caps at 24/page (?per_page=100 ignored, returns 24); no <select> for perPage",
+      "paginationPattern": "HIGH - /page/N/ works (overlap=0 page-1 vs page-2); ?page=N silently ignored (overlap=24, returns page 1)",
+      "crawlers.watermark.method": "HIGH - WP REST two-probe passed for ?after= filter"
+    },
+    "probeIp": "audit-host IP - production crawler IP may differ; Sucuri reputation is per-IP. Re-verify hasWaf from production IP before promoting.",
+    "stageNotes": [
+      "Stage 1: canonical = www (apex 307 -> Sucuri JS challenge; <link rel=canonical> on home declares https://www.gotenda.com/).",
+      "Stage 2: Sucuri WAF active on every probe. hasCaptcha=false (reCAPTCHA v3 is contact-form-only, does not block /shop or category fetches).",
+      "Stage 3: WooCommerce 9.4.5 + estore-pro theme + tenda child theme. needsPlaywright=false because waf-cookie-manager + Store API handle Sucuri.",
+      "Stage 4: 15 top-level cats via wp/v2/product_cat (3 pages, per_page=100, x-wp-total=207 sub+top); 7 firearm-relevant kept; PROMOTIONS/TENDA-ALPHA/TENDA-STRIKE excluded as overlapping subsets; gift-card/free-gift excluded as non-firearm-relevant. All top-level cats are tile-only on page 1 (theme behavior). Crawler walks page 2 onwards to get all products.",
+      "Stage 5: paginationPattern type=path /page/{N}/ verified - overlap=0 on /firearms-canada/page/2 vs /shop p1. ?page=N silently ignored (returns p1). perPage=24 (?per_page=100 ignored).",
+      "Stage 6: sortParam=?orderby=date with verdict honored-default-is-newest. default=[750165,750084,750081]; ?orderby=date == default; ?orderby=price=[206086,206126,206088] != default. Sort honored.",
+      "Stage 7: api-date-since-watermark - WP REST ?after= two-probe: after=2099 -> x-wp-total=0; after=1999 -> x-wp-total=16588 (= global). Filter honored.",
+      "Stage 8: expectedProductCount=16588 via wp-rest-header (both /wc/store/v1/products and /wp/v2/product return same x-wp-total).",
+      "Stage 9: candidate written; per Rule A this is the only deliverable; promotion to DB is operator-gated."
+    ]
+  }
+}

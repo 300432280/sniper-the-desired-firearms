@@ -1,0 +1,121 @@
+{
+  "profileVersion": 1,
+  "platform": "shopify",
+  "adapterType": "shopify",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T08:46:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray present, server: cloudflare). All real-UA batches 200; rapid burst 10/10 = 200; SQLi/XSS payloads 200; honeypots /wp-admin /wp-login /xmlrpc /phpinfo /.git = 404 (no WP); only no-UA batch 8 = 403 (default Shopify+CF block). Not actively blocking the crawler.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray: 9fc0deab884bab09-YYZ", "server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotPathsReturn404": true,
+    "botUaBlocked": false,
+    "noUaBlocked": true,
+    "platformIndicators": ["set-cookie: _shopify_y", "server-timing: pageType;desc=\"index\""]
+  },
+  "hasCaptcha": false,
+  "captchaType": "hcaptcha",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1992,
+  "productCountMethod": {
+    "method": "shopify-products-walk",
+    "endpoint": "/products.json",
+    "perPage": 250
+  },
+  "catalogUrls": [
+    "/collections/all"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://fishingworldgc.ca/products/chiappa-1892-mares-leg-44-mag", "title": "1892 L.A. Mare's Leg (Color Case) 44MAG/12\"BBL", "price": 1399.99, "stockStatus": "out_of_stock" },
+    { "url": "https://fishingworldgc.ca/products/backwoods-scout-15l-backpack", "title": "Backwoods Scout 15L Backpack", "price": 54.99, "stockStatus": "in_stock" },
+    { "url": "https://fishingworldgc.ca/products/buck-bomb-doe-p-attractant-4-oz-dropper-bottle", "title": "Buck Bomb Doe P Attractant 4 oz Dropper Bottle", "price": 15.99, "stockStatus": "out_of_stock" }
+  ],
+  "sortParam": "?sort_by=created-descending",
+  "sortVerified": true,
+  "perPage": 34,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 34,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productsJson": "/products.json",
+        "collectionsJson": "/collections.json"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "shopify-collections-json",
+    "totalsSumCheck": "276 collections returned by /collections.json; products_count sum = 11,082 (overlap-heavy across nested taxonomy: shooting-sports 1526 is a parent aggregator). Distinct product count from /collections/all walk = 1992, matches sitemap_products_1.xml (1992 product URLs). /collections/all serves as the 100%-coverage spine.",
+    "categories": [
+      { "slug": "/collections/all-guns", "allOption": 725 },
+      { "slug": "/collections/all-ammo-1", "allOption": 593 },
+      { "slug": "/collections/shooting-miscellaneous-1", "allOption": 231 },
+      { "slug": "/collections/hunting-accessories", "allOption": 227 },
+      { "slug": "/collections/rings-mounts", "allOption": 164 },
+      { "slug": "/collections/magazines-1", "allOption": 143 },
+      { "slug": "/collections/scopes-1", "allOption": 139 },
+      { "slug": "/collections/archery-accessories-1", "allOption": 135 },
+      { "slug": "/collections/gun-parts", "allOption": 111 },
+      { "slug": "/collections/optics", "allOption": 99 }
+    ]
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "R1-blind",
+    "probeIp": "audit-runner",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "captchaType": "high",
+      "ageGate": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "paginationPattern": "high",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex https://fishingworldgc.ca and www both return 200; <link rel=\"canonical\" href=\"https://fishingworldgc.ca/\"> in HTML — canonical = apex.",
+      "Stage 2: heavy-8-batch probe — cf-ray + server: cloudflare on all 200 responses; rapid burst 10/10 = 200; SQLi/XSS/honeypots non-blocking (honeypots 404 because Shopify not WP); only no-UA = 403. Cloudflare-passive, hasWaf=false (operational). hCaptcha present site-wide for contact/login forms only — hasCaptcha=false (operational).",
+      "Stage 3: Shopify confirmed by /cdn/shop/*, _shopify_* cookies, server-timing pageType, captcha-bootstrap script. No age-gate markers. Plain HTTP fetch of /collections/all returned 250 products in JSON — needsPlaywright=false.",
+      "Stage 4: /collections.json reports 276 collections; products_count sum 11,082 includes overlapping parent/child taxonomy. /collections/all walked 8 pages x 250 = 1992 unique product IDs, exactly matching sitemap_products_1.xml (1992 <loc> product URLs). Shopify dept-feed soft-cap CONFIRMED - shooting-sports walk capped at 846 of reported 1526. /collections/all is the only 100%-coverage path; included as single catalogUrls entry. extractionTested with 3 random products from page 1.",
+      "Stage 5: HTML pagination - ?page=1 vs ?page=2 zero overlap; 34 unique slugs per HTML page (theme-controlled, not raised by ?limit=). API path /products.json?limit=250&page=N walks until empty (the actual runtime crawl path for Shopify).",
+      "Stage 6: SortBy <select> options include created-descending (newest). 3-outcome counter-control with cache-bust nonce: default (alphabetical A-Z, theme default) vs sort_by=created-descending vs sort_by=price-ascending - all three produce DIFFERENT first 3 product slugs. Sort honored.",
+      "Stage 7: Shopify public /products.json does NOT support date filter (shopify.ts:18 confirms supportsDateFilter=false). Sort honored on HTML AND /products.json natural order is published_at-descending. Use navigate-from-watermark.",
+      "Stage 8: shopify-products-walk via /products.json?limit=250 - 8 pages, 1992 unique IDs, matches sitemap (1992).",
+      "Stage 9: validator-compliant fields populated; no walkProof/operator-audit-trail residue."
+    ]
+  }
+}

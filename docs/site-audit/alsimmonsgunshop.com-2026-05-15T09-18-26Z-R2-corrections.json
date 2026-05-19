@@ -1,0 +1,104 @@
+{
+  "runId": "R2-live-investigation-2026-05-15T09-18-26Z",
+  "site": "alsimmonsgunshop.com",
+  "r1Candidate": "docs/site-audit/alsimmonsgunshop.com-2026-05-15T08-54-56Z-R1.json",
+  "r1DiffFile": "docs/site-audit/alsimmonsgunshop.com-2026-05-15T08-54-56Z-R1-diff.md",
+  "verdict": "R1 CORRECT on all three high-risk divergent fields. No corrections to candidate. DB row has two confirmed errors (productCountMethod.method='dual-api' non-canonical; expectedProductCount=1638 measures admin REST not customer-visible catalog).",
+  "corrections": [],
+  "verifications": [
+    {
+      "field": "productCountMethod.method",
+      "r1Value": "wp-rest-header",
+      "dbValue": "dual-api",
+      "r1Correct": true,
+      "method": "deep-grep + read switch",
+      "evidence": {
+        "filesGrepped": "backend/ entire tree",
+        "dualApiMatches": 0,
+        "switchCases": [
+          "wp-rest-header",
+          "json-api-count",
+          "json-api-length",
+          "html-pagination",
+          "sitemap",
+          "sitemap-index",
+          "generic-product-sitemap",
+          "ecwid-storefront-search",
+          "shopify-products-walk",
+          "klevu-api-count",
+          "stream-page-count"
+        ],
+        "fallthroughBehavior": "switch default at product-count-probe.ts:446-451 logs `unknown method 'dual-api'` and returns null",
+        "conclusion": "DB value 'dual-api' is dead config that silently disables the probe. R1's canonical 'wp-rest-header' is the correct runtime value."
+      },
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "r1Value": 160,
+      "dbValue": 1638,
+      "r1Correct": true,
+      "method": "independent Store API arithmetic probe + admin-only slug visit classification",
+      "evidence": {
+        "storeApiStockFilterProbe": {
+          "url": "/wp-json/wc/store/v1/products?per_page=1&stock_status={X}",
+          "results": {
+            "instock": 160,
+            "outofstock": 1502,
+            "onbackorder": 0,
+            "sum": 1662
+          }
+        },
+        "adminRestTotal": {
+          "url": "/wp-json/wp/v2/product?per_page=1",
+          "xWpTotal": 1662,
+          "samplingValidation": "all 15 sampled products have status=publish; admin REST default filter does NOT include drafts/private — it returns all status=publish posts of post_type=product regardless of _stock_status"
+        },
+        "shopWalkCount": 160,
+        "classificationOfDelta": {
+          "totalAdminMinusStorefront": 1502,
+          "samplesVisited": 7,
+          "allSamplesReturned": "HTTP 200",
+          "schemaAvailability": "https://schema.org/OutOfStock (7/7)",
+          "bodyMarkers": "out-of-stock + consign/consignment markers across all 7",
+          "classification": "WooCommerce products with status=publish + _stock_status=outofstock; site has hide_out_of_stock_items option enabled so Store API + /shop/ frontend filter them out; these are sold-out consignment records kept as historical posts",
+          "samples": [
+            { "slug": "henry-h2-u-s-survival-rifle-22lr-unfired", "id": 65261 },
+            { "slug": "winchester-sxp-field-12ga-14014n", "id": 64197 },
+            { "slug": "marlin-model-60ss-22lr-14010nc", "id": 64195 },
+            { "slug": "marlin-model-795-22lr-14009nc", "id": 64190 },
+            { "slug": "hatsan-55cr-air-rifle-177cal-13733nc", "id": 64187 },
+            { "slug": "chiappa-double-badger-22lr-20ga-14008nc", "id": 64184 },
+            { "slug": "smithwesson-sd9-sd9ve-9mm-magazine-199280000-copy", "id": 46685 }
+          ]
+        },
+        "drift": "DB stored 1638 on 2026-04-11; today's admin total is 1662 (drift +24 in 34 days); but 1638 is wrong as expectedProductCount because the runtime catalog crawler walks /shop/ and Store API which both return 160 — it would always under-report and trigger false coverage alerts",
+        "conclusion": "expectedProductCount must mirror the customer-visible catalog the crawler actually walks. 160 is the correct value. The 1638/1662 admin-REST figure is not the customer-visible inventory."
+      },
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf + wafType internal contradiction",
+      "r1Value": "hasWaf=false, wafType=cloudflare-passive",
+      "dbValue": "hasWaf=true, wafType=cloudflare-passive",
+      "r1Correct": true,
+      "method": "fresh heavy 8-batch WAF probe with header + body scans",
+      "evidence": {
+        "batches": [
+          { "batch": 1, "ua": "chrome", "url": "/shop/", "status": 200, "bytes": 211009, "cfRay": "9fc10a064cc9d5f4-YYZ", "server": "cloudflare", "bodyWafMarkers": "none" },
+          { "batch": 2, "ua": "empty", "url": "/shop/", "status": 200, "bytes": 211009 },
+          { "batch": 3, "ua": "python-requests/2.31.0", "url": "/shop/", "status": 403, "bytes": 146, "note": "bot-UA blocked at edge — Cloudflare bot fight mode default, not site-specific WAF rule" },
+          { "batch": 4, "ua": "curl/8.0.1", "url": "/shop/", "status": 200, "note": "raw curl UA passes through" },
+          { "batch": 5, "ua": "chrome", "url": "/?s=test' OR '1'='1&post_type=product", "status": 200, "bytes": 154682, "note": "SQLi payload not blocked" },
+          { "batch": 6, "ua": "chrome", "url": "/?s=<script>alert(1)</script>", "status": 200, "bytes": 154237, "note": "XSS payload not blocked" },
+          { "batch": 7, "type": "rapid-burst-10x", "ua": "chrome", "result": "all 200 (page 1 -> 301, pages 2-10 -> 200)" },
+          { "batch": 8, "type": "honeypot", "results": { "/wp-admin/": 302, "/wp-login.php": 403, "/xmlrpc.php": 403 }, "note": "WP-standard login lockdown not Cloudflare WAF" }
+        ],
+        "bodyMarkerScan": "no MalCare / Wordfence / Sucuri / Incapsula / sgcaptcha / cf-chl / recaptcha / hcaptcha tokens in /shop/ body across all 8 batches",
+        "headers": "cf-ray on every response, server=cloudflare, cf-cache-status=DYNAMIC — Cloudflare is in front but only standard bot fight",
+        "conclusion": "Cloudflare-passive confirmed. Real-browser UA + SQLi + XSS + 10x rapid burst all 200. Only python-requests UA + WP login honeypots blocked. R1's operational hasWaf=false is correct per SKILL.md Stage 2 rule. DB's hasWaf=true contradicts the same row's wafType=cloudflare-passive — would force the crawler onto the slow Playwright path with no benefit."
+      },
+      "confidence": "high"
+    }
+  ]
+}

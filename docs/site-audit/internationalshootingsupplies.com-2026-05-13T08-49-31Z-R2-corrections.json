@@ -1,0 +1,163 @@
+{
+  "_meta": {
+    "site": "internationalshootingsupplies.com",
+    "round": "R2",
+    "investigator": "testing-api-tester (FRESH agent)",
+    "candidateAudited": "docs/site-audit/internationalshootingsupplies.com-2026-05-13T08-36-38Z-R1.json",
+    "dbSnapshotAt": "2026-04-12",
+    "liveProbedAt": "2026-05-13T08:35-08:48Z",
+    "probeIp": "residential (Canada)"
+  },
+  "expectedProductCount": {
+    "value": 5230,
+    "evidence": "Store API in-stock X-WP-Total=2299 + Store API out-of-stock X-WP-Total=2931 = 5230 = WP REST admin X-WP-Total=5230 (probed 2026-05-13T08:43Z). Both halves are live products (status=publish, detail pages render 200 OK with full price/title). R1's 2299 omits 2931 out-of-stock-but-live products (56% undercount); DB's 5111 is a stale 2026-04-12 snapshot (today=5230, drift=+119). Sample out-of-stock product /product/just-right-carbines-glock-m-lok-model-burnt-bronze-9mm-luger-18-6-threaded-barrel/ returns HTTP 200 with class='stock out-of-stock' + price=1399.99 — confirming live status.",
+    "confidence": "high"
+  },
+  "productCountMethod": {
+    "value": {
+      "method": "wp-rest-header",
+      "endpoint": "/wp-json/wp/v2/product",
+      "header": "x-wp-total"
+    },
+    "evidence": "WP REST admin endpoint returns total live published products (5230). Store API endpoint returns only customer-visible in-stock count (2299). For Tier-1 watermark + Tier-2 catalog refresh + verify workers, we need the full live count to track restock and out-of-stock products — both R1 and DB pre-bootstrap output schema (per SKILL.md Stage 8 Rule B) should NOT carry the audit-trail residue (wpRestTotal, storeApiTotal, dateFilterEvidence). Bare shape preferred.",
+    "confidence": "high"
+  },
+  "catalogUrls": {
+    "value": [
+      "/product-category/ammunition/airgun-ammunition/",
+      "/product-category/ammunition/crossbow-bolts/",
+      "/product-category/ammunition/handgun-ammo/",
+      "/product-category/ammunition/rifle-ammo/",
+      "/product-category/ammunition/rimfire-ammo/",
+      "/product-category/ammunition/shotgun-ammo/",
+      "/product-category/bows/crossbows/",
+      "/product-category/firearms/airguns-pal-not-required/",
+      "/product-category/firearms/airguns-pal-required/",
+      "/product-category/firearms/airsoft-guns-pal-not-required/",
+      "/product-category/firearms/handguns/",
+      "/product-category/firearms/rifles/",
+      "/product-category/firearms/shotguns/",
+      "/product-category/hunting-accessories/decoys-decoy-accessories/",
+      "/product-category/hunting-accessories/game-bags/",
+      "/product-category/hunting-accessories/game-calls/",
+      "/product-category/hunting-accessories/hunting-accessories-backpacks-frames/",
+      "/product-category/hunting-accessories/hunting-accessories-bladed-tools/",
+      "/product-category/hunting-accessories/hunting-accessories-clothing-and-apparel/",
+      "/product-category/hunting-accessories/hunting-accessories-game-cameras-thermal-imagers/",
+      "/product-category/hunting-accessories/hunting-accessories-game-processing/",
+      "/product-category/hunting-accessories/hunting-accessories-shooting-sticks-and-tripods/",
+      "/product-category/hunting-accessories/hunting-accessories-tool-maintenance/",
+      "/product-category/novelties/electronics-protection/",
+      "/product-category/optics/binoculars/",
+      "/product-category/optics/mounts/",
+      "/product-category/optics/night-vision/",
+      "/product-category/optics/optics-rifelscope-accessories/",
+      "/product-category/optics/range-finders/",
+      "/product-category/optics/red-dots-reflex/",
+      "/product-category/optics/rifle-scopes/",
+      "/product-category/optics/sights/",
+      "/product-category/optics/spotting-scopes-and-accessories/",
+      "/product-category/parts/actions-and-action-parts/",
+      "/product-category/parts/barrels/",
+      "/product-category/parts/bow-function-parts-upgrades/",
+      "/product-category/parts/buttstocks/",
+      "/product-category/parts/internal-stability-upgrades/",
+      "/product-category/parts/magazine-upgrade-parts/",
+      "/product-category/parts/stock-and-chassis-systems/",
+      "/product-category/parts/trigger-assemblies-and-parts/",
+      "/product-category/reloading-components/brass/",
+      "/product-category/reloading-components/primers/",
+      "/product-category/reloading-components/projectiles/",
+      "/product-category/reloading-equipment/case-cleaning-prep/",
+      "/product-category/reloading-equipment/dies-die-accessories/",
+      "/product-category/reloading-equipment/hand-tools/",
+      "/product-category/reloading-equipment/kits/",
+      "/product-category/reloading-equipment/presses-accessories/",
+      "/product-category/reloading-equipment/reloading-equip-projectile-production/",
+      "/product-category/reloading-equipment/reloading-equip-reloading-component-dispensers/",
+      "/product-category/reloading-equipment/reloading-equip-scales-measures-gauges/",
+      "/product-category/reloading-equipment/trimmers/",
+      "/product-category/reloading-equipment/tumblers/",
+      "/product-category/shooting-accessories/achery-accessories/",
+      "/product-category/shooting-accessories/ammo-storage-locking-devices/",
+      "/product-category/shooting-accessories/bags-pouches/",
+      "/product-category/shooting-accessories/bipods-adapters/",
+      "/product-category/shooting-accessories/buttstock-accessories/",
+      "/product-category/shooting-accessories/cleaning-supplies-reusable/",
+      "/product-category/shooting-accessories/eye-protection/",
+      "/product-category/shooting-accessories/flashlights-lasers/",
+      "/product-category/shooting-accessories/forends/",
+      "/product-category/shooting-accessories/grips/",
+      "/product-category/shooting-accessories/gun-cabinets-safes/",
+      "/product-category/shooting-accessories/gun-cases/",
+      "/product-category/shooting-accessories/gun-parts/",
+      "/product-category/shooting-accessories/gunsmithing/",
+      "/product-category/shooting-accessories/hearing-protection/",
+      "/product-category/shooting-accessories/holsters/",
+      "/product-category/shooting-accessories/magazines-accessories/",
+      "/product-category/shooting-accessories/shooting-accessories-apparel/",
+      "/product-category/shooting-accessories/shooting-accessories-chronographs-recording-tools/",
+      "/product-category/shooting-accessories/shooting-accessories-cleaning-supplies-consumables/",
+      "/product-category/shooting-accessories/shooting-accessories-muzzle-devices-externally-attached/",
+      "/product-category/shooting-accessories/shooting-rests/",
+      "/product-category/shooting-accessories/slings-sling-hardware/",
+      "/product-category/shooting-accessories/snap-caps/",
+      "/product-category/shooting-accessories/targets-accessories/",
+      "/product-category/uncategorized/"
+    ],
+    "evidence": "Live-probed 2026-05-13T08:45Z: /product-category/firearms/ page 1 returns 6 li.product elements that are ALL .product-category SUBCATEGORY TILES (handguns, rifles, shotguns, airguns-pal-required, airguns-pal-not-required, airsoft-guns-pal-not-required) -- the WC adapter's isCategoryPageUrl filter (woocommerce.ts:676) correctly drops them, so extractCatalogProducts returns 0. Runtime catalog-crawler.ts:458-471 then BREAKS (not hasWaf=false) without advancing to page 2. R1's strategy of 12 top-level URLs would lose 468 firearms + every other parent's products on the HTML-fallback path. DB's 79-leaf strategy works: /firearms/rifles/ page 1 returns 12 real product cards with 'Showing 1-12 of 256 results'. Note: API path via adapter.fetchCatalogPage (catalog-crawler.ts:280-302) is primary -- these HTML catalogUrls are fallback only -- but the fallback must work. Added /firearms/handguns/ which DB was missing.",
+    "confidence": "high"
+  },
+  "crawlers.maintain.verifyMethod": {
+    "value": "detail-page",
+    "evidence": "LIVE TEST 2026-05-13T08:41Z: probed 15 known-in-stock newest products via Store API ?include= -- ALL 15 returned (no false negatives in the in-stock half). Then probed 20 older products (IDs from WP REST page 100) -- 14 of 20 (70%) MISSING from Store API ?include but present with status=publish in WP REST admin. Confirmed: missing products are out-of-stock (Store API ?stock_status=outofstock returns them) but their detail pages render HTTP 200 with valid price (e.g. /product/just-right-carbines-glock-m-lok-model-burnt-bronze-9mm-luger-18-6-threaded-barrel/ = $1399.99 'Out of stock'). Out-of-stock = LIVE PRODUCT, not deleted. Site-wide split: 2299 in-stock + 2931 out-of-stock = 5230 total. Runtime worker.ts:537-546 is already SAFE (skips missing-from-store-api instead of deactivating since 2026-04-03 fix), so store-api would not re-trigger the 2,898-product incident -- BUT it does NOT save cost vs detail-page: store-api fast-path handles only 2299 in-stock products (44%), then falls through to Playwright for 2931 out-of-stock (56%). detail-page sends all 5230 through Playwright. Cost ratio store-api:detail-page = roughly 56% of full Playwright + 44% of fast-batch -- modest savings ONLY if our DB has the right mix. DB's documented decision (post-incident 2026-04-03: 'Switched to detail-page verification') is the safer default; preserves operator history. Recommend detail-page.",
+    "confidence": "high"
+  },
+  "crawlers.watermark.method": {
+    "value": "api-date-since-watermark",
+    "evidence": "MATCH. Both R1 and DB agree. Live verified 2026-05-13T08:47Z: WP REST /wp-json/wp/v2/product?per_page=1 returns 200 + X-WP-Total=5230. Store API ?after=<ISO> behavior re-verified per R1 stage-7 (future=0, past=2299). Adapter has fetchCatalogPage support -> watermark-crawler.ts:715 will use API method.",
+    "confidence": "high"
+  },
+  "needsPlaywright": {
+    "value": false,
+    "evidence": "All ISS probes 2026-05-13 used plain curl with desktop Chrome UA and received 200 OK on apex, WP REST, Store API, category pages, and detail pages. No CDN WAF (server: nginx, no cf-ray, no x-sucuri, no x-incapsula). BPS plugin is rule-selective only on SQLi/XSS payloads -- catalog/product paths unaffected. R1 correct.",
+    "confidence": "high"
+  },
+  "hasWaf": {
+    "value": false,
+    "evidence": "Headers probed 2026-05-13T08:47Z: server: nginx only. No cf-ray, no x-sucuri, no x-incapsula. R1 and DB agree.",
+    "confidence": "high"
+  },
+  "platform": {
+    "value": "woocommerce",
+    "evidence": "WP REST /wp-json/wp/v2/product responds (WordPress); /wp-json/wc/store/v1/products responds (WooCommerce Store API). R1 and DB agree.",
+    "confidence": "high"
+  },
+  "adapterType": {
+    "value": "woocommerce",
+    "evidence": "R1 chose woocommerce. DB column shows woocommerce but DB notes contradict: 'adapterType changed to generic-retail to force HTML crawl path'. The DB notes are STALE -- the WC adapter's fetchCatalogPage works fine today (WP REST returns 200, Store API returns 200, both have X-WP-Total). DB's adapterType column 'woocommerce' (the actual stored value, not the note) is correct. R1 correct.",
+    "confidence": "high"
+  },
+  "paginationPattern": {
+    "value": {
+      "type": "path",
+      "template": "/page/{N}/",
+      "perPage": 12,
+      "firstPageHasParam": false,
+      "startPage": 1,
+      "zeroIndexed": false
+    },
+    "evidence": "Live-probed: /product-category/firearms/page/2/ returns 'Showing 13-24 of 468 results'. Both R1 (/page/{N}/) and DB (page/{N}/) work via the runtime URL-builder (woocommerce.ts:266-268 normalizes both). R1's shape includes the extra metadata fields; SKILL.md Rule B says these are NOT required pre-bootstrap fields. Either form acceptable; R1's leading-slash form is slightly more explicit.",
+    "confidence": "high"
+  },
+  "sortParam": {
+    "value": "?orderby=date",
+    "evidence": "Live-tested: ?orderby=date works on leaf categories. R1's leading-? form is slightly cleaner. DB's no-? form also works via runtime normalizer.",
+    "confidence": "high"
+  },
+  "perPage": {
+    "value": 12,
+    "evidence": "/firearms/rifles/ shows 'Showing 1-12 of 256' = 12/page. Astra theme; ?count/?products_per_page ignored. R1 and DB agree.",
+    "confidence": "high"
+  }
+}

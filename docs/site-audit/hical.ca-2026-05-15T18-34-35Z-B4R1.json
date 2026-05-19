@@ -1,0 +1,151 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "incapsula",
+  "wafLastProbedAt": "2026-05-15T18:27:18Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Imperva/Incapsula JS challenge interstitial returned on every plain-HTTP GET (200 OK but ~844-byte 'Loading' iframe body); X-CDN: Imperva + X-Iinfo header + visid_incap_3254206 / incap_ses_1848_3254206 cookies; SQLi probe returned 403; XSS + no-UA probes returned redirect loops; /.env and /.git/config returned 403. Playwright Chromium bypasses the challenge and reaches real WordPress markup (329KB).",
+  "wafProbeEvidence": {
+    "cdnHeader": "X-CDN: Imperva",
+    "iinfoHeader": "X-Iinfo: 55-262018211-0 0NNN RT(...)",
+    "incapCookies": ["visid_incap_3254206", "incap_ses_1848_3254206", "nlbi_3254206"],
+    "challengeBody": "<HTML><HEAD><TITLE>Loading</TITLE></HEAD>... iframe to /_Incapsula_Resource",
+    "rapidBurst": "10/10 returned 200 with ~844 byte challenge body",
+    "sqliRuleFired": true,
+    "xssRedirectLoop": true,
+    "honeypotPathsBlocked": ["/.env (403)", "/.git/config (403)"],
+    "botUaBlocked": "no-UA returns 302 redirect loop",
+    "auditFrom": "Chromium headless with iPhone + desktop UAs both got challenge until Playwright JS context solved it"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "needsPlaywright": true,
+  "expectedProductCount": 1677,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://hical.ca/product-category/firearm-accessories/",
+    "https://hical.ca/product-category/firearm-parts/",
+    "https://hical.ca/product-category/firearms-canada/",
+    "https://hical.ca/product-category/optics-mounts/",
+    "https://hical.ca/product-category/tactical-accessories/",
+    "https://hical.ca/product-category/cleaning-maintenance/",
+    "https://hical.ca/product-category/all-products/",
+    "https://hical.ca/product-category/uncategorized/",
+    "https://hical.ca/product-category/optics-2/",
+    "https://hical.ca/product-category/night-vision-accessories/",
+    "https://hical.ca/product-category/storage-cases-transport/",
+    "https://hical.ca/product-category/shooting-accessories-misc/",
+    "https://hical.ca/product-category/hunting-survival-gear/",
+    "https://hical.ca/product-category/handguards/",
+    "https://hical.ca/product-category/shotgun/",
+    "https://hical.ca/product-category/clearance/",
+    "https://hical.ca/product-category/new-arrivals/",
+    "https://hical.ca/product-category/scopes/",
+    "https://hical.ca/product-category/range-finder/",
+    "https://hical.ca/product-category/courses-training/",
+    "https://hical.ca/product-category/raffle/",
+    "https://hical.ca/product-category/draws/",
+    "https://hical.ca/product-category/gun-smith-services/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://hical.ca/product/henry-lever-action-rifle/", "title": "Henry Lever Action Supreme Rifle Canada | Non-Restricted", "price": 1699.99, "stockStatus": "in_stock" },
+    { "url": "https://hical.ca/product/sbi-st-22-precision-16-22lr-rifle-canada/", "title": "SBI ST-22 Precision 16 .22LR Rifle Canada | Non-Restricted", "price": 1599.95, "stockStatus": "in_stock" },
+    { "url": "https://hical.ca/product/beretta-1301-tactical-c-chisel-stock-5-1/", "title": "Beretta 1301 Tactical C Chisel Stock 5+1 Canada | Non-Restricted", "price": 3349.99, "stockStatus": "out_of_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 16,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/shop/page/{N}/",
+    "perPage": 16,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "apiBase": "/wp-json/wp/v2/product",
+      "dateField": "after"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "products": "/wp-json/wc/store/v1/products",
+        "categories": "/wp-json/wp/v2/product_cat",
+        "perPage": 100
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "firearm-accessories", "id": 171, "count": 805 },
+      { "slug": "firearm-parts", "id": 192, "count": 255 },
+      { "slug": "firearms-canada", "id": 143, "count": 226 },
+      { "slug": "optics-mounts", "id": 164, "count": 221 },
+      { "slug": "tactical-accessories", "id": 199, "count": 96 },
+      { "slug": "cleaning-maintenance", "id": 174, "count": 69 },
+      { "slug": "all-products", "id": 1867, "count": 29 },
+      { "slug": "uncategorized", "id": 15, "count": 26 },
+      { "slug": "optics-2", "id": 2073, "count": 16 },
+      { "slug": "night-vision-accessories", "id": 2093, "count": 9 },
+      { "slug": "storage-cases-transport", "id": 184, "count": 8 },
+      { "slug": "shooting-accessories-misc", "id": 207, "count": 6 },
+      { "slug": "hunting-survival-gear", "id": 211, "count": 5 },
+      { "slug": "handguards", "id": 1454, "count": 4 },
+      { "slug": "courses-training", "id": 140, "count": 3 },
+      { "slug": "raffle", "id": 1431, "count": 3 },
+      { "slug": "shotgun", "id": 149, "count": 3 },
+      { "slug": "clearance", "id": 217, "count": 2 },
+      { "slug": "draws", "id": 1895, "count": 2 },
+      { "slug": "gun-smith-services", "id": 443, "count": 2 },
+      { "slug": "new-arrivals", "id": 2037, "count": 2 },
+      { "slug": "scopes", "id": 1983, "count": 2 },
+      { "slug": "range-finder", "id": 1375, "count": 1 }
+    ],
+    "totalsSumCheck": "Sum of selected top-level firearm-relevant counts = 1795; WC Store API x-wp-total = 1677. ~7% overlap expected (products in multiple top-level cats)."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "hical.ca-2026-05-15T18-34-35Z-B4R1",
+    "wafReverifyRequired": "hasWaf=true must be confirmed from production crawler IP before promotion - Incapsula challenge is IP-reputation dependent",
+    "playwrightRequired": "Plain HTTP returns 844-byte Loading iframe on every request including REST endpoints. Playwright Chromium with warmup navigation to / yields cookies that allow subsequent /wp-json/* requests.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "medium-not walk-verified due to Incapsula warmup cost; sum-of-counts vs x-wp-total cross-check passed (1795 vs 1677)",
+      "sortParam": "high - 3-outcome differential confirmed",
+      "paginationPattern": "high - page 2 distinct from page 1",
+      "crawlers.watermark": "high - WP REST two-probe verified"
+    },
+    "stageNotes": [
+      "Stage 1: hical.ca apex returns 200; www.hical.ca 301->apex. canonical = https://hical.ca.",
+      "Stage 2: Incapsula confirmed. Heavy 8-batch probe - every plain-HTTP request gets 200+844-byte Loading interstitial; SQLi 403; XSS+no-UA redirect loops. hasWaf=true wafType=incapsula. No CAPTCHA. No age-gate.",
+      "Stage 3: WooCommerce on WordPress (Monstroid2 theme + JetEngine + Elementor + woocommerce-* plugin chain). needsPlaywright=true (plain HTTP returns challenge body not WC markup).",
+      "Stage 4: WP REST /product_cat returned 142 categories (40 top-level). Selected 23 firearm-relevant categories with count>0 as catalogUrls. Extraction sample via /wp-json/wc/store/v1/products?per_page=3 yielded 3 products with full title/url/price/stock.",
+      "Stage 5: /shop/page/2/ returned distinct products vs /shop/. perPage=16 (theme default; ?per_page and ?count ignored).",
+      "Stage 6: /shop/?orderby=date returned henry-lever-action-rifle (newest 2026-05-12) vs default kidd-10-22-auto-bolt-release (alpha) and ?orderby=title same as default. orderby=date honored.",
+      "Stage 7: WP REST two-probe - ?after=2099 returned x-wp-total=0; ?after=1999 returned x-wp-total=1677. Date filter honored - api-date-since-watermark.",
+      "Stage 8: x-wp-total header from /wp-json/wc/store/v1/products?per_page=1 = 1677.",
+      "Stage 9: Schema verified against profile-validator.ts shape; 9 required fields present."
+    ]
+  }
+}

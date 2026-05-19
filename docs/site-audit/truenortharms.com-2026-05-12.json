@@ -1,0 +1,120 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-12T06:22:06Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray, __cf_bm cookie, server: cloudflare) but every batch returned 200 cleanly. Rapid burst x10, SQLi/XSS/no-UA all 200. wp-admin/wp-login/.env/.git 403 = BC origin app filter (not a CDN WAF challenge). xmlrpc.php/phpinfo 404. No challenge body, no MalCare/Wordfence/Sucuri/Incapsula markers anywhere. Operationally hasWaf=false.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "server: cloudflare", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-admin/ 403", "/wp-login.php 403", "/.env 403", "/.git/config 403"],
+    "botUaBlocked": false,
+    "note": "Honeypot 403s are BigCommerce origin filtering (BC sites have no WP routes), not Cloudflare WAF challenges. Category/product paths returned 200 in every probe."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3666,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "https://truenortharms.com/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "https://truenortharms.com/firearms/?sort=newest",
+    "https://truenortharms.com/used-firearms/?sort=newest",
+    "https://truenortharms.com/ar-15-magazines.html?sort=newest",
+    "https://truenortharms.com/parts/?sort=newest",
+    "https://truenortharms.com/tools-accessories/?sort=newest",
+    "https://truenortharms.com/ammo-reloading/?sort=newest",
+    "https://truenortharms.com/hunting/?sort=newest",
+    "https://truenortharms.com/crossbows/?sort=newest",
+    "https://truenortharms.com/outdoors-survival/?sort=newest",
+    "https://truenortharms.com/military-surplus/?sort=newest",
+    "https://truenortharms.com/explosives-smoke/?sort=newest",
+    "https://truenortharms.com/swords-knives/?sort=newest",
+    "https://truenortharms.com/tna-gear/?sort=newest"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "productId": "28929", "note": "newest-sorted top ID on /parts/?sort=newest - sort returned 28929,28549,28131 (descending IDs)" },
+    { "productId": "20507", "note": "first product on /firearms/non-restricted/ default sort, extracted from productGrid visible" },
+    { "productId": "11378", "note": "first product on /parts/ default (bestselling) sort" }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 50,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 50,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "?sort=newest verified honored via counter-control (default=bestselling: 11378,11437,11317 vs ?sort=newest: 28929,28549,28131 vs ?sort=alphaasc: 13044,11105,12844 - all three distinct). Newest list shows monotonically descending product IDs => auto-increment IDs serve as a natural monotonic newest signal. Walk page 1 newest until first ID <= watermark."
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "homepage-nav (navPages-action has-subMenu) + sitemap cross-reference",
+    "categories": [
+      { "slug": "/firearms/", "allOption": null, "note": "tile page; non-restricted/restricted/co2-pellet-bb-paintball/less-lethals subcategories" },
+      { "slug": "/used-firearms/", "allOption": null },
+      { "slug": "/ar-15-magazines.html", "allOption": null },
+      { "slug": "/parts/", "allOption": 72, "note": "page 1 of 3 at perPage=24 = ~72" },
+      { "slug": "/tools-accessories/", "allOption": null },
+      { "slug": "/ammo-reloading/", "allOption": null, "note": "page 1 of 2 at perPage=24" },
+      { "slug": "/hunting/", "allOption": null },
+      { "slug": "/crossbows/", "allOption": null },
+      { "slug": "/outdoors-survival/", "allOption": null },
+      { "slug": "/military-surplus/", "allOption": null },
+      { "slug": "/explosives-smoke/", "allOption": null },
+      { "slug": "/swords-knives/", "allOption": null },
+      { "slug": "/tna-gear/", "allOption": null, "note": "TNA branded gear - gun-related apparel/patches/soft-goods, firearm-relevant per scope" }
+    ],
+    "totalsSumCheck": "Not walked this round (BLIND Round 1). Sitemap reports 3666 product URLs as the ground-truth count. Site has a /new-arrivals/ aggregator and /deals.html (excluded as subset aggregators per Rule C). Note: /ar-15-ar-308/ in sitemap returns 301 -> /ar-15-ar-308 -> 404 (dead URL), so it is NOT in catalogUrls. /ar-15-parts/ also returned empty (likely 301 elsewhere) - needs Round 2 walk to confirm. /tna-merch was excluded as not firearm-relevant (general merch), but /tna-gear was kept (gun-related soft goods)."
+  },
+  "lastVerified": "2026-05-12",
+  "auditNotes": {
+    "runId": "truenortharms.com-2026-05-12-blind-round-1",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high",
+      "ageGate.detected": "high",
+      "needsPlaywright": "high (static HTML returns productGrid with data-product-id on every probed category)",
+      "expectedProductCount": "high (BC standard xmlsitemap.php type=products page=1, 3666 <loc> entries, single sitemap page)",
+      "productCountMethod": "high",
+      "catalogUrls": "medium (homepage-nav-derived top categories; NOT walk-verified this round per Round-1 BLIND constraint; needs full walk + ID dedup to prove 100% coverage)",
+      "sortParam": "high (counter-control 3-outcome test passed: default!=newest!=alpha)",
+      "sortVerified": "high",
+      "perPage": "high (verified limit=50 returns 50; limit=100 returned 71 on /parts/ matching natural end at 72)",
+      "paginationPattern": "high (page=2 link found on /parts/, page 1 has no ?page=1 in URL)",
+      "crawlers.watermark.method": "high (newest sort honored + monotonic descending product IDs)"
+    },
+    "knownDbTypo": "DB siteProfile column has platform stored as 'bigcommerce.stencil' (DOT) - confirmed by the site's own <meta name='platform' content='bigcommerce.stencil'/> tag. Per SKILL.md Stage 3 canonical-separator rule, the candidate uses 'bigcommerce-stencil' (HYPHEN) - this is the canonical form. Mistake 39 footnote.",
+    "round1Notes": "BLIND audit - no live walk-and-dedup performed for catalogUrls (deferred to Round 2). Sitemap is single page with 3666 entries (no sitemap-index for products despite the xmlsitemap.php?type=products&page=1 URL - page=2 returns empty). BC store hash s-e2fesuoqas; store ID 1002255649 (x-bc-store-id header). Cloudflare in front but operationally passive. Default sort on /parts/ is bestselling (NOT featured - Mistake 29 false-negative trap avoided because counter-control test still distinguishes newest from default)."
+  }
+}

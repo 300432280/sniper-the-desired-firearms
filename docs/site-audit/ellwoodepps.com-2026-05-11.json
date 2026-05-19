@@ -1,0 +1,101 @@
+{
+  "profileVersion": 1,
+  "platform": "magento-1.x",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-11T06:47:04Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare passive (CF-RAY on all 200s, no challenge body, no Sucuri/sgcaptcha/Incapsula markers). Burst hits + sqli/xss/no-UA each produce origin 520 BYTES=15 (Cloudflare origin error page, not a CF challenge), suggesting origin-level rate-limit. /wp-login.php = 403 (origin), /xmlrpc.php + .env + phpinfo = 404 (Magento store, no WP).",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-cache-status: DYNAMIC", "CF-RAY: 9f9f3afe3cd5ac3a-YYZ", "Server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 520, 520, 200],
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": ["/wp-login.php (403)", "/wp-admin/ (520)", "/.git/config (520)"],
+    "botUaBlocked": false,
+    "noUaBlocked": true
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 33601,
+  "productCountMethod": "generic-product-sitemap",
+  "catalogUrls": [
+    "https://ellwoodepps.com/hunting/firearms.html?order=news_from_date&dir=desc&limit=100",
+    "https://ellwoodepps.com/hunting/ammunition.html?order=news_from_date&dir=desc&limit=100",
+    "https://ellwoodepps.com/hunting/accessories.html?order=news_from_date&dir=desc&limit=100",
+    "https://ellwoodepps.com/hunting/bow.html?order=news_from_date&dir=desc&limit=100",
+    "https://ellwoodepps.com/hunting/sets.html?order=news_from_date&dir=desc&limit=100",
+    "https://ellwoodepps.com/hunting/miscellaneous.html?order=news_from_date&dir=desc&limit=100",
+    "https://ellwoodepps.com/fishing/fishing-products.html?order=news_from_date&dir=desc&limit=100",
+    "https://ellwoodepps.com/camping/camping-products.html?order=news_from_date&dir=desc&limit=100"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://ellwoodepps.com/hunting/firearms/tikka-t3x-hunter-scope-package.html", "title": "Tikka T3X HUNTER SCOPE PACKAGE", "price": 1400.00, "stockStatus": "in_stock" },
+    { "url": "https://ellwoodepps.com/hunting/firearms/winchester-71-450-alaskan-project-rifle.html", "title": "Winchester 71 , 450 ALASKAN PROJECT RIFLE", "price": 999.00, "stockStatus": "in_stock" },
+    { "url": "https://ellwoodepps.com/hunting/firearms/winchester-model-70-pre-64-22-hornet-scope-pkg.html", "title": "Winchester MODEL 70 PRE-64 22 HORNET SCOPE PKG", "price": 1999.00, "stockStatus": "out_of_stock" }
+  ],
+  "sortParam": "?order=news_from_date&dir=desc",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "p",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Magento 1.x has no public REST date-filter API; sort verified via 3-outcome counter-control test (default = explicit news_from_date desc = `tikka-t3x-hunter-scope-package`; counter `?order=name&dir=asc` = `1803-harpers-ferry...`). Each product card carries a monotonic Magento entity_id in `id=\"product-price-NNNNNN\"` (e.g. 468851) usable as sourceId watermark."
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav + sitemap",
+    "categories": [
+      { "slug": "/hunting/firearms.html", "allOption": 2811 },
+      { "slug": "/hunting/ammunition.html", "allOption": 3672 },
+      { "slug": "/hunting/accessories.html", "allOption": 17494 },
+      { "slug": "/hunting/bow.html", "allOption": 62 },
+      { "slug": "/hunting/sets.html", "allOption": 3 },
+      { "slug": "/hunting/miscellaneous.html", "allOption": 4 },
+      { "slug": "/fishing/fishing-products.html", "allOption": 9286 },
+      { "slug": "/camping/camping-products.html", "allOption": 72 }
+    ],
+    "totalsSumCheck": "Sum of category toolbar 'Items 1 to N of TOTAL' counts = 33,404. Sitemap apex-level product .html URLs = 33,601. Drift = +197 (0.6%). Sitemap is the authoritative source (productCountMethod=generic-product-sitemap)."
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "calibration-2026-05-11-ellwoodepps",
+    "fieldConfidence": {
+      "platform": "high - OpenMage 20.16.0 fingerprint (prototype.js, varien/, Mage.Cookies, footer 'OpenMage' string)",
+      "hasWaf": "high - CF-RAY visible on every 200; no challenge body anywhere",
+      "wafType": "high - passive CF; 520s are origin error pages not CF active challenges",
+      "expectedProductCount": "medium - sitemap-derived (33,601); rollup-sum 33,404 agrees to 0.6%",
+      "catalogUrls": "high - every productive top-level leaf walked + toolbar count verified",
+      "sortParam": "high - 3-outcome counter-control test passed (default == newest, name asc differs)",
+      "paginationPattern": "high - `?p=2` zero-overlap test passed",
+      "perPage": "high - `?limit=100` rendered 100 items; `?limit=200`/`?limit=500` silently downgraded to 20 (allowlist enforced)"
+    },
+    "watchdogPriorVerdict": null,
+    "openMageVersion": "20.16.0"
+  }
+}

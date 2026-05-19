@@ -1,0 +1,135 @@
+{
+  "_meta": {
+    "runId": "R2-live-2026-05-15T09-16-43Z",
+    "site": "gunpost.ca",
+    "r1File": "docs/site-audit/gunpost.ca-2026-05-15T08-52-03Z-R1.json",
+    "r1DiffFile": "docs/site-audit/gunpost.ca-2026-05-15T08-52-03Z-R1-diff.md",
+    "approach": "Re-probed every R1-flagged divergent field using a method DIFFERENT from R1's hypothesis. Cross-checked against backend/src/services/product-count-probe.ts, product-verifier.ts, scraper/adapters/classifieds-gunpost.ts. Found a third-truth on expectedProductCount that BOTH R1 and DB got wrong."
+  },
+
+  "corrections": {
+    "productCountMethod.method": {
+      "value": "html-pagination",
+      "evidence": "Read product-count-probe.ts:148-451 switch — 11 cases exist (wp-rest-header, json-api-count, json-api-length, html-pagination, sitemap, sitemap-index, generic-product-sitemap, ecwid-storefront-search, shopify-products-walk, klevu-api-count, stream-page-count). 'pagination-walk' is NOT in the switch. DB's value falls through default:return null and silently disables the count probe at runtime. R1 verdict is correct: rename to canonical 'html-pagination'.",
+      "confidence": "high",
+      "side": "R1"
+    },
+
+    "expectedProductCount": {
+      "value": 25186,
+      "evidence": "BOTH R1 (30,225) and DB (30,423) are WRONG. Live HTML count on 2026-05-15T09:13Z: every catalog page renders 15 regular `node--view-mode-teaser` + 3 sticky `node--view-mode-promoted-teaser` = 18 visible cards. Promoted set rotates across pages (p0 has [1228380/1160134/628101], p1 has [1224475/1210306/1228380]). Real terminus is p1680 which shows 'No results found' div + 3 promoted only; p1679 has 1 regular + 3 promoted. Real listing count = (1679 * 15) + 1 = 25,186. This matches the live facet sums EXACTLY: province-sum (9200+4361+3960+2447+1726+1195+1089+895+113+106+94) = 25,186; category-sum (10505+4695+2468+1867+1766+878+627+623+602+492+366+109+94+52+42) = 25,184. R1's 'totalsSumCheck' note blamed the 17% drift on 'uncategorized/sticky/sold' — actual cause is R1 multiplied perPage=18 over 1680 pages, double-counting 3 sticky promoted teasers per page (3 * 1680 = 5,040 phantom listings; 30,225 - 25,186 = 5,039). Verified middle-page (p500) also shows 15 regular + 3 promoted.",
+      "confidence": "high",
+      "side": "third-truth"
+    },
+
+    "productCountMethod (full shape)": {
+      "value": {
+        "method": "html-pagination",
+        "selector": "a[href*='page='] (rel='last' / largest page= query param in pager)",
+        "perPage": 15,
+        "formula": "(1679 * 15) + 1 = 25186",
+        "lastPageZeroIndexed": 1679,
+        "lastPageItems": 1
+      },
+      "evidence": "Same source as expectedProductCount above. perPage=15 (regular teasers per page), NOT 18. lastPageItems=1 (one regular teaser on p1679), NOT 3 (R1) or the 18-visible mix.",
+      "confidence": "high",
+      "side": "third-truth"
+    },
+
+    "perPage": {
+      "value": 15,
+      "evidence": "Same evidence as productCountMethod. R1 and DB both report 18 because they counted visible card slots including 3 sticky-promoted-teasers. The DB's `paginationPattern.perPage` and top-level `perPage` should be 15 (regular listings per page). This affects the listing-count formula. NOTE: if the perPage field is meant to describe `visible card slots` for the crawler's pagination logic, then 18 is fine for that crawler-mechanical use. But for `expectedProductCount` arithmetic, 15 is the correct figure.",
+      "confidence": "high",
+      "side": "third-truth",
+      "operatorNote": "Operator must decide whether `perPage` documents visible-cards (18) or listing-count-multiplier (15). RECOMMEND: keep perPage=18 for crawler mechanics, change expectedProductCount/formula to use the listing-only math (1679 * 15) + 1 = 25,186."
+    },
+
+    "classifiedRules.soldDetection": {
+      "value": ["class=sold", "class=field-sold", "field-sold Yes", "SOLD"],
+      "evidence": "Live HTML search /ads?key=sold returned `class=\"field-sold\"` and `class=\"sold\"` in teaser markup. NO `class=\"ad-sold\"` found. R1's set is more accurate. DB's `ad-sold` is dead-but-not-harmful since `class=\"field-sold\"` and the `SOLD` literal still trigger detection. Generic CSS fallback in product-verifier.ts:308 also matches `.sold, .ad-sold, .field-sold` so all three trigger.",
+      "confidence": "high",
+      "side": "R1"
+    },
+
+    "classifiedRules.wantedDetection": {
+      "value": ["^wanted", "wtb$", "wtt$", "iso$", "wanted$", "wanted:"],
+      "evidence": "R1 was WRONG to drop this field. Runtime consumer at backend/src/services/product-verifier.ts:259-260 reads `entry?.siteProfile?.classifiedRules?.wantedDetection` and uses it as the wanted-ad regex (falls back to `/\\b(wanted|wtb|wtt|iso)\\s*$/` only if absent). Live evidence: /ads?key=wanted returned titles 'Wanted: vintage/antique firearms...' (matches `^wanted` and `wanted:`), 'shoei-mp44-wanted' (matches `wanted$`). The DB regex set is operator-curated and runtime-real — PRESERVE. SKILL.md GAP: classifieds output section does not document wantedDetection as a target field; should be added.",
+      "confidence": "high",
+      "side": "DB"
+    },
+
+    "apiConfig.customSelectors": {
+      "value": null,
+      "evidence": "R1 said the DB's `apiConfig.customSelectors` block is `runtime-consumed by the classifieds adapter`. VERIFIED FALSE. `grep -r customSelectors backend/src` returns ZERO matches. The classifieds-gunpost.ts adapter (lines 96-100) uses HARD-CODED selectors: `[class*=\"node--type-classified\"]`, `[class*=\"gunpost-teaser\"]`, `[class*=\"node--type-\"][class*=\"teaser\"]`, `[class*=\"classified-ad\"]`. The `extractPostDate` override (line 59-80) hard-codes `.node__pubdate`. NO siteProfile.apiConfig.customSelectors path is read by any adapter. This is pure operator-documentation residue and should NOT be in the runtime profile. R1 was correct to omit; R1's diff-md text mis-described why.",
+      "confidence": "high",
+      "side": "R1"
+    },
+
+    "userAgentOverride": {
+      "value": null,
+      "evidence": "Tested 2026-05-15T09:14Z: bare /ads with default curl UA = 403; with iPhone Safari UA = 403; with Chrome desktop UA = 403; with Macintosh Safari UA = 403. Sorted /ads?sort_by=date_pub&sort_order=DESC with default curl UA = 200. Cloudflare-active is URL-parameter-selective, NOT UA-selective. Any prior `userAgentOverride: iPhone Safari` setting in the DB has zero crawler effect because catalogUrls always include the sort param. R1's null is correct.",
+      "confidence": "high",
+      "side": "R1"
+    },
+
+    "platform": {
+      "value": "drupal-classifieds",
+      "evidence": "Skill canonical platform table uses `drupal-classifieds` (separator + qualifier). DB has older bare `drupal` tag. No runtime consequence today because adapterType (`classifieds-gunpost`, used in routing) agrees on both. R1's value is canonical.",
+      "confidence": "high",
+      "side": "R1"
+    },
+
+    "catalogUrls": {
+      "value": ["/ads?sort_by=date_pub&sort_order=DESC"],
+      "evidence": "Both R1 and DB agree. Live-verified 2026-05-15T09:13Z — sorted URL returns 200, bare /ads returns 403 (Cloudflare-active rule-selective). Single-URL global catalog is correct per Mistake 37.",
+      "confidence": "high",
+      "side": "both-agree"
+    },
+
+    "sortParam": {
+      "value": "?sort_by=date_pub&sort_order=DESC",
+      "evidence": "Live-verified — exposed Drupal Views sort form on bare URL uses sort_by/sort_order pair; this is the canonical form. Also runtime-baked into catalogUrls.",
+      "confidence": "high",
+      "side": "both-agree"
+    },
+
+    "needsPlaywright": {
+      "value": false,
+      "evidence": "Static curl with default UA on sorted /ads returned 200 + 561,345 bytes with all 18 teaser cards rendered. NO Playwright fallback needed. Confirmed catalog-crawler.ts will not auto-fire Playwright because static HTML > 5KB returns 18 products (above the auto-fallback threshold).",
+      "confidence": "high",
+      "side": "both-agree"
+    },
+
+    "wafType": {
+      "value": "cloudflare-active",
+      "evidence": "cf-ray header present on all responses. Bare /ads returns 403 + Cf-Mitigated:challenge header. Sorted /ads returns 200 cleanly. Rule-selective behavior confirmed. Operational impact: zero (crawler always uses sorted URL).",
+      "confidence": "high",
+      "side": "both-agree"
+    }
+  },
+
+  "_summary": {
+    "totalDivergentFields": 13,
+    "correctionCount": 12,
+    "byConfidence": {
+      "high": 12,
+      "medium": 0,
+      "low": 0,
+      "inconclusive": 0
+    },
+    "bySide": {
+      "R1": 6,
+      "DB": 1,
+      "third-truth": 3,
+      "both-agree": 4
+    },
+    "criticalBothWrong": [
+      "expectedProductCount — BOTH 30,225 (R1) and 30,423 (DB) are wrong. Real count is 25,186 (sticky promoted teasers were double-counted across 1680 pages).",
+      "productCountMethod.formula — must use perPage=15 (regular listings) not 18 (visible cards).",
+      "productCountMethod.lastPageItems — must be 1 not 3 (R1) — only 1 regular teaser on p1679."
+    ],
+    "paginationWalkVerdict": "CONFIRMED — `pagination-walk` is NOT in product-count-probe.ts switch. DB falls through default:return null at runtime, silently disabling count probe. R1's `html-pagination` is the canonical name.",
+    "wantedDetectionVerdict": "CONFIRMED runtime-consumed at product-verifier.ts:259. R1 was wrong to drop. Must preserve DB's regex set. SKILL.md needs to add wantedDetection as a documented classifieds output field.",
+    "customSelectorsVerdict": "DISPROVED runtime-consumed claim — grep returns zero hits in backend/src. R1's diff text mis-described WHY but R1's correct decision was to omit from the candidate. Pure operator-documentation residue."
+  }
+}

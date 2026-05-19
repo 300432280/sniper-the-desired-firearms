@@ -1,0 +1,124 @@
+{
+  "profileVersion": 1,
+  "platform": "drupal-commerce",
+  "adapterType": "classifieds-gunpost",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-05-13T08:18:12Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare active (rule-selective): bare /ads returns interactive challenge (_cf_chl_opt), SQLi UNION + XSS payloads return 403; rapid burst OK; all batches via browser UA on / return 200",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: 9fb03b304c5bb0a3-YYZ", "cf-cache-status: DYNAMIC", "Server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": ["200x10 (no 429/503)"],
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [".env=403", ".git/config=403", "phpinfo.php=403"],
+    "botUaBlocked": false,
+    "bareAdsBlocked": "GET /ads returns 200 'Just a moment...' interactive Cloudflare challenge; /ads with any query string (e.g. ?sort_by=date_pub) returns 200 clean HTML",
+    "challengeUrl": "/ads (no query)"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": false,
+  "expectedProductCount": 30078,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "url": "/ads?sort_by=date_pub&sort_order=DESC",
+    "selector": ".pager__item--last a",
+    "regex": "page=(\\d+)",
+    "perPage": 18
+  },
+  "catalogUrls": [
+    "/ads?sort_by=date_pub&sort_order=DESC"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.gunpost.ca/blades/knives-tools/tricities-pitt-maple/boker-anso-solo", "title": "Boker Anso Solo", "price": 275.00, "stockStatus": "in_stock" },
+    { "url": "https://www.gunpost.ca/firearms/rifles/calgary/limited-time-price-drop-ruger-marlin-336-sbl-30-30", "title": "LIMITED TIME PRICE DROP - Ruger Marlin 336 SBL 30-30", "price": 2750.00, "stockStatus": "in_stock" },
+    { "url": "https://www.gunpost.ca/firearms/rifles/edmonton/tikka-t3x-varmintsuper-varmint-308", "title": "Tikka T3X Varmint/Super Varmint 308", "price": null, "stockStatus": "unknown", "priceVisible": false, "note": "wanted-ad (WTB) — adapter isWantedAd() filters" }
+  ],
+  "sortParam": "?sort_by=date_pub&sort_order=DESC",
+  "sortVerified": true,
+  "perPage": 18,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 18,
+    "firstPageHasParam": false,
+    "startPage": 0,
+    "zeroIndexed": true
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Drupal Views ?sort_by=date_pub&sort_order=DESC honored (3-outcome counter-control test passed); listing has node__pubdate date source; no API date filter on Drupal Views"
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "classifiedRules": {
+    "soldDetection": [
+      "class=field-sold",
+      "field-sold Yes",
+      "SOLD"
+    ]
+  },
+  "lastVerified": "2026-05-13",
+  "topLevelCategories": {
+    "source": "homepage-nav + /ads facet bar (15 c:N facets)",
+    "categories": [
+      { "slug": "/ads?f[0]=c:1", "name": "Firearms", "lastPage": 693, "approxCount": 12484 },
+      { "slug": "/ads?f[0]=c:12", "name": "Firearm Components, Accessories, & Tools", "lastPage": 313, "approxCount": 5652 },
+      { "slug": "/ads?f[0]=c:7", "name": "Optics", "lastPage": 164, "approxCount": 2970 },
+      { "slug": "/ads?f[0]=c:65", "name": "Reloading", "lastPage": 123, "approxCount": 2232 },
+      { "slug": "/ads?f[0]=c:38", "name": "Ammunition", "lastPage": 117, "approxCount": 2124 },
+      { "slug": "/ads?f[0]=c:2131", "name": "Blades", "lastPage": 58, "approxCount": 1062 },
+      { "slug": "/ads?f[0]=c:30", "name": "Airgun & Airsoft", "lastPage": 42, "approxCount": 774 },
+      { "slug": "/ads?f[0]=c:23", "name": "Archery", "lastPage": 41, "approxCount": 756 },
+      { "slug": "/ads?f[0]=c:2089", "name": "Shooting Range & Gear", "lastPage": 40, "approxCount": 738 },
+      { "slug": "/ads?f[0]=c:57", "name": "Hunting", "lastPage": 32, "approxCount": 594 },
+      { "slug": "/ads?f[0]=c:50", "name": "Cases & Storage", "lastPage": 24, "approxCount": 450 },
+      { "slug": "/ads?f[0]=c:2085", "name": "Books", "lastPage": 7, "approxCount": 144 },
+      { "slug": "/ads?f[0]=c:127", "name": "Services", "lastPage": 6, "approxCount": 126 },
+      { "slug": "/ads?f[0]=c:44", "name": "Muzzleloading Supplies", "lastPage": 3, "approxCount": 72 },
+      { "slug": "/ads?f[0]=c:2032", "name": "Targets", "lastPage": 2, "approxCount": 54 }
+    ],
+    "totalsSumCheck": "Per-category sum ≈ 30,232; global walk via /ads?sort_by=date_pub&sort_order=DESC last page 1670 → ≈30,078; overlap explained by classified items appearing in multiple categories. Global URL chosen as single catalogUrl (minimum URL count = 1)."
+  },
+  "auditNotes": {
+    "runId": "R1-blind-2026-05-13",
+    "probeIp": "audit-host (Cloudflare blocks bare /ads from this IP; facet/sort URLs pass)",
+    "fieldConfidence": {
+      "platform": "high (Drupal 10 + Commerce 2 generator meta)",
+      "adapterType": "high (classifieds-gunpost adapter file exists)",
+      "hasWaf": "high (cf-ray + bare /ads challenge + SQLi/XSS 403)",
+      "catalogUrls": "high (global URL with baked sort returns 200; sort verified honored)",
+      "expectedProductCount": "high (walk count 30,078; html-pagination probe matches within +/-0.1%)",
+      "sortParam": "high (3-outcome counter-control test passed)",
+      "classifiedRules.soldDetection": "medium (verified live listing class=field-sold present; sold-yes pattern inferred from adapter expectation)"
+    },
+    "stageNotes": {
+      "1-canonical": "apex redirects to www (1 hop); <link rel='canonical'> confirms www.gunpost.ca",
+      "2-waf": "Cloudflare active rule-selective: bare /ads triggers interactive challenge ('Just a moment'); SQLi UNION + XSS payloads return 403; rapid burst clean",
+      "3-platform": "Drupal 10 + Commerce 2 (generator meta); classifieds adapter already in codebase",
+      "4-catalogUrls": "Global URL /ads?sort_by=date_pub&sort_order=DESC covers 100% with 1 URL; per-category facets documented in topLevelCategories",
+      "5-pagination": "?page=N zero-indexed query; perPage=18 (no items_per_page select; Drupal Views config-fixed)",
+      "6-sort": "3-outcome counter-control on c:1 facet: default (no sort) -> sort=created&order=desc -> sort=closing_date&order=asc; all 3 first products differ -> sort honored; bare-form ?sort_by=date_pub&sort_order=DESC is the global canonical (per Mistake 37)",
+      "7-watermark": "navigate-from-watermark: sort honored + node__pubdate date source available; no Drupal Views API date filter",
+      "8-count": "Walk count 30,078 (pages 0-1670 x 18); sitemap 25,517 (lags ~15% — classifieds keep sold/expired live with field-sold Yes class but sitemap drops them); html-pagination runtime probe selected (last-page selector x perPage = 1670 x 18 = 30,060 ≈ 0.1% drift)",
+      "9-assembly": "Validated against profile-validator field requirements; testUrlWasFacetFiltered=false (global URL used in Stage 5+6+8 probes; only Stage 6 counter-control needed facet form due to bare-form sort options being constrained on global URL)"
+    }
+  }
+}

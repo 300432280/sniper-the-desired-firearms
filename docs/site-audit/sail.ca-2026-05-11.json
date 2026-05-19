@@ -1,0 +1,114 @@
+{
+  "profileVersion": 1,
+  "platform": "magento-2.x",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-11T06:46:54Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "No vendor WAF marker (no cf-ray / x-sucuri / incap / Akamai). Fastly CDN headers only. Rule-selective layer fires 406/400 on SQLi/XSS payloads while normal traffic passes 200. Honeypot paths 404 (not 403). Rapid burst (10x ~2s) all 200. Multi-UA all 200. No CAPTCHA gate on homepage.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "fastlyHeaders": ["X-Served-By", "X-Cache", "X-Timer"],
+    "rapidBurstStatus": "10/10 = 200",
+    "sqliRuleFired": true,
+    "sqliStatus": 406,
+    "xssRuleFired": true,
+    "xssStatus": 400,
+    "honeypotPathsBlocked": false,
+    "honeypotStatus": 404,
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "interpretation": "no vendor WAF; Magento/Fastly app-layer rule-selective on injection payloads only"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 18944,
+  "productCountMethod": "generic-product-sitemap",
+  "catalogUrls": [
+    "https://www.sail.ca/en/fishing",
+    "https://www.sail.ca/en/hunting",
+    "https://www.sail.ca/en/women",
+    "https://www.sail.ca/en/outdoor-gear",
+    "https://www.sail.ca/en/men",
+    "https://www.sail.ca/en/camping",
+    "https://www.sail.ca/en/footwear",
+    "https://www.sail.ca/en/kids"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.sail.ca/en/primos-trigger-stick-gen3-jim-shockey-tall-tripod-638510-18-014390001", "title": "Trigger Stick Gen3 Jim Shockey Tall Tripod", "price": 262.99, "stockStatus": "unknown", "stockStatusReason": "Searchspring lite results do not include stock_status; resolved at detail page via Playwright" },
+    { "url": "https://www.sail.ca/en/sail-double-gun-case-724994-20-031040001", "title": "Double Gun Case", "price": 189.99, "stockStatus": "unknown" },
+    { "url": "https://www.sail.ca/en/hoppes-bench-rest-premium-gun-cleaning-kit-499102-1442220001", "title": "Bench Rest Premium Gun Cleaning Kit", "price": 99.99, "stockStatus": "unknown" }
+  ],
+  "sortParam": "&sort.created_at=desc",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "api-page",
+    "template": "https://s8zq1c.a.searchspring.io/api/search/search.json?siteId=s8zq1c&resultsFormat=native&page={N}&resultsPerPage=100&bgfilter.category_hierarchy=<CATEGORY>&sort.created_at=desc",
+    "perPage": 100,
+    "firstPageHasParam": true,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Searchspring sort.created_at=desc verified honored via 3-outcome counter-control test (default first3 != newest first3 != price-asc first3). No queryable date-range filter found on created_at (filter.created_at.low/high return 0), so api-date-since-watermark not viable; navigate-from-watermark with newest sort proves the watermark crawl."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "searchspringSearch": "https://s8zq1c.a.searchspring.io/api/search/search.json",
+        "siteId": "s8zq1c",
+        "bgFilterField": "category_hierarchy",
+        "sortField": "sort.created_at=desc",
+        "perPageParam": "resultsPerPage",
+        "pageParam": "page"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "searchspring-facet category_hierarchy",
+    "categories": [
+      { "slug": "/en/fishing", "allOption": 5098 },
+      { "slug": "/en/hunting", "allOption": 3196 },
+      { "slug": "/en/women", "allOption": 2748 },
+      { "slug": "/en/outdoor-gear", "allOption": 2644 },
+      { "slug": "/en/men", "allOption": 2389 },
+      { "slug": "/en/camping", "allOption": 2095 },
+      { "slug": "/en/footwear", "allOption": 1282 },
+      { "slug": "/en/kids", "allOption": 329 }
+    ],
+    "totalsSumCheck": "Sum of 8 top-level categories = 19,781. Global Searchspring unfiltered total = 18,916. Sum > global by 4.6% indicates multi-parent tagging (e.g. women's hunting jacket appears in both Women and Hunting). Sitemap product-URL count = 18,944 (0.15% above global). Drift acceptable.",
+    "notes": "Seasonal/aggregator URLs (Sales, Clearance, Flash Sale, Door Crashers, Mothers' Day, etc.) intentionally excluded from catalogUrls because they overlap entirely with the per-category list. 'Gift Ideas' (227) is a curated subset — every product also lives in a top-level dpt category. 'DEV' (20) is a dev sandbox."
+  },
+  "auditNotes": {
+    "runId": "sail.ca-2026-05-11-blind-calibration",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high (homepage scan)",
+      "catalogUrls": "medium (8 top-levels from facet; multi-parent overlap not perfectly partitionable; coverage acceptable)",
+      "expectedProductCount": "high (sitemap 18,944 vs Searchspring API 18,916 within 0.15%)",
+      "sortParam": "high (3-outcome test)",
+      "perPage": "high (verified server returns 100 cleanly; caps silently at 100 above)",
+      "watermarkMethod": "high (sort honored; no date filter)"
+    },
+    "openQuestions": [
+      "Magento-2.x catalog pages do not server-render product cards — Searchspring SPA replaces innerHTML on load. Project crawler must either (a) drive Playwright on /en/<category> URLs and wait for Searchspring DOM, or (b) call Searchspring API directly via bootstrap.apiEndpoints. Recommend the latter for efficiency.",
+      "Stock status not present in Searchspring lite result objects — would need a second per-product call OR fetch the detail page. Detail-page maintain verify path covers this.",
+      "Locale: site exposes both /en/ and /fr/ sitemaps and content. Only /en/ in scope for this profile."
+    ]
+  },
+  "lastVerified": "2026-05-11"
+}

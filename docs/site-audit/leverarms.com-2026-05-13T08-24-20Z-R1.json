@@ -1,0 +1,110 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-13T08:20:16Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every response, __cf_bm cookies); rule-selective on SQLi UNION + XSS payloads (403 nginx body, NOT Cloudflare challenge); honeypots .env/.git/config/xmlrpc.php return 403; all crawler paths (homepage, /product-category/*, /wp-json/wc/store/v1/*) return 200 cleanly with valid product markup. Operationally hasWaf=false.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "__cf_bm", "cf-cache-status"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": ["xmlrpc.php", ".env", ".git/config"],
+    "botUaBlocked": false,
+    "pluginWafMarkers": []
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 356,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://leverarms.com/product-category/all-product/",
+    "https://leverarms.com/product-category/all-surplus/",
+    "https://leverarms.com/product-category/ammo/",
+    "https://leverarms.com/product-category/food/",
+    "https://leverarms.com/product-category/guns/",
+    "https://leverarms.com/product-category/kit/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://leverarms.com/shop/guns/rifles/bolt-action-rifles/post-4152/", "title": "post-4152 (guns p1 first) — instock class, $805.99", "price": 805.99, "stockStatus": "in_stock" },
+    { "url": "https://leverarms.com/shop/guns/rifles/semi-auto-rifles/post-2135/", "title": "post-2135 (guns p1) — instock, $499.99", "price": 499.99, "stockStatus": "in_stock" },
+    { "url": "https://leverarms.com/shop/guns/rifles/semi-auto-rifles/post-36834/", "title": "post-36834 (guns p1) — instock, $599.99", "price": 599.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 16,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 16,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "apiEndpoint": "/wp-json/wc/store/v1/products",
+      "dateParam": "after"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "products": "/wp-json/wc/store/v1/products",
+        "categories": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "all-product", "id": 200, "allOption": 320, "walked": 331 },
+      { "slug": "all-surplus", "id": 186, "allOption": 102, "walked": 104 },
+      { "slug": "ammo", "id": 188, "allOption": 122, "walked": 124 },
+      { "slug": "food", "id": 1755, "allOption": 11, "walked": 11 },
+      { "slug": "guns", "id": 1603, "allOption": 35, "walked": 34 },
+      { "slug": "kit", "id": 1606, "allOption": 203, "walked": 216 }
+    ],
+    "totalsSumCheck": "Union of all 6 top-level cats = 356 unique product IDs = WC Store API x-wp-total (0% drift). all-product alone covers 331/356; 25 products not in all-product require the 5 true top-level cats. all-product contributes 9 unique products not in the 5-cat union. All 6 URLs needed for 100% coverage."
+  },
+  "lastVerified": "2026-05-13",
+  "auditNotes": {
+    "runId": "R1-2026-05-13T08-24-20Z",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "catalogUrls": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "expectedProductCount": "high",
+      "watermark.method": "high"
+    },
+    "probeIp": "audit-host (single-IP run; production WAF re-confirm recommended before promotion)",
+    "stageNotes": [
+      "Stage 1: apex 200 + www->apex 200; <link rel=canonical> declares https://leverarms.com/. Canonical = apex.",
+      "Stage 2: heavy-8-batch ran 2026-05-13T08:20:16Z. cf-ray + __cf_bm on every response. Rapid burst 10x 200. BATCH 6 UNION 403, BATCH 7 XSS 403 (rule-selective). BATCH 4 .env/.git/xmlrpc.php 403. BATCH 8 no-UA 200. No plugin-WAF body markers (no MalCare/Wordfence). 403 body = generic nginx, not Cloudflare challenge HTML. Cloudflare-passive only.",
+      "Stage 3: <meta name=generator content='WooCommerce 10.7.0'>. wp-content/plugins/woocommerce. WC Store API /wp-json/wc/store/v1/products returns valid JSON.",
+      "Stage 4: Taxonomy API returned 42 categories; 6 top-level (parent=0). Walked each via Store API category param. Union of all 6 = 356 = global Store API x-wp-total (0% drift). Each contributes uniquely. NO category dropped.",
+      "Stage 5: /product-category/guns/page/2/ STATUS 200; page-1 (16 post-IDs) vs page-2 (16 post-IDs) overlap = 0. Pattern = /page/{N}/. perPage=16 default for HTML category.",
+      "Stage 6: 3-outcome test with cache-bust (&_=<nonce>). default first-3 = [4152,2135,36834]; ?orderby=date = [53271,53140,53134]; ?orderby=price = [50371,53129,51179]. Three distinct sequences -> orderby=date is honored.",
+      "Stage 7: WC two-probe: /wp-json/wp/v2/product?after=2099 -> x-wp-total=0; ?after=1999 -> x-wp-total=971 (wp/v2 admin REST includes drafts; Store API customer-visible total is 356). Date filter honored.",
+      "Stage 8: WC Store API per_page=1 -> x-wp-total=356. Confirmed by walking 4 pages of 100 -> 356 unique IDs. productCountMethod object shape verified against backend/src/services/product-count-probe.ts.",
+      "Stage 9: candidate written; validator run by operator."
+    ]
+  }
+}

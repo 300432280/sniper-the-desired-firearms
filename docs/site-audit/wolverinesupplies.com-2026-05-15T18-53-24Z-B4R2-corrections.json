@@ -1,0 +1,97 @@
+{
+  "runId": "B4R2-2026-05-15T18-53-24Z",
+  "site": "wolverinesupplies.com",
+  "basedOn": "wolverinesupplies.com-2026-05-15T18-43-52Z-B4R1.json",
+  "verdict": "R1 candidate CONFIRMED on all 4 high-risk dimensions. NO corrections needed to the candidate. DB siteProfile is the divergent side. Promote candidate as-is.",
+  "corrections": [],
+  "highRiskVerifications": {
+    "productCountMethodSwitch": {
+      "field": "productCountMethod",
+      "dbValue": "category-walk-dedupe",
+      "candidateValue": { "method": "sitemap", "url": "https://wolverinesupplies.com/xmlsitemap.php?type=products&page=1" },
+      "verdict": "R1 CORRECT. DB bare string is broken at runtime.",
+      "evidence": {
+        "fileRead": "backend/src/services/product-count-probe.ts:148-451",
+        "switchKey": "m.method (object property)",
+        "cases": [
+          "wp-rest-header",
+          "json-api-count",
+          "json-api-length",
+          "html-pagination",
+          "sitemap",
+          "sitemap-index",
+          "generic-product-sitemap",
+          "ecwid-storefront-search",
+          "shopify-products-walk",
+          "klevu-api-count",
+          "stream-page-count"
+        ],
+        "noCaseFor": "category-walk-dedupe",
+        "defaultBranch": "line 446-451: warns 'unknown method' and returns null",
+        "stringTypeBehavior": "bare string has no .method property -> m.method === undefined -> hits default branch -> returns null. Site has zero count-probe coverage at runtime with DB value.",
+        "candidateBakedSitemapVerified": "GET https://wolverinesupplies.com/xmlsitemap.php?type=products&page=1 returns 200 with <loc> entries (R1 measured 8173). Second page (?page=2) returns 404 — single-page sitemap (R1 confirmed)."
+      }
+    },
+    "wafReVerdict": {
+      "field": "hasWaf + wafType",
+      "dbValue": { "hasWaf": true, "wafType": null },
+      "candidateValue": { "hasWaf": false, "wafType": "cloudflare-passive" },
+      "verdict": "R1 CORRECT. Cloudflare is in front but fully passive.",
+      "evidence": {
+        "batch1RootHeaders": "Server: cloudflare, CF-RAY: 9fc4563a1e7924ee-YYZ, cf-cache-status: DYNAMIC, x-bc-store-id: 1003335859, BC-Ray: 1. No cf-mitigated, no challenge cookie, no 403/503.",
+        "batch2FirearmsHeaders": "Same — 200, CF-RAY present, cf-cache-status DYNAMIC, no challenge.",
+        "batch3Sqli": "GET /firearms/?sku=' OR 1=1-- -> 200, body 636193 bytes (full category page rendered, no WAF page).",
+        "batch4Xss": "GET /?q=<script>alert(1)</script> -> 200, body 218243 bytes (full homepage rendered).",
+        "batch5HoneypotWpAdmin": "GET /wp-admin -> 403 (BC origin default — BC is not WordPress, router rejects unknown paths). NOT a WAF block.",
+        "batch6HoneypotEnv": "GET /.env -> 403 (BC origin default).",
+        "batch7BotUa": "UA='curl/7.0 bot' on /firearms/ -> 200, body 622614 bytes.",
+        "batch8EmptyUa": "UA='' on /firearms/ -> 200, body 635526 bytes.",
+        "bodyMarkerScan": "Body of /firearms/ contains NO Sucuri / Wordfence / MalCare / sgcaptcha / Incapsula / SiteLock / Imperva markers. Only legitimate cdn11.bigcommerce.com strings.",
+        "rapidBurst30": "30 sequential requests on /firearms/?page=N&limit=250 cycling pages 1-7 — all 200 (30/30). No rate-limit, no 429, no challenge.",
+        "operationalImpact": "DB hasWaf=true currently throttles this site's crawler perPage to 20 and routes through waf-cookie-manager — ~5x throughput hit with zero security benefit. R1's hasWaf=false is the correct operational value."
+      }
+    },
+    "maintainVerifyMethod": {
+      "field": "crawlers.maintain.verifyMethod",
+      "dbValue": "absent",
+      "candidateValue": "detail-page",
+      "verdict": "R1 CORRECT. Without the field, worker.ts:765 errors out and skips verification entirely.",
+      "evidence": {
+        "fileRead1": "backend/src/services/worker.ts:381-400 (tryStoreApiVerify)",
+        "storeApiGate": "Line 397: if (!maintainConfig || maintainConfig.verifyMethod !== 'store-api') return null. So tryStoreApiVerify returns null for BC (no public Store API equivalent here).",
+        "fileRead2": "backend/src/services/worker.ts:759-769 (Playwright fallback branch)",
+        "missingMethodBranch": "Line 763: verifyMethod = entry?.siteProfile?.crawlers?.maintain?.verifyMethod. Line 764-767: if (!verifyMethod) { console.error 'MISSING verifyMethod'; return; } — verification SKIPPED entirely.",
+        "detailPageBranch": "Line 768-769: if verifyMethod is truthy (any non-store-api value, including 'detail-page'), Playwright detail-page walk fires.",
+        "behaviorWithoutField": "Worker logs 'MISSING verifyMethod in site profile. Skipping verification.' and returns early. Maintain phase silently broken for this site in DB.",
+        "behaviorWithDetailPage": "Worker walks each product URL via verifyProductsViaPlaywright (Playwright detail-page). Correct for BC Stencil (no Store API)."
+      }
+    },
+    "bcStoreIdLiveVerification": {
+      "field": "bcStoreId",
+      "dbValue": "1003335859",
+      "candidateValue": "absent (dropped by R1 per skill schema)",
+      "verdict": "DB value 1003335859 verified live via response header on root and /firearms/. R1 dropping is schema-consistent (Stage 3 conditional-output table only lists ecwidStoreId), so the candidate is schema-correct — but this exposes a SKILL.md gap (already flagged by R1 diff gap #1). NO mechanical correction to JSON.",
+      "evidence": {
+        "headRoot": "x-bc-store-id: 1003335859 (Date: Fri, 15 May 2026 18:51:56 GMT, CF-RAY: 9fc4563a1e7924ee-YYZ)",
+        "headFirearms": "x-bc-store-id: 1003335859 (Date: Fri, 15 May 2026 18:51:58 GMT, CF-RAY: 9fc456427ed361e9-YYZ)",
+        "cdnString": "Body contains cdn11.bigcommerce.com/s-bhxpar2unf (BC store hash for store ID 1003335859)",
+        "recommendation": "Operator decision (out of scope of mechanical corrections JSON): either (a) keep R1 schema-pure and accept the skill gap, OR (b) add bcStoreId to a future skill conditional output. R1 diff gap #1 already documents this."
+      }
+    },
+    "perPage250Honored": {
+      "field": "perPage",
+      "verdict": "R1 CORRECT (250).",
+      "evidence": {
+        "defaultPage": "GET /firearms/ — 100 <article class='card> matches in HTML (matches stencilBootstrap 'categorypage_products_per_page: 100' theme setting)",
+        "limit250": "GET /firearms/?limit=250 — 250 <article class='card> matches in HTML — exactly the requested perPage",
+        "confirmsHonored": "BigCommerce Stencil ?limit=N query is honored without falling back to theme default"
+      }
+    }
+  },
+  "skillGapsConfirmed": [
+    "bcStoreId is not in SKILL.md Stage 3 conditional-output table — R1 correctly dropped it but the value is operationally useful and present in DB. Skill should either add it or explicitly say 'BC Stencil store IDs are intentionally not stored'.",
+    "paginationPattern legacy keys (param, firstPage) used by older DB profiles silently fall back to defaults at catalog-crawler.ts URL builder — skill should mandate key-name rewrite on re-audit.",
+    "hasWaf=true on cloudflare-passive sites is a common operator-side defensive over-set with real throughput cost — skill Stage 2 should add a calibration note."
+  ],
+  "promotionRecommendation": "Promote R1 candidate as-is. All 4 high-risk fields verified. Per-category counts drift -42 is normal 5-week inventory churn. catalogUrls list of 15 (including /training/=0) follows skill rule 'empty != dead'."
+}

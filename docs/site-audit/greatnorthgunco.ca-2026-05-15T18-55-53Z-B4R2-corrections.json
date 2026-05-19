@@ -1,0 +1,116 @@
+{
+  "$schema": "B4R2-corrections-to-R1",
+  "siteDomain": "greatnorthgunco.ca",
+  "r1Candidate": "docs/site-audit/greatnorthgunco.ca-2026-05-15T18-40-47Z-B4R1.json",
+  "r1Diff": "docs/site-audit/greatnorthgunco.ca-2026-05-15T18-40-47Z-B4R1-diff.md",
+  "r2RunAt": "2026-05-15T18:55:53Z",
+  "verdict": "R1's central finding (Imunify360 actively gating catalog + API) is NOT REPRODUCIBLE from the R2 audit IP and is contradicted by live production crawler state (4281 products tracked, 12 consecutive successful crawl-verify events 2026-05-12, zero errorMessages, zero consecutiveFailures). R1 was either (a) probing from an IP that Imunify had transiently rate-limit-flagged, (b) captured a brief WAF rule-toggle window, or (c) misclassified an unrelated artifact. The DB siteProfile (hasWaf=false, needsPlaywright=false) matches the live R2 observation. Most R1 corrections to DB are REJECTED.",
+  "corrections": [
+    {
+      "field": "hasWaf",
+      "r1Value": true,
+      "r2CorrectedValue": false,
+      "confidence": "high",
+      "why": "R2 ran 4 user-agents (desktop Chrome, curl/8.0.0, blank UA, HeadlessChrome) against /shop/ + /wp-json/wp/v2/product?per_page=1 + 10-page rapid burst on /shop/page/{1..10}/ + 20-hit burst on /wp-json/wp/v2/product?page={1..20} -- ALL returned HTTP 200, server=LiteSpeed (NOT openresty/1.29.x), title 'Shop - Surplus GNG', 24 WC product cards on /shop/, and real JSON on the WP REST API. Zero occurrences of R1's claimed markers 'f03s36su46c0' / 'One moment, please' / '/z[0-9a-f]{40}' / 'openresty' across all responses. DB siteProfile.hasWaf=false matches R2 observation."
+    },
+    {
+      "field": "wafType",
+      "r1Value": "imunify360",
+      "r2CorrectedValue": "none",
+      "confidence": "high",
+      "why": "No Imunify360 challenge observed by R2. See hasWaf justification."
+    },
+    {
+      "field": "needsPlaywright",
+      "r1Value": true,
+      "r2CorrectedValue": false,
+      "confidence": "high",
+      "why": "Plain axios/curl returns full /shop/ HTML (121KB, 24 products in WC markup) and full WP REST JSON. Stealth Playwright produces IDENTICAL output (200, 24 products, 525ms). Playwright fallback is unnecessary. Production crawler has run 12 consecutive successful crawl-verify in maintain phase WITHOUT Playwright -- proof at scale."
+    },
+    {
+      "field": "wafProbeMethod",
+      "r1Value": "heavy-8-batch",
+      "r2CorrectedValue": "heavy-8-batch",
+      "confidence": "high",
+      "why": "Method is fine; the recorded RESULT in wafProbeEvidence.imunify360Challenge is the problem. R2 cannot reproduce R1's evidence string with any of 4 UAs and a 20-hit burst from R2 IP."
+    },
+    {
+      "field": "wafProbeResult",
+      "r1Value": "Imunify360 interactive JS challenge gates /shop/, /product-category/*, /product/*, /wp-json/* -- passes only by passing webdriver/outerWidth/plugins/mimeTypes anti-bot checks. Homepage and sitemaps pass through unchallenged.",
+      "r2CorrectedValue": "No WAF detected from R2 audit IP. Plain curl + stealth Playwright produce identical clean output across catalog + API + product detail paths. Production crawler in maintain phase succeeded 12/12 recent events (2026-05-12). If R1's observation was real, it was IP-specific or transient -- DB hasWaf=false should NOT be changed.",
+      "confidence": "high"
+    },
+    {
+      "field": "wafProbeEvidence.imunify360Challenge",
+      "r1Value": "openresty/1.29.2.3 returns ~11KB JS challenge page on /shop/, /product-category/*, /product/*, /wp-json/*; markers 'f03s36su46c0', 'One moment, please...', form '/z0f76a1d14fd21a8fb5fd0d03e0fdc3d3cedae52f'; bypass via stealth Playwright init scripts.",
+      "r2CorrectedValue": "Not reproducible. R2 GET /shop/ returns server=LiteSpeed, ETag '1888666-1778871196;;;', X-LiteSpeed-Cache=hit, NO openresty header, NO challenge markers. /wp-json/wp/v2/product returns JSON product records. /shop/, /product-category/accessories-parts/, and /product/brno-model-zp47-sxs-12ga-2/ all return clean WC markup or JSON.",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "r1Value": 4292,
+      "r2CorrectedValue": 4293,
+      "confidence": "high",
+      "why": "R2 GET /wp-json/wp/v2/product?per_page=1 today returns x-wp-total: 4293 (+1 vs R1, presumably one new product in the ~15 minutes between R1 and R2 probes). DB has 4201 (Apr 7); growth of 92 products in ~5 weeks is plausible. Use 4293; do not over-anchor on the exact integer (it will drift hourly)."
+    },
+    {
+      "field": "catalogUrls",
+      "r1Value": ["/shop/"],
+      "r2CorrectedValue": ["/shop/"],
+      "confidence": "high",
+      "why": "R1's collapse from 14 DB URLs to single ['/shop/'] is CORRECT and matches skill Rule C (minimum-coverage). /shop/ proven 100%-coverage of customer-visible 517 (sum of WC product_cat counts). The DB typo entry '/product-category/accessoriesparts/' (no hyphen) VERIFIED returns HTTP 404 (R2 curl confirmed) -- must not be retained. The R2 list matches R1: keep ['/shop/']."
+    },
+    {
+      "field": "DB typo confirmation: /product-category/accessoriesparts/",
+      "r1Value": "claimed-404",
+      "r2CorrectedValue": "verified-404",
+      "confidence": "high",
+      "why": "R2 curl: GET /product-category/accessoriesparts/ -> HTTP 404, title 'Page not found - Surplus GNG'. R2 curl: GET /product-category/accessories-parts/ -> HTTP 200, title 'Accessories Parts Archives - Surplus GNG', 24 products. R1 was right about the typo. DB should drop the typo entry. R2 collapse to ['/shop/'] handles this implicitly."
+    },
+    {
+      "field": "productCountMethod",
+      "r1Value": { "method": "wp-rest-header", "endpoint": "/wp-json/wp/v2/product", "header": "x-wp-total" },
+      "r2CorrectedValue": { "method": "wp-rest-header", "endpoint": "/wp-json/wp/v2/product", "header": "x-wp-total" },
+      "confidence": "high",
+      "why": "Verified live (R2 HEAD returned X-WP-Total: 4293, X-WP-TotalPages: 4293). The R1 'runtime risk' knownGap about wp-rest-header arm using plain axios is now MOOT because hasWaf=false -- no challenge to bypass. Code at backend/src/services/product-count-probe.ts:149-154 will work fine."
+    },
+    {
+      "field": "auditNotes.knownGaps[0]",
+      "r1Value": "Runtime product-count-probe.ts wp-rest-header arm uses plain axios -- will fail with Imunify challenge on this site.",
+      "r2CorrectedValue": "Remove this knownGap. Pre-condition (Imunify challenge) is false. wp-rest-header arm has no WAF to bypass on this site.",
+      "confidence": "high"
+    },
+    {
+      "field": "auditNotes.knownGaps[1]",
+      "r1Value": "DB siteProfile has hasWaf=false and needsPlaywright=false. Either Imunify360 was deployed between Apr 2026 and now, OR the audit IP at that time was not challenged.",
+      "r2CorrectedValue": "Remove this knownGap. R2 from a different IP also sees hasWaf=false. R1's observation was IP-specific or transient. DB is correct as-is.",
+      "confidence": "high"
+    }
+  ],
+  "fieldsConfirmed": [
+    "platform = woocommerce",
+    "adapterType = woocommerce",
+    "hasCaptcha = false (reCAPTCHA v3 loads via CF7 but does not gate catalog -- same finding both)",
+    "expectedProductCount methodology = wp-rest-header (header x-wp-total)",
+    "perPage = 24",
+    "paginationPattern.template = /page/{N} (R2 verified pages 1..10 all return 200)",
+    "sortParam = ?orderby=date (DB has it; matches R1; not re-verified by R2 but no reason to doubt)",
+    "crawlers.watermark.method = api-date-since-watermark",
+    "topLevelCategories source = wp-rest-product_cat (R1 query confirmed today by R2 implicit via x-wp-total=517 match)",
+    "DB typo catalog URL (/accessoriesparts/) confirmed 404; real slug (/accessories-parts/) confirmed 200 with 24 products"
+  ],
+  "skillGapsReassessed": [
+    {
+      "r1Gap": "Imunify360 not in wafType enum",
+      "r2Stance": "Valid future-proofing -- Imunify360 IS a real WAF. Even though this site is not currently using it, adding it to the enum is harmless. However, the markers R1 lists (openresty/1.29 + 'One moment, please...' + '/z[0-9a-f]{40}') ARE the documented Imunify360 anti-bot challenge fingerprint -- R1's detection rule is correct; only R1's claim that THIS SITE uses Imunify is wrong."
+    },
+    {
+      "r1Gap": "wp-rest-header arm has no Playwright fallback when hasWaf=true",
+      "r2Stance": "Valid concern in general, but does NOT apply to this site. Worth filing as a SKILL.md improvement for future Imunify-fronted WordPress sites."
+    },
+    {
+      "r1Gap": "BATCH 1 of heavy-8-batch probe misses catalog-path-only WAFs (probes /, /robots.txt, /sitemap.xml; not /shop/)",
+      "r2Stance": "Valid in principle -- some WAFs do challenge only catalog paths. But this gap did NOT cause the R1 misfire on this site: R1 DID probe /shop/ (and reported it as challenged); the issue was that R1's /shop/ probe returned an Imunify-looking response that R2 cannot reproduce. Recommend SKILL.md addendum: 'When BATCH 1 says no-WAF but BATCH 4 catalog-paths show challenge, re-probe BATCH 4 from a second IP / second time window before promoting hasWaf=true to DB.'"
+    }
+  ]
+}

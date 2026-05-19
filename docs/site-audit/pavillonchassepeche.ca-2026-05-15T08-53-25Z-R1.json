@@ -1,0 +1,102 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-15T08:46:48Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches returned 200; no cf-ray / x-sucuri / sgcaptcha / Incapsula / MalCare / Wordfence markers in headers or bodies; honeypot 403s on /.env and /.git/config are LiteSpeed origin path protection, not a CDN WAF; rapid burst clean (no 429/503).",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "200x10",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/.env -> 403", "/.git/config -> 403"],
+    "honeypotNote": "LiteSpeed origin file-rule, not WAF — /wp-admin redirects to login (200), /xmlrpc.php 405; no CDN headers anywhere",
+    "botUaBlocked": false,
+    "serverHeader": "LiteSpeed"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1243,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/categorie-produit/chasse/",
+    "/categorie-produit/liquidation/",
+    "/categorie-produit/salines/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://pavillonchassepeche.ca/produit/plano-etui-noir-pour-arbalete/", "title": "PLANO ETUI NOIR POUR ARBALETE", "price": 205.99, "stockStatus": "in_stock" },
+    { "url": "https://pavillonchassepeche.ca/produit/excalibur-mag340-crossbow-realtree-package-excape/", "title": "EXCALIBUR MAG340 CROSSBOW REALTREE PACKAGE EXCAPE", "price": 849.99, "stockStatus": "in_stock" },
+    { "url": "https://pavillonchassepeche.ca/produit/billet-de-tirage/", "title": "BILLET DE TIRAGE", "price": 15.00, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 36,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST /wp-json/wp/v2/product?after=<ISO> two-probe passed: future-date (2099) -> x-wp-total: 0; ancient-date (1999) -> x-wp-total: 1253 (matches global). Site lacks an HTML <select> for sort (Elementor archive), but the API path is the canonical watermark path and works."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "products": "/wp-json/wc/store/v1/products",
+        "categories": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/categorie-produit/chasse/", "allOption": 412, "rationale": "Hunting umbrella; includes firearms (263), ammunition (50), optics+accessories (23), bows/crossbows (52), air guns (18), traps (4), targets (5), equipment (25)." },
+      { "slug": "/categorie-produit/liquidation/", "allOption": 338, "rationale": "Clearance — mixed category (per skill Rule C, include mixed). 338 customer-visible products (REST taxonomy reports 483 incl. drafts/OOS)." },
+      { "slug": "/categorie-produit/salines/", "allOption": 48, "rationale": "Salt licks — hunting-adjacent." },
+      { "slug": "/categorie-produit/peche/", "allOption": 243, "rationale": "EXCLUDED — pure fishing." },
+      { "slug": "/categorie-produit/plein-air/", "allOption": 129, "rationale": "EXCLUDED — camping/cooking, not firearm-adjacent." },
+      { "slug": "/categorie-produit/vetements/", "allOption": 184, "rationale": "EXCLUDED — pure apparel." },
+      { "slug": "/categorie-produit/tirage/", "allOption": 1, "rationale": "EXCLUDED — single raffle ticket already in /chasse/ via REST verification (redundant by evidence, not by name)." }
+    ],
+    "totalsSumCheck": "412 (chasse) + 338 (liquidation) + 48 (salines) = 798 firearm-relevant by category sum (cross-tag overlap not enumerated). Global site total = 1243 (Store API). expectedProductCount = 1243 is the global Store API customer-visible total."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "pavillonchassepeche.ca-2026-05-15-R1",
+    "probeIp": "audit IP (not production crawler IP)",
+    "fieldConfidence": {
+      "platform": "high (multi-marker: WooCommerce 10.7.0 generator + wp-content + wp-json + WC Store API + product_cat taxonomy all match)",
+      "hasWaf": "high (8-batch probe all 200, no CDN headers, no plugin-WAF body markers)",
+      "expectedProductCount": "high (WC Store API x-wp-total = 1243; WP REST product = 1253 includes drafts; chose customer-visible Store API)",
+      "catalogUrls": "medium-high (taxonomy-driven, 3 firearm-relevant top-level cats; coverage NOT walk-verified at scale due to skill-time budget — relied on per-category REST counts for sum-check)",
+      "sortParam": "high (3-outcome test: date/title/price each gave different first product; date matches REST date-desc top)",
+      "paginationPattern": "high (/page/2/ returned different products from page 1)",
+      "watermarkMethod": "high (WP REST after= two-probe passed)"
+    },
+    "deviations": [
+      "No HTML <select name='orderby'> on the category page (Elementor archive widget renders without it). Sort verified via query-param 3-outcome test instead.",
+      "perPage on HTML is locked at 36 by the Elementor widget; ?per_page and ?posts_per_page do not override. WC Store API supports up to 100. Crawler must use the per-category /page/N/ walk path with 36 ppp.",
+      "Site is French (WPML present), category slugs in French. URL prefix is /categorie-produit/ not /product-category/."
+    ]
+  }
+}

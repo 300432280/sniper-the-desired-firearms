@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "site": "gunpost.ca",
+    "round": "R2",
+    "candidateRef": "docs/site-audit/gunpost.ca-2026-05-13T08-27-41Z-R1.json",
+    "investigationRef": "docs/site-audit/gunpost.ca-2026-05-13T08-48-19Z-R2-investigation.md",
+    "runAt": "2026-05-13T08:48:19Z",
+    "totalCorrections": 8,
+    "confidence": { "high": 6, "medium": 2, "low": 0, "inconclusive": 0 }
+  },
+
+  "platform": {
+    "value": "drupal-commerce",
+    "evidence": "Live HEAD 2026-05-13T08:43:44Z: 'X-Generator: Drupal 10 (https://www.drupal.org)' + 'X-Commerce-Core: 2'. Skill table prefers most-specific multi-marker. Field not consumed by runtime (no siteProfile.platform reads in backend/src) so either tag works; the specific one is correct.",
+    "confidence": "high"
+  },
+
+  "expectedProductCount": {
+    "value": 30077,
+    "evidence": "Live walk 2026-05-13T08:44:19Z..08:45:01Z. Page 0 pager 'pager__item--last' href = 'page=1670' (zero-indexed). Pages 100, 500, 1000, 1500, 1668, 1669 each have 18 unique node IDs (data-history-node-id). Page 1670 has exactly 17 unique node IDs and NO 'pager__item--next' / NO 'pager__item--last' (terminus confirmed). Pages 1671 / 1690 / 1700 / 5000 / 100000 each return 3 items but they are NOT real catalog items: they differ on every page request, none present on page 0, no pager. They are Drupal Views 'empty-results filler' (sticky/recommended ads) on out-of-range pages. Real count = (1670 mid-pages * 18) + 17 = 30,060 + 17 = 30,077. R1's 30,078 was off by 1 (assumed page 1670 had 18). DB's 30,423 was wrong: DB assumed terminus at page 1690 with 3 items, but 'page=1690' is out-of-range filler not a real page. Actual terminus is page 1670.",
+    "confidence": "high"
+  },
+
+  "productCountMethod": {
+    "value": {
+      "method": "html-pagination",
+      "url": "/ads?sort_by=date_pub&sort_order=DESC",
+      "selector": ".pager__item--last a",
+      "regex": "page=(\\d+)",
+      "perPage": 18
+    },
+    "evidence": "Runtime switch in backend/src/services/product-count-probe.ts lines 148-451 has 11 canonical method arms; 'pagination-walk' is NOT one of them and falls through to default:return null at line 446-451 (logs warn 'unknown method'). DB value silently returns null at runtime — latent DB bug. R1's html-pagination shape is one of the 11 valid arms. Formula computes 1670*18 = 30,060 (~0.06% under truth 30,077; last-page 17-item residual not captured). Acceptable for the 95% coverage gate: 30060/30077 = 99.94%.",
+    "confidence": "high"
+  },
+
+  "searchUrl": {
+    "value": "/ads?key={keyword}",
+    "evidence": "Live GET 2026-05-13T08:45:19Z to https://www.gunpost.ca/ads?key=glock returned HTTP 200, 148624 bytes, 15 data-history-node-id results. Adapter classifieds-gunpost.ts:82-84 hardcodes the same URL pattern: getSearchUrl(origin, kw) returns `${origin}/ads?key=${encodeURIComponent(kw)}`. DB has this field; candidate omitted it. Candidate gap confirmed.",
+    "confidence": "high"
+  },
+
+  "classifiedRules.soldDetection": {
+    "value": ["class=sold", "class=ad-sold", "class=field-sold", "field-sold Yes", "SOLD"],
+    "evidence": "Live GET 2026-05-13T08:46:24Z of detail page /blades/.../nazi-dress-daggers-last-4-blow-out showed both 'class=\"field-sold No\"' AND 'class=\"sold No\"' as paired markers (No = not sold; Yes = sold). Adapter classifieds-gunpost.ts:155-157 actually checks via cheerio .find('.sold, .ad-sold, [class*=\"sold\"]') — so '.sold' and '.ad-sold' MUST be in the seed list. DB list is a defensive superset matching the adapter's real behavior; candidate's narrower list is incomplete. Recommended union: DB list plus candidate's 'class=field-sold' (the outer wrapper class).",
+    "confidence": "high"
+  },
+
+  "classifiedRules.wantedDetection": {
+    "value": ["^wanted", "wtb$", "wtt$", "iso$", "wanted$", "wanted:"],
+    "evidence": "Adapter classifieds-gunpost.ts:33-52 hardcodes the same regex patterns: /^(wanted|wtb|wtt|iso)\\b/i, /\\b(wanted|wtb|wtt|iso)\\s*$/i, /\\bwanted\\s*:/i. DB stores these in siteProfile (redundant but harmless documentation). Not strictly required at runtime but matches DB shape. Skill is silent on this — defaults to omission. Keeping DB value preserves operator-readable documentation.",
+    "confidence": "medium"
+  },
+
+  "userAgentOverride": {
+    "value": null,
+    "evidence": "Live test 2026-05-13T08:48:18Z: default Chrome 131 UA on /ads?sort_by=date_pub&sort_order=DESC returned HTTP 200 with 18 items (page 0) and 18 items (page 100). The iPhone UA override does NOT help bare /ads (still 403 with iPhone UA), and is NOT needed for sorted URLs (Chrome UA works). DB omits this field correctly. Candidate's defensive addition is wasted — production crawler never hits bare /ads, so the override changes nothing. Recommend OMIT.",
+    "confidence": "high"
+  },
+
+  "_unchanged_from_R1": {
+    "note": "Fields where R1 was correct (operator-residue / Rule B): bootstrap.method, bootstrap.htmlFallback, crawlers.maintain.cooldowns/tierShares/tierWindows, name, notes, budget, timeout, t1IntervalMin, siteCategory, crawlPhase, hasRateLimit, apiConfig.customSelectors, dataFlow. Operator-added post-bootstrap config; candidate's omission is per-spec. Recommend keep DB shape but do not 'correct' the candidate.",
+    "wafLastProbedAt_winner": "candidate (fresh ISO timestamp 2026-05-13T08:18:12Z beats DB's stale 2026-04-11 date-only)",
+    "wafProbeEvidence_winner": "candidate (structured object per SKILL.md Stage 2; DB has older free-text shape)",
+    "wafProbeResult_winner": "either acceptable (candidate more descriptive, DB more terse)",
+    "wafWorkaround_winner": "DB (operator-readable steps + method='http-direct' + perRequestPlaywright:false; candidate omits per current schema narrowing but DB shape is informational and harmless)"
+  }
+}

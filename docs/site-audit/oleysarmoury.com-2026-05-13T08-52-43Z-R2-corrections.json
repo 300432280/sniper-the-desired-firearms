@@ -1,0 +1,159 @@
+{
+  "domain": "oleysarmoury.com",
+  "runId": "R2-2026-05-13T08-52-43Z",
+  "basedOn": {
+    "r1Candidate": "docs/site-audit/oleysarmoury.com-2026-05-13T08-28-56Z-R1.json",
+    "r1Diff": "docs/site-audit/oleysarmoury.com-2026-05-13T08-28-56Z-R1-diff.md",
+    "dbSnapshotTaken": "2026-05-13T08-45Z"
+  },
+  "summary": {
+    "correctionsToR1": 4,
+    "correctionsToDb": 3,
+    "confirmedR1Correct": 4,
+    "confirmedDbCorrect": 4
+  },
+  "corrections": [
+    {
+      "field": "catalogUrls",
+      "verdict": "R1 wrong on multiple URLs; DB closer to truth",
+      "confidence": "high",
+      "evidence": "Live walk of 21 candidate paths (?sort=newest&limit=100) on 2026-05-13. Unique-contribution analysis: /clearance/ contributes 0 unique products (all 142 reachable from other cats); /consignment/ contributes 0 unique (2 reachable elsewhere); /swag/ contributes 64 unique (NOT reachable from any other cat — pure apparel SKUs only in this cat). R1 union = 3418; sitemap total = 3482; gap = 64 = swag count exactly. R1's claim that '/clearance/ contributes 21 unique products' is contradicted by live walk.",
+      "r1Value": "18 URLs (kept clearance + consignment + 4 empty cats; dropped swag)",
+      "dbValue": "13 URLs (dropped clearance + consignment; kept swag)",
+      "r2Recommended": "13 URLs matching DB. Specifically: /firearms/, /ammunition/, /accessories/, /optics/, /bargain-bin/, /air-guns-and-supplies/, /decals/, /swag/, /trail-cameras/, /blinds-stands-accessories/, /steambow/, /air-soft/, /training-aid/. Total walked union = 3482 = sitemap loc count = expectedProductCount. DB catalogUrls set achieves 100% coverage; R1 set leaves 64 products unreachable.",
+      "walkProof": {
+        "totalAcrossAllCats": 3482,
+        "perCatTotalAndUnique": {
+          "/firearms/": {"total": 571, "unique": 505},
+          "/ammunition/": {"total": 836, "unique": 821},
+          "/optics/": {"total": 381, "unique": 375},
+          "/accessories/": {"total": 1302, "unique": 1243},
+          "/bargain-bin/": {"total": 241, "unique": 216},
+          "/clearance/": {"total": 142, "unique": 0},
+          "/air-guns-and-supplies/": {"total": 46, "unique": 39},
+          "/decals/": {"total": 31, "unique": 31},
+          "/trail-cameras/": {"total": 12, "unique": 9},
+          "/blinds-stands-accessories/": {"total": 11, "unique": 6},
+          "/training-aid/": {"total": 4, "unique": 4},
+          "/air-soft/": {"total": 2, "unique": 2},
+          "/steambow/": {"total": 2, "unique": 1},
+          "/consignment/": {"total": 2, "unique": 0},
+          "/swag/": {"total": 64, "unique": 64},
+          "/parts-guns-as-is/": {"total": 3, "unique": 0},
+          "/firestick/": {"total": 2, "unique": 0},
+          "/consignment-non-firearm/": {"total": 0, "unique": 0},
+          "/cleaning-and-maintenance/": {"total": 0, "unique": 0},
+          "/secure-firearms-storage/": {"total": 0, "unique": 0},
+          "/unwanted-firearms/": {"total": 0, "unique": 0}
+        },
+        "r1UnionSize": 3418,
+        "dbUnionSize": 3482,
+        "sitemapLocCount": 3482
+      }
+    },
+    {
+      "field": "crawlers.bootstrap.apiAlternative",
+      "verdict": "R1 missed working primary path; DB correct",
+      "confidence": "high",
+      "evidence": "Live JWT scrape from /firearms/ on 2026-05-13: regex match eyJ0eXAi... found a JWT whose decoded payload is {cid:[1],cors:['https://oleysarmoury.com'],eat:1778753483,iat:1778580683,iss:'BC',sid:1000335807,sub:'BC',token_type:1}. Posted to https://oleysarmoury.com/graphql with Bearer auth + Origin header. Response: HTTP 200 with data.site.newestProducts.edges[0..2] returning entityId 10121/10120/10119 (Remington Ultimate Defense 12ga / Hornady Critical Defense 22wmr / Caldwell Elbow Bench Bag) with createdAt.utc=2026-05-12T* timestamps. pageInfo.hasNextPage=true, endCursor=eyJpZCI6MTAxMTl9. This proves DB's apiAlternative shape works end-to-end.",
+      "r1Value": "absent",
+      "dbValue": "{type: 'bigcommerce-graphql', graphqlUrl: '/graphql', currencyCode: 'CAD', tokenScrapeUrl: '/firearms/', tokenCacheTtlMs: 3600000}",
+      "r2Recommended": "Adopt DB's apiAlternative block verbatim. Runtime hook is generic-retail.ts:343-345 (profile?.apiAlternative?.type === 'bigcommerce-graphql' -> _fetchBigCommerceGraphQLPage(apiCfg, origin, page, options)). With apiAlternative present, bootstrap/T1 uses GraphQL primary; without it, falls back to HTML.",
+      "runtimeReference": "backend/src/services/scraper/adapters/generic-retail.ts:343-346, _fetchBigCommerceGraphQLPage at :720-846, _resolveBcGraphqlToken at :862-929"
+    },
+    {
+      "field": "productCountMethod.method",
+      "verdict": "DB wrong (label drift); R1 correct",
+      "confidence": "high",
+      "evidence": "Runtime switch in backend/src/services/product-count-probe.ts:148-451 covers methods: 'wp-rest-header', 'json-api-count', 'json-api-length', 'html-pagination', 'sitemap', 'sitemap-index', 'generic-product-sitemap', 'ecwid-storefront-search', 'shopify-products-walk', 'klevu-api-count', 'stream-page-count'. 'bc-xmlsitemap' falls into default: console.warn(...) return null at line 446. Grep across runtime confirms 'bc-xmlsitemap' is referenced nowhere outside the DB JSON. The DB's value endpoint: '/xmlsitemap.php?type=products&page=1' is also wrong key; runtime sitemap method reads cfg.url.",
+      "r1Value": "{method: 'sitemap', url: 'https://oleysarmoury.com/xmlsitemap.php?type=products&page=1'}",
+      "dbValue": "{method: 'bc-xmlsitemap', endpoint: '/xmlsitemap.php?type=products&page=1', sitemapTotal: 3368, categoryWalkTotal: 3388}",
+      "r2Recommended": "Use R1's value: {method: 'sitemap', url: '/xmlsitemap.php?type=products&page=1'}. Drop sitemapTotal/categoryWalkTotal sub-fields as stale audit residue. Live fetch of /xmlsitemap.php?type=products&page=1 returns 3482 unique <loc> entries; page=2 returns 404 (no pagination needed)."
+    },
+    {
+      "field": "expectedProductCount",
+      "verdict": "DB stale by ~30d; R1 correct",
+      "confidence": "high",
+      "evidence": "Fresh sitemap fetch 2026-05-13: 3482 unique <loc> entries on page=1, page=2 returns 404. Walked union of 21 catalog candidate paths = 3482 (exact match). DB value 3368 was probed 2026-04-12 (lastVerified). 3482-3368=114 net new products in 30d (~3.8 new/day) — consistent with BC GraphQL newestProducts showing createdAt=2026-05-12 on top-3 items.",
+      "r1Value": 3482,
+      "dbValue": 3368,
+      "r2Recommended": 3482
+    },
+    {
+      "field": "hasWaf (DB column)",
+      "verdict": "DB column wrong; DB JSON correct; R1 correct",
+      "confidence": "high",
+      "evidence": "Heavy 8-batch probe rerun 2026-05-13 (see _audit_tmp/oleys-waf-r2.out): cf-ray on every batch but no x-sucuri-*, no x-iinfo, no incap_ses, no Reblaze. BATCH 2 (4 UAs): all 200, identical bytes. BATCH 3 (10 rapid bursts): all 200, no rate-limit. BATCH 4 (honeypots): wp-admin/wp-login/.env/.git 403 with body size 552 bytes = BC origin default 403 page, NOT a CDN challenge body. xmlrpc/phpinfo return 404 with BC's 207KB homepage. BATCHES 5-8 (suspicious UA / SQLi / XSS / no-UA): all 200. Interpretation guide: 'cf-ray header present but all 200 -> wafType: cloudflare-passive' — skill operational rule says cloudflare-passive maps to runtime hasWaf=false. DB JSON's wafType: 'cloudflare-passive' is internally inconsistent with DB column hasWaf: true.",
+      "r1Value": false,
+      "dbValue": true,
+      "r2Recommended": false,
+      "operationalImpact": "DB column hasWaf:true causes catalog-crawler to apply WAF-mode pacing (slower perPage, longer delays). Site has no active WAF blocking and can crawl at perPage=100 normally. Recommendation: flip DB column to false when promoting R2."
+    },
+    {
+      "field": "searchUrl",
+      "verdict": "R1 omitted; DB correct",
+      "confidence": "high",
+      "evidence": "Live test 2026-05-13: GET /search.php?search_query=glock returned HTTP 200 with 12 product cards (Glock magazines for 9mm/40cal/357sig/45auto, SGM Tactical Glock mag). Runtime uses profile?.searchUrl at backend/src/services/scraper/adapters/base.ts:21-22. Without it, BC sites fall through to a generic guess. BC Stencil's search endpoint is deterministic platform-wide.",
+      "r1Value": "(omitted)",
+      "dbValue": "/search.php?search_query={keyword}",
+      "r2Recommended": "/search.php?search_query={keyword}"
+    },
+    {
+      "field": "bcStoreId / storeHash",
+      "verdict": "R1 omitted; DB has them as metadata; no runtime use",
+      "confidence": "medium",
+      "evidence": "DB stores bcStoreId=1000335807 (matches x-bc-store-id header on every response AND sid claim in JWT payload) and storeHash='s-6j8taxjw04'. Grep across runtime: zero references to bcStoreId or storeHash outside DB JSON. These are operator-audit metadata only.",
+      "r1Value": "(omitted)",
+      "dbValue": "{bcStoreId: 1000335807, storeHash: 's-6j8taxjw04'}",
+      "r2Recommended": "Include {bcStoreId: 1000335807} (verified). storeHash auditable but not load-bearing."
+    }
+  ],
+  "confirmedR1Correct": [
+    {
+      "field": "wafType",
+      "value": "cloudflare-passive",
+      "evidence": "8-batch probe matches: cf-ray on all, no active vendor markers, all probes 200 except honeypots (BC origin 403, not CDN challenge)."
+    },
+    {
+      "field": "sortParam + sortVerified",
+      "value": "?sort=newest, true",
+      "evidence": "Default page (no param) first 3 products = ?sort=newest first 3 products (newestProducts GraphQL also returns same top-3: entityId 10121, 10120, 10119). Default IS newest. ?sort=alphaasc reorders. Counter-control passes."
+    },
+    {
+      "field": "perPage",
+      "value": 100,
+      "evidence": "Live fetch /firearms/?limit=100 returned 200 li.product nodes (image+title anchors = 100 unique product URLs). Pagination link to ?page=2 confirms paging works at limit=100."
+    },
+    {
+      "field": "platform",
+      "value": "bigcommerce-stencil",
+      "evidence": "x-bc-store-id header on every response; BC Stencil productGrid markup; /search.php and /xmlsitemap.php endpoints both BC-Stencil-specific."
+    }
+  ],
+  "skillHarnessGaps": [
+    {
+      "gap": "Skill does not direct AI to probe for BC GraphQL JWT in catalog-page HTML",
+      "location": ".claude/skills/pre-bootstrap/SKILL.md — Stage 3 platform-extras",
+      "impact": "R1 missed working primary GraphQL path that exists on EVERY BC Stencil site. HTML fallback still works but GraphQL is faster + carries createdAt for postDate.",
+      "fix": "Add Stage 3 conditional: if platform=bigcommerce-stencil, fetch one catalogUrl, grep for /eyJ[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+/, if found decode payload base64 and confirm iss=='BC', then emit apiAlternative={type:'bigcommerce-graphql', graphqlUrl:'/graphql', tokenScrapeUrl:'<that catalogUrl>', tokenCacheTtlMs:3600000, currencyCode:'CAD'}."
+    },
+    {
+      "gap": "Skill has no platform-specific searchUrl table",
+      "location": ".claude/skills/pre-bootstrap/SKILL.md — Stage 3 searchUrl paragraph",
+      "impact": "R1 omitted searchUrl on a site where the pattern is deterministic (BC Stencil = /search.php?search_query={keyword}).",
+      "fix": "Add platform-keyed searchUrl table to Stage 3: bigcommerce-stencil => /search.php?search_query={keyword}, shopify => /search?q={keyword}, woocommerce => /?s={keyword}, magento => /catalogsearch/result/?q={keyword}."
+    },
+    {
+      "gap": "Skill does not output bcStoreId / storeHash for BC sites",
+      "location": ".claude/skills/pre-bootstrap/SKILL.md — Stage 3 platform-extras",
+      "impact": "Operator-audit metadata missing. Not load-bearing for crawl correctness but useful for cross-store correlation.",
+      "fix": "Add Stage 3 BC conditional: extract bcStoreId from x-bc-store-id response header; storeHash from cdn11.bigcommerce.com/s-XXXXXXXX/ CDN URL pattern in HTML."
+    },
+    {
+      "gap": "Skill's Rule-C wording allows AI to drop catalogUrls based on 'pure apparel' interpretation",
+      "location": ".claude/skills/pre-bootstrap/SKILL.md — Stage 5 catalogUrls Rule C",
+      "impact": "R1 dropped /swag/ citing 'pure apparel — exclude' but Rule C says NEVER drop without walk-proof of zero unique contribution. /swag/ contributes 64 unique products with no overlap. R1 violated Rule C by applying a scope-judgment that contradicts the Rule.",
+      "fix": "Strengthen Rule C: 'NEVER drop a catalogUrl based on category name or product type. The only valid reason to drop is: walked product URLs are 100% subset of the union of other walked catalogUrls (i.e. zero unique contribution). Scope judgments (apparel-only, accessories-only) MAY NOT override this rule.'"
+    }
+  ]
+}

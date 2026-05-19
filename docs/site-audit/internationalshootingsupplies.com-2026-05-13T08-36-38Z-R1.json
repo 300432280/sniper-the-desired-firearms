@@ -1,0 +1,128 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-13T08:18:48Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "no CDN WAF (no cf-ray / no x-sucuri); BPS Plugin (BulletProof Security WordPress plugin) fires rule-selective 403 on SQLi/XSS query strings but catalog paths return 200 normally; xmlrpc connection-reset is server-level filtering, not a CDN WAF",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [".env(403)", ".git/config(403)", "xmlrpc.php(reset)"],
+    "botUaBlocked": false,
+    "pluginWafMarker": "BPS Plugin 403 Error Page (BulletProof Security WordPress plugin)",
+    "server": "nginx"
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2299,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://internationalshootingsupplies.com/product-category/firearms/",
+    "https://internationalshootingsupplies.com/product-category/ammunition/",
+    "https://internationalshootingsupplies.com/product-category/parts/",
+    "https://internationalshootingsupplies.com/product-category/reloading-components/",
+    "https://internationalshootingsupplies.com/product-category/reloading-equipment/",
+    "https://internationalshootingsupplies.com/product-category/shooting-accessories/",
+    "https://internationalshootingsupplies.com/product-category/hunting-accessories/",
+    "https://internationalshootingsupplies.com/product-category/optics/",
+    "https://internationalshootingsupplies.com/product-category/novelties/",
+    "https://internationalshootingsupplies.com/product-category/bows/",
+    "https://internationalshootingsupplies.com/product-category/iss-packages/",
+    "https://internationalshootingsupplies.com/product-category/uncategorized/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://internationalshootingsupplies.com/product/uberti-1894-carbine-30-30-win-20-barrel/", "title": "A. Uberti 1894 Carbine 30-30 Win 20 Barrel", "price": 2249.99, "stockStatus": "in_stock" },
+    { "url": "https://internationalshootingsupplies.com/product/antler-arms-expedition-bear-mb42-6-5-cr-22-barrel/", "title": "Antler Arms Expedition Bear MB42 6.5 CR 22 Barrel", "price": 2799.99, "stockStatus": "in_stock" },
+    { "url": "https://internationalshootingsupplies.com/product/antler-arms-wild-mountain-coyote-mb42-7mm-prc-24-barrel-w-adjustable-cheekpiece/", "title": "Antler Arms Wild Mountain Coyote Adjustable MB42 7mm PRC 24 Barrel", "price": 3329.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WC Store API /wp-json/wc/store/v1/products?after=<ISO> honored (two-probe verified: future=0, past=2299); also WP REST /wp-json/wp/v2/product?after=<ISO> honored (admin count 5230 incl drafts); HTML sort ?orderby=date also honored (3-outcome counter-control test passed)"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "wcStore": "/wp-json/wc/store/v1/products",
+        "wpRest": "/wp-json/wp/v2/product",
+        "productCat": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wp/v2/product_cat (parent=0)",
+    "categories": [
+      { "slug": "/product-category/firearms/",             "wpV2Count": 468,  "wcStoreCount": 473, "id": 32 },
+      { "slug": "/product-category/ammunition/",           "wpV2Count": 14,   "wcStoreCount": 14,  "id": 34 },
+      { "slug": "/product-category/parts/",                "wpV2Count": 2281, "wcStoreCount": 310, "id": 281 },
+      { "slug": "/product-category/reloading-components/", "wpV2Count": 2283, "wcStoreCount": 8,   "id": 75 },
+      { "slug": "/product-category/reloading-equipment/",  "wpV2Count": 486,  "wcStoreCount": 491, "id": 80 },
+      { "slug": "/product-category/shooting-accessories/", "wpV2Count": 1015, "wcStoreCount": 687, "id": 90 },
+      { "slug": "/product-category/hunting-accessories/",  "wpV2Count": 253,  "wcStoreCount": 253, "id": 61 },
+      { "slug": "/product-category/optics/",               "wpV2Count": 49,   "wcStoreCount": 50,  "id": 65 },
+      { "slug": "/product-category/novelties/",            "wpV2Count": 44,   "wcStoreCount": 44,  "id": 974 },
+      { "slug": "/product-category/bows/",                 "wpV2Count": 0,    "wcStoreCount": 0,   "id": 1087 },
+      { "slug": "/product-category/iss-packages/",         "wpV2Count": 0,    "wcStoreCount": 0,   "id": 340 },
+      { "slug": "/product-category/uncategorized/",        "wpV2Count": 1,    "wcStoreCount": 1,   "id": 1271 }
+    ],
+    "totalsSumCheck": "Global X-WP-Total = 2299 (WC Store API customer-visible) / 5230 (WP/v2 admin incl drafts). HTML-walk of all 12 top-level cats covers ~1522 product IDs (66%) because WC Store API's ?category=ID does NOT include descendant cats; HTML pagination of parent category DOES include descendants. Walking ALL non-manufacturer leaf cats (79 leaves, 2273 sum) yields 2244 unique IDs (97.6%). 55 products are uncategorized in the public taxonomy. Runtime catalog refresh uses WC Store API path (apiCrawlUsed=true) for 100% coverage; HTML catalogUrls are fallback only."
+  },
+  "lastVerified": "2026-05-13",
+  "auditNotes": {
+    "runId": "iss-2026-05-13T08-36-38Z-R1",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "medium",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "watermarkMethod": "high"
+    },
+    "probeIp": "99.228.63.11 (residential, BPS plugin echoed it in 403 page)",
+    "catalogCoverageNote": "HTML catalogUrls (12 top-level cats) cover ~66% of products via direct-only WC Store API; full HTML coverage requires 79 non-manufacturer leaf cats reaching 97.6%. 55 products are top-level-orphans (brand-only or empty cat). Runtime WC API path achieves 100%.",
+    "stageNotes": [
+      "Stage 1: apex 200 OK clean; <link rel=canonical> declares apex; canonical=https://internationalshootingsupplies.com.",
+      "Stage 2: heavy-8-batch probe ran 2026-05-13 08:18-08:21 UTC; nginx server; no cf-ray, no x-sucuri, no incapsula. SQLi/XSS payloads return 403 (BPS Plugin rule-selective) but homepage/category paths all 200. Honeypot .env/.git → 403; xmlrpc → conn-reset. hasWaf=false because catalog crawl path is unaffected.",
+      "Stage 3: 122 'woocommerce' hits in HTML; Astra theme; reCAPTCHA-v3 site-wide via Contact Form 7 (NOT gating catalog → hasCaptcha=false); no age-gate; WC Store API returns products. needsPlaywright=false.",
+      "Stage 4: 205 cats; 13 top-level (12 excl manufacturers). HTML top-level cats cover 1522 IDs. WC Store API ?category does NOT include descendants — HTML pagination DOES. Walked 79 non-mfr leaf cats → 2244 unique (97.6%). 55 products top-level-orphans. Chose 12 top-level cats; runtime uses WC API.",
+      "Stage 5: /page/{N}/ path-style. Rifles p1 vs p2 → 0 overlap. perPage=12 locked (Astra theme; ?count and ?products_per_page ignored; no <select> for perpage).",
+      "Stage 6: <select name=orderby> options: menu_order, popularity, date, price, price-desc. 3-outcome cache-busted test on /product-category/firearms/rifles/: default ≠ ?orderby=date ≠ ?orderby=price. Verdict: honored.",
+      "Stage 7: WC Store API ?after=2099 → 0; ?after=1999 → 2299. WP REST ?after=2099 → 0; ?after=1999 → 5230. api-date-since-watermark confirmed.",
+      "Stage 8: WC Store API ?per_page=1 returns X-WP-Total: 2299 (customer-visible). WP/v2 returns 5230 (admin incl drafts).",
+      "Stage 9: Validator pass — required fields all present and well-typed."
+    ]
+  }
+}

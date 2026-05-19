@@ -1,0 +1,111 @@
+{
+  "runId": "hical.ca-2026-05-15T18-55-32Z-B4R2",
+  "site": "hical.ca",
+  "round": "R2",
+  "candidateUnderReview": "docs/site-audit/hical.ca-2026-05-15T18-34-35Z-B4R1.json",
+  "dbProfileReference": "backend/_audit_tmp/hical-db-profile.json (lastVerified 2026-04-12)",
+  "correctionCount": 4,
+  "corrections": [
+    {
+      "id": 1,
+      "field": "paginationPattern.template",
+      "candidateValue": "/shop/page/{N}/",
+      "correctedValue": "/page/{N}/",
+      "rationale": "Runtime buildPaginatedUrl (backend/src/services/catalog-crawler.ts:121-125) concatenates template onto each catalogUrls entry: stripped + template.replace('{N}', pageNum). With absolute template '/shop/page/{N}/' and base '/product-category/firearms-canada/' the crawler produces '/product-category/firearms-canada/shop/page/2/'. Live Playwright GET of that URL returns HTTP 404 with title 'Page not found' (0 product anchors). Live GET of suffix '/product-category/firearms-canada/page/2/' returns 200 with title 'FIREARMS Archives - Page 2 of 15' and 47 product anchors. R1 absolute template would 404 every catalog crawl pagination request.",
+      "evidence": {
+        "code": "backend/src/services/catalog-crawler.ts:121-125",
+        "playwrightProbe": {
+          "absoluteTemplateUrl": "https://hical.ca/product-category/firearms-canada/shop/page/2/ -> 404 'Page not found' 215961 bytes 0 productAnchors",
+          "suffixTemplateUrl": "https://hical.ca/product-category/firearms-canada/page/2/ -> 200 'FIREARMS Archives - Page 2 of 15' 508109 bytes 47 productAnchors"
+        }
+      },
+      "confidence": "high",
+      "severity": "blocker"
+    },
+    {
+      "id": 2,
+      "field": "wafWorkaround",
+      "candidateValue": null,
+      "correctedValue": "OMIT - operator audit-trail metadata, NOT consumed by runtime",
+      "rationale": "Searched all of backend/src/ for any reference to 'wafWorkaround', 'cookieCache', 'cookie-cache', 'getCachedCookies', 'setCachedCookies', 'cookieJar', 'warmupCookies'. Zero matches in src/. The only hits are in backend/_audit_tmp/*.json profile dumps and backend/scripts/_apply-siteprofile-corrections-batch-b-2026-05-12.js (operator one-off). Runtime WAF/Playwright behavior is gated solely on the boolean hasWaf (catalog-crawler.ts:258,290,293,306; product-count-probe.ts:135; product-verifier.ts:137). R1 diff claim that runtime path consumes 'wafWorkaround.method: cookie-cache' is FALSE. DB profile carries wafWorkaround as documentation residue. Keep R1's omission.",
+      "evidence": {
+        "grep": "Grep wafWorkaround across backend/src -> 0 matches",
+        "runtimeWafConsumers": ["catalog-crawler.ts:258,290,293,306", "product-count-probe.ts:121,135", "product-verifier.ts:137", "playwright-fetcher.ts (gated by hasWaf only)"]
+      },
+      "confidence": "high",
+      "severity": "documentation-only (do not change R1)"
+    },
+    {
+      "id": 3,
+      "field": "catalogUrls (firearms-canada vs firearms)",
+      "candidateValue": "https://hical.ca/product-category/firearms-canada/",
+      "correctedValue": "KEEP firearms-canada (R1 is correct; DB is stale)",
+      "rationale": "Live WP REST /wp-json/wp/v2/product_cat?slug=firearms returns []. Same query with slug=firearms-canada returns id=143 count=226 name='FIREARMS'. Playwright GET of /product-category/firearms/ returns 200 but title 'Page not found - High Caliber Services Corp' (WP 200-with-404-page pattern, 0 product anchors). Playwright GET of /product-category/firearms-canada/ returns 200 with title 'FIREARMS Archives' and 47 product anchors. The category was renamed by the merchant after the 2026-04-12 DB capture. R1 captured current state correctly.",
+      "evidence": {
+        "wpRest": {
+          "firearms": "status=200, body=[]",
+          "firearms-canada": "status=200, body=[{id:143, count:226, name:'FIREARMS', slug:'firearms-canada'}]"
+        },
+        "html": {
+          "firearms": "Page not found title, 0 product anchors, 217903 bytes",
+          "firearms-canada": "FIREARMS Archives title, 47 product anchors, 501909 bytes"
+        }
+      },
+      "confidence": "high",
+      "severity": "blocker (if firearms slug copied from DB the firearms catalog would index 0 products)"
+    },
+    {
+      "id": 4,
+      "field": "crawlers.watermark.dateFilterField",
+      "candidateValue": "after",
+      "correctedValue": "modified_after",
+      "rationale": "DB profile uses dateFilterField=modified_after with orderBy=modified, captured 2026-04-12 with id-jump monotonicity proof. Operationally modified_after catches edited products (price/stock changes) which is the Tier 1 watermark goal. Candidate's 'after' (created date only) would miss edits. SKILL.md Stage 7 underspecifies which field to prefer; recommend taking DB's verified choice.",
+      "evidence": {
+        "dbProfile": "backend/_audit_tmp/hical-db-profile.json:11-17 dateFilterField=modified_after orderBy=modified"
+      },
+      "confidence": "medium",
+      "severity": "regression-risk",
+      "note": "Not live-verified against API this round (Incapsula warmup required); trust the 2026-04-12 DB choice."
+    }
+  ],
+  "nonCorrections": [
+    {
+      "id": "n1",
+      "field": "all-products catalogUrl entry",
+      "rationale": "Not verified in R2 (requires per-category walk + dedup proof against the 22 other categories). DB walk-verified it as redundant umbrella; R1 kept it on conservative grounds. Defer."
+    },
+    {
+      "id": "n2",
+      "field": "userAgentOverride",
+      "rationale": "Both desktop Chrome 120 (R1) and iPhone Safari 17 (DB) walked past Incapsula in the warmed Playwright session. DB choice is documented playbook (iPhone UA preferred for Incapsula/Sucuri). Recommend DB value but not live A/B-tested."
+    },
+    {
+      "id": "n3",
+      "field": "wafType naming (incapsula vs imperva-incapsula)",
+      "rationale": "Cosmetic. SKILL.md canonical 'incapsula'; DB 'imperva-incapsula'. Not a runtime field."
+    }
+  ],
+  "live_probe_log": {
+    "warmup": "https://hical.ca/ via Playwright Chromium iPhone UA -> challenge resolved, cookies issued",
+    "url_tests": [
+      { "url": "https://hical.ca/product-category/firearms/", "status": 200, "bytes": 217903, "title": "Page not found - High Caliber Services Corp", "productAnchors": 0 },
+      { "url": "https://hical.ca/product-category/firearms-canada/", "status": 200, "bytes": 501909, "title": "FIREARMS Archives - High Caliber Services Corp", "productAnchors": 47 },
+      { "url": "https://hical.ca/product-category/firearms-canada/page/2/", "status": 200, "bytes": 508109, "title": "FIREARMS Archives - Page 2 of 15 - High Caliber Services Corp", "productAnchors": 47 },
+      { "url": "https://hical.ca/product-category/firearms-canada/shop/page/2/", "status": 404, "bytes": 215961, "title": "Page not found - High Caliber Services Corp", "productAnchors": 0 }
+    ],
+    "wp_rest_taxonomy": {
+      "firearms": { "status": 200, "body": [] },
+      "firearms-canada": { "status": 200, "body": [{ "id": 143, "count": 226, "name": "FIREARMS", "slug": "firearms-canada" }] }
+    },
+    "build_paginated_url_simulation": {
+      "code_ref": "backend/src/services/catalog-crawler.ts:121-125",
+      "db_template_suffix": "https://hical.ca/product-category/firearms-canada/page/2/ (WORKS, 200, 47 product anchors)",
+      "r1_template_absolute": "https://hical.ca/product-category/firearms-canada/shop/page/2/ (404)"
+    },
+    "waf_workaround_grep": {
+      "scope": "backend/src/**",
+      "matches": 0,
+      "verdict": "wafWorkaround is profile-stored metadata only; not consumed by runtime"
+    }
+  }
+}

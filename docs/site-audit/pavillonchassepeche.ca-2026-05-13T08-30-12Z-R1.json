@@ -1,0 +1,133 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-13T08:19:51Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "No WAF. LiteSpeed origin direct. All 8 batches returned 200 with consistent timing. .env and .git/config returned 403 from origin file ACLs (not a CDN WAF). No cf-ray / x-sucuri / sgcaptcha / malcare / wordfence / incapsula markers in any batch.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "serverHeader": "LiteSpeed",
+    "xPoweredBy": "PHP/7.4.33",
+    "xLitespeedCache": "hit",
+    "rapidBurstStatus": "10/10 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/.env (403)", "/.git/config (403)"],
+    "honeypotPathsNote": "origin file ACL, not a WAF; /wp-admin redirects to /wp-login.php (200), /xmlrpc.php returns 405",
+    "botUaBlocked": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1245,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/categorie-produit/chasse/",
+    "/categorie-produit/salines/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "id": 92970,
+      "url": "https://pavillonchassepeche.ca/produit/howa-legacy-m1500-7-62x39-20-mini-action-rifle-black/",
+      "title": "HOWA LEGACY M1500 7.62X39 20 MINI ACTION RIFLE BLACK",
+      "price": 599.99,
+      "currency": "CAD",
+      "stockStatus": "in_stock"
+    },
+    {
+      "id": 92963,
+      "url": "https://pavillonchassepeche.ca/produit/cva-scout-ss-td-ss-black-0-moa-pic-rail-45-70-govt-22-fluted/",
+      "title": "CVA SCOUT SS TD SS/BLACK 0 MOA PIC RAIL 45-70 GOVT 22 FLUTED",
+      "price": 679.99,
+      "currency": "CAD",
+      "stockStatus": "in_stock"
+    },
+    {
+      "id": 92800,
+      "url": "https://pavillonchassepeche.ca/produit/cva-paramount-nitride-green-bolt-action-45-cal-26/",
+      "title": "CVA PARAMOUNT NITRIDE/GREEN BOLT ACTION .45 CAL 26",
+      "price": 1300.00,
+      "currency": "CAD",
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 36,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productDiscovery": "/wp-json/wp/v2/product",
+        "priceEnrichment": "/wp-json/wc/store/v1/products"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "taxonomy-api (/wp-json/wp/v2/product_cat)",
+    "categories": [
+      { "slug": "/categorie-produit/chasse/", "allOption": 412, "firearmRelevant": true, "note": "Parent hunting; includes armes-a-feu (263), arbaletes-arcs (26), equipements-chasse (25), accessoires-optiques (23), produits-air-comprime (18), trappe-et-piegeage (4), munition (50) - all children rolled up." },
+      { "slug": "/categorie-produit/salines/", "allOption": 49, "firearmRelevant": true, "note": "Mineral licks / attractants for hunters; not under chasse parent so requires separate URL." },
+      { "slug": "/categorie-produit/liquidation/", "allOption": 484, "firearmRelevant": false, "note": "Clearance; 484 products. ~22 firearm-tagged via product_cat-armes-a-feu but ALL of those also surface under /chasse/ (WC includes child-tagged products in parent archive). Net 0 unique firearm products NOT reachable via chasse." },
+      { "slug": "/categorie-produit/peche/", "allOption": 244, "firearmRelevant": false, "note": "Fishing only." },
+      { "slug": "/categorie-produit/plein-air/", "allOption": 129, "firearmRelevant": false, "note": "Outdoor/camping; not firearm-adjacent." },
+      { "slug": "/categorie-produit/vetements/", "allOption": 184, "firearmRelevant": false, "note": "Apparel only." }
+    ],
+    "totalsSumCheck": "chasse 412 + salines 49 = 461 firearm-relevant walked-unique. WC Store API global = 1245. Non-firearm scope (peche 244 + plein-air 129 + vetements 184 + liquidation 484) covers the remaining ~1041 with some cross-tagging overlap. catalogUrls intentionally restricted to firearm-relevant URLs per Rule C scope."
+  },
+  "lastVerified": "2026-05-13",
+  "auditNotes": {
+    "runId": "R1-blind-2026-05-13T08-30-12Z",
+    "probeIp": "audit-machine (not production crawler IP)",
+    "calibrationMode": true,
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high (8-batch confirmed; LiteSpeed direct)",
+      "expectedProductCount": "high (X-WP-Total header from WC Store API)",
+      "catalogUrls": "medium - scope debate: skill Rule C says firearm-relevant only (chasse + salines); DB has all 6 top-level categories under /en/ prefix.",
+      "sortParam": "high (3-outcome counter-control verified: ?orderby=date=newest, ?orderby=title=NOOP, ?orderby=price=honored low-to-high)",
+      "paginationPattern": "high (page-1 vs page-2 zero overlap on /page/{N}/; ?page= and ?paged= and ?e-page- all NOOP)",
+      "perPage": "high (HTML archive fixed at 36 per page; ?per_page= ignored)",
+      "watermark.method": "high (WC REST ?after= filter verified: 2099->0 total, 1999->1253 total)",
+      "searchUrl": "medium - URL pattern carried from DB; not freshly verified this run"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200 OK with <link rel=canonical href=https://pavillonchassepeche.ca/>; www and apex both return 200. Canonical = https://pavillonchassepeche.ca.",
+      "Stage 2: 8-batch WAF probe ran 33 GETs across batches 1-8. 32x 200 + 1x 301 (canonical redirect in pre-flight). No CDN/WAF markers. Server: LiteSpeed; X-LiteSpeed-Cache:hit. .env/.git 403 from origin ACL, not WAF. hasWaf=false, hasCaptcha=false (no recaptcha/turnstile/h-captcha scripts on homepage), ageGate.detected=false.",
+      "Stage 3: WordPress + WooCommerce 10.7.0 (wp-content/plugins/woocommerce). Theme: TwentyTwentyThree + Elementor + Elementor Pro. Plugins: WPML (sitepress-multilingual-cms + woocommerce-multilingual) confirms FR/EN bilingual. Adapter = woocommerce. Maintain verify = store-api (/wp-json/wc/store/v1/products).",
+      "Stage 4: /wp-json/wp/v2/product_cat returned 43 categories. Firearm-relevance filter per Rule C scope: chasse (412, parent of armes-a-feu/arbaletes-arcs/equipements-chasse/optiques/airguns/trapping/munition) + salines (49, hunting attractants). Walked all 12 pages of chasse (=412 unique), all 8 pages of armes-a-feu (=263 unique), all 2 pages of salines (=49). Verified chasse covers 100% of armes-a-feu via WC parent-archive rollup (0 firearm products unique to armes-a-feu and missing from chasse). Liquidation walk (all 10 pages) found ~22 firearm-tagged products, all reachable via chasse. Total firearm-relevant minimum-cover URL set = 2 URLs.",
+      "Stage 4g: 3 sampled products via WC Store API ?category=63 (armes-a-feu) all returned title + URL + price (CAD cents) + is_in_stock. extractionTested=true.",
+      "Stage 5: Tested 4 pagination patterns on /categorie-produit/chasse/armes-a-feu/. /page/2/ returned 36 products with zero overlap vs page 1 (testA passed). ?page=2 and ?e-page-21901=2 returned identical first-5 IDs to page 1 (NOOP). ?paged=2 returned 301 redirect. Winner: type='path', template='/page/{N}/', perPage=36, startPage=1.",
+      "Stage 6: No <select name='orderby'> on Elementor-loop archive page. Tested 3-outcome: default first-3 = [92788, 78080, 77541]; ?orderby=date first-3 = [92970, 92963, 92800] (newest-first, descending post IDs); ?orderby=title first-3 = [92788, 78080, 77541] (NOOP - default order); ?orderby=price first-3 = [69806, 70001, 70205] (low-to-high, honored). Verdict: ?orderby=date honored (sortedFirst3 != defaultFirst3). sortVerified=true.",
+      "Stage 7: Method A two-probe on /wp-json/wp/v2/product?after=...: future 2099 -> X-WP-Total:0; past 1999 -> X-WP-Total:1253. Both pass. method='api-date-since-watermark'.",
+      "Stage 8: WC Store API /wp-json/wc/store/v1/products?per_page=1 returned X-WP-Total:1245 (customer-visible, in-stock + visible). WP REST /wp-json/wp/v2/product?per_page=1 returned X-WP-Total:1253 (includes drafts). Picking 1245 (customer-visible). productCountMethod={method:'wp-rest-header', endpoint:'/wp-json/wc/store/v1/products', header:'x-wp-total'}."
+    ]
+  }
+}

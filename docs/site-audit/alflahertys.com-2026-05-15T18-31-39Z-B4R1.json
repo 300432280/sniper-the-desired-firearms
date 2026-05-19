@@ -1,0 +1,137 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T18:25:57Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches return 200 OK on `/`. cf-ray header present (Cloudflare in front). Honeypot paths (`/wp-admin`, `/wp-login.php`, `/.env`, `/.git/config`) return 403 (Cloudflare's managed-rules / origin BC blocking — path-selective, but does not interfere with category/product fetches). No Sucuri / MalCare / sgcaptcha / Incapsula / Wordfence body markers in any batch. Bot UA + no-UA + rapid burst + SQLi + XSS payloads all return 200. Operationally non-blocking from THIS audit IP.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray: 9fc43039c892ac5e-YYZ", "Server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstAllStatuses": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-admin/ (403)", "/wp-login.php (403)", "/.env (403)", "/.git/config (403)"],
+    "botUaBlocked": false,
+    "bodyMarkersFound": []
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 5264,
+  "productCountMethod": {
+    "method": "json-api-count",
+    "endpoint": "https://uscs33v2.ksearchnet.com/cs/v2/search",
+    "field": "queryResults.0.meta.totalResultsFound"
+  },
+  "catalogUrls": [
+    "/shooting-supplies-firearms-and-ammunition/firearms/",
+    "/shooting-supplies-firearms-ammunition/ammunition/",
+    "/optics/",
+    "/shooting-supplies-firearms-and-ammunition/stocks-parts-barrels-kits/",
+    "/shooting-supplies-and-firearms/tactical-accessories/",
+    "/shooting-supplies-and-firearms/storage-transportation/",
+    "/archery-and-airguns/",
+    "/knives-tools-and-lights/",
+    "/als-bargains/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://alflahertys.com/vortex-sparc-ar-2-red-dot-with-multi-height-mount-2-moa-spc-402/", "title": "Vortex SPARC II Red Dot with Multi-Height Mount - 2 MOA #SPC-402", "price": 349.00, "stockStatus": "in_stock", "sourceId": "10599" },
+    { "url": "https://alflahertys.com/vortex-diamondback-tactical-3-9x40-riflescope-with-vmr-1-dbk-10023/", "title": "Vortex Diamondback Tactical 3-9x40 Riflescope with VMR-1 #DBK-10023", "price": 349.00, "stockStatus": "in_stock", "sourceId": "17096" },
+    { "url": "https://alflahertys.com/ruger-american-generation-ii-predator-bolt-action-rifle/", "title": "Ruger American Generation II Predator Bolt-Action Rifle, Splatter Bronze", "price": 945.00, "stockStatus": "in_stock", "sourceId": "16368-variantid_49427" }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "api-offset",
+    "template": "offset={N}",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "Klevu API rejects NEWEST/DATE_DESC/NAME_ASCENDING sort enums (HTTP 500 'Invalid request'); only RELEVANCE and PRICE_ASC are honored. No newest-first sort is available on either the Klevu API or the BC Stencil HTML (HTML category pages return 0 products — Klevu hydrates client-side). Sitemap `xmlsitemap.php?type=products` has no <lastmod>. Therefore no date-based watermark is possible; T1 must walk the full Klevu catalog every cycle and dedupe against DB."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "klevu": "https://uscs33v2.ksearchnet.com/cs/v2/search",
+        "klevuApiKey": "klevu-170966446878517137"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "apiConfig": {
+    "klevuApiKey": "klevu-170966446878517137",
+    "klevuEndpoint": "https://uscs33v2.ksearchnet.com/cs/v2/search",
+    "klevuCategoryPaths": [
+      { "slug": "rifles", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Rifles" },
+      { "slug": "shotguns", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Shotguns" },
+      { "slug": "long-range-precision", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Long Range Precision" },
+      { "slug": "used-firearms", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Used Firearms" },
+      { "slug": "airguns", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Airguns 500FPS or More - PAL Required" },
+      { "slug": "centerfire-ammunition", "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Centerfire Ammunition" },
+      { "slug": "rimfire-ammunition", "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Rimfire Ammunition" },
+      { "slug": "shotgun-ammunition", "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Shotgun Ammunition" }
+    ]
+  },
+  "searchUrl": "/search.php?search_query={keyword}",
+  "topLevelCategories": {
+    "source": "homepage-nav",
+    "categories": [
+      { "slug": "/shooting-supplies-firearms-and-ammunition/firearms/", "allOption": null },
+      { "slug": "/shooting-supplies-firearms-ammunition/ammunition/", "allOption": null },
+      { "slug": "/optics/", "allOption": null },
+      { "slug": "/shooting-supplies-firearms-and-ammunition/stocks-parts-barrels-kits/", "allOption": null },
+      { "slug": "/shooting-supplies-and-firearms/tactical-accessories/", "allOption": null },
+      { "slug": "/shooting-supplies-and-firearms/storage-transportation/", "allOption": null },
+      { "slug": "/archery-and-airguns/", "allOption": null },
+      { "slug": "/knives-tools-and-lights/", "allOption": null },
+      { "slug": "/als-bargains/", "allOption": null }
+    ],
+    "totalsSumCheck": "Per-category Klevu counts not enumerated. Global wildcard SEARCH returns totalResultsFound=5264 which equals BC sitemap xmlsitemap.php?type=products&page=1 <loc> count exactly (5264). Catalog walk is via Klevu wildcard, not per-category — categories above are HTML-fallback start points only."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "B4R1",
+    "probeIp": "audit-host-IP (single IP, not production crawler IP)",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium (IP-dependent; stored DB profile says true with sucuri-cookie-cache workaround; current probe from this IP shows cloudflare-passive only with all 200s; operator must reconfirm from production crawler IP)",
+      "wafType": "high (cf-ray present, all 200, no sucuri/malcare markers anywhere)",
+      "hasCaptcha": "high",
+      "ageGate.detected": "high",
+      "expectedProductCount": "high (5264 — Klevu totalResultsFound matches sitemap product <loc> count exactly)",
+      "productCountMethod": "high",
+      "catalogUrls": "medium (BC Stencil category HTML returns 0 products — Klevu hydrates client-side; runtime path uses Klevu wildcard which covers 100%; the HTML catalogUrls are start points for HTML fallback only)",
+      "sortParam": "high (Klevu rejects NEWEST/DATE_DESC; no newest sort available)",
+      "perPage": "high (verified: limit=100 returns 100, limit=250 caps at 100)",
+      "paginationPattern": "high (Klevu api-offset; offset=0 vs offset=50 returns disjoint IDs)",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage1: apex returns 200 cleanly; www redirects to apex. Canonical = https://alflahertys.com.",
+      "Stage2: heavy-8-batch all 200 on `/`, cf-ray present, honeypots 403 (path-selective Cloudflare/origin), no sucuri/malcare/sgcaptcha/wordfence body markers in any batch. hasWaf=false (operationally non-blocking from this IP). Stored DB profile contradicts (hasWaf=true, wafWorkaround=sucuri-cookie-cache) — likely stale residue from earlier audit when IP was challenged.",
+      "Stage3: platform=bigcommerce-stencil (cdn11.bigcommerce.com refs + stencil/* CSS paths). Klevu site-search overlay loaded via js.klevu.com/theme/default/v2/category-page.js (no server-side product cards). adapterType=generic-retail (BC Stencil routes through generic-retail.ts).",
+      "Stage4: HTML category pages return 0 products (Klevu client-side hydration). The runtime crawler reads siteProfile.apiConfig.klevuApiKey and calls Klevu wildcard SEARCH at https://uscs33v2.ksearchnet.com/cs/v2/search (per generic-retail.ts:362-446). Klevu wildcard returns 5264 products total — matches sitemap product <loc> count exactly. catalogUrls preserved as HTML start points for the fallback path; runtime walks Klevu wildcard for 100% coverage in one API stream.",
+      "Stage5: paginationPattern.type=api-offset. Klevu accepts limit (max verified 100) + offset. Tested offset=0 vs offset=50 disjoint IDs, pagination honored.",
+      "Stage6: Klevu accepts sort=RELEVANCE and PRICE_ASC (HTTP 200). NEWEST, DATE_DESC, NAME_ASCENDING return HTTP 500 'Invalid request'. No newest-first sort possible via Klevu API. BC HTML sort UI moot. HTML category pages have no products to sort. sortParam=null, sortVerified=false.",
+      "Stage7: A/B/C cascade. A skipped (no date filter on Klevu). B skipped (no newest-first sort). C selected: full-catalog-sweep with reason citing Klevu sort enum limits.",
+      "Stage8: productCountMethod={method:'json-api-count', endpoint:'https://uscs33v2.ksearchnet.com/cs/v2/search', field:'queryResults.0.meta.totalResultsFound'}. Returns 5264. Cross-check: BC sitemap xmlsitemap.php?type=products&page=1 has 5264 <loc> entries exact match. NOTE: stored DB siteProfile uses 'klevu-api-count' as method name; that method IS in the SKILL.md table (rank 10) but its config shape (`{method, endpoint, apiKey}`) differs from what I wrote. Both names exist in the SKILL table; runtime switch must handle whichever is in product-count-probe.ts.",
+      "Stage9: Assembled candidate JSON. Validator not run (no DB write phase)."
+    ],
+    "watchdogPriorVerdict": null
+  }
+}

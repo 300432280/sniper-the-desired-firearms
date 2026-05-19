@@ -1,0 +1,157 @@
+{
+  "profileVersion": 1,
+  "platform": "drupal-classifieds",
+  "adapterType": "classifieds-gunpost",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-05-15",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cloudflare-active (rule-selective): cf-ray on all responses; bare /ads → 403 Cf-Mitigated:challenge; /ads?sort_by=date_pub&sort_order=DESC → 200; SQLi UNION → 403; XSS payload → 403; honeypot paths (.env/.git/phpinfo) → 403; rapid burst 10x → 200; bot UA → 200.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray present on every response", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "200x10 (no rate-limit triggered)",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [".env (403)", ".git/config (403)", "phpinfo.php (403)"],
+    "botUaBlocked": false,
+    "challengeOnBareCatalog": "https://www.gunpost.ca/ads → 403 with Cf-Mitigated: challenge + challenges.cloudflare.com CSP",
+    "challengeBypassedBySortParam": "https://www.gunpost.ca/ads?sort_by=date_pub&sort_order=DESC → 200"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 30225,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": "a[href*='page='] (rel='last' / largest page= query param in pager)",
+    "perPage": 18,
+    "formula": "(1679 * 18) + 3 = 30225",
+    "lastPageZeroIndexed": 1679,
+    "lastPageItems": 3
+  },
+  "catalogUrls": [
+    "/ads?sort_by=date_pub&sort_order=DESC"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.gunpost.ca/firearms/shotguns/city-montreal/stevens-512-28-guage-ou",
+      "title": "Stevens 512 28 guage o/u",
+      "price": 875.00,
+      "stockStatus": "in_stock",
+      "sourceId": "1228349"
+    },
+    {
+      "url": "https://www.gunpost.ca/firearms/rifles/calgary/bnib-ruger-marlin-336-sbl-30-30",
+      "title": "BNIB (Ruger) Marlin 336 SBL .30-30",
+      "price": 2750.00,
+      "stockStatus": "in_stock",
+      "sourceId": "1210754"
+    },
+    {
+      "url": "https://www.gunpost.ca/reloading/bullets-brass/chilliwack/rifle-brass-308-30-06-223",
+      "title": "Rifle brass .308, 30-06, .223",
+      "price": 20.00,
+      "stockStatus": "in_stock",
+      "sourceId": "1130437"
+    }
+  ],
+  "sortParam": "?sort_by=date_pub&sort_order=DESC",
+  "sortVerified": true,
+  "perPage": 18,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 18,
+    "firstPageHasParam": false,
+    "startPage": 0,
+    "zeroIndexed": true
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "classifiedRules": {
+    "soldDetection": [
+      "class=sold",
+      "class=field-sold",
+      "field-sold Yes",
+      "SOLD"
+    ]
+  },
+  "searchUrl": "/ads?key={keyword}",
+  "topLevelCategories": {
+    "source": "nav-facet (data-drupal-facet-id=category_filter on /ads listing page)",
+    "categories": [
+      { "slug": "/ads?f[0]=c:1", "label": "Firearms", "allOption": 10505 },
+      { "slug": "/ads?f[0]=c:12", "label": "Firearm Components, Accessories, & Tools", "allOption": 4695 },
+      { "slug": "/ads?f[0]=c:7", "label": "Optics", "allOption": 2468 },
+      { "slug": "/ads?f[0]=c:65", "label": "Reloading", "allOption": 1867 },
+      { "slug": "/ads?f[0]=c:38", "label": "Ammunition", "allOption": 1766 },
+      { "slug": "/ads?f[0]=c:2131", "label": "Blades", "allOption": 878 },
+      { "slug": "/ads?f[0]=c:30", "label": "Airgun & Airsoft", "allOption": 627 },
+      { "slug": "/ads?f[0]=c:23", "label": "Archery", "allOption": 623 },
+      { "slug": "/ads?f[0]=c:2089", "label": "Shooting & Range Gear", "allOption": 602 },
+      { "slug": "/ads?f[0]=c:57", "label": "Hunting", "allOption": 492 },
+      { "slug": "/ads?f[0]=c:50", "label": "Cases & Storage", "allOption": 366 },
+      { "slug": "/ads?f[0]=c:127", "label": "Services", "allOption": 94 },
+      { "slug": "/ads?f[0]=c:2085", "label": "Books", "allOption": 109 },
+      { "slug": "/ads?f[0]=c:44", "label": "Muzzleloading Supplies", "allOption": 52 },
+      { "slug": "/ads?f[0]=c:2032", "label": "Targets", "allOption": 42 }
+    ],
+    "totalsSumCheck": "Sum of facet counts = 25,186. Pagination-walk total = 30,225. Drift = ~5,039 (16.7%). Likely explanations: uncategorized ads, sticky/promoted/sold entries excluded from facet count. Live pagination-walk is the authoritative count (Mistake 37 — sitemap and facet aggregates can diverge from live listing on classifieds with sold-retention)."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "R1-blind-2026-05-15T08-52-03Z",
+    "probeIp": "audit-IP (single-vantage; production crawler IP must re-confirm WAF behavior)",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "needsPlaywright": "medium",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "perPage": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex 301 -> www; canonical = https://www.gunpost.ca",
+      "Stage 2: 8-batch probe — Cloudflare rule-selective; bare /ads -> 403 challenge, sorted URL -> 200; no CAPTCHA; no age-gate",
+      "Stage 3: X-Generator: Drupal 10 + X-Commerce-Core: 2 + drupal-settings-json + node--type-classified -> drupal-classifieds / classifieds-gunpost adapter",
+      "Stage 4: Single global catalogUrl '/ads?sort_by=date_pub&sort_order=DESC' (Mistake 37). 15 top-level facet categories captured in topLevelCategories for operator reference. Sub-category filter URLs (?f[0]=c:N) NOT in catalogUrls because each is a subset of the global listing.",
+      "Stage 4g: 3 random product samples (idx 0/9/17 of 18-row page) — all 4 fields (url/title/price/stockStatus) populated",
+      "Stage 5: paginationPattern type=query, template='page', startPage=0, zeroIndexed=true, firstPageHasParam=false. Page 0 vs page 1: zero product-URL overlap.",
+      "Stage 6: counter-control swap sort_order=DESC<->ASC — distinct first-3 product URLs -> sort honored.",
+      "Stage 7: navigate-from-watermark (Drupal Views sorted listing + post-date visible).",
+      "Stage 8: html-pagination, lastPageZeroIndexed=1679, perPage=18, lastPageItems=3 -> 30,225. Sitemap NOT used (Mistake 37 — sitemap regenerates and drops sold listings, lagging live by ~25%)."
+    ],
+    "harnessGaps": [
+      "DB-stored productCountMethod='pagination-walk' is NOT a recognized method name in backend/src/services/product-count-probe.ts (falls through to default:return null — count probe disabled). Skill correctly maps to canonical 'html-pagination'.",
+      "Stage 4 totalsSumCheck arithmetic: facet sum (25,186) vs live walk (30,225) shows ~17% drift. Skill could prescribe a default reconciliation note for classifieds where this is expected (uncategorized/promoted/sold-retention).",
+      "wafType='cloudflare-active' is the right call given the bare /ads challenge, but skill's 'operational not literal' rule could be read to argue cloudflare-passive since the crawler URL (sorted) is never challenged. Persona Mistake 37 is the tie-breaker — record reasoning explicitly."
+    ]
+  }
+}

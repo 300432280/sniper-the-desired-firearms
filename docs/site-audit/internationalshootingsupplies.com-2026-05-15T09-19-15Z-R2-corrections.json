@@ -1,0 +1,138 @@
+{
+  "runId": "R2-live-investigation-2026-05-15",
+  "site": "internationalshootingsupplies.com",
+  "method": "live curl + DB cross-check + runtime code trace, not the SKILL harness",
+  "baselineCandidate": "docs/site-audit/internationalshootingsupplies.com-2026-05-15T09-05-23-928Z-R1.json",
+  "baselineDb": "MonitoredSite{domain='internationalshootingsupplies.com'} (lastVerified 2026-04-12)",
+
+  "corrections": [
+    {
+      "id": "C1",
+      "field": "expectedProductCount",
+      "r1Value": 2314,
+      "dbValue": 5111,
+      "correctedValue": 5237,
+      "confidence": "high",
+      "evidence": {
+        "method": "live HEAD + paginated tail walk of /wp-json/wp/v2/product",
+        "p1_x_wp_total": 5237,
+        "headTailWalk": "page 1 per_page=100 returned 100 items first id=147189; page 53 (last) returned 37 items first id=3363 last id=2259; 52*100 + 37 = 5237 — matches X-WP-Total exactly",
+        "crossCheck": "Store API in-stock total (2314) + Store API outofstock total (2923) = 5237 — partition adds up perfectly",
+        "dbStaleness": "DB-stored 5111 is from 2026-04-12 (33-day-old probe); live count is 5237 (drift +126 products = 2.5% over 33 days, normal organic inventory growth)",
+        "watermarkCrawlerEndpoint": "Verified by reading backend/src/services/scraper/adapters/woocommerce.ts:340 — fetchCatalogPage queries /wp-json/wp/v2/product FIRST; only falls back to /wc/store/v1/products when WP REST returns 401. ISS WP REST returns 200 -> 5237 is the denominator the watermark walk actually sees."
+      }
+    },
+    {
+      "id": "C2",
+      "field": "productCountMethod.endpoint",
+      "r1Value": "/wp-json/wc/store/v1/products",
+      "dbValue": "/wp-json/wp/v2/product",
+      "correctedValue": "/wp-json/wp/v2/product",
+      "confidence": "high",
+      "evidence": {
+        "rationale": "Must match the endpoint the watermark crawler walks (woocommerce.ts:340). Customer-visible 2314 is a useful secondary signal but cannot be the canonical expectedProductCount because the watermark walk would surface 2,923 false 'new' OOS products on a single pass."
+      }
+    },
+    {
+      "id": "C3",
+      "field": "catalogUrls",
+      "r1Value": "77 entries (missed bows/crossbows + uncategorized)",
+      "dbValue": "79 entries",
+      "correctedValue": "79 entries -- DB list is correct as-is",
+      "confidence": "high",
+      "evidence": {
+        "method": "live walk of /wp-json/wp/v2/product_cat (3 pages, 207 total taxonomy entries)",
+        "productiveNonManufLeaves": 79,
+        "sumOfLeafCounts": 2288,
+        "coverageVsStoreApi": "2288 / 2314 = 98.9% (R1 had 2274 / 2314 = 98.3%)",
+        "missingLeavesInR1": [
+          {"slug": "/product-category/bows/crossbows/", "count": 1, "live_walk": "1 real product (Steambow AR-Series M10 crossbow)"},
+          {"slug": "/product-category/uncategorized/", "count": 1, "live_walk": "1 real product (Ege Arms Levar 12S shotgun)"}
+        ],
+        "r1RootCause": "Stage 4 leaf-selection erroneously chained on parent count>0 (bows top-level has count=0 because its only descendant is in a single leaf). SKILL Rule C forbids this; R1 self-admitted the bug."
+      }
+    },
+    {
+      "id": "C4",
+      "field": "crawlers.maintain.verifyMethod silent-no-op behavior verdict",
+      "r1Value": "store-api",
+      "dbValue": "store-api",
+      "correctedValue": "store-api (KEEP -- silent no-op is the intended post-2026-04-03 safety behavior)",
+      "confidence": "high",
+      "evidence": {
+        "verdict": "SAFE",
+        "codeTrace": "worker.ts:510-549. When Store API doesn't return a product the verify cycle requested (e.g. product went OOS and Store API default filter omits it): line 537-546 explicit comment 'Do NOT increment verifyErrors or deactivate -- just skip'; line 549 'handledProductIds.push(product.id)' marks it as handled. Result: silent no-op, neither deactivated nor escalated to Playwright fallback.",
+        "isThisIntended": "YES. This is the 2026-04-03 mass-deactivation incident fix (CLAUDE.md project rule: 'Never deactivate products based on lastSeenAt alone'). Without this guard, Store API's default in-stock-only filter would silently delete every OOS product on every verify pass.",
+        "tradeoff": "OOS-to-truly-deleted transitions are invisible to Store API verify -- only Playwright detail-page verify can catch that. Acceptable: stale OOS products will eventually expire via cross-tier cycle completion rules, not via store-api verify alone.",
+        "liveStoreApiPartition": "in-stock visible: 2314; out-of-stock visible: 2923. Total Store API addressable: 5237 = WP REST total. Store API does see OOS products IF you set stock_status=outofstock -- but worker.ts:453 does NOT add that filter, so OOS products absent from the include= response trigger the silent-skip branch."
+      }
+    },
+    {
+      "id": "C5",
+      "field": "crawlers.catalog (DB field with no runtime reader)",
+      "r1Value": "absent (R1 omits by design -- Rule B residue)",
+      "dbValue": "{ method: 'html-category-walk', notes: 'adapterType changed to generic-retail to force HTML crawl path' }",
+      "correctedValue": "remove from DB -- dead audit-trail residue",
+      "confidence": "high",
+      "evidence": {
+        "method": "grepped backend/src for crawlers.catalog and html-category-walk",
+        "grepResult": "0 matches -- no runtime code reads crawlers.catalog.method anywhere",
+        "routingKey": "adapterType is the only runtime routing key (adapter-registry.ts:116). adapterType in DB is 'woocommerce' (not 'generic-retail'). The note's stated intent never took effect -- the override is half-applied and has been dead since whenever it was written.",
+        "additionalEvidence": "DB note claims 'WP REST blocked'; live probe with the prod-rotated UA returns 200 with X-WP-Total=5237. The note is also stale on this point -- the catalog crawler's WC adapter WILL succeed against WP REST, so the html-walk forcing rationale is moot."
+      }
+    },
+    {
+      "id": "C6",
+      "field": "auditNotes.requiresBrowserUa (NEW -- not in either baseline)",
+      "r1Value": "absent",
+      "dbValue": "absent",
+      "correctedValue": true,
+      "confidence": "high",
+      "evidence": {
+        "method": "bare curl/X.Y UA on /wp-json/wp/v2/product -> 403 with body 'BPS Plugin 403 Error Page'; identical request with Mozilla UA -> 200",
+        "scope": "BPS plugin appears to filter only API-path requests by UA -- bare curl on / and /shop/ returns 200, only /wp-json/* paths are UA-gated",
+        "productionImpact": "NONE under current code. http-client.ts:9-21 rotates 4 Mozilla UAs by domain hash; pickUserAgent('internationalshootingsupplies.com') = Edge UA, which my live test confirmed gets 200. Risk is only to ad-hoc scripts using axios/node-fetch defaults.",
+        "recommendation": "Set auditNotes.requiresBrowserUa=true to document the constraint for future operators / ad-hoc probes, even though production crawlers already comply."
+      }
+    },
+    {
+      "id": "C7",
+      "field": "paginationPattern.template",
+      "r1Value": "/page/{N}/",
+      "dbValue": "page/{N}/",
+      "correctedValue": "page/{N}/",
+      "confidence": "medium",
+      "evidence": {
+        "rationale": "Cosmetic -- DB convention is no leading slash because catalogUrls already end in /. Functionally identical."
+      }
+    },
+    {
+      "id": "C8",
+      "field": "hasWaf / wafType",
+      "r1Value": "false / null",
+      "dbValue": "false / null",
+      "correctedValue": "false / null (BPS app-layer plugin, NOT a CDN WAF)",
+      "confidence": "high",
+      "evidence": {
+        "rapidBurstStatus": "10 successive requests all 200 with prod UA -- no rate limit",
+        "headers": "nginx origin, no Cloudflare/Sucuri/Incapsula/Akamai markers",
+        "bpsBehavior": "Returns 403 on /wp-json/wp/v2/product ONLY when UA is bare curl/X.Y; returns 200 with any Mozilla UA. This is plugin-level path-and-UA filtering, not a WAF. R1's verdict (hasWaf=false, BPS noted in wafProbeEvidence) is correct."
+      }
+    }
+  ],
+
+  "verdicts": {
+    "watermarkCrawlerEndpointVerdict": "WP REST (/wp-json/wp/v2/product) -- confirmed by reading woocommerce.ts:340 (WP REST queried first; Store API fallback only on 401). Therefore expectedProductCount denominator MUST come from this endpoint. Live total = 5237.",
+    "storeApiSilentNoOpVerdict": "SAFE / INTENDED. worker.ts:537-546 explicit skip-on-missing comment, worker.ts:549 unconditional handledProductIds.push. This is the 2026-04-03 mass-deactivation incident fix. KEEP verifyMethod=store-api.",
+    "adapterTypeVsCrawlersCatalogMethodVerdict": "adapterType is the ONLY runtime routing key. crawlers.catalog.method is NOT read anywhere in backend/src. DB's 'html-category-walk' override is dead audit-trail residue from a 2026-04-03 firefight that was never fully applied (adapterType was never changed from 'woocommerce'). The override has zero runtime effect."
+  },
+
+  "summary": {
+    "correctionCount": 8,
+    "topThreeMostImpactful": [
+      "C1 expectedProductCount 5237 (corrects both R1's 2314 and DB's stale 5111)",
+      "C3 catalogUrls 79 (restores bows/crossbows + uncategorized that R1 dropped)",
+      "C5 remove dead crawlers.catalog override (DB has been carrying an internally-inconsistent override for ~6 weeks)"
+    ]
+  }
+}

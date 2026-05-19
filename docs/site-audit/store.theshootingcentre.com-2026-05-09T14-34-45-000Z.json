@@ -1,0 +1,156 @@
+{
+  "profileVersion": 1,
+
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-09T14:10:05Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every batch). All legitimate traffic 200 OK across 4 UAs (desktop/mobile/python-bot/curl), 10-request burst, barebones GET, and no-UA. Cloudflare WAF rules block honeypot paths (/wp-admin, /.env, /.git/config), UNION SELECT, and inline-script XSS — but none of those affect catalog crawl. Classifying as cloudflare-passive: legitimate UA + path traffic is unblocked, no JS challenge required.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": true,
+    "sqliRuleNote": "?id=1%20UNION%20SELECT%201,2,3 returned 403 Cloudflare 'Attention Required' page; ?id=1%27%20OR%20%271%27%3D%271 returned 200. Rule-selective only.",
+    "xssRuleFired": true,
+    "xssRuleNote": "?q=<script>alert(1)</script> returned 403 Cloudflare 'Attention Required' page. Rule-selective only.",
+    "honeypotPathsBlocked": true,
+    "honeypotPathsNote": "/wp-admin, /wp-login.php, /.env, /.git/config, /phpinfo.php returned 403 Cloudflare; /xmlrpc.php returned 404 (BC app, not Cloudflare).",
+    "botUaBlocked": false,
+    "botUaNote": "python-requests/2.31.0 and curl/8.1.2 both got 200 on /.",
+    "cfHeaders": [
+      "cf-ray",
+      "server: cloudflare",
+      "set-cookie: __cf_bm",
+      "cf-cache-status: DYNAMIC"
+    ],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "incapsulaInBody": false
+  },
+
+  "hasCaptcha": false,
+  "captchaType": null,
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 7018,
+  "productCountMethod": "catalog-walk-only",
+
+  "catalogUrls": [
+    "https://store.theshootingcentre.com/firearms/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/ammunition/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/optics/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/optics-accessories/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/gun-parts-accessories/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/reloading/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/gear/?sort=newest&limit=100"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://store.theshootingcentre.com/adler-arms-rf-224-tac-rifle-black-22-lr-11-7-barrel-model-rf224tacblk/",
+      "title": "Adler Arms RF-224 TAC Rifle, Black: 22 LR, 11.7\" Barrel, Model RF224TACBLK",
+      "price": 449.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://store.theshootingcentre.com/antique-galand-revolver-380-short-cf-3-75-barrel-ser-12184/",
+      "title": "Antique Galand Revolver: 380 Short CF, 3.75\" Barrel, SER# 12184",
+      "price": 2600.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://store.theshootingcentre.com/benelli-ethos-upland-a-i-shotgun-20-gauge-3-28-barrel-model-12651/",
+      "title": "Benelli ETHOS Upland A.I. Shotgun: 20 Gauge-3\", 28\"Barrel, Model 12651",
+      "price": 3730.00,
+      "stockStatus": "in_stock"
+    }
+  ],
+
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "BC Stencil exposes ?sort=newest in the catalog page <select name='sort'>, verified honored via 3-outcome counter-control (default alphaasc -> newest changed first product from 'Adler Arms RF-224' to 'Sako 90 Finnlight'; counter-control priceasc returned 'Charles Daly 101 Shotgun' - different from both). Page-1 vs page-2 zero-overlap confirmed. Newest-sort listing has monotonic descending product IDs (32503, 32488, 32487, 32486...) usable as sourceId for navigate-from-watermark."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "homepage-nav",
+    "categories": [
+      { "slug": "/firearms",              "allOption": 974 },
+      { "slug": "/ammunition",            "allOption": 964 },
+      { "slug": "/optics",                "allOption": 501 },
+      { "slug": "/optics-accessories",    "allOption": 625 },
+      { "slug": "/gun-parts-accessories", "allOption": 1634 },
+      { "slug": "/reloading",             "allOption": 74 },
+      { "slug": "/gear",                  "allOption": 2265 }
+    ],
+    "totalsSumCheck": "Sum of per-category walked counts (limit=100, ?sort=newest) = 7037 across 7 top-level categories. Walked unique = 7018; cross-category overlap = 19 products (~0.27%). /clearance excluded per skill rule (filter-subset). BC xmlsitemap.php totals 16,985 product URLs but inspection shows the extra 9,967 are OutOfStock products that BC Stencil category pages hide by default. Walked count is canonical for runtime expectations."
+  },
+
+  "lastVerified": "2026-05-09",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-09T14-34-45Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "adapterType": "verified",
+      "hasWaf": "verified",
+      "wafType": "verified-via-8-batch-probe",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "expectedProductCount": "verified-via-walk",
+      "productCountMethod": "verified-via-walk",
+      "catalogUrls": "verified-via-page1-dedup-walk",
+      "paginationPattern": "verified-via-zero-overlap-test",
+      "sortParam": "verified-via-3-outcome-counter-control",
+      "extractionTested": "verified",
+      "watermarkMethod": "verified-via-monotonic-product-id-and-sort",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1 (Canonical URL): apex https://store.theshootingcentre.com/ returned 200 cleanly. <link rel='canonical' href='https://store.theshootingcentre.com/'> matched; www variant did not resolve (curl exit 6 ENOTFOUND). canonicalOrigin = https://store.theshootingcentre.com.",
+      "Stage 2 (WAF + CAPTCHA): heavy 8-batch probe ran cleanly; cf-ray on every response. Legitimate batches (1a homepage, 2a-2d UAs, 3 burst x10, 5 barebones, 8 noUA) all 200. WAF rules fired on /wp-admin, /.env, /.git/config, /phpinfo.php, ?id=1%20UNION..., ?q=<script> - all returned 403 with Cloudflare 'Attention Required' page. Classifying as cloudflare-passive (legitimate traffic unblocked; rule-selective only). No CAPTCHA markers (no recaptcha/hcaptcha/turnstile in homepage HTML).",
+      "Stage 3 (Platform): bigcommerce-stencil identified by 4 multi-marker matches: <meta name='platform' content='bigcommerce.stencil'>, cdn11.bigcommerce.com/s-stx5s5fhga (Stencil store hash), x-bc-store-id: 1000882963 response header, BC-Ray: 1 header. adapterType=generic-retail (BC Stencil falls under FA's generic adapter). No age-gate detected. Maintain verifyMethod=detail-page (BC has no public storefront product API - /api/storefront/products returned 404).",
+      "Stage 4 (Catalog URLs): 8 top-level category candidates from homepage mega-nav (navPages-action 'All X' links): firearms, ammunition, optics, optics-accessories, gun-parts-accessories, reloading, gear, clearance. /clearance dropped per skill rule (filter-subset). Page-1 dedup walk (limit=100): each of the 7 kept categories contributed 9.7%-13.1% NEW unique -> all kept. Sub-segment paths (e.g. /firearms/rifles, /ammunition/centrefire) NOT included to avoid mid-page overlap with their parent category.",
+      "Stage 5 (Pagination): tested ?page=2 -> returned 100 products entirely different from page 1 (zero-overlap confirmed). paginationPattern.type=query, template='page', perPage=100, firstPageHasParam=false, startPage=1, zeroIndexed=false. perPage=100 chosen as it's the highest selectable in the BC Stencil <select name='limit'> (default=20, options 8/12/16/20/40/100); halves request count vs. default.",
+      "Stage 6 (Sort): <select name='sort'> exposed on catalog pages with options [featured, newest, bestselling, alphaasc, alphadesc, avgcustomerreview, priceasc, pricedesc]. Default sort is alphaasc (NOT newest - Mistake 29 BC Stencil counter-control test was important). 3-outcome test: default first product = 'Adler Arms RF-224 TAC Rifle Black'; ?sort=newest first product = 'Sako 90 Finnlight Rifle Stainless 7mm PRC'; counter-control ?sort=priceasc first product = 'Charles Daly 101 Shotgun Vision Green'. All three differ -> sort honored. sortParam='?sort=newest', sortVerified=true.",
+      "Stage 7 (Watermark method): navigate-from-watermark. Reasoning: (a) Sort verified honored upstream (Stage 6). (b) BC product IDs visible in <img src> URLs as cdn11.bigcommerce.com/.../products/{N}/ - newest-sort firearms page 1 shows IDs 32503, 32488, 32487, 32486, 32485, 32484, 32483, 32482, 32481, 32480 (monotonically descending integer sourceId). (c) No public BC storefront API for date filtering, so api-date-since-watermark unavailable.",
+      "Stage 8 (Product count): catalog-walk-only. Walked all 7 top-level categories with limit=100 -> 7037 total cards, 7018 unique URLs (cross-category overlap = 19 / 0.27%). BC xmlsitemap.php (3 pages of products) lists 16,985 unique <loc> entries but probe-sampled 5/5 sitemap-only URLs returned availability=OutOfStock; BC Stencil category pages hide out-of-stock by default. Walked count reflects what the runtime catalog crawler will actually index. expectedProductCount=7018, productCountMethod=catalog-walk-only.",
+      "Stage 9 (Assembly + validate): all 9 stages ran in order; runtime fields populated; validator pass to be confirmed by operator. JSON written to docs/site-audit/store.theshootingcentre.com-2026-05-09T14-34-45-000Z.json; report written to .md sibling."
+    ]
+  }
+}

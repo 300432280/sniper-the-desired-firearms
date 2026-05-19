@@ -1,0 +1,209 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-05-13T08:19:34Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare edge active: BATCH 2 'bot' UA (curl/x.x) returns 403 on /fr/; BATCH 7 XSS payload returns 403 + Cloudflare 'blocked' interstitial. All browser-UA probes return 200 cleanly. CF-RAY present on every batch. No challenge interstitial on legitimate UA. Honeypot paths (wp-admin, .env, .git/config) return 404, not 403.",
+  "wafProbeEvidence": {
+    "cfRayPresent": true,
+    "serverHeader": "cloudflare",
+    "botUaBlocked": true,
+    "botUaStatus": 403,
+    "xssRuleFired": true,
+    "xssStatus": 403,
+    "honeypot404": true,
+    "rapidBurstStatus": [200,200,200,200,200,200,200,200,200,200],
+    "sqliFired": false,
+    "browserUaStatus": 200
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "needsPlaywright": false,
+  "expectedProductCount": 2117,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/fr/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/fr/categorie-produit/armes-a-feu/",
+    "/fr/categorie-produit/optiques/",
+    "/fr/categorie-produit/accessoires/",
+    "/fr/categorie-produit/autre-fr/",
+    "/fr/categorie-produit/munitions/",
+    "/fr/categorie-produit/pieces-et-accessoires-a/",
+    "/fr/categorie-produit/armes-a-air-comprime/",
+    "/fr/categorie-produit/entreposage/",
+    "/fr/categorie-produit/30-jours-de-bushnell/",
+    "/fr/categorie-produit/couteaux/",
+    "/fr/categorie-produit/winchester-historical/",
+    "/fr/categorie-produit/permis/",
+    "/fr/categorie-produit/non-classe/",
+    "/fr/categorie-produit/rugeramericangen2/",
+    "/fr/categorie-produit/rechargement/",
+    "/fr/categorie-produit/promopmc/",
+    "/fr/categorie-produit/autre-fr/vetements/",
+    "/fr/categorie-produit/accessoires/entretien-d-arme-a-feu-2/",
+    "/fr/categorie-produit/accessoires/lance-pigeon/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://dantesports.com/fr/produit/canuck-wrangler-regulator-action-a-levier-357-mag/",
+      "title": "Canuck Wrangler Regulator Action À Levier .357 Mag.",
+      "price": 999.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://dantesports.com/fr/produit/savage-modele-64-g-semi-auto/",
+      "title": "Savage Modèle 64 G Semi-Auto",
+      "price": 369.77,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://dantesports.com/fr/produit/winchester-sxp-hybrid/",
+      "title": "Winchester SXP Hybrid",
+      "price": 589.77,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 48,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 48,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "apiEndpoint": "/fr/wp-json/wc/store/v1/products",
+      "apiDateFilterField": "after",
+      "apiOrderBy": "date",
+      "apiOrder": "desc",
+      "apiPerPage": 100
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "wcStoreProducts": "/fr/wp-json/wc/store/v1/products",
+        "wpRestProduct": "/fr/wp-json/wp/v2/product",
+        "wpRestProductCat": "/fr/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/fr/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/fr/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "totalsSumCheck": "Sum of 16 top-level category counts = 2625; global x-wp-total = 2117 (FR) / 2116 (EN). Overlap ~24% (products in multiple top-level cats). 32 products are only reachable via 3 subcategories (vetements, entretien-d-arme-a-feu-2, lance-pigeon) - added as catalogUrls to reach 100% coverage.",
+    "categories": [
+      { "slug": "/fr/categorie-produit/armes-a-feu/", "allOption": 1099 },
+      { "slug": "/fr/categorie-produit/optiques/", "allOption": 353 },
+      { "slug": "/fr/categorie-produit/accessoires/", "allOption": 293 },
+      { "slug": "/fr/categorie-produit/autre-fr/", "allOption": 265 },
+      { "slug": "/fr/categorie-produit/munitions/", "allOption": 238 },
+      { "slug": "/fr/categorie-produit/pieces-et-accessoires-a/", "allOption": 190 },
+      { "slug": "/fr/categorie-produit/armes-a-air-comprime/", "allOption": 48 },
+      { "slug": "/fr/categorie-produit/entreposage/", "allOption": 30 },
+      { "slug": "/fr/categorie-produit/30-jours-de-bushnell/", "allOption": 27 },
+      { "slug": "/fr/categorie-produit/couteaux/", "allOption": 23 },
+      { "slug": "/fr/categorie-produit/winchester-historical/", "allOption": 20 },
+      { "slug": "/fr/categorie-produit/permis/", "allOption": 17 },
+      { "slug": "/fr/categorie-produit/non-classe/", "allOption": 14 },
+      { "slug": "/fr/categorie-produit/rugeramericangen2/", "allOption": 4 },
+      { "slug": "/fr/categorie-produit/rechargement/", "allOption": 2 },
+      { "slug": "/fr/categorie-produit/promopmc/", "allOption": 2 },
+      { "slug": "/fr/categorie-produit/autre-fr/vetements/", "allOption": 21 },
+      { "slug": "/fr/categorie-produit/accessoires/entretien-d-arme-a-feu-2/", "allOption": 12 },
+      { "slug": "/fr/categorie-produit/accessoires/lance-pigeon/", "allOption": 6 }
+    ]
+  },
+  "lastVerified": "2026-05-13",
+  "auditNotes": {
+    "runId": "dantesports.com-2026-05-13T08-18-57Z-R1",
+    "probeIp": "audit-host (Cloudflare verdict IP-dependent - re-confirm WAF gating from production crawler IP before promotion)",
+    "watchdogPriorVerdict": "DB siteProfile dated 2026-04-11 used English /en/ side with 16 top-level URLs; this R1 used French /fr/ default-redirect side and added 3 orphan subcat URLs (vetements, entretien-d-arme-a-feu-2, lance-pigeon) which were missing from the English profile and contained 32 products not reachable from the 16 top-level cats alone.",
+    "multilingual": {
+      "plugin": "wpml",
+      "defaultLanguage": "fr",
+      "alternateLanguage": "en",
+      "rootRedirect": "https://dantesports.com/ -> https://dantesports.com/fr/ (302)",
+      "frProductCount": 2117,
+      "enProductCount": 2116,
+      "note": "WPML mirrors products at /en/ but the canonical (default-redirect) origin is /fr/. Operator must choose one side; switching sides changes every URL prefix and the product count by 1."
+    },
+    "perPageCap": {
+      "value": 48,
+      "evidence": "?per_page=24 -> 24 products, ?per_page=48 -> 48 products, ?per_page=50/60/72/96/100/250/500/1000 -> 12 (silent drop to default). Confirmed on /armes-a-feu/ and /optiques/."
+    },
+    "sortVerification": {
+      "default": "canuck-wrangler-regulator-action-a-levier-357-mag",
+      "withDate": "canuck-wrangler-regulator-action-a-levier-357-mag",
+      "withCounterPrice": "charles-daly-101-un-coup-410-ga",
+      "verdict": "honored-default-is-newest"
+    },
+    "paginationVerification": {
+      "page1Slugs": ["canuck-wrangler-regulator-action-a-levier-357-mag","canuck-wrangler-regulator-action-a-levier-44-mag","derya-ria-tm22-semi-auto-combo"],
+      "page2OverlapWithPage1": 0,
+      "page1Count": 48,
+      "page2Count": 48
+    },
+    "watermarkApiProbe": {
+      "endpoint": "/fr/wp-json/wc/store/v1/products",
+      "after_2099_total": 0,
+      "after_1999_total": 2117,
+      "global_total": 2117,
+      "verdict": "honored (matches global)"
+    },
+    "coverageVerification": {
+      "globalApiUniqueIds": 2117,
+      "topLevelCatsCoverage": 2085,
+      "orphanCount": 32,
+      "orphanSubcats": [
+        { "slug": "/fr/categorie-produit/autre-fr/vetements/", "id": 642, "orphanProducts": 17 },
+        { "slug": "/fr/categorie-produit/accessoires/entretien-d-arme-a-feu-2/", "id": 580, "orphanProducts": 1 },
+        { "slug": "/fr/categorie-produit/accessoires/lance-pigeon/", "id": 628, "orphanProducts": 1 }
+      ]
+    },
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium - IP-dependent; XSS rule and bot-UA rule fired but normal traffic clean. Operator should re-verify from production IP",
+      "wafType": "medium - 'cloudflare-active' chosen because XSS rule fires + bot-UA filter (rule-selective at edge); DB tag 'cloudflare-passive' is defensible since normal traffic 200s - operator chooses",
+      "hasCaptcha": "high - no captcha scripts loaded; 'no-recaptcha' class on Constant Contact form is the OPPOSITE marker",
+      "ageGate": "high - no markers; site does not gate by age",
+      "expectedProductCount": "high - WC Store API x-wp-total = 2117 on /fr/ side; 22-page walk delivers 2117 unique IDs",
+      "productCountMethod": "high - wp-rest-header on /fr/wp-json/wc/store/v1/products exists in runtime switch",
+      "catalogUrls": "high - 22-page API walk + cat-id cross-reference proved 32 products are only reachable via 3 subcat URLs; 19-URL list covers 2117/2117",
+      "sortParam": "high - 3-outcome counter-control with cache-bust verified",
+      "sortVerified": "high",
+      "perPage": "high - bracket-probed; cap is 48 exactly",
+      "paginationPattern": "high - /page/{N}/ path-form; page1/page2 zero overlap; perPage=48 both pages",
+      "crawlers.watermark.method": "high - WP REST and WC Store API 'after' two-probe both honored",
+      "crawlers.maintain.verifyMethod": "high - standard WC mapping"
+    },
+    "stageNotes": [
+      "Stage 1: Apex returns 200; redirect chain / -> /fr/ (302) confirmed. www returns 200 mirror. canonicalOrigin = https://dantesports.com.",
+      "Stage 2: 8-batch heavy probe. Cloudflare CF-RAY on every batch. Bot UA (curl) -> 403 (edge UA filter). XSS-payload -> 403 + Cloudflare blocked page. SQLi -> 200 (not blocked). Honeypots -> 404 (not blocked). Rapid burst -> all 200. No challenge body on browser UA. Classified as cloudflare-active because of XSS-rule and bot-UA blocking; with browser UA all crawl paths return 200. needsPlaywright=false. No CAPTCHA scripts (the only 'recaptcha' marker is a 'no-recaptcha' class on a Constant Contact widget).",
+      "Stage 3: WooCommerce plugin + theme-dante; WPML 4.9.2 (FR default, EN alt); WPBakery. adapterType=woocommerce. No age-gate markers on the homepage.",
+      "Stage 4: Taxonomy API (/fr/wp-json/wp/v2/product_cat) returned 82 cats, 16 top-level. Full 22-page WC Store API walk (per_page=100) deduped to 2117 unique IDs (=x-wp-total). Cross-referencing each product's categories[].id against the 16 top-level set revealed 32 products only reachable via 3 subcats: vetements (autre-fr/), entretien-d-arme-a-feu-2 (accessoires/), lance-pigeon (accessoires/). Final catalogUrls = 16 top-level + 3 subcat = 19 URLs covering 100%. Extraction spot-check on /armes-a-feu/ p1 confirms title/url/price/stockStatus all populate.",
+      "Stage 5: /page/{N}/ path pattern verified (page 1 vs page 2 zero overlap). perPage bracket-probe: cap is 48 exactly; values > 48 silently fall back to 12 default. paginationPattern.template='/page/{N}/', perPage=48, firstPageHasParam=false, startPage=1.",
+      "Stage 6: <select name='orderby'> options: popularity / date (selected) / price / price-desc. 3-outcome test on /armes-a-feu/ with cache-bust nonces: default == orderby=date (first slug canuck-wrangler-regulator-...); orderby=price first slug charles-daly-101-un-coup-... Verdict: honored-default-is-newest. sortParam='?orderby=date'.",
+      "Stage 7: WC Store API two-probe: after=2099 -> x-wp-total=0; after=1999 -> x-wp-total=2117 (matches global). WP REST /wp/v2/product gives identical results. Watermark method = api-date-since-watermark, endpoint /fr/wp-json/wc/store/v1/products, field 'after', order desc.",
+      "Stage 8: WC Store API HEAD with per_page=1 returns x-wp-total:2117 on /fr/ and 2116 on /en/. productCountMethod = wp-rest-header / endpoint /fr/wp-json/wc/store/v1/products / header x-wp-total (canonical method name in product-count-probe.ts switch).",
+      "Stage 9: Validator pending. Wrote candidate JSON + this report. No DB write."
+    ]
+  }
+}

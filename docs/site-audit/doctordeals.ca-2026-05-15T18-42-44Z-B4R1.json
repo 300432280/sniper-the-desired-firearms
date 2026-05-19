@@ -1,0 +1,112 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "sgcaptcha",
+  "wafLastProbedAt": "2026-05-15T18:27:25Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches return HTTP 202 + SG-Captcha: challenge header + meta-refresh to /.well-known/sgcaptcha/ — SiteGround sgcaptcha gating EVERY path (apex /, /robots.txt, /sitemap.xml, /wp-admin, /wp-login, /xmlrpc, .env, .git, phpinfo, rapid burst, multi-UA, SQLi, XSS, no-UA). Playwright bypass succeeded with iPhone Safari UA — challenge clears on first non-cache-busted GET.",
+  "wafProbeEvidence": {
+    "headerSgCaptcha": "challenge",
+    "metaRefreshSgcaptcha": true,
+    "responseStatus202OnAllBatches": true,
+    "noCfRay": true,
+    "noXSucuriHeaders": true,
+    "iphoneUaSamePlainResult": "still-challenged-on-plain-curl-cleared-via-playwright"
+  },
+  "wafWorkaround": {
+    "method": "cookie-cache",
+    "reason": "SiteGround sgcaptcha clears once challenge JS runs in a real browser; cookies set after challenge bypass the gate for ~30 min."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 971,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/product-category/parts/",
+    "/product-category/accessories/",
+    "/product-category/firearms/",
+    "/product-category/mags-barrels/",
+    "/product-category/clothing-gun-related/",
+    "/product-category/defense/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://doctordeals.ca/product/ruger-10-22-semi-automatic-rifle-complete-bolt-assembly-polished-collectors-series/", "title": "Ruger 10-22 Semi-automatic Rifle — Complete Bolt Assembly (polished) (Collector's Series)", "stockStatus": "in_stock", "extractionNotes": "Flatsome .product-small card matches woocommerce.ts:655 selector list; price in nested .woocommerce-Price-amount span (handled by runtime adapter via WC Store API enrichment)." },
+    { "url": "https://doctordeals.ca/product/savage-a22-22-lr-semi-automatic-rifle-parts-magazine-accessory-kit/", "title": "Savage A22, 22 lr, Semi-automatic Rifle (Parts) — Magazine + Accessory Kit", "stockStatus": "in_stock" },
+    { "url": "https://doctordeals.ca/product/savage-a22-22-lr-semi-automatic-rifle-parts-scope-rail/", "title": "Savage A22, 22 LR, Semi-automatic Rifle (Parts) — Scope Rail", "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/shop/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": { "method": "api-date-since-watermark" },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productDiscovery": "/wp-json/wp/v2/product",
+        "priceEnrichment": "/wp-json/wc/store/v1/products"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "wp-json/wp/v2/product_cat?per_page=100&hide_empty=false&orderby=count&order=desc (filtered to parent=0, excluded uncategorized)",
+    "categories": [
+      { "slug": "parts", "id": 239, "apiCount": 389, "walkedUnique": 385 },
+      { "slug": "accessories", "id": 199, "apiCount": 263, "walkedUnique": 267 },
+      { "slug": "firearms", "id": 60, "apiCount": 109, "walkedUnique": 109 },
+      { "slug": "mags-barrels", "id": 6294, "apiCount": 109, "walkedUnique": 114 },
+      { "slug": "clothing-gun-related", "id": 3680, "apiCount": 44, "walkedUnique": 44 },
+      { "slug": "defense", "id": 215, "apiCount": 1, "walkedUnique": 2 }
+    ],
+    "totalsSumCheck": "Top-6 walked union = 576 unique products; WC Store API customer-visible total = 582; WP REST product (incl. drafts) = 971; product-sitemap.xml <loc> count = 971. Union/WC drift = 6 products (~1%) — within 5% gate. /shop/ alone walked = 572 (covers 571/576 top-cat union products + 1 product not in any top-cat). Aggregator /shop/ excluded from catalogUrls because the 6 top-cats deliver near-equal coverage with category attribution preserved."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-15T18-42-44Z",
+    "probeIp": "99.228.63.11 (sgcaptcha cleared via iPhone Playwright)",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "expectedProductCount": "high (sitemap + WP REST agree)",
+      "catalogUrls": "high (taxonomy API + walk-and-dedup)",
+      "paginationPattern": "high (zero-overlap verified)",
+      "sortParam": "high (counter-control verified honored-default-is-newest)",
+      "crawlers.watermark.method": "high (two-probe verified)",
+      "perPage": "medium (12 is Flatsome default with no overridable <select>; WC Store API supports 100)"
+    },
+    "stageNotes": [
+      "Stage 1: apex doctordeals.ca returns 202+sgcaptcha; www also 202. Canonical apex confirmed via <link rel=canonical> after Playwright bypass.",
+      "Stage 2: heavy 8-batch probe — every path returns 202 with SG-Captcha header. No cf-ray. No Sucuri. sgcaptcha confirmed. Playwright iPhone UA clears the challenge.",
+      "Stage 3: body.class contains woocommerce-js + theme-flatsome; meta generator AIOSEO (SEO plugin not platform — Mistake 22/39 noted). /wp-json/wc/store/v1/products returns 200 + valid WC payload — WooCommerce confirmed.",
+      "Stage 4: 6 top-level categories from wp/v2/product_cat (parent=0). Walked all 6 + /shop/. Union 576 vs WC Store API 582 vs sitemap 971. /shop/ aggregator excluded (1 unique product gap; the 6 top-cats preserve category attribution and cover ~99% of customer-visible inventory).",
+      "Stage 4g: 3 sample products extracted with title+url+stock from .product-small cards (Flatsome theme). Price resolved via WC Store API enrichment at runtime.",
+      "Stage 5: /shop/page/N/ form; page1 vs page2 zero-overlap verified (12+12 distinct slugs). perPage=12 (Flatsome default, no <select> override exposed in HTML).",
+      "Stage 6: 3-outcome counter-control. default first3 == ?orderby=date first3 (date IS the default); ?orderby=price first3 distinct -> verdict honored-default-is-newest. sortParam=?orderby=date sortVerified=true.",
+      "Stage 7: WP REST two-probe — ?after=2099-01-01 returns x-wp-total=0; ?after=1999-01-01 returns x-wp-total=971. WC Store API same: 0 vs 582. api-date-since-watermark honored. Method A selected.",
+      "Stage 8: WP REST /wp-json/wp/v2/product per_page=1 returns x-wp-total=971; product-sitemap.xml has 971 <loc> entries (exact match). WC Store API customer-visible total = 582 (in-stock subset). Picked WP REST (admin) as canonical because it matches sitemap and covers full inventory including OOS."
+    ]
+  }
+}

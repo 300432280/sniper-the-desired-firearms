@@ -1,0 +1,109 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-13T08:20:01Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cloudflare-passive — cf-ray on every response, all real-traffic batches 200, only python-requests bot UA blocked (origin WP-native 403)",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY", "cf-cache-status", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["wp-admin->wp-login.php redirect (WP-native)", "wp-login.php 403 (WP-native)", "xmlrpc.php 403 (WP-native)"],
+    "botUaBlocked": true,
+    "botUaBlockSource": "origin (X-Powered-By: PHP/8.2.30 on 403 body) — not Cloudflare"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 161,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": ["/shop/"],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://alsimmonsgunshop.com/product/henry-h2-u-s-survival-rifle-22lr-unfired/", "title": "Henry H2 U.S. Survival Rifle .22LR UNFIRED", "price": 399.95, "stockStatus": "in_stock" },
+    { "url": "https://alsimmonsgunshop.com/product/cz-600-trail-223rem-w-case-5x-magazines-14356n/", "title": "CZ 600 Trail .223rem w/case &5x magazines (14356N)", "price": 1195.00, "stockStatus": "in_stock" },
+    { "url": "https://alsimmonsgunshop.com/product/winchester-model-670-243win-w-optic-ammo-14350nc/", "title": "Winchester Model 670 .243Win w/ optic& ammo (14350NC)", "price": 799.95, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 9,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 9,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productDiscovery": "/wp-json/wp/v2/product",
+        "priceEnrichment": "/wp-json/wc/store/v1/products"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/new-non-restricted/", "allOption": 11 },
+      { "slug": "/product-category/new-restricted/", "allOption": 0 },
+      { "slug": "/product-category/used-non-restricted/", "allOption": 65 },
+      { "slug": "/product-category/used-restricted/", "allOption": 0 },
+      { "slug": "/product-category/magazines/", "allOption": 85 },
+      { "slug": "/product-category/accessories/", "allOption": 0 },
+      { "slug": "/product-category/collectable-22s/", "allOption": 3 }
+    ],
+    "totalsSumCheck": "Per-category in-stock counts sum to 164; /shop shows 'of 161 results'. ~3 product overlap from consignment subcategory of used-non-restricted. /shop covers 100% with single URL. Note WP REST admin total = 1661 (includes 1500 OOS/sold consignment, hidden from /shop)."
+  },
+  "lastVerified": "2026-05-13",
+  "auditNotes": {
+    "runId": "R1-2026-05-13",
+    "probeIp": "audit-machine (Windows dev)",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "expectedProductCount": "high (161 customer-visible; 1661 admin-total exists but hidden from /shop)",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "paginationPattern": "high",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200, www->apex 301 redirect, <link rel=canonical>=apex. Canonical = https://alsimmonsgunshop.com.",
+      "Stage 2: 8-batch probe. cf-ray on every response. All real-traffic batches 200. Rapid burst (10 sequential): all 200. SQLi/XSS payloads: 200. Honeypots /wp-admin/wp-login redirect to login (WP-native, not CF). Bot UA python-requests 403 from PHP (origin). No body markers for MalCare/Wordfence/sgcaptcha/Incapsula. hasWaf=false; cloudflare-passive recorded informationally.",
+      "Stage 3: meta generator=WooCommerce 10.7.0, WordPress 6.9.4. Storefront theme. wc/store/v1/products and wp/v2/product both 200. platform=woocommerce, adapter=woocommerce, needsPlaywright=false.",
+      "Stage 4: taxonomy API returned 9 categories (7 top-level + 1 child + uncategorized). Per-category in-stock counts: 11+0+65+0+85+0+3 = 164 (~3 overlap with consignment child). /shop shows 'of 161 results' covering 100%. catalogUrls = ['/shop/'] is the minimum-cover set. topLevelCategories.categories documents the per-category breakdown for operator reference.",
+      "Stage 4g: 3 random extraction samples from /shop p1 all yielded title+url+price+stock_status via wc/store/v1 API. Confirmed real products.",
+      "Stage 5: Pagination /shop/page/2/. Zero overlap p1 vs p2 (both 9 unique products). perPage HTML=9 (Storefront default; ?perpage=99 ignored). API per_page caps at 100 (per_page=200 returns 400). Runtime uses HTML perPage=9.",
+      "Stage 6: <select name=orderby> options: popularity, date, price, price-desc. Default 'Sorted by latest' (data-is-sorted-by=true). 3-outcome counter-control: default==orderby=date (both Henry/CZ/Winchester); orderby=price returns Mossberg/Marlin/Colt. Verdict: honored-default-is-newest. sortParam=?orderby=date, sortVerified=true.",
+      "Stage 7: Method A two-probe: wp/v2/product ?after=2099-01-01 -> x-wp-total=0; ?after=1999-01-01 -> x-wp-total=1661. wc/store/v1 similar (0 / 161). Date filter monotonic. crawlers.watermark.method=api-date-since-watermark.",
+      "Stage 8: expectedProductCount=161 (customer-visible, what /shop and store-api in-stock return). Note: wp/v2 admin REST shows 1661 (includes 1500 OOS / sold consignment hidden from /shop). For alert purposes use 161 to avoid false back-in-stock on sold listings. productCountMethod = wp-rest-header on /wp-json/wc/store/v1/products."
+    ]
+  }
+}

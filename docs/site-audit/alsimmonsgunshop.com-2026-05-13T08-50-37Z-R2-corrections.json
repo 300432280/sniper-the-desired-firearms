@@ -1,0 +1,178 @@
+{
+  "site": "alsimmonsgunshop.com",
+  "round": "R2",
+  "auditedAt": "2026-05-13T08:50:37Z",
+  "auditor": "testing-api-tester (live API + curl heavy-WAF + Store-API slug lookup)",
+  "r1Reference": "docs/site-audit/alsimmonsgunshop.com-2026-05-13T08-25-28Z-R1.json",
+  "method": "Live-probe every divergent field using a method DIFFERENT from R1's. R1 used HTML scrape + per-cat taxonomy + Storefront /shop count. R2 used: direct WP REST + WC Store API headers (header-only count), 8-batch heavy WAF probe with BATCH-1-only parser, Store-API slug-lookup test on 5 random old wp/v2-published products to PROVE consignment hidden-from-shop hypothesis, counter-control sort on /shop?orderby=date|price|popularity.",
+  "corrections": [
+    {
+      "field": "hasWaf",
+      "dbValue": true,
+      "r1Value": false,
+      "r2Value": false,
+      "r2Confidence": "high",
+      "evidence": {
+        "probeMethod": "8-batch heavy WAF probe (inline curl, 800ms inter-batch delay)",
+        "batchResults": {
+          "batch1_headers": "Server: cloudflare, CF-RAY present, cf-cache-status: DYNAMIC, NO cf-mitigated, NO Set-Cookie, NO x-sucuri/x-incap/x-akamai/x-cdn headers",
+          "batch2_rapidBurst10": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+          "batch3_sqliEncoded": 200,
+          "batch3_xss": 200,
+          "batch3_traversal": 200,
+          "batch4_pythonRequests": 403,
+          "batch4_pythonRequestsSource": "origin (X-Powered-By: PHP/8.2.30 in 403 body) — WP-native bot block, NOT Cloudflare",
+          "batch4_curl": 200,
+          "batch4_emptyUa": 200,
+          "batch4_scrapy": 200,
+          "batch5_wpLogin": 403,
+          "batch5_wpAdmin": 403,
+          "batch5_xmlrpc": 403,
+          "batch5_envFile": 404,
+          "batch5_source": "all 403/404 are WP-native (no CF challenge body)",
+          "batch6_wpV2Product": 200,
+          "batch6_wcStoreV1Products": 200,
+          "batch7_shop": 200,
+          "batch7_perCategory": 200,
+          "batch7_shopPage2": 200,
+          "batch8_bodyMarkerScan": "none (no MalCare/Wordfence/sgcaptcha/incapsula/sucuri/cloudflare-ddos/cf-browser-verification/distil/akamai markers)"
+        },
+        "verdict": "cloudflare-passive. CF in the path (CF-RAY on every response) but no challenge / no rate-limit / no rule-based block fired against real-traffic. Only bot-UA python-requests received 403, and the 403 carries the X-Powered-By: PHP/8.2.30 header proving the block came from origin WP, not Cloudflare. Per SKILL.md Stage 2 operational-not-literal rule and the engineering-security-engineer reminder that hasWaf:true imposes perPage=20 throttle + waf-cookie-manager overhead, the correct value is false.",
+        "skillMdGap": "The DB column hasWaf:true is stale defensive 2026-04-11 setting that contradicts the same row's siteProfile.wafType: cloudflare-passive. R1 correctly flagged this. R2 confirms the column should be downgraded to false on operator promotion."
+      }
+    },
+    {
+      "field": "expectedProductCount",
+      "dbValue": 1638,
+      "r1Value": 161,
+      "r2Value": 161,
+      "r2Confidence": "high",
+      "evidence": {
+        "wpV2ProductHeader": "X-WP-Total: 1661 at /wp-json/wp/v2/product?per_page=1 (admin total — published products of ALL stock statuses; matches DB notes that wp/v2 counts all published)",
+        "wcStoreV1Header": "X-WP-Total: 161 at /wp-json/wc/store/v1/products?per_page=1 (customer-visible — in-stock only; Store API enforces visibility/catalog-visibility flag)",
+        "shopHtmlCount": "Storefront /shop shows 'Showing 1-9 of 161 results' (matches Store API)",
+        "categoryTaxonomyCount": "Top-level product_cat sum from wp/v2/product_cat: 0+3+85+11+0+65 = 164 (+50 consignment overlap with used-non-restricted child) — close to 161 with the expected ~3 overlap from consignment subcategory.",
+        "consignmentVisibilityTest": "5 randomly-selected old wp/v2-published products (dated 2024-03 to 2024-06, status=publish): canuck-elite-operator-fde-12ga-13122n, browning-bl-22-grade-1-22cal-13115np, bergara-b14-hmr-6-5creedmoor-13132n, beretta-a400-xtreme-plus-synthetic-left-hand-12-gauge-12871n, winchester-94-30-30win-12689np. Store API lookup by slug for ALL 5: 0 hits each. Direct product-page GET: HTTP 200, body contains 'out-of-stock'/'outofstock' markers + empty price block. Verdict: these are published-but-sold consignment listings, in wp/v2 admin total but HIDDEN from /shop and Store API.",
+        "verdict": "wp/v2 admin total includes ~1500 sold/OOS consignment listings invisible to customers. For monitoring alerts on a consignment shop, the count must match what customers see — 161 (Store API). Confirms R1's choice and the 2026-04-11 DB notes (which said '1,444 products wrongly discontinued by Store API verify').",
+        "currentValueDrift": "DB stored 1638 on 2026-04-11; today wp/v2 returns 1661 (+23 new admin entries over 1 month, consistent with consignment intake). DB drift: confirms wp/v2 grows over time as more consignment comes through."
+      }
+    },
+    {
+      "field": "productCountMethod",
+      "dbValue": {
+        "method": "dual-api",
+        "wpRestCount": 1638,
+        "wpRestHeader": "x-wp-total",
+        "storeApiCount": 168,
+        "storeApiHeader": "x-wp-total",
+        "wpRestEndpoint": "/wp-json/wp/v2/product",
+        "storeApiEndpoint": "/wp-json/wc/store/v1/products",
+        "note": "WP REST = all published (1638), Store API = in-stock only (168)"
+      },
+      "r1Value": {
+        "method": "wp-rest-header",
+        "endpoint": "/wp-json/wc/store/v1/products",
+        "header": "x-wp-total"
+      },
+      "r2Value": {
+        "method": "wp-rest-header",
+        "endpoint": "/wp-json/wc/store/v1/products",
+        "header": "x-wp-total"
+      },
+      "r2Confidence": "high",
+      "evidence": {
+        "runtimeSwitchAudit": "Read backend/src/services/product-count-probe.ts:148-451. Switch arms: wp-rest-header | json-api-count | json-api-length | html-pagination | sitemap | sitemap-index | generic-product-sitemap | ecwid-storefront-search | shopify-products-walk | klevu-api-count | stream-page-count. Default arm at lines 446-451: console.warn('[productCountProbe] unknown method ...'); return null. Grep for 'dual-api' across backend/src: NO MATCHES. The stored 'dual-api' method falls through to the default arm and silently disables the count probe for alsimmonsgunshop.com (verifyBootstrapCoverage at lines 466-488 receives null and skips ratio check).",
+        "operationalImpact": "Confirms R1's diff claim. Until the DB profile is corrected, this site has NO functional product-count probe and its bootstrap coverage check is silently bypassed.",
+        "correctMethod": "wp-rest-header on /wp-json/wc/store/v1/products with header x-wp-total — direct match to customer-visible 161 total. R1's value is canonical and runtime-recognized."
+      }
+    },
+    {
+      "field": "catalogUrls",
+      "dbValue": [
+        "/product-category/used-non-restricted/",
+        "/product-category/new-non-restricted/",
+        "/product-category/magazines/",
+        "/product-category/collectable-22s/",
+        "/product-category/accessories/",
+        "/shop/"
+      ],
+      "r1Value": ["/shop/"],
+      "r2Value": ["/shop/"],
+      "r2Confidence": "high",
+      "evidence": {
+        "skillRuleC": "SKILL.md Rule C / Stage 4: Pick the smallest URL set whose union covers 100% of firearm-relevant products. If one URL like /collections/all or /shop/ reaches 100%, use just that.",
+        "shopCoverage": "/shop returns 161 products on 18 pages (verified 'Showing 1-9 of 161 results' + last-page-link page/18 in pagination ul.page-numbers). All firearm-relevant.",
+        "perCategorySum": "Top-level cats: 0 acc + 3 coll22 + 85 mag + 11 new-nr + 0 new-r + 65 used-nr + 0 used-r = 164. +50 consignment child overlapping used-non-restricted. Sum > 161 due to multi-cat overlap.",
+        "verdict": "/shop alone is the minimum URL with 100% coverage. DB's per-category list adds 5 URLs of redundant overlap. R1 matches SKILL.md Rule C. Per-category breakdown is preserved in topLevelCategories.categories[] for operator reference.",
+        "skillMdGap": "R1's diff MD #2 flags a real harness gap: the DB's per-category list may have been kept because the operator wanted per-category token budgeting or category-restricted alerts. SKILL.md could explicitly note this option. R2 confirms the canonical minimum-cover choice but flags the gap as worth resolving in SKILL.md."
+      }
+    },
+    {
+      "field": "paginationPattern",
+      "dbValue": {"type": "path", "template": "/page/{N}/", "firstPageHasParam": false},
+      "r1Value": {"type": "path", "template": "/page/{N}/", "perPage": 9, "firstPageHasParam": false, "startPage": 1, "zeroIndexed": false},
+      "r2Value": {"type": "path", "template": "/page/{N}/", "perPage": 9, "firstPageHasParam": false, "startPage": 1, "zeroIndexed": false},
+      "r2Confidence": "high",
+      "evidence": {
+        "p1Count": "9 unique product slugs on /shop/ (page 1)",
+        "p2Count": "9 unique product slugs on /shop/page/2/",
+        "p3Count": "9 unique product slugs on /shop/page/3/",
+        "lastPageDiscovery": "shop p1 pagination ul lists links to /shop/page/{2,3,4,16,17,18}/ — last page is 18. 18 x 9 = 162; 161 actual -> last page has 8.",
+        "schemaConformance": "SKILL.md schema (line 121, lines 561-569) REQUIRES perPage, firstPageHasParam, startPage, zeroIndexed inside paginationPattern. DB pattern is missing 3 of 4 inner fields. R1 fills them per spec."
+      }
+    },
+    {
+      "field": "wafProbeEvidence_shape",
+      "dbValue": "freeform string: 'server: cloudflare + cf-ray on all responses. Bot UA (python-requests) gets 403; desktop/mobile/curl UAs get 200. SQLi/XSS queries not blocked. No active challenge.'",
+      "r1Value": "structured object with cfHeaders[], sucuriHeaders[], rapidBurstStatus[], sqliRuleFired, xssRuleFired, honeypotPathsBlocked[], botUaBlocked, botUaBlockSource",
+      "r2Value": "same structured shape as R1, values verified by R2's independent 8-batch probe (matches R1 batch-for-batch)",
+      "r2Confidence": "high",
+      "evidence": "R2 ran a fresh 8-batch probe at 2026-05-13T08:46Z. Every R1 claim reproduced: CF-RAY present, no Sucuri/Incap/Akamai, rapidBurst 10x200, SQLi-encoded/XSS/traversal 200, python-requests 403 with X-Powered-By:PHP/8.2.30 (origin not CF), honeypots all WP-native 403/404. R1's structured shape is correct."
+    },
+    {
+      "field": "crawlers.maintain_extra_fields",
+      "dbValue": "present (method:db-verification, cooldowns, tierShares, tierWindows, verifyBehavior)",
+      "r1Value": "absent (only verifyMethod + verifyEndpoint emitted)",
+      "r2Value": "absent (only verifyMethod + verifyEndpoint)",
+      "r2Confidence": "high",
+      "evidence": "SKILL.md Stage 7 (line 125, lines 307-319) emits ONLY verifyMethod + verifyEndpoint under crawlers.maintain. The DB's extra fields (method:db-verification, cooldowns, tierShares, tierWindows, verifyBehavior) are scheduler config managed by another pipeline (crawl-scheduler.ts / tier engine) — operator audit-trail residue per Rule B. R1 correctly omits them."
+    },
+    {
+      "field": "dataFlow_categoryTree_catalogUrlStats_verified_residue",
+      "dbValue": "present (15 fields: dataFlow, categoryTree, catalogUrlStats, paginationVerified, paginationVerifiedAt, paginationVerifiedEvidence, sortVerifiedAt, sortVerifiedEvidence, sortVerifiedMethod, lastVerifiedMethod, notes, budget, t1IntervalMin, siteCategory, hasRateLimit, crawlPhase, expectedInStockCount)",
+      "r1Value": "absent (replaced by topLevelCategories.categories[] + auditNotes.stageNotes[])",
+      "r2Value": "absent",
+      "r2Confidence": "high",
+      "evidence": "SKILL.md Rule B: these are operator audit-trail residue NOT consumed at runtime by adapters or crawlers. expectedInStockCount=168 in DB is a stale 2026-04-11 snapshot of what is now 161 (DB drift). The runtime-consumed expectedProductCount is the canonical field; in-stock variants are not consulted by product-count-probe.ts or watermark-crawler.ts. R1 correctly drops all of these."
+    }
+  ],
+  "verifiedCorrect": [
+    {"field": "platform", "value": "woocommerce", "verified": "meta generator + REST endpoints + Storefront theme markers in batch1 body"},
+    {"field": "adapterType", "value": "woocommerce", "verified": "platform-driven"},
+    {"field": "wafType", "value": "cloudflare-passive", "verified": "R2 batch 1-8 evidence matches"},
+    {"field": "wafProbeMethod", "value": "heavy-8-batch", "verified": "R2 ran the same 8-batch probe"},
+    {"field": "hasCaptcha", "value": false, "verified": "no captcha markers in batch 1 or 8"},
+    {"field": "ageGate.detected", "value": false, "verified": "no age-gate cookie or interstitial seen"},
+    {"field": "needsPlaywright", "value": false, "verified": "static HTML + JSON APIs return 200 with full data"},
+    {"field": "sortParam", "value": "?orderby=date", "verified": "R2 counter-control: default page1 = orderby=date page1 = Henry/CZ/Winchester; orderby=price page1 = Mossberg/Marlin/Colt (different) -> sort honored. <option value=date selected=selected> confirms default."},
+    {"field": "sortVerified", "value": true, "verified": "counter-control swap result"},
+    {"field": "perPage", "value": 9, "verified": "9 unique product slugs on p1, p2, p3"},
+    {"field": "crawlers.watermark.method", "value": "api-date-since-watermark", "verified": "R2 date-filter monotonicity: ?after=2099 -> 0, ?after=2026-05-01 -> 8, ?after=2026-04-01 -> 30, no filter -> 1661"},
+    {"field": "crawlers.bootstrap.apiEndpoints", "value": "{productDiscovery:/wp-json/wp/v2/product, priceEnrichment:/wp-json/wc/store/v1/products}", "verified": "both 200 with valid JSON arrays"},
+    {"field": "crawlers.maintain.verifyMethod", "value": "store-api", "verified": "SKILL.md Stage 7 table maps woocommerce -> store-api"},
+    {"field": "crawlers.maintain.verifyEndpoint", "value": "/wp-json/wc/store/v1/products", "verified": "platform-derived"},
+    {"field": "searchUrl", "value": "/?s={keyword}&post_type=product", "verified": "WP-native search form, unchanged between DB and R1"},
+    {"field": "extractionSample", "value": "3 products with title/price/stockStatus", "verified": "R2 confirmed first 3 products from /shop p1 are Henry H2 / CZ 600 Trail / Winchester Model 670, all in-stock with price"}
+  ],
+  "summary": {
+    "totalDivergentFieldsAudited": 17,
+    "correctionsConfirmingR1": 17,
+    "correctionsRejectingR1": 0,
+    "newCorrectionsBeyondR1": 0,
+    "verifiedCorrectFieldsR1AndDbAgreed": 16,
+    "highConfidence": 17,
+    "mediumConfidence": 0,
+    "lowConfidence": 0,
+    "inconclusive": 0
+  }
+}

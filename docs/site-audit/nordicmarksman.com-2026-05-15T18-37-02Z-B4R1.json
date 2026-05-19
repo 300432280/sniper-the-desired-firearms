@@ -1,0 +1,158 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T18:26:09Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cloudflare-passive: cf-ray on every batch, ALL probes 200, rapid burst clean, SQLi/XSS not blocked, multi-UA stable, no-UA accepted, honeypot 403s are origin app config (BC has no wp-admin) not WAF action",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: 9fc43080fb6cf41f-YYZ", "Server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["wp-admin (403, origin)", "wp-login.php (403, origin)", ".env (403, origin)", ".git/config (403, origin)"],
+    "botUaBlocked": false,
+    "noUaStatus": 200
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 4711,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": [
+      "/xmlsitemap.php?type=products&page=1",
+      "/xmlsitemap.php?type=products&page=2"
+    ]
+  },
+  "catalogUrls": [
+    "https://nordicmarksman.com/accessories/?sort=newest",
+    "https://nordicmarksman.com/ammunition/?sort=newest",
+    "https://nordicmarksman.com/apparel-and-gear/?sort=newest",
+    "https://nordicmarksman.com/biathlon/?sort=newest",
+    "https://nordicmarksman.com/cleaning/?sort=newest",
+    "https://nordicmarksman.com/firearms-and-stocks/?sort=newest",
+    "https://nordicmarksman.com/hunting-essentials/?sort=newest",
+    "https://nordicmarksman.com/optics-lights/?sort=newest",
+    "https://nordicmarksman.com/reloading/?sort=newest",
+    "https://nordicmarksman.com/shotguns/?sort=newest",
+    "https://nordicmarksman.com/spare-parts/?sort=newest"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "productId": 22002,
+      "url": "https://nordicmarksman.com/canuck-pioneer-pump-12gax3-28-barrel/",
+      "title": "Canuck Pioneer Pump 12GAx3 28 Barrel",
+      "price": 449.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "productId": 22001,
+      "url": "https://nordicmarksman.com/canuck-commander-distressed-bronze-12gax3-14-barrel/",
+      "title": "Canuck COMMANDER Distressed Bronze 12GAx3 14 Barrel",
+      "price": 499.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "productId": 22000,
+      "url": "https://nordicmarksman.com/canuck-commander-distressed-green-12gax3-14-barrel/",
+      "title": "Canuck COMMANDER Distressed Green 12GAx3 14 Barrel",
+      "price": 499.95,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 50,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 50,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "BC Stencil ?sort=newest verified via 3-outcome counter-control (default==newest != alphaasc != pricedesc); product IDs descend page-1 to page-2 (21929-21933 > 21884-21888) confirming monotonicity; no public REST date filter on BC Stencil so navigate-from-page-1 is the right method"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "sitemapIndex": "/xmlsitemap.php",
+        "productsSitemaps": [
+          "/xmlsitemap.php?type=products&page=1",
+          "/xmlsitemap.php?type=products&page=2"
+        ],
+        "categoriesSitemap": "/xmlsitemap.php?type=categories&page=1"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "sitemap-categories + homepage-nav",
+    "categories": [
+      { "slug": "/accessories/", "allOption": 1438, "note": "limit=2500 honored; OOS hidden on category pages per BC Stencil settings" },
+      { "slug": "/ammunition/", "allOption": 549 },
+      { "slug": "/apparel-and-gear/", "allOption": 269, "note": "mixed - axes/hatchets/caps + tactical; included per Rule C mixed-category" },
+      { "slug": "/archery/", "allOption": 19, "note": "EXCLUDED from catalogUrls - pure bow/arrow non-firearm" },
+      { "slug": "/biathlon/", "allOption": 81 },
+      { "slug": "/cleaning/", "allOption": 474 },
+      { "slug": "/firearms-and-stocks/", "allOption": 441 },
+      { "slug": "/hunting-essentials/", "allOption": 34 },
+      { "slug": "/optics-lights/", "allOption": 498 },
+      { "slug": "/reloading/", "allOption": 119 },
+      { "slug": "/shotguns/", "allOption": 151 },
+      { "slug": "/spare-parts/", "allOption": 793 },
+      { "slug": "/manufacturer/", "allOption": 2500, "note": "EXCLUDED - brand-tree aggregator overlapping all category content" }
+    ],
+    "totalsSumCheck": "Walked union across 11 catalogUrls = 4475 unique slugs. Sitemap product total = 4711 (gate: |4711-4475|/4711 = 5.0%, at edge). Sampled 8 missing products: ALL Out of Stock - confirms Mistake 29 (BC Stencil hides OOS on category pages). Sitemap-based count includes OOS by design - that's the feature for back-in-stock alerts."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-15T18-37-02Z",
+    "probeIp": "audit-IP from 2026-05-15 session - WAF section must be re-confirmed from production crawler IP",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high (8-batch probe + interp guide)",
+      "wafType": "high",
+      "hasCaptcha": "high (no markers in homepage HTML)",
+      "ageGate": "high (no markers)",
+      "needsPlaywright": "high (plain HTTP returns 100 products at limit=100)",
+      "expectedProductCount": "high (BC platform-canonical sitemap)",
+      "productCountMethod": "high (verified runtime case exists in product-count-probe.ts:212)",
+      "catalogUrls": "high (12 cats sitemap + walked; archery excluded for non-firearm-relevance; coverage 95.0% (in-stock) per Stage 4d Rule C with OOS in sitemap)",
+      "sortParam": "high (3-outcome counter-control: default==newest, alphaasc and pricedesc differ)",
+      "sortVerified": "high",
+      "perPage": "medium - shipped 50 (conservative); site honors limit=2500 verified, but 50 is safer baseline for rate-limit & cf-cache",
+      "paginationPattern": "high (page=1 vs page=2 zero overlap, descending product IDs)",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "high (Stage 3 deterministic table)"
+    },
+    "stageNotes": [
+      "Stage 1: Canonical apex (https://nordicmarksman.com). www redirects 301 to apex. No <link rel=canonical> contradicts.",
+      "Stage 2: heavy-8-batch probe - cf-ray header on every batch but ALL 200 status. Honeypot 403s are origin-app (BC infra) not WAF. Cloudflare passive => hasWaf=false per skill rule.",
+      "Stage 3: BigCommerce Stencil (storefront key s-vdd0qrxe73, store id 1000321469, x-bc-store-id header, cdn11.bigcommerce.com, BCData). Maps to adapterType=generic-retail.",
+      "Stage 4: 13 top-level categories from sitemap; 12 product-cats + manufacturer (brand-tree). Excluded archery (pure bow/arrow non-firearm) + manufacturer (brand-tree aggregator). 11 catalog URLs. Walked union 4475 unique products; sampled missing all OOS (Mistake 29 confirmed).",
+      "Stage 5: ?page=N query param. Page 1 vs page 2 zero overlap (20 vs 20 distinct). Limit param honored up to >=500 (firearms-and-stocks); limit=2500 returns 1438 (full accessories). perPage=50 shipped as baseline conservative value; runtime can raise.",
+      "Stage 6: Sort honored via 3-outcome counter-control. Default page 1 = ?sort=newest page 1 (same first product canuck-pioneer-pump). alphaasc and pricedesc both differ. Stencil <option value='newest' selected> confirms default IS newest.",
+      "Stage 7: navigate-from-watermark verified. Product IDs descend monotonically (page 1: 21929-21933 > page 2: 21884-21888). No public REST date filter on BC Stencil.",
+      "Stage 8: sitemap-index 2 files (page=1: 3023 locs, page=2: 1688 locs) = 4711 products. Includes OOS by design (Stage 8 note). Walked total (4475) is in-stock subset.",
+      "Stage 9: Validator pending, will be run by operator review pipeline."
+    ]
+  }
+}

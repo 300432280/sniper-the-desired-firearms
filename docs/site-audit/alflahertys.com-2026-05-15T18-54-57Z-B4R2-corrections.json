@@ -1,0 +1,135 @@
+{
+  "runId": "B4R2",
+  "site": "alflahertys.com",
+  "candidateSource": "docs/site-audit/alflahertys.com-2026-05-15T18-31-39Z-B4R1.json",
+  "investigationTimestamp": "2026-05-15T18:54:57Z",
+  "probeIp": "audit-host-IP (single IP, not production crawler IP)",
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "r1Value": 5264,
+      "correctedValue": 5595,
+      "confidence": "high",
+      "reason": "R1 picked the BC sitemap <loc> count (5264) which is stale. Klevu API totalResultsFound=5595 (verified 2026-05-15T18:52Z). Klevu offset=5594 returns 1 record, offset=5595 returns 0 records — confirming 5595 is the authoritative live catalog count. The 331-product delta is sitemap regen lag (BC xmlsitemap.php returns single-page 5264, /xmlsitemap.php?type=products&page=2 returns HTTP 404). The chosen productCountMethod returns 5595, so the candidate is internally inconsistent.",
+      "evidence": {
+        "klevuTotalResultsFound": 5595,
+        "klevuOffset5594Records": 1,
+        "klevuOffset5595Records": 0,
+        "bcSitemapPage1LocCount": 5264,
+        "bcSitemapPage2": "HTTP 404 (single-page sitemap)"
+      }
+    },
+    {
+      "field": "productCountMethod.method",
+      "r1Value": "json-api-count",
+      "correctedValue": "klevu-api-count",
+      "confidence": "medium",
+      "reason": "Both methods exist in product-count-probe.ts (json-api-count line 156, klevu-api-count line 302) and both return 5595 against this endpoint. However klevu-api-count is the purpose-built switch case: it calls resolveKlevuKey() to self-heal a rotated API key, has the typeOfRequest:'SEARCH' + typeOfRecords:['KLEVU_PRODUCT'] body shape baked in, and matches the DB convention. R1's json-api-count requires the operator to hand-author the field drill-path. Pick the named method when one exists.",
+      "evidence": {
+        "klevuApiCountLine": 302,
+        "jsonApiCountLine": 156,
+        "klevuApiCountHasKeyResolver": true,
+        "dbConvention": "klevu-api-count"
+      }
+    },
+    {
+      "field": "productCountMethod.apiKey",
+      "r1Value": "(omitted, embedded in field drill-path)",
+      "correctedValue": "klevu-170966446878517137",
+      "confidence": "high",
+      "reason": "If method is switched to klevu-api-count (above), it requires an apiKey field per the KlevuApiCountMethod interface at product-count-probe.ts:74-78. Re-add to match the runtime contract.",
+      "evidence": {
+        "interfaceLines": "74-78",
+        "requiredFields": ["method", "endpoint", "apiKey"]
+      }
+    },
+    {
+      "field": "auditNotes.fieldConfidence.hasWaf",
+      "r1Value": "medium (IP-dependent; operator must reconfirm from production crawler IP)",
+      "correctedValue": "high",
+      "confidence": "high",
+      "reason": "R1 hedged to 'medium' over-cautiously. 8-batch probe: bot UA, no UA, suspicious UA, 10x rapid burst — ALL return 200 OK. SQLi payload returns 000 (curl URL-parse error, NOT a WAF block), XSS returns 400 (BC origin parse, NOT a WAF — payload contains literal angle brackets). Honeypots 403 are path-selective Cloudflare/BC-origin handling, not whole-site blocks. ZERO Sucuri/MalCare/Incapsula/Wordfence body markers across all 8 batches. ZERO sgcaptcha/Just-a-moment/cf_challenge body markers on category HTML. cf-ray + __cf_bm cookie present = Cloudflare-passive bot-mode only. Stored DB hasWaf=true with workaround=sucuri-cookie-cache is fully stale residue with no current signal supporting it.",
+      "evidence": {
+        "batch1_botUa": 200,
+        "batch2_noUa": 200,
+        "batch3_curlUa": 200,
+        "batch4_burst10x": "200 200 200 200 200 200 200 200 200 200",
+        "batch7_honeypotsAllPathSelective": true,
+        "batch8_headers": "Server: cloudflare + __cf_bm only; NO x-sucuri-*, NO x-malcare-*, NO x-iinfo, NO incap_*",
+        "challengePageMarkersInBody": 0,
+        "wafBrandMarkersInBody": 0
+      }
+    },
+    {
+      "field": "wafProbeEvidence.threeWayContradictionResolution",
+      "r1Value": "(not addressed)",
+      "correctedValue": "DB-stored values hasWaf=true / wafType=cloudflare-passive / wafWorkaround.method=sucuri-cookie-cache are mutually inconsistent. Current evidence: WAF posture is Cloudflare-passive only (cf-ray, __cf_bm). NO Sucuri markers exist anywhere — headers, cookies, body, challenge HTML. The sucuri-cookie-cache workaround field is legacy mislabeling, likely from an earlier era when this site genuinely was on Sucuri (BigCommerce stores DO sometimes flip between Sucuri-fronted and CF-fronted), OR from copy-paste of another site's profile. Resolution: drop wafWorkaround entirely (R1 already does); set hasWaf=false, wafType=cloudflare-passive (passive label retained as the cookie/header tag, NOT as a blocking WAF).",
+      "confidence": "high",
+      "reason": "Three-way contradiction resolved: hasWaf=false (passive __cf_bm bot-cookie does not constitute an active WAF block), wafType retains 'cloudflare-passive' as a posture label, wafWorkaround.method dropped (no Sucuri present to work around).",
+      "evidence": {
+        "cfMarkers": ["cf-ray: 9fc4566fdb8cade0-YYZ", "__cf_bm cookie", "Server: cloudflare", "cf-cache-status: DYNAMIC"],
+        "sucuriMarkers": [],
+        "malcareMarkers": [],
+        "challengePageDetected": false
+      }
+    },
+    {
+      "field": "auditNotes.klevuSortEnum500Verdict",
+      "r1Value": "(claim made, not enumerated)",
+      "correctedValue": "VERIFIED on 19 enum candidates: RELEVANCE=200, PRICE_ASC=200, PRICE_DESC=200 — only these three are honored. All others return HTTP 500 'Invalid request or server error' with qTime=0 (validation rejection, not execution failure). Rejected set: NEWEST, DATE_DESC, NAME_ASCENDING, NAME_DESCENDING, LATEST, CREATED_AT_DESC, ADDED_TIME_DESC, newest, oldest, dateDesc, dateAsc, createdAt, added, date-desc, date_desc, date.",
+      "confidence": "high",
+      "reason": "19 sort enums tested with 800ms delay each. All non-{RELEVANCE, PRICE_*} return HTTP 500. Klevu instance is configured to expose only relevance + price sorts.",
+      "evidence": {
+        "accepted": ["RELEVANCE", "PRICE_ASC", "PRICE_DESC"],
+        "rejected_500": ["NEWEST", "DATE_DESC", "NAME_ASCENDING", "NAME_DESCENDING", "LATEST", "CREATED_AT_DESC", "ADDED_TIME_DESC", "newest", "oldest", "dateDesc", "dateAsc", "createdAt", "added", "date-desc", "date_desc", "date"]
+      }
+    },
+    {
+      "field": "auditNotes.klevuPerPageCapVerdict",
+      "r1Value": "100 (verified: limit=100 returns 100, limit=250 caps at 100)",
+      "correctedValue": "CONFIRMED 100 cap. 7-size probe: limit=50 returns 50, limit=100 returns 100, limit=150/200/250/500/1000 all return exactly 100 records. The cap is silent (no error, no warning header, noOfResults field also caps at 100). perPage=100 is verified optimum (5595/100 = 56 paginated calls).",
+      "confidence": "high",
+      "reason": "Five size points above the 100 ceiling all returned exactly 100. R1's perPage:100 stands.",
+      "evidence": {
+        "limit_50": 50,
+        "limit_100": 100,
+        "limit_150": 100,
+        "limit_200": 100,
+        "limit_250": 100,
+        "limit_500": 100,
+        "limit_1000": 100
+      }
+    },
+    {
+      "field": "auditNotes.bcHtmlEmptyVerdict",
+      "r1Value": "BC HTML category pages return 0 products (Klevu hydrates client-side)",
+      "correctedValue": "CONFIRMED. Static GET /shooting-supplies-firearms-and-ammunition/firearms/ returns HTTP 200, body 141504 bytes, ZERO product anchors (`card-figure`, `productCard`, `data-product-id` all absent). Klevu hydration markers present in body: js.klevu, klevu, ksearchnet, klevu-170966446878517137, klevu-js-v1, klevu-recs, klevuLanding. needsPlaywright:true is mandatory for HTML fallback. R1 was correct.",
+      "confidence": "high",
+      "reason": "Direct curl with realistic UA showed 0 product anchors and Klevu-only product-injection markers. The runtime path via Klevu wildcard does NOT use these HTML category pages; they remain as fallback start-points only.",
+      "evidence": {
+        "categoryHtmlSize": 141504,
+        "cardFigureCount": 0,
+        "dataProductIdCount": 0,
+        "klevuMarkersFound": ["klevu", "klevu-170966446878517137", "klevu-js-v1", "klevu-recs", "klevu-user-customization-170966446878517137-v2", "klevuLanding", "klevu_addtocart", "klevu_currency", "klevu_customAddToCart", "klevu_pageCategory", "klevu_page_meta"]
+      }
+    },
+    {
+      "field": "auditNotes.paginationDisjointVerdict",
+      "r1Value": "(claimed offset=0 vs offset=50 disjoint)",
+      "correctedValue": "CONFIRMED with offset=0 (100 records) vs offset=100 (100 records): overlap=0 unique IDs. Pagination semantics intact; api-offset crawl is safe.",
+      "confidence": "high",
+      "reason": "Direct Klevu probe of two adjacent pages returned 0 overlapping product IDs.",
+      "evidence": {
+        "offset0_size": 100,
+        "offset100_size": 100,
+        "overlap": 0
+      }
+    }
+  ],
+  "totalCorrections": 9,
+  "topPriorityCorrections": [
+    "expectedProductCount 5264 -> 5595 (R1 internally inconsistent — chose Klevu method but used stale sitemap value)",
+    "productCountMethod.method json-api-count -> klevu-api-count (purpose-built switch case with key-rotation self-healing)",
+    "hasWaf confidence medium -> high (8-batch + body + cookie evidence unanimously supports cloudflare-passive non-blocking)"
+  ]
+}

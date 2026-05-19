@@ -1,0 +1,138 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-11T06:47:12Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200 OK; no cf-ray, no x-sucuri-id, no Incapsula cookies, no MalCare, server=LiteSpeed (Hostinger). Honeypot paths return WP-native responses (xmlrpc 403 = WP hardening, .env 404 via WP). SQLi/XSS payloads NOT blocked (200 OK). Rapid burst 10x served without throttle. HIGH confidence hasWaf=false.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false
+  },
+  "hasCaptcha": true,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 7381,
+  "productCountMethod": "wc-store-api-header",
+  "catalogUrls": [
+    "https://westernmetal.ca/product-category/accessories/",
+    "https://westernmetal.ca/product-category/ammunition/",
+    "https://westernmetal.ca/product-category/babbitt/",
+    "https://westernmetal.ca/product-category/bar_solders/",
+    "https://westernmetal.ca/product-category/chronographs/",
+    "https://westernmetal.ca/product-category/consignments_used/",
+    "https://westernmetal.ca/product-category/firearm_parts/",
+    "https://westernmetal.ca/product-category/firearms/",
+    "https://westernmetal.ca/product-category/flux_tinning_compounds/",
+    "https://westernmetal.ca/product-category/lead_wire/",
+    "https://westernmetal.ca/product-category/outdoor/",
+    "https://westernmetal.ca/product-category/reloading/",
+    "https://westernmetal.ca/product-category/shooting/",
+    "https://westernmetal.ca/product-category/silver_solders/",
+    "https://westernmetal.ca/product-category/solder_paste/",
+    "https://westernmetal.ca/product-category/soldering/",
+    "https://westernmetal.ca/product-category/wire_solders/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://westernmetal.ca/product/charles-daly-301-12ga3-pump-field-28-wood-matte-n-930-306/",
+      "title": "CHARLES DALY 301, 12GA 3\" PUMP FIELD 28\", WOOD matte, N-930.306",
+      "price": 259.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://westernmetal.ca/product/adler-ad500-semi-auto-rifle-308win-18-6%e2%80%b3bbl-5-rd-n/",
+      "title": "ADLER AD500 SEMI AUTO RIFLE, 308WIN, 18.6\" BBL, 5-RD, N-AD500TACBLKW",
+      "price": 1039.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://westernmetal.ca/product/mossberg-patriot-6-5-creedmoor-22-dark-earth-cerakote-n-28049/",
+      "title": "MOSSBERG PATRIOT 6.5 CREEDMOOR 22\" Dark Earth Cerakote, N-28049",
+      "price": 719.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST /wp-json/wp/v2/product honors ?after=ISO filter; future date returns x-wp-total=0, past date returns x-wp-total=7381 matching global count."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "products": "/wp-json/wc/store/v1/products",
+        "categories": "/wp-json/wc/store/v1/products/categories",
+        "wpRest": "/wp-json/wp/v2/product"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/accessories/", "allOption": 893 },
+      { "slug": "/product-category/ammunition/", "allOption": 1090 },
+      { "slug": "/product-category/babbitt/", "allOption": 4 },
+      { "slug": "/product-category/bar_solders/", "allOption": 5 },
+      { "slug": "/product-category/chronographs/", "allOption": 35 },
+      { "slug": "/product-category/consignments_used/", "allOption": 2 },
+      { "slug": "/product-category/firearm_parts/", "allOption": 254 },
+      { "slug": "/product-category/firearms/", "allOption": 2515 },
+      { "slug": "/product-category/flux_tinning_compounds/", "allOption": 2 },
+      { "slug": "/product-category/lead_wire/", "allOption": 11 },
+      { "slug": "/product-category/outdoor/", "allOption": 45 },
+      { "slug": "/product-category/reloading/", "allOption": 2423 },
+      { "slug": "/product-category/shooting/", "allOption": 1413 },
+      { "slug": "/product-category/silver_solders/", "allOption": 3 },
+      { "slug": "/product-category/solder_paste/", "allOption": 3 },
+      { "slug": "/product-category/soldering/", "allOption": 22 },
+      { "slug": "/product-category/wire_solders/", "allOption": 75 }
+    ],
+    "totalsSumCheck": "Sum of top-level allOption = 8795 vs global x-wp-total = 7381. Delta = +1414 (19% over-count) because products are cross-tagged across top-level cats; notably /shooting/ overlaps heavily with /firearms/ + /ammunition/ (every firearm listing observed carried product_cat-shooting class). Per-category page-1 walk + dedupe required to find minimum-coverage subset; not pruned in candidate to preserve 100% reachability under Rule C."
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "westernmetal.ca-2026-05-11-blind-calibration",
+    "fieldConfidence": {
+      "hasWaf": "HIGH",
+      "hasCaptcha": "HIGH",
+      "platform": "HIGH",
+      "expectedProductCount": "HIGH",
+      "catalogUrls": "MEDIUM",
+      "sortParam": "HIGH",
+      "perPage": "HIGH",
+      "paginationPattern": "HIGH",
+      "crawlers.watermark.method": "HIGH"
+    }
+  }
+}

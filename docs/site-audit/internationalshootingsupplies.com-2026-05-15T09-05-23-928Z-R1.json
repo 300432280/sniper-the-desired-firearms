@@ -1,0 +1,246 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-15T09:05:23.928Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "No CDN WAF; BulletProof Security plugin blocks SQLi/XSS payloads at app layer; honeypot paths 403 (nginx deny); rapid burst all 200; consistent timing across UAs",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "incapsulaHeaders": [],
+    "akamaiHeaders": [],
+    "serverHeaders": [
+      "nginx"
+    ],
+    "cacheHeaders": [
+      "X-Cache: HIT",
+      "X-Cache: MISS"
+    ],
+    "rapidBurstStatus": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [
+      "/.env",
+      "/.git/config",
+      "/xmlrpc.php (reset)"
+    ],
+    "botUaBlocked": false,
+    "appLayerWafPlugin": "BulletProof Security (BPS)",
+    "appLayerWafEvidence": "403 body contains \"BPS Plugin 403 Error Page\" - blocks SQLi/XSS payloads only, not normal catalog fetches"
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2314,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/product-category/parts/actions-and-action-parts/",
+    "/product-category/ammunition/airgun-ammunition/",
+    "/product-category/firearms/airguns-pal-not-required/",
+    "/product-category/firearms/airguns-pal-required/",
+    "/product-category/firearms/airsoft-guns-pal-not-required/",
+    "/product-category/shooting-accessories/ammo-storage-locking-devices/",
+    "/product-category/shooting-accessories/shooting-accessories-apparel/",
+    "/product-category/shooting-accessories/achery-accessories/",
+    "/product-category/hunting-accessories/hunting-accessories-backpacks-frames/",
+    "/product-category/shooting-accessories/bags-pouches/",
+    "/product-category/parts/barrels/",
+    "/product-category/optics/binoculars/",
+    "/product-category/shooting-accessories/bipods-adapters/",
+    "/product-category/hunting-accessories/hunting-accessories-bladed-tools/",
+    "/product-category/parts/bow-function-parts-upgrades/",
+    "/product-category/reloading-components/brass/",
+    "/product-category/shooting-accessories/buttstock-accessories/",
+    "/product-category/parts/buttstocks/",
+    "/product-category/reloading-equipment/case-cleaning-prep/",
+    "/product-category/shooting-accessories/shooting-accessories-chronographs-recording-tools/",
+    "/product-category/shooting-accessories/shooting-accessories-cleaning-supplies-consumables/",
+    "/product-category/shooting-accessories/cleaning-supplies-reusable/",
+    "/product-category/hunting-accessories/hunting-accessories-clothing-and-apparel/",
+    "/product-category/ammunition/crossbow-bolts/",
+    "/product-category/bows/crossbows/",
+    "/product-category/hunting-accessories/decoys-decoy-accessories/",
+    "/product-category/reloading-equipment/dies-die-accessories/",
+    "/product-category/novelties/electronics-protection/",
+    "/product-category/shooting-accessories/eye-protection/",
+    "/product-category/shooting-accessories/flashlights-lasers/",
+    "/product-category/shooting-accessories/forends/",
+    "/product-category/hunting-accessories/game-bags/",
+    "/product-category/hunting-accessories/game-calls/",
+    "/product-category/hunting-accessories/hunting-accessories-game-cameras-thermal-imagers/",
+    "/product-category/hunting-accessories/hunting-accessories-game-processing/",
+    "/product-category/shooting-accessories/grips/",
+    "/product-category/shooting-accessories/gun-cabinets-safes/",
+    "/product-category/shooting-accessories/gun-cases/",
+    "/product-category/shooting-accessories/gun-parts/",
+    "/product-category/shooting-accessories/gunsmithing/",
+    "/product-category/reloading-equipment/hand-tools/",
+    "/product-category/ammunition/handgun-ammo/",
+    "/product-category/shooting-accessories/hearing-protection/",
+    "/product-category/shooting-accessories/holsters/",
+    "/product-category/reloading-equipment/kits/",
+    "/product-category/parts/magazine-upgrade-parts/",
+    "/product-category/shooting-accessories/magazines-accessories/",
+    "/product-category/shooting-accessories/shooting-accessories-muzzle-devices-externally-attached/",
+    "/product-category/optics/night-vision/",
+    "/product-category/reloading-equipment/presses-accessories/",
+    "/product-category/reloading-components/primers/",
+    "/product-category/reloading-equipment/reloading-equip-projectile-production/",
+    "/product-category/reloading-components/projectiles/",
+    "/product-category/optics/range-finders/",
+    "/product-category/optics/red-dots-reflex/",
+    "/product-category/reloading-equipment/reloading-equip-reloading-component-dispensers/",
+    "/product-category/ammunition/rifle-ammo/",
+    "/product-category/optics/rifle-scopes/",
+    "/product-category/firearms/rifles/",
+    "/product-category/optics/optics-rifelscope-accessories/",
+    "/product-category/ammunition/rimfire-ammo/",
+    "/product-category/reloading-equipment/reloading-equip-scales-measures-gauges/",
+    "/product-category/optics/mounts/",
+    "/product-category/shooting-accessories/shooting-rests/",
+    "/product-category/hunting-accessories/hunting-accessories-shooting-sticks-and-tripods/",
+    "/product-category/ammunition/shotgun-ammo/",
+    "/product-category/firearms/shotguns/",
+    "/product-category/optics/sights/",
+    "/product-category/shooting-accessories/slings-sling-hardware/",
+    "/product-category/shooting-accessories/snap-caps/",
+    "/product-category/optics/spotting-scopes-and-accessories/",
+    "/product-category/parts/stock-and-chassis-systems/",
+    "/product-category/shooting-accessories/targets-accessories/",
+    "/product-category/hunting-accessories/hunting-accessories-tool-maintenance/",
+    "/product-category/parts/trigger-assemblies-and-parts/",
+    "/product-category/reloading-equipment/trimmers/",
+    "/product-category/reloading-equipment/tumblers/"
+  ],
+  "extractionTested": true,
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "wcStoreApi": "/wp-json/wc/store/v1/products",
+        "wpRestApi": "/wp-json/wp/v2/product"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-taxonomy-api",
+    "categories": [
+      {
+        "slug": "/product-category/ammunition/",
+        "allOption": 14
+      },
+      {
+        "slug": "/product-category/firearms/",
+        "allOption": 473
+      },
+      {
+        "slug": "/product-category/hunting-accessories/",
+        "allOption": 252
+      },
+      {
+        "slug": "/product-category/manufacturers/",
+        "allOption": 249
+      },
+      {
+        "slug": "/product-category/novelties/",
+        "allOption": 44
+      },
+      {
+        "slug": "/product-category/optics/",
+        "allOption": 50
+      },
+      {
+        "slug": "/product-category/parts/",
+        "allOption": 308
+      },
+      {
+        "slug": "/product-category/reloading-components/",
+        "allOption": 8
+      },
+      {
+        "slug": "/product-category/reloading-equipment/",
+        "allOption": 491
+      },
+      {
+        "slug": "/product-category/shooting-accessories/",
+        "allOption": 687
+      }
+    ],
+    "totalsSumCheck": "WC Store API global count 2314; sum of 9 productive top-level non-manuf cats 2327 (overlap 0.6%); 77 leaf catalogUrls cover 2274 = 98.3%; 40-product (1.7%) gap is parent-only-tagged products invisible via leaf walking; theme hides products on parent /product-category/X/ p1 (shows subcat tiles only), so parent URLs cannot be used as catalogUrls without triggering catalog-crawler consecutive-empty bail"
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "R1-blind-skill-run-2026-05-15",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "catalogUrls": "medium-high (98.3% coverage)",
+      "sortParam": "high",
+      "paginationPattern": "high",
+      "expectedProductCount": "high"
+    },
+    "probeIp": "<audit-host-ip; verify from production crawler IP before promotion>",
+    "notes": "Astra theme on WC 10.7.0; /shop/ aggregator returns only subcategory tiles (no products at any page); parent /product-category/X/ p1 also shows tiles only — p2+ shows products. Leaf-only catalogUrls avoid the p1-empty bail in catalog-crawler.ts:471. 40-product (1.7%) under-coverage accepted under 5% drift gate. BulletProof Security plugin is app-layer SQLi/XSS filter, not a CDN WAF.",
+    "wpRestProductTotal": 5237,
+    "wcStoreProductTotal": 2314,
+    "extractionSample": [
+      {
+        "url": "https://internationalshootingsupplies.com/product/aguila-6-5-creedmoor-140gr-fmjbt-20-round-box/",
+        "title": "Aguila 6.5 Creedmoor 140Gr FMJBT 20 Round Box",
+        "category": "/product-category/ammunition/rifle-ammo/"
+      },
+      {
+        "url": "https://internationalshootingsupplies.com/product/uberti-1894-carbine-30-30-win-20-barrel/",
+        "title": "Uberti 1894 Carbine 30-30 Win 20 Barrel",
+        "category": "/product-category/firearms/rifles/"
+      },
+      {
+        "url": "https://internationalshootingsupplies.com/product/cz-600-trail-fde-223-rem-16-barrel-m15x1-threaded-muzzle/",
+        "title": "CZ 600 Trail FDE 223 Rem 16 Barrel M15x1 Threaded Muzzle",
+        "category": "/product-category/firearms/rifles/"
+      }
+    ]
+  }
+}

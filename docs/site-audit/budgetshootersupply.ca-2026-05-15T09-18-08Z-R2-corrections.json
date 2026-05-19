@@ -1,0 +1,163 @@
+{
+  "_meta": {
+    "runId": "R2-live-investigation-2026-05-15T09-18-08Z",
+    "site": "budgetshootersupply.ca",
+    "inputs": {
+      "r1": "docs/site-audit/budgetshootersupply.ca-2026-05-15T09-08-04Z-R1.json",
+      "r1Diff": "docs/site-audit/budgetshootersupply.ca-2026-05-15T09-08-04Z-R1-diff.md",
+      "dbProfile": "MonitoredSite(budgetshootersupply.ca).siteProfile (lastVerified 2026-04-11)"
+    },
+    "methodology": "Live probe with DIFFERENT methods than R1 (curl direct, parallel WP REST + WC Store API headers, sitemap union, leaf vs parent HTML, runtime code line read)",
+    "constraints": "NO DB writes, 800ms inter-request delay respected"
+  },
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "dbValue": 2756,
+      "r1Value": 1577,
+      "proposedValue": 2809,
+      "confidence": "high",
+      "evidence": [
+        "GET /wp-json/wp/v2/product?per_page=1 -> x-wp-total: 2809 (anon, status defaults to publish)",
+        "GET /wp-json/wc/store/v1/products?per_page=1&stock_status[]=instock&stock_status[]=outofstock -> x-wp-total: 2809 (matches exactly)",
+        "Sitemap union (product-sitemap.xml + 2.xml + 3.xml) = 1001+1000+808 = 2809 (matches exactly)",
+        "WC Store API default (stock_status=instock only) = 1577 - confirms R1's denominator is in-stock-only",
+        "DB's 2756 is stale (2026-04-11); live count grew by 53 products"
+      ],
+      "rationale": "WP REST default returns all published products. Three independent counts (WP REST, WC Store API w/ combined stock filter, sitemap union) all return 2809 exactly. R1 incorrectly chose in-stock-only denominator; DB had correct semantics but stale value."
+    },
+    {
+      "field": "productCountMethod.endpoint",
+      "dbValue": "/wp-json/wp/v2/product",
+      "r1Value": "/wp-json/wc/store/v1/products",
+      "proposedValue": "/wp-json/wp/v2/product",
+      "confidence": "high",
+      "evidence": [
+        "WC Store API default filters by stock_status=instock unless combined param explicitly set, yielding wrong denominator (1577 vs 2809)",
+        "WP REST gives 2809 with zero extra params - matches sitemap union exactly",
+        "Runtime adapter at woocommerce.ts:340 uses /wp-json/wp/v2/product as primary discovery; Store API is enrichment-only (woocommerce.ts:541-565)"
+      ],
+      "rationale": "Endpoint must yield the full denominator to match crawler watermark semantics. DB endpoint is correct; R1's choice silently undercounts by 1232 OOS products."
+    },
+    {
+      "field": "hasWaf",
+      "dbValue": false,
+      "r1Value": true,
+      "proposedValue": false,
+      "confidence": "medium-high",
+      "evidence": [
+        "10-burst on /wp-json/wc/store/v1/products?page=N: all 200 (no 429/503/cf-mitigated)",
+        "Normal GET /products/ -> 200, Server: Apache (no cf-ray, x-sucuri, no waf vendor headers)",
+        "SQLi probe ?p=1' OR 1=1-- -> 403 (Apache mod_security / Wordfence rule fires)",
+        "Crawler UA 'firearm-alert/1.0' -> 200 (no UA-based blocking)",
+        "R1's wafProbeEvidence: rapidBurstStatus = [200x10], wordfenceMarkersInHtml: true, sqliRuleFired: true",
+        "Wordfence is INSTALLED (CSS/JS/login-security plugin), but the rule pack does NOT fire on crawler URL space"
+      ],
+      "rationale": "Operationally, the WAF does not block the crawler. hasWaf=true triggers Playwright + extra cookies for every fetch (watermark-crawler.ts:79 hasWaf branch + woocommerce.ts:343 timeout=30000), which is wasted overhead. R1's defensive 'when unsure set true' is the wrong call when the operational reality is clean. DB's false matches runtime behavior."
+    },
+    {
+      "field": "wafType",
+      "dbValue": null,
+      "r1Value": "wordfence",
+      "proposedValue": null,
+      "confidence": "high",
+      "evidence": [
+        "Downstream of hasWaf=false. Schema convention: leave wafType unset when hasWaf=false."
+      ],
+      "rationale": "Wordfence is installed but not operational against the crawler. Recording wafType while hasWaf=false confuses the runtime. Match DB."
+    },
+    {
+      "field": "catalogUrls",
+      "dbValue": ["/products/"],
+      "r1Value": "<167 leaf URLs>",
+      "proposedValue": ["/products/"],
+      "confidence": "high",
+      "evidence": [
+        "Runtime catalog-crawler.ts:299-353 - when apiCrawlUsed && productsFound>0, HTML branch is skipped entirely.",
+        "WooCommerce adapter uses /wp-json/wp/v2/product for full catalog (woocommerce.ts:340), not catalogUrls.",
+        "catalogUrls is only consulted at catalog-crawler.ts:358 (`if (!apiCrawlUsed && adapter.extractCatalogProducts)`) - never reached for this site since WP REST returns 2809 products on every call.",
+        "GET /products/ returns 5 distinct product URLs (Woodmart AJAX widget) - would be a poor crawl source even if it ran.",
+        "GET /product-category/ammunition/centerfire-pistol-ammunition/ returns 27 distinct product URLs (server-rendered) - confirms R1's leaf approach WOULD work as HTML fallback, but is not needed since API is the runtime path."
+      ],
+      "rationale": "DB's ['/products/'] is intentionally a placeholder. The API-only path is the runtime mode for this site. R1's 167 leaf URLs are correct for an HTML fallback scenario but represent wasted index work for a site whose runtime crawl uses WP REST. Match DB."
+    },
+    {
+      "field": "paginationPattern.type",
+      "dbValue": "api-page",
+      "r1Value": "path",
+      "proposedValue": "api-page",
+      "confidence": "high",
+      "evidence": [
+        "Downstream of catalogUrls correction - runtime walks WP REST via ?page=N, not HTML /page/{N}/.",
+        "buildPaginatedUrl at catalog-crawler.ts:118-166 only recognizes 'path' | 'suffix-replace' | 'offset-query'; 'api-page' falls through to default `url.searchParams.set('page', N)` which is the correct API pagination form.",
+        "Although /products/page/2/ works (200 OK live test), it would only matter in the never-reached HTML branch."
+      ],
+      "rationale": "Match DB's api-page semantics for runtime correctness."
+    },
+    {
+      "field": "paginationPattern.template",
+      "dbValue": "page={N}",
+      "r1Value": "/page/{N}/",
+      "proposedValue": "page={N}",
+      "confidence": "high",
+      "evidence": [
+        "Downstream of paginationPattern.type correction"
+      ],
+      "rationale": "Match DB."
+    },
+    {
+      "field": "apiDateFilter.param",
+      "dbValue": "modified_after",
+      "r1Value": "(not in candidate schema)",
+      "proposedValue": "modified_after",
+      "confidence": "high",
+      "evidence": [
+        "woocommerce.ts:337 - `if (options?.dateAfter) params.modified_after = options.dateAfter;` (verbatim read 2026-05-15).",
+        "woocommerce.ts:333 - orderby toggles 'modified' when date filter present.",
+        "Live monotonicity test: modified_after=2026-05-01 -> 444; 2026-05-10 -> 196; 2026-05-14 -> 22. Monotonic.",
+        "after=2026-04-01 -> 78 vs modified_after=2026-04-01 -> 1068. Different semantics (publish-date vs modified-date). modified_after is what the crawler uses."
+      ],
+      "rationale": "Re-verified the hardcode at woocommerce.ts:337. DB profile field correct."
+    },
+    {
+      "field": "searchUrl",
+      "dbValue": "?s={keyword}&post_type=product",
+      "r1Value": "(omitted)",
+      "proposedValue": "/?s={keyword}&post_type=product",
+      "confidence": "medium",
+      "evidence": [
+        "DB profile carries this field; R1 omitted it. Skill Stage 3 mentions searchUrl is optional."
+      ],
+      "rationale": "Preserve DB value; R1 should have included it."
+    },
+    {
+      "field": "topLevelCategories",
+      "dbValue": "(omitted)",
+      "r1Value": "<21 categories>",
+      "proposedValue": "<keep R1's structure but note unused at runtime>",
+      "confidence": "medium",
+      "evidence": [
+        "DB profile does not carry topLevelCategories. Runtime does not consult it for API-only crawl."
+      ],
+      "rationale": "Informational only; R1's discovery is valid but unused at runtime."
+    }
+  ],
+  "fieldsMatchingDb": [
+    "platform: woocommerce",
+    "adapterType: woocommerce",
+    "hasCaptcha: false",
+    "needsPlaywright: false",
+    "perPage: 100",
+    "sortParam: ?orderby=date",
+    "sortVerified: true",
+    "crawlers.watermark.method: api-date-since-watermark",
+    "crawlers.maintain.verifyMethod: store-api",
+    "crawlers.maintain.verifyEndpoint: /wp-json/wc/store/v1/products"
+  ],
+  "summary": {
+    "totalDivergentFieldsInR1Diff": 7,
+    "materialCorrectionsProposed": 7,
+    "directionVsR1": "majority-favor-DB",
+    "directionVsDb": "expectedProductCount stale (2756 -> 2809); semantics correct"
+  }
+}

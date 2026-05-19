@@ -1,0 +1,198 @@
+{
+  "round": "R2",
+  "site": "pavillonchassepeche.ca",
+  "investigatedAt": "2026-05-15T09:20:44Z",
+  "method": "live HTTP/curl + DB siteProfile diff + worker.ts:381-400 line-by-line",
+  "corrections": [
+    {
+      "field": "url (MonitoredSite.url, NOT in siteProfile)",
+      "r1": "(unset — implicit FR apex)",
+      "db": "https://pavillonchassepeche.ca/en/",
+      "r2_verdict": "OPERATOR_CHOICE",
+      "confidence": "high",
+      "evidence": [
+        "curl HEAD on apex (with and without Accept-Language) -> 200 https://pavillonchassepeche.ca/ (no redirect)",
+        "<html lang=\"fr-FR\"> on apex, <html lang=\"en-US\"> on /en/",
+        "Both trees self-canonical (own rel=canonical); hreflang x-default=FR (site-default)",
+        "DB operator picked /en/ as runtime tree (an explicit operator choice, not what the homepage redirects to)"
+      ],
+      "rule": "WPML sites expose two co-equal trees. Site-canonical (x-default) = FR. Operator runtime choice = EN. Skill should record `multilingual: \"wpml\"` and surface both trees; either is valid as runtime root."
+    },
+    {
+      "field": "catalogUrls",
+      "r1": ["/categorie-produit/chasse/", "/categorie-produit/liquidation/", "/categorie-produit/salines/"],
+      "db": ["/en/product-category/hunting-en-6/", "/en/product-category/liquidation-en/", "/en/product-category/fishing/", "/en/product-category/clothing/", "/en/product-category/outdoors-en-4/", "/en/product-category/saltworks/"],
+      "r2_verdict": "DB_CORRECT",
+      "confidence": "high",
+      "evidence": [
+        "Verified all 6 DB EN catalogUrls return HTTP 200",
+        "WP REST /wp/v2/product_cat parent=0 enumerates 7 FR top-levels: liquidation/chasse/peche/vetements/plein-air/salines/tirage (sum count = 1500 incl. drafts)",
+        "Sampled product slugs in /peche/ /vetements/ /plein-air/ — ZERO firearm content (boots, rods, propane heaters)",
+        "feedback_full_coverage.md / CLAUDE.md require 100% coverage on retail sites — Rule C 'firearm-relevant only' is OVERRIDDEN by full-coverage on retailer sites",
+        "DB includes fishing/clothing/outdoors (per full-coverage); R1 excluded them (per Rule C). Full-coverage wins."
+      ],
+      "rule": "On retailer sites, catalogUrls MUST include all top-level product categories regardless of firearm-relevance. Scope filtering happens at runtime keyword match, not at crawl-target selection."
+    },
+    {
+      "field": "expectedProductCount",
+      "r1": 1243,
+      "db": 1318,
+      "r2_verdict": "R1_CORRECT_AS_OF_TODAY (DB stale)",
+      "confidence": "high",
+      "evidence": [
+        "Live WC Store API /wp-json/wc/store/v1/products x-wp-total = 1243",
+        "Live WP REST /wp-json/wp/v2/product x-wp-total = 1253 (FR) / 1260 (EN)",
+        "DB's 1318 matches no live endpoint — DB is stale (lastVerified 2026-04-12 per R1 diff)",
+        "DB pcm stores additional totals: wpRestTotal=1318, enScopeTotal=1318, storeApiTotal=1291, rootScopeTotal=1311 — none match today's live values"
+      ],
+      "rule": "Re-derive on every audit. DB residual numbers are audit-trail not ground truth."
+    },
+    {
+      "field": "productCountMethod.endpoint",
+      "r1": "/wp-json/wc/store/v1/products",
+      "db": "/wp-json/wp/v2/product",
+      "r2_verdict": "OPERATOR_CHOICE",
+      "confidence": "medium",
+      "evidence": [
+        "Both endpoints expose x-wp-total in headers and both work",
+        "Operator chose admin WP REST (1318/1253) — includes drafts/hidden",
+        "R1 chose customer-visible Store API (1243) — excludes drafts",
+        "DB stores BOTH counts in pcm extras (audit trail)"
+      ],
+      "rule": "Either endpoint is valid for product-count probe. Operator chose admin-visible total which is wider (correctly includes hidden inventory the customer Store API hides)."
+    },
+    {
+      "field": "perPage (top-level)",
+      "r1": 36,
+      "db": 100,
+      "r2_verdict": "DB_CORRECT for API-first bootstrap path",
+      "confidence": "high",
+      "evidence": [
+        "Live curl: /wp-json/wc/store/v1/products?per_page=100 -> 200, 13 pages — API perPage = 100",
+        "Live curl: /magasiner/?per_page=72 returns 36 product cards (Elementor archive widget locks HTML at 36)",
+        "Live curl: /magasiner/?posts_per_page=72 still returns 36 cards",
+        "Live curl: /en/shop/?per_page=72 still returns 36 cards",
+        "R1's 36 is the HTML fallback perPage; DB's 100 is the API bootstrap perPage. They are NOT alternatives — they describe DIFFERENT crawl paths."
+      ],
+      "rule": "When `crawlers.bootstrap.htmlFallback: true` and the bootstrap path is API-first, top-level perPage records the API perPage. paginationPattern.perPage records the HTML fallback perPage (when needed)."
+    },
+    {
+      "field": "paginationPattern.perPage",
+      "r1": 36,
+      "db": "(omitted)",
+      "r2_verdict": "R1_CORRECT for HTML fallback path",
+      "confidence": "high",
+      "evidence": [
+        "Same HTML perPage evidence above — 36 is the locked Elementor widget value",
+        "DB doesn't store it because the runtime path is API-first; HTML fallback is only used if Store API fails"
+      ],
+      "rule": "Store HTML perPage in paginationPattern.perPage even if API is primary — needed for fallback walks."
+    },
+    {
+      "field": "crawlers.maintain.verifyMethod",
+      "r1": "store-api",
+      "db": "json-ld",
+      "r2_verdict": "DB_CORRECT (json-ld IS routed, not dead code)",
+      "confidence": "high",
+      "evidence": [
+        "worker.ts:397 literal: `if (!maintainConfig || maintainConfig.verifyMethod !== 'store-api') return null;` — non-'store-api' values skip the fast-path",
+        "worker.ts:759-769 ELSE BRANCH: `const verifyMethod = entry?.siteProfile?.crawlers?.maintain?.verifyMethod;` then `if (!verifyMethod) { ...skip... } ` then UNCONDITIONALLY calls `verifyProductsViaPlaywright(products, ...)`",
+        "Line 768 comment says `// verifyMethod === 'detail-page' — visit each product URL via Playwright` but the code gates only on `!verifyMethod` (line 764). ANY non-null verifyMethod (including 'json-ld') triggers Playwright detail-page verification.",
+        "Prior batch R2 was WRONG: 'json-ld' is NOT dead code. It is a routed value that means 'don't use Store API fast-path; verify via Playwright detail-page JSON-LD scraping instead.'",
+        "Operator chose json-ld likely because Store API verify by product ID failed at scale on this site, OR because per-product JSON-LD detail scraping gives more reliable stock-status than batch Store API."
+      ],
+      "rule": "verifyMethod is a 3-way switch (store-api / json-ld / detail-page) but the code currently treats it as a 2-way: 'store-api' uses fast-path; anything else uses Playwright. The 'json-ld' vs 'detail-page' distinction is a hint to verifyProduct (in product-verifier.ts) — investigate separately."
+    },
+    {
+      "field": "crawlers.maintain.verifyEndpoint",
+      "r1": "/wp-json/wc/store/v1/products",
+      "db": "(omitted)",
+      "r2_verdict": "DB_CORRECT (json-ld doesn't need an endpoint — it scrapes detail pages)",
+      "confidence": "high",
+      "evidence": [
+        "Follows from verifyMethod: json-ld reads product detail-page HTML; no API endpoint required"
+      ]
+    },
+    {
+      "field": "crawlers.bootstrap.apiEndpoints",
+      "r1": {"products": "/wp-json/wc/store/v1/products", "categories": "/wp-json/wp/v2/product_cat"},
+      "db": {"priceEnrichment": "/wp-json/wc/store/v1/products", "productDiscovery": "/wp-json/wp/v2/product"},
+      "r2_verdict": "DB_CORRECT (encodes 2-step pipeline)",
+      "confidence": "high",
+      "evidence": [
+        "DB encodes the actual bootstrap pipeline: WP REST /wp/v2/product for discovery (returns 1253 IDs/slugs/dates), then WC Store API /products for price+stock enrichment",
+        "R1 used skill template keys (products/categories) which don't represent the 2-step flow",
+        "Sensible: WP REST returns id+slug+date+title without price; Store API returns price+stock by ID"
+      ],
+      "rule": "Skill template's flat `{products, categories}` shape is wrong for sites that split discovery vs enrichment. Use `{productDiscovery, priceEnrichment}` for WC sites where the WP REST product endpoint is open."
+    },
+    {
+      "field": "multilingual",
+      "r1": "(unset)",
+      "db": "wpml",
+      "r2_verdict": "DB_CORRECT",
+      "confidence": "high",
+      "evidence": [
+        "<meta name=\"generator\" content=\"WPML ver:4.8.6 stt:1,4;\" /> on apex",
+        "wpml-cookie-js + wpml-ls-* classes throughout DOM",
+        "wp-content/plugins/sitepress-multilingual-cms/ asset paths"
+      ],
+      "rule": "Skill should add Stage-3 WPML detection: search HTML for `WPML ver:` generator meta or `sitepress-multilingual-cms` asset path. Emit `multilingual: \"wpml\"`."
+    },
+    {
+      "field": "crawlers.bootstrap.htmlFallback",
+      "r1": "(unset)",
+      "db": true,
+      "r2_verdict": "DB_CORRECT (operator runtime hint)",
+      "confidence": "medium",
+      "evidence": [
+        "Schema field used by catalog-crawler.ts to enable HTML walk when API fails",
+        "R1 omitted because skill template doesn't include it; not derivable from probe alone"
+      ]
+    },
+    {
+      "field": "crawlers.bootstrap.method",
+      "r1": "(unset)",
+      "db": "single-continuous",
+      "r2_verdict": "DB_CORRECT (scheduler hint)",
+      "confidence": "medium",
+      "evidence": [
+        "Scheduler runtime field, not a skill output. Operator-managed."
+      ]
+    },
+    {
+      "field": "crawlers.maintain.method / cooldowns / tierShares / tierWindows",
+      "r1": "(unset)",
+      "db": "populated runtime tuning",
+      "r2_verdict": "DB_CORRECT (operator-managed scheduler config)",
+      "confidence": "high",
+      "evidence": [
+        "Standard t2/t3/t4 cooldown + share config; not derivable from probe."
+      ]
+    }
+  ],
+  "skillGaps": [
+    "WPML detection missing — should be Stage 3 marker check",
+    "verifyMethod hardcoded as 'store-api' for woocommerce — should run a maintain-verify probe (test Store API at scale + check for detail-page JSON-LD) and choose accordingly. Don't assume.",
+    "Rule C 'firearm-relevant scope' contradicts feedback_full_coverage.md on retailer sites. Skill must defer to full-coverage rule when siteCategory is retailer.",
+    "Skill flat apiEndpoints {products, categories} doesn't capture 2-step discovery/enrichment pipeline. Add {productDiscovery, priceEnrichment, categories} shape.",
+    "perPage vs paginationPattern.perPage semantics: skill conflates the API perPage and HTML fallback perPage. Should emit both."
+  ],
+  "siteSpecificContradictions": {
+    "verifyMethodDeadCode": {
+      "claim": "Prior R2 said 'json-ld' is unreachable dead code",
+      "verdict": "FALSE — worker.ts:381-400 only routes the 'store-api' literal to the fast-path; ANYTHING ELSE (including null, undefined, 'json-ld', 'detail-page') falls through to the else branch at line 759-769, which checks `if (!verifyMethod) skip; else run Playwright`. So 'json-ld' is a non-null value that routes to Playwright per-product verification.",
+      "evidence": "worker.ts:397 literal-equality check `!== 'store-api'`; worker.ts:764 `if (!verifyMethod)` gates only on null/undefined; worker.ts:769 unconditional `verifyProductsViaPlaywright(products, ...)`"
+    },
+    "wpmlCanonical": {
+      "claim": "What is the canonical language?",
+      "verdict": "Two co-equal trees. Site-default (x-default hreflang) = FR. Operator runtime choice (DB) = EN. Both valid.",
+      "evidence": "curl HEAD apex with EN and FR Accept-Language headers — neither redirects. FR and EN URLs each carry their own self-canonical link."
+    },
+    "ruleCvsFullCoverage": {
+      "claim": "Rule C 'firearm-only' vs feedback_full_coverage.md '100% coverage'",
+      "verdict": "Full-coverage WINS on retailer sites. CLAUDE.md and feedback_full_coverage.md are authoritative; Rule C in SKILL.md is wrong on retailer sites with mixed inventory.",
+      "evidence": "DB siteCategory='retailer' + DB catalogUrls includes fishing/clothing/outdoors despite zero firearm content. Operator explicitly accepted the coverage cost over scope-filtering."
+    }
+  }
+}

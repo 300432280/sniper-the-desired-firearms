@@ -1,0 +1,137 @@
+{
+  "profileVersion": 1,
+
+  "platform": "wix-thunderbolt",
+  "adapterType": "generic-retail",
+
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-12T06:22:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200 OK; no cf-ray, no x-sucuri-id, no Incapsula cookies, no MalCare/Wordfence body markers, no sgcaptcha meta-refresh. Honeypot paths return uniform Wix 400/404 default error (2204 bytes) - origin app rejection, not WAF challenge. SQLi/XSS payloads return 200 same as default. Rapid 10-burst all 200 with consistent timing. server: Pepyaka (Wix edge); set-cookie: ssr-caching, sec-fetch-unsupported (Wix Thunderbolt markers). HIGH confidence hasWaf=false.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "wixEdge": "server: Pepyaka; set-cookie: ssr-caching/sec-fetch-unsupported"
+  },
+
+  "hasCaptcha": false,
+  "captchaType": null,
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 158,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "https://www.surplusherbys.com/store-products-sitemap.xml"
+  },
+
+  "catalogUrls": [
+    "https://www.surplusherbys.com/shop"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.surplusherbys.com/product-page/bushpro-hip-pad-replacement",
+      "title": "Bushpro Hip Pad Replacement",
+      "price": 32.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.surplusherbys.com/product-page/roma-300-se",
+      "title": "Roma 300 SE",
+      "price": 130.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.surplusherbys.com/product-page/folding-camp-grill",
+      "title": "Folding Camp Grill",
+      "price": 38.95,
+      "stockStatus": "in_stock"
+    }
+  ],
+
+  "sortParam": null,
+  "sortVerified": false,
+
+  "perPage": 20,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 20,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "Wix Stores HTML sort is NOOP: ?sort=newest and ?sort=name_asc both return byte-identical first products to default /shop (3-outcome counter-control on cache-busted URLs). No public Wix Stores REST/JSON API exposed in static HTML for date-filtered queries (internal GraphQL requires authenticated tokens). Sitemap lastmod is mixed 2020-2023 and NOT newest-first ordered. No reliable independent newest-first signal to drive navigate-from-watermark. Catalog is small (158 products = 8 pages at perPage=20), so full-catalog-sweep is cheap. Mistake 27 reaffirmed: Wix uses ONLY /shop with ?page=N; sub-category paths are custom Wix pages without product grids."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "homepage-nav + /shop probe",
+    "categories": [
+      { "slug": "/shop", "allOption": 158 }
+    ],
+    "totalsSumCheck": "Wix Stores on this site exposes no /category/<slug> URLs and no per-category filtered /shop variants in static HTML. Homepage nav links (/hunting, /fishing, /clothing, /hardware, /departments) all return 0 products - they are custom Wix CMS pages, not Wix Stores categories. /shop is the single catalog spine (158 walked-unique slugs across 8 pages of perPage=20, exactly matching sitemap <loc> count of 158)."
+  },
+
+  "lastVerified": "2026-05-12",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-12-blind-round1",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "expectedProductCount": "verified-walk-equals-sitemap",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified-via-full-walk",
+      "paginationPattern": "verified-zero-overlap",
+      "perPage": "verified-via-slug-dedup",
+      "sortParam": "verified-noop-via-counter-control",
+      "extractionTested": "verified",
+      "watermarkMethod": "derived-from-noop-sort-and-small-catalog",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1: apex surplusherbys.com 301 -> https://www.surplusherbys.com (1 redirect, 200). canonicalOrigin = https://www.surplusherbys.com.",
+      "Stage 2: 8/8 batches 200. server: Pepyaka (Wix edge), no cf-ray/x-sucuri/Incapsula/MalCare/Wordfence/sgcaptcha markers in any batch headers or body. Honeypot paths return uniform 2204-byte Wix 400/404 default page (not WAF challenge). No recaptcha/hcaptcha/turnstile script tags on homepage. hasWaf=false, hasCaptcha=false.",
+      "Stage 3: <meta name=\"generator\" content=\"Wix.com Website Builder\"/> + 61 thunderbolt/parastorage references + wixstores-client-product-page bundle references => platform=wix-thunderbolt. adapterType=generic-retail (Wix served via generic-retail.ts selectors). No age-gate UI found (homepage 'Birthdate' string is a Thunderbolt feature flag spec, not a form field). maintain.verifyMethod=detail-page (Wix Stores has no public REST product API).",
+      "Stage 4: Homepage nav exposes 18 internal paths (/shop, /departments, /hunting, /fishing, /camping-1, /clothing, /hardware, /seasonal, /on-sale, /sales-flyers, /liquidation, /herb-s-products, /foam-shop, /fishing-dept, /tree-planting-1, /locations, /page3). Probed /shop, /hunting, /departments; only /shop renders product cards (40 product-item-name duplicates = 20 unique slugs on page 1). /hunting, /departments, etc. return 0 products via plain HTTP (custom Wix CMS pages, not Wix Stores categories). Per Mistake 27 the catalog spine is /shop alone. extractionTested=true (3 samples on page 1 produced full title/url/price/stockStatus).",
+      "Stage 5: /shop?page=2 first product 'Propane Adapter' completely differs from /shop?page=1 first product 'Bushpro Hip Pad Replacement' -> zero-overlap pagination confirmed. Walked pages 1-8: 40/40/40/40/40/40/40/36 product-item-name occurrences = 316 raw, BUT slug-dedup per page = 20/20/20/20/20/20/20/18 = 158 unique slugs (each card renders name twice for mobile+desktop layouts). True perPage = 20 (slug-based), not 40 (name-tag-based). Pages 9, 10, 15, 20, 100 all return 0 products = pagination terminates cleanly. paginationPattern = {type:'query', template:'page', perPage:20, firstPageHasParam:false, startPage:1, zeroIndexed:false}.",
+      "Stage 6: No <select name|id|class*='sort'> in static HTML (Wix Stores sort UI is JS-rendered). Probed common Wix sort param names: ?sort=newest and counter-control ?sort=name_asc both return byte-identical first 10 product slugs to default /shop (cache-busted with _=<ts>). 3-outcome counter-control verdict = NOOP. sortParam=null, sortVerified=false.",
+      "Stage 7: Sort is NOOP (Stage 6); Wix Stores has no public REST product list with date filter; sitemap lastmod (2020-2023 mixed) is not newest-first ordered. No independent newest-first signal to drive navigate-from-watermark. Falls to method='full-catalog-sweep' with reason. Cost is low: 158 products / perPage=20 = 8 pages = ~8 sequential GETs per sweep cycle.",
+      "Stage 8: store-products-sitemap.xml returns 158 <loc> entries. Independent /shop walk (pages 1-8, slug-dedup) returns 158 unique slugs. Walk exactly equals sitemap count -> productCountMethod={method:'sitemap', url:'.../store-products-sitemap.xml'}, expectedProductCount=158. No discrepancy requiring html-pagination fallback.",
+      "Stage 9: validator pending. 9 required fields all populated; ageGate.bypassCookie=null (no gate); ecwidStoreId omitted (not Ecwid); classifiedRules omitted (not classifieds adapter)."
+    ]
+  }
+}

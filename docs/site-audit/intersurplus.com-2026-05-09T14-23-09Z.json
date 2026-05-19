@@ -1,0 +1,192 @@
+{
+  "profileVersion": 1,
+  "platform": "shopify",
+  "adapterType": "shopify",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-09T14:10:16Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare passive — cf-ray on every batch, all 200s on the catalog/home/sitemap, no challenges fired. Honeypot/SQLi/XSS payloads silently absorbed by Shopify routing. Batch 8 (no-UA) returned 403/4515b which is Cloudflare's standard reject-empty-UA reflex; Shopify's normal traffic uses a UA so this does not affect crawls.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray on home, robots.txt, sitemap.xml, all desktop+mobile+bot+curl probes"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 200 OK",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": "/wp-admin /wp-login.php /xmlrpc.php /.git/config /phpinfo.php → 404; /.env → 200 (Shopify routes unknown paths to homepage)",
+    "botUaBlocked": false,
+    "noUaStatus": 403,
+    "noUaBodyBytes": 4515,
+    "serverHeader": "cloudflare",
+    "poweredBy": "Shopify"
+  },
+  "hasCaptcha": true,
+  "captchaType": "hcaptcha",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3157,
+  "productCountMethod": "shopify-products-walk",
+  "catalogUrls": [
+    "/collections/firearms",
+    "/collections/ammunitions",
+    "/collections/bayonets",
+    "/collections/all-arms-accessories",
+    "/collections/all-military-surplus",
+    "/collections/reloading-components",
+    "/collections/manuals-stickers",
+    "/collections/hunting-accessories",
+    "/collections/flare-guns",
+    "/collections/stripped-receiver",
+    "/collections/combination-combo-barrels",
+    "/collections/pistol-barrels",
+    "/collections/riffle-barrels",
+    "/collections/shotgun-barrels",
+    "/collections/husqvarna-1600-parts",
+    "/collections/lee-enfield-parts",
+    "/collections/m96-parts",
+    "/collections/m98-parts",
+    "/collections/magazine",
+    "/collections/stock",
+    "/collections/cleaning-kit",
+    "/collections/gun-cases",
+    "/collections/holsters",
+    "/collections/insert",
+    "/collections/scopes",
+    "/collections/slings-bipods-grips",
+    "/collections/reloading-brass",
+    "/collections/brass-one-fired",
+    "/collections/bullets",
+    "/collections/reloading-kit",
+    "/collections/gift-card"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://intersurplus.com/products/copy-of-charles-daly-301-12ga-3-pump-shotgun-black-18-5",
+      "title": "Stevens Pump Shotgun 12 GA",
+      "price": 349.00,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://intersurplus.com/products/carl-gustaf-80-in-6-5x55-6",
+      "title": "Carl Gustaf 80 in 6.5x55",
+      "price": 595.00,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://intersurplus.com/products/cz-452-em-in-22lr",
+      "title": "CZ 452-EM in 22LR",
+      "price": 495.00,
+      "stockStatus": "out_of_stock"
+    }
+  ],
+  "sortParam": "?sort_by=created-descending",
+  "sortVerified": true,
+  "perPage": 32,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 32,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Shopify global /products.json default order is published_at DESC (verified: husqvarna-1640-fullstock created 2026-02-24 but published 2026-05-07 appears at position 2 ahead of older-published items — confirms Mistake 32 published_at not created_at). Storefront sort ?sort_by=created-descending is honored on /collections/* pages (counter-control proven: default firearms first product copy-of-charles-daly differs from sort=created-descending first product sauer-s100 AND differs from counter-control sort=title-ascending first product a-allan-sxs). No Shopify storefront API exposes a published_at_min filter, so this is navigate-from-watermark, not api-date-since-watermark."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productsJson": "/products.json?limit=250&page={N}",
+        "collectionProducts": "/collections/{handle}/products.json?limit=250&page={N}",
+        "collectionsList": "/collections.json?limit=250"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav + collections.json + sitemap cross-check",
+    "categories": [
+      { "slug": "/collections/firearms", "allOption": 2235 },
+      { "slug": "/collections/ammunitions", "allOption": 110 },
+      { "slug": "/collections/bayonets", "allOption": 1 },
+      { "slug": "/collections/all-arms-accessories", "allOption": 191 },
+      { "slug": "/collections/all-military-surplus", "allOption": 11 },
+      { "slug": "/collections/reloading-components", "allOption": 320 },
+      { "slug": "/collections/manuals-stickers", "allOption": 37 },
+      { "slug": "/collections/hunting-accessories", "allOption": 17 },
+      { "slug": "/collections/flare-guns", "allOption": 6 },
+      { "slug": "/collections/stripped-receiver", "allOption": 8 },
+      { "slug": "/collections/combination-combo-barrels", "allOption": 10 },
+      { "slug": "/collections/pistol-barrels", "allOption": 7 },
+      { "slug": "/collections/riffle-barrels", "allOption": 3 },
+      { "slug": "/collections/shotgun-barrels", "allOption": 85 },
+      { "slug": "/collections/husqvarna-1600-parts", "allOption": 10 },
+      { "slug": "/collections/lee-enfield-parts", "allOption": 2 },
+      { "slug": "/collections/m96-parts", "allOption": 30 },
+      { "slug": "/collections/m98-parts", "allOption": 33 },
+      { "slug": "/collections/magazine", "allOption": 18 },
+      { "slug": "/collections/stock", "allOption": 11 },
+      { "slug": "/collections/cleaning-kit", "allOption": 86 },
+      { "slug": "/collections/gun-cases", "allOption": 5 },
+      { "slug": "/collections/holsters", "allOption": 0 },
+      { "slug": "/collections/insert", "allOption": 3 },
+      { "slug": "/collections/scopes", "allOption": 92 },
+      { "slug": "/collections/slings-bipods-grips", "allOption": 7 },
+      { "slug": "/collections/reloading-brass", "allOption": 92 },
+      { "slug": "/collections/brass-one-fired", "allOption": 2 },
+      { "slug": "/collections/bullets", "allOption": 152 },
+      { "slug": "/collections/reloading-kit", "allOption": 76 },
+      { "slug": "/collections/gift-card", "allOption": 1 }
+    ],
+    "totalsSumCheck": "Sum of per-category counts = 3,669. Walked union of 31 collections = 3,143 unique. Global /products.json walk = 3,157. Coverage = 99.6% (14 products missing from per-category union — merchant-side tagging gap, e.g. /products/1911-auto-magazine has product_type Magazines but is not in /collections/magazine which targets Magazine singular). Cross-category overlap inside the union ~14.1% (517 products tagged in 2+ collections, typical for Shopify smart-collection model where caliber-level subcategories sit beneath /collections/firearms). Within the skill's 5% drift gate."
+  },
+  "lastVerified": "2026-05-09",
+  "auditNotes": {
+    "runId": "calibration-2026-05-09T14-23-09Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "calibrationMode": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "adapterType": "verified",
+      "hasWaf": "verified",
+      "wafType": "verified",
+      "hasCaptcha": "verified",
+      "captchaType": "verified",
+      "ageGate": "verified",
+      "needsPlaywright": "verified",
+      "expectedProductCount": "verified",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified-with-coverage-99.6pct",
+      "paginationPattern": "verified",
+      "perPage": "verified",
+      "sortParam": "verified-via-counter-control",
+      "sortVerified": "verified",
+      "watermarkMethod": "verified",
+      "maintainVerifyMethod": "derived-from-platform",
+      "extractionTested": "verified"
+    },
+    "stageNotes": [
+      "Stage 1 (Canonical URL): apex 200, www 301 -> apex (Shopify canonical_host_redirection x-redirect-reason header), <link rel=canonical href=https://intersurplus.com/> agrees -> canonicalOrigin = https://intersurplus.com.",
+      "Stage 2 (WAF + CAPTCHA): 8-batch probe — Cloudflare passive (cf-ray on every batch, all 200), Shopify origin (powered-by + cdn.shopify), no challenge body markers, no Sucuri/Incapsula/Akamai/MalCare. Batch 8 no-UA returned 403/4515b — Cloudflare standard, not site-specific. CAPTCHA: hCaptcha bootstrap script present (captcha-bootstrap inline JS targeting contact/account forms) -> hasCaptcha=true, captchaType=hcaptcha. CAPTCHA gates form submission, NOT catalog browsing — does not block crawl.",
+      "Stage 3 (Platform): Shopify confirmed by Shopify.shop = survivalsurplus-ca.myshopify.com, cdn.shopify.com, _shopify_* cookies, powered-by: Shopify header. Theme = Debut. adapterType=shopify. No age-gate detected in homepage HTML. Maintain verifyMethod=detail-page (Shopify Admin API requires auth; storefront fallback is per-page Playwright).",
+      "Stage 4 (Catalog URLs): /collections.json returned 111 collections; homepage nav exposes 68 /collections/* links across an Ammunition link, Bayonets link, and a Firearms mega-dropdown plus secondary groupings. After dropping aggregators (/collections/all, /collections/all-firearms — 100% subset of /collections/firearms; /collections/fire-arms — 30-06 caliber masquerading as parent) and caliber-level subcategories (those nest under /collections/ammunitions and /collections/firearms), 31 leaf or mid-level collections selected. Coverage walk: union of 31 = 3143 of 3157 (99.6%); 14 missing are merchant-side tagging artifacts (econo-bundles, 1911-auto-magazine product_type Magazines vs /collections/magazine Magazine). Within the 5% gate.",
+      "Stage 4g (Extraction quality): 3 products sampled from /collections/firearms page 1 (positions 0, 16, 31 of 32 cards). All four fields populated for each: title (real product names — Stevens Pump Shotgun, Carl Gustaf 80, CZ 452-EM), absolute URL, price (numeric), stockStatus (all 3 sold-out — high out-of-stock rate is normal for this surplus retailer). Sample URLs verified GET 200.",
+      "Stage 5 (Pagination): /collections/firearms page 1 returns 32 products. Tested ?page=2 -> 32 different products, zero-overlap with page 1. type=query, template=page, firstPageHasParam=false (page 1 is bare URL), startPage=1, zeroIndexed=false. perPage=32 from the default storefront grid (Shopify Debut theme).",
+      "Stage 6 (Sort): <select name=sort_by id=SortBy> exposed 9 standard Shopify options (manual, most-relevant, best-selling, title-asc/desc, price-asc/desc, created-asc/desc). 3-outcome counter-control test on /collections/firearms: default first 3 (copy-of-charles-daly, baikal-ij-26e, squires-bingham) ne sort=created-descending first 3 (sauer-s100, fabarm-o-u, lincoln-premier) ne sort=title-ascending first 3 (a-allan-sxs, copy-of-charles-lancaster, a-e-bayliss). Both differ from default -> sort honored. sortParam=?sort_by=created-descending. Note Mistake 32: Shopify storefront created-descending actually orders by published_at (verified: /products.json default order has husqvarna-1640 created 2026-02-24 but published 2026-05-07 appearing at position 2). The runtime crawler should treat created-descending as the published_at ordering.",
+      "Stage 7 (Watermark): Method B (navigate-from-watermark). Sort honored upstream (Stage 6). Date source available via product.published_at on every /products.json item AND on every /collections/<h>/products.json item. Method A (api-date-since-watermark) is NOT available because Shopify storefront /products.json does not accept ?published_at_min= or any date-since filter. The crawler must paginate /products.json?limit=250&page=N newest-first to find the watermark, then walk back to index new products.",
+      "Stage 8 (Product count): /products.json walk returned 13 pages x 250 (last page partial) = 3,157 unique products. productCountMethod=shopify-products-walk (canonical for Shopify per harness order #3). /products/count.json not tested but skill notes it usually 401s on storefront.",
+      "Stage 9 (Assembly): all 9 required validator fields present; 7 recommended fields present (sortParam, sortVerified, perPage, paginationPattern, crawlers.*, topLevelCategories, lastVerified). One judgment call to flag for operator: catalogUrls coverage is 99.6% (14 products short of global). Operator may accept this as merchant-side tagging gap, OR add /collections/all as a catchall (Rule C trade-off — the rule discourages aggregator URLs but Shopify smart-collections sometimes leak orphans)."
+    ]
+  }
+}

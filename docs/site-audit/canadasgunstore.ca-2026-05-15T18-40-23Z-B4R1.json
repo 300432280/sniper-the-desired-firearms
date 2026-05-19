@@ -1,0 +1,131 @@
+{
+  "profileVersion": 1,
+  "platform": "activant-inet",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-15T18:27:18Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200; no cf-ray / x-sucuri / Incapsula / MalCare / Wordfence markers; honeypots return 404 (not 403); SQLi/XSS pass through clean. Server: Apache.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "serverHeader": "Apache"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2381,
+  "productCountMethod": null,
+  "catalogUrls": [
+    "https://www.canadasgunstore.ca/departments/outdoors---hunting-etc--|30.html"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.canadasgunstore.ca/products/allen-47-tack--reflective-trail%7C47.html",
+      "title": "Allen 47 Tack, Reflective Trail",
+      "price": 5.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.canadasgunstore.ca/products/federal-champion-small-pistol-primers---100--100-pk-%7C100.html",
+      "title": "Federal Champion Small Pistol Primers  #100 (100 PK)",
+      "price": 10.49,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.canadasgunstore.ca/products/cci-mini-mag-rifle-ammo-22lr%7C962.html",
+      "title": "CCI Mini Mag Rifle Ammo 22LR",
+      "price": 44.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 255,
+  "paginationPattern": {
+    "type": "offset-query",
+    "template": "top",
+    "perPage": 255,
+    "firstPageHasParam": false,
+    "startPage": 0,
+    "zeroIndexed": true
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "Sort <select name=\"product_list_sort\"> exposes only SKU/Description/Manufacturer asc/desc options (skua, skud, namea, named, mfga, mfgd) — no newest/date option. Product detail JSON-LD has no datePublished/dateCreated/dateAdded. No sitemap (404 on all common paths), no RSS, no /new-arrivals path. Cross-referenced 8 hidden sort values (newest, dated, created, added, datea, datea, published, recent) with cache-bust — all return identical first-3 default order. Activant/Inet Web Storefront does not expose a newest signal."
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "searchUrl": null,
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/departments/firearms-|30|FA.html", "allOption": 673 },
+      { "slug": "/departments/ammunition-|30|AMM.html", "allOption": 447 },
+      { "slug": "/departments/apparel-|30|CLO.html", "allOption": 60 },
+      { "slug": "/departments/hunting-|30|HNT.html", "allOption": 114 },
+      { "slug": "/departments/knives-and-tools-|30|KT.html", "allOption": 100 },
+      { "slug": "/departments/optics-|30|OPT.html", "allOption": 252 },
+      { "slug": "/departments/shooting-|30|SHO.html", "allOption": 723 },
+      { "slug": "/departments/outdoors---hunting-etc--|30.html", "allOption": 2381 }
+    ],
+    "totalsSumCheck": "Sum of 7 named departments by walked-unique product slugs = 2,369. Outdoors parent (code |30) walks to 2,381 unique by trailing ID (after last %7C). Union of all = 2,396 by full URL but 2,381 by trailing-ID dedup — 15 'extra' URLs are the same products served with category-baked breadcrumb form (productUrlSchemes situation). Outdoors |30 alone covers 100% when dedup is by trailing numeric/alpha ID."
+  },
+  "productUrlSchemes": {
+    "canonical": "/products/<slug>%7C<id>.html",
+    "sitemapForm": "/products/<slug>%7C<crumb>%7C<id>.html",
+    "joinOn": "trailing-id-after-last-pipe"
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-15T18-40-23Z",
+    "probeIp": "audit-runner",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "needsPlaywright": "high",
+      "catalogUrls": "high",
+      "perPage": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "low",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage 1: Apex returned SSL cert mismatch (admin.activant-inet.com); www returned 200 cleanly. <link rel=\"canonical\"> = https://www.canadasgunstore.ca/. Canonical = www.",
+      "Stage 2: 8-batch heavy probe — all 200, no WAF/CAPTCHA/age-gate signals. Server: Apache. Honeypot paths return 404 (not 403); SQLi/XSS pass clean. PHPSESSID + INET_MOBILE cookies set on every response (session, not WAF).",
+      "Stage 3: platform = activant-inet (NEW tag — no existing detector). Signals: /inet/storefront/catalog.js, /inet/styles/CGSINET/, INET_MOBILE cookie, dept URLs /departments/<slug>-|30|<CODE>.html, SSL CN admin.activant-inet.com. URLs are .php (not .cfm — NOT Celerant). Adapter = generic-retail. needsPlaywright=false (plain HTTP returns 290KB of product markup).",
+      "Stage 4: 7 named depts walked + outdoors parent (|30). Outdoors alone covers 2,381 unique by trailing-ID dedup = 100%. Selected single catalogUrl = outdoors. Extraction-quality spot-check on 3 random products passed (title+url+price+stock). Pre-existing adapter selector `.store_product_list_wrapper` already in generic-retail.ts:86.",
+      "Stage 5: pagination type = offset-query with `?top=N`, perPage = 255 (offsets 0/255/510/...). Page 1 vs page 2 zero-overlap verified (255 each, 0 intersection). perPage NOT configurable via `?page_size=` / `?limit=` (both ignored, return 255). Last page on outdoors = ?top=2295 (86 products). Pages beyond last (?top=2550) return 200 with 0 products gracefully.",
+      "Stage 6: sort <select name=\"product_list_sort\"> options = skua/skud (SKU asc/desc), namea/named (Description), mfga/mfgd (Manufacturer). NO newest/date option. Default order = skua. Tried 8 hidden sort values (newest/dated/created/added/datea/dated/published/recent) with cache-bust — all return identical first-3. sortParam = null, sortVerified = false.",
+      "Stage 7: full-catalog-sweep is the only viable watermark method. No newest sort, no datePublished on JSON-LD, no sitemap/RSS/new-arrivals. Reason captured in crawlers.watermark.reason.",
+      "Stage 8: 2,381 product count from full walk of outdoors (9 pages × 255 + 86). Listing page contains exact total `<p class=\"text-success\">2,381 found, showing page 1 of 10</p>`. productCountMethod=null because runtime `html-pagination` regex pulls matched[1] only — comma-separated numbers (`2,381`) parse to 2. Would need a code change to support comma-strip; flagging as harness gap.",
+      "Stage 9: profile validator inputs assembled. Hard-fail: none. Soft-fail: productCountMethod (recommended) is null. expectedProductCount sourced from walk."
+    ]
+  }
+}

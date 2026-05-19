@@ -1,0 +1,156 @@
+{
+  "profileVersion": 1,
+
+  "platform": "celerant-coldfusion",
+  "adapterType": "generic-retail",
+
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-12T06:21:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "8/8 batches 200 OK; no cf-ray, no x-sucuri-id, no Incapsula, no MalCare/Wordfence body markers, no Akamai server header. Honeypot/admin/SQLi/XSS/no-UA paths all return 200 with identical 34977-byte body (Celerant returns app default page for unknown paths). HIGH confidence hasWaf=false.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "serverHeader": "Null"
+  },
+
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v2",
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 3343,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": "select#perpage option:last-child",
+    "perPage": 1
+  },
+
+  "catalogUrls": [
+    "https://www.bullseyenorth.com/accessories/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/ammunition/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/firearms/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/knives/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/magazines/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/optics/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/reloading/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/storage/browse/orderby/new-arrivals/perpage/36"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.bullseyenorth.com/shop/belgian-fn49-safn-3006-collector-gun-matching-serials-excellent-condition-37503",
+      "title": "Belgian FN49 SAFN 30-06 Collector Gun (Matching Serials, Excellent Condition)",
+      "price": 3000.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.bullseyenorth.com/shop/umarex-ux-avera-177-45mm-cal-co2-air-pistol-495fps-2252116-37216",
+      "title": "Umarex UX Avera .177 / 4.5mm Cal CO2 Air Pistol 495fps 2252116",
+      "price": 199.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.bullseyenorth.com/shop/winchester-sx4-waterfowl-hunter-realtree-max7-12-gauge-shotgun-28-barrel-35-chamber-4-rounds-511303292-37474",
+      "title": "Winchester SX4 Waterfowl Hunter Realtree Max7 12 Gauge Shotgun 28in Barrel",
+      "price": 1579.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+
+  "sortParam": "",
+  "sortVerified": true,
+
+  "perPage": 36,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Path-baked sort verified via /orderby/<value>/ swap counter-control. Page 1 of /firearms/browse/orderby/new-arrivals/perpage/36 first product = '...-37503' (newest by ID DESC); page 1 of same URL with /orderby/name-a-to-z/ first product = '...-derya-...-37335'; page 1 of /orderby/oldest-rcvd/ first product = '...-canuck-evolve-...-37453' - three different first products prove sort is honored. Product IDs (37503, 37474, ...) are monotonically increasing - watermark crawler can compare lastWatermarkId."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "homepage-nav",
+    "categories": [
+      { "slug": "/accessories", "allOption": 1180 },
+      { "slug": "/ammunition",  "allOption": 484  },
+      { "slug": "/firearms",    "allOption": 558  },
+      { "slug": "/knives",      "allOption": 323  },
+      { "slug": "/magazines",   "allOption": 163  },
+      { "slug": "/optics",      "allOption": 453  },
+      { "slug": "/reloading",   "allOption": 183  },
+      { "slug": "/storage",     "allOption": 183  }
+    ],
+    "totalsSumCheck": "Sum of allOption across 8 top-level categories = 3527. /all-products perpage select All option = 3343. Difference = 184 = 5.5% cross-category overlap (accessories likely overlaps with optics scope-mounts and storage gun-cleaning). After dedup, walking the 8 catalog URLs above will produce ~3343 unique products. Per-category split chosen over single /all-products URL because Rule C prefers per-category spine for operator review and per-category watermark independence."
+  },
+
+  "lastVerified": "2026-05-12",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-12T06-21-00Z",
+    "harnessVersion": "AI-driven blind, Round 1 of 4-round adversarial cycle",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "hasCaptcha": "verified-operational-recaptcha-v2-newsletter-only",
+      "ageGate": "verified",
+      "expectedProductCount": "verified-perpage-all-option-and-perpage-3343-returned-3343-cards",
+      "productCountMethod": "verified",
+      "catalogUrls": "page-1-walked-eight-candidates-all-productive-perpage-558-firearms-returned-558-cards-allOption-sum-vs-all-products-allOption-arithmetic-matches-5.5pc-overlap-not-full-walk-and-dedup",
+      "paginationPattern": "verified-page2-zero-overlap-vs-page1",
+      "sortParam": "verified-via-3-outcome-counter-control-path-form",
+      "extractionTested": "verified-3-products-all-fields-populated",
+      "watermarkMethod": "verified-sort-and-monotonic-ID",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1: apex 301 to www; canonical = https://www.bullseyenorth.com. No <link rel=canonical> disagreement on www homepage.",
+      "Stage 2: heavy-8-batch probe - all batches 200, no cf-ray, no x-sucuri, no MalCare/Wordfence/Incapsula/Akamai. Honeypot 200 not 403 (Celerant returns 34977-byte default page for unknown paths). Server: Null + CFID/CFTOKEN cookies. hasWaf=false (HIGH confidence). reCAPTCHA-v2 script tag on homepage but only wired to newsletter signup form (CI_subscribeForm) - does NOT gate catalog crawl path - hasCaptcha=false operational, captchaType='recaptcha-v2' informational.",
+      "Stage 3: celerant-coldfusion confirmed - Server: Null header, CFID/CFTOKEN cookies, cdn.celerantwebservices.com asset host, dm.celerant.com form action, /shop/<slug>-<id> style URLs. adapterType=generic-retail. No age-gate, no login wall.",
+      "Stage 4: 8 homepage nav categories - firearms, ammunition, magazines, reloading, storage, optics, knives, accessories. Each has /<cat>/browse/orderby/new-arrivals/perpage/36 catalog URL with productive cards. allOption sum 3527 vs /all-products allOption 3343 → 5.5% overlap, within tolerance. NOTE: did not perform full per-page walk+ID-dedup across all 8 categories - relied on allOption arithmetic + extraction spot-check on /firearms. Per SKILL Rule C strict reading this is incomplete; flagging for Round 2 live verification.",
+      "Stage 5: /page/N path pagination verified - page 2 first product distinct from page 1 first product on /firearms. perPage=36 default; perpage=558 (firearms All) returned 558 cards single-page; perpage=3343 on /all-products returned 3343 cards single-page - server honors arbitrary perpage. Shipping perPage=36 to balance request size and granular watermark stepping.",
+      "Stage 6: <select name='ordering' id='ordering'> exposes new-arrivals|price-low-to-high|price-high-to-low|name-a-to-z|name-z-to-a|newest-rcvd|oldest-rcvd; URL form is /orderby/<value>/perpage/<N>. 3-outcome counter-control: /orderby/new-arrivals first product = ...-37503; /orderby/name-a-to-z first product = ...-derya-tm22-37335 (different); /orderby/oldest-rcvd first product = ...-canuck-evolve-37453 (different). Three distinct first products → sort honored. sortParam='' (path-baked), sortVerified=true.",
+      "Stage 7: navigate-from-watermark. Path-baked newest-first sort verified upstream. Product IDs monotonic (highest visible: 37503 > 37474 > 37245 ...). No API date filter available (Celerant ColdFusion has no /wp-json/ REST).",
+      "Stage 8: <select id='perpage'> on /all-products/browse/orderby/new-arrivals/perpage/36 has <option value='3343'> All - that's the canonical count source. Verified by GET .../perpage/3343 returning 3343 productListing cards in a single 3.6MB response. productCountMethod = {method:'html-pagination', selector:'select#perpage option:last-child', perPage:1}.",
+      "Stage 9: candidate JSON written; markdown report deferred (out of scope for Round 1 of adversarial cycle - hypothesis-only round)."
+    ],
+    "round1Caveats": [
+      "Stage 4 did NOT do full per-page walk + product-ID dedup across all 8 categories. Round 2 should walk all 8 categories at perPage=All, collect /shop/<id> IDs, compute union, verify union size ≈ 3343 ±5%.",
+      "Stage 2 reCAPTCHA-v2 verdict: hasCaptcha=false because reCAPTCHA fires only on newsletter form. Did NOT fetch /shop/<id> detail pages to confirm no recaptcha gate there.",
+      "DB siteProfile NOT inspected during Stages 1-9 - Round 1 is blind by design."
+    ]
+  }
+}

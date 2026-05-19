@@ -1,0 +1,183 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-05-15T18:27:20Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare 403 on desktop-Chrome/curl/bot UAs and on rapid burst (10/10), SQLi (2/2), XSS, honeypot paths (all 403). iPhone Safari UA passes (200) until SiteGround sgcaptcha kicks in on sequential /wp-json/* fetches with x-redirect-by: Yoast SEO and x-sg-cdn header confirming SiteGround host; sgcaptcha (meta-refresh /.well-known/sgcaptcha/) is sticky per-IP for >15 min after trigger.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "server: cloudflare"],
+    "siteGroundHeaders": ["x-sg-cdn: 1", "x-ce: us-east4-*"],
+    "cloudflare403OnDesktopUA": true,
+    "cloudflare403OnCurl": true,
+    "rapidBurstStatus": "10/10 returned 403 with CF challenge body",
+    "sqliRuleFired": "/?id=1' OR '1'='1 -> 403; UNION SELECT -> 403",
+    "xssRuleFired": "/?q=<script>alert(1)</script> -> 403",
+    "honeypotPathsBlocked": ["/wp-admin (403)", "/wp-login.php (403)", "/.env (403)", "/.git/config (403)", "/phpinfo.php (403)"],
+    "botUaBlocked": "curl/8.0 UA -> 403",
+    "iPhoneUaPasses": "iPhone Safari UA -> 200 BUT triggers SiteGround sgcaptcha on rapid /wp-json/wp/v2 fetches",
+    "sgcaptchaTrigger": "Second sequential WP REST call -> 202 with meta http-equiv='refresh' to /.well-known/sgcaptcha/?r=..."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 5848,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://g4cgunstore.com/product-category/firearms/",
+    "https://g4cgunstore.com/product-category/ammunition/",
+    "https://g4cgunstore.com/product-category/accessories/",
+    "https://g4cgunstore.com/product-category/high-value-optics/",
+    "https://g4cgunstore.com/product-category/oversize/",
+    "https://g4cgunstore.com/product-category/new-arrivals/",
+    "https://g4cgunstore.com/product-category/hornady/",
+    "https://g4cgunstore.com/product-category/display/",
+    "https://g4cgunstore.com/product-category/iron-sights/",
+    "https://g4cgunstore.com/product-category/online-only/",
+    "https://g4cgunstore.com/product-category/cadex/",
+    "https://g4cgunstore.com/product-category/cadex-customized/",
+    "https://g4cgunstore.com/product-category/kel-tec/",
+    "https://g4cgunstore.com/product-category/cz-bren-2/",
+    "https://g4cgunstore.com/product-category/gunpartsneedpal/",
+    "https://g4cgunstore.com/product-category/m1-garand/",
+    "https://g4cgunstore.com/product-category/nanuk-special/",
+    "https://g4cgunstore.com/product-category/cz600/",
+    "https://g4cgunstore.com/product-category/airsoft/",
+    "https://g4cgunstore.com/product-category/boxing-day-sale/",
+    "https://g4cgunstore.com/product-category/coming-soon/",
+    "https://g4cgunstore.com/product-category/kriss-vector/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://g4cgunstore.com/product/benelli-lupo-30-06-sprg-22-black/",
+      "title": "Benelli Lupo .30-06 Sprg. 22\" Black (data-id=230791, product_cat=firearms)",
+      "price": null,
+      "stockStatus": "in_stock",
+      "priceVisible": true,
+      "evidence": "Extracted from /product-category/firearms/ page 1; product-grid-item class + data-product_id attribute"
+    },
+    {
+      "url": "https://g4cgunstore.com/product/federal-champion-22lr-36gr-hp-value-pack-5250rds/",
+      "title": "Federal Champion .22LR 36gr. HP Value Pack 5250rds",
+      "price": 469.99,
+      "stockStatus": "in_stock",
+      "evidence": "Extracted from homepage Featured Ammunition section; woocommerce-Price-amount=$469.99 (was $519.99)"
+    },
+    {
+      "url": "https://g4cgunstore.com/product/challenger-12gauge-00buck-2-3-4inch-175rds/",
+      "title": "Challenger 12 Gauge Magnum 2-3/4 inch 00Buck 9 Pellets 175rds",
+      "price": 219.99,
+      "stockStatus": "in_stock",
+      "evidence": "Extracted from homepage Featured Ammunition section"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": false,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WC plugin confirmed; /wp-json/wp/v2/product returned x-wp-total: 5848 with iPhone UA. WP REST ?after=<ISO> filter expected to work (canonical WC behavior). Two-probe verification (impossible-future-date and 1999-01-01) was blocked by SiteGround sgcaptcha at audit time; runtime crawler must use waf-cookie-manager + iPhone UA to verify post-promotion."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "wpRestProducts": "/wp-json/wp/v2/product",
+        "wpRestCategories": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "endpoint": "/wp-json/wp/v2/product_cat?per_page=100&hide_empty=false",
+    "fetchedAt": "2026-05-15T18:27:40Z",
+    "totalCategoriesInTree": 158,
+    "parent0Count": 22,
+    "totalsSumCheck": "Sum of parent=0 counts = 6213; WP REST product total = 5848; difference = 365 indicates products cross-listed across multiple top-level categories (new-arrivals, brand-feed sub-categories like hornady/cadex/kel-tec overlap firearms/ammunition).",
+    "categories": [
+      { "slug": "/product-category/firearms/", "allOption": 2097, "name": "Firearms" },
+      { "slug": "/product-category/ammunition/", "allOption": 1926, "name": "Ammunition" },
+      { "slug": "/product-category/accessories/", "allOption": 1231, "name": "Accessories" },
+      { "slug": "/product-category/high-value-optics/", "allOption": 286, "name": "High Value Optics" },
+      { "slug": "/product-category/oversize/", "allOption": 182, "name": "oversize" },
+      { "slug": "/product-category/new-arrivals/", "allOption": 150, "name": "New Arrivals" },
+      { "slug": "/product-category/hornady/", "allOption": 119, "name": "Hornady" },
+      { "slug": "/product-category/display/", "allOption": 98, "name": "display" },
+      { "slug": "/product-category/iron-sights/", "allOption": 35, "name": "Iron Sights" },
+      { "slug": "/product-category/online-only/", "allOption": 20, "name": "Online Only" },
+      { "slug": "/product-category/cadex/", "allOption": 17, "name": "Cadex" },
+      { "slug": "/product-category/cadex-customized/", "allOption": 16, "name": "Cadex Customized" },
+      { "slug": "/product-category/kel-tec/", "allOption": 10, "name": "Kel-Tec" },
+      { "slug": "/product-category/cz-bren-2/", "allOption": 9, "name": "CZ Bren 2" },
+      { "slug": "/product-category/gunpartsneedpal/", "allOption": 9, "name": "GunPartsNeedPal" },
+      { "slug": "/product-category/m1-garand/", "allOption": 3, "name": "M1 Garand" },
+      { "slug": "/product-category/nanuk-special/", "allOption": 3, "name": "Nanuk Special" },
+      { "slug": "/product-category/cz600/", "allOption": 2, "name": "CZ600" },
+      { "slug": "/product-category/airsoft/", "allOption": 0, "name": "Airsoft" },
+      { "slug": "/product-category/boxing-day-sale/", "allOption": 0, "name": "BOXING DAY SALE" },
+      { "slug": "/product-category/coming-soon/", "allOption": 0, "name": "Coming Soon" },
+      { "slug": "/product-category/kriss-vector/", "allOption": 0, "name": "Kriss Vector" }
+    ]
+  },
+  "searchUrl": "/?s={keyword}&post_type=product&product_cat=0",
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "B4R1",
+    "probeIp": "2607:fea8:3d80:7e00:606b:3cf4:b465:d344 (IPv6 residential; sgcaptcha-flagged after ~3 sequential WP-REST calls)",
+    "stageNotes": [
+      "Stage 1 (canonical): apex 403 on desktop Chrome UA, 200 on iPhone UA. www -> 301 -> apex (x-redirect-by: WordPress). Canonical = https://g4cgunstore.com.",
+      "Stage 2 (WAF): Cloudflare-active blocks desktop Chrome / curl / bot UAs and 10/10 rapid burst, SQLi, XSS, honeypots. SiteGround sgcaptcha (meta refresh /.well-known/sgcaptcha/) layered on top - triggers on rapid WP-REST sequential fetches. No homepage CAPTCHA; no age-gate.",
+      "Stage 3 (platform): WooCommerce - confirmed via /wp-content/plugins/woocommerce/* JS paths, woocommerce-Price-amount and product-grid-item CSS classes, woocommerce_params JS var, x-redirect-by: WordPress. Theme = Woodmart (wd-*/woodmart-* classes) but theme != platform (Mistake 39).",
+      "Stage 4 (catalog): /wp-json/wp/v2/product_cat returned 158 total cats, 22 parent=0. Sum of parent=0 counts = 6213 vs WP REST total = 5848 -> ~6% cross-listing overlap. Full walk-and-dedup BLOCKED by sgcaptcha mid-audit; kept ALL 22 parent=0 catalogUrls per Rule C ('never drop empty-today or seemingly-redundant categories without proof'). Brand sub-feeds (hornady, cadex, kel-tec) likely overlap firearms/ammunition - operator should prune via Playwright re-walk.",
+      "Stage 4g (extraction): /product-category/firearms/ page 1 returned 24 products (data-loop=1..24) with product-grid-item, data-product_id, valid /product/<slug>/ URLs. Homepage Featured Ammunition section validated 3 priced products. Extraction works.",
+      "Stage 5 (pagination): WC /page/{N}/ path confirmed (/page/1, .../page/88 visible in firearms category HTML). perPage=24 from page 1 product count. perPage select UI exposes ?page=12|24|36|48 - max=48 NOT verified due to sgcaptcha block; conservative ship perPage: 24.",
+      "Stage 6 (sort): <select name='orderby'> options: menu_order (default), popularity, rating, date (Sort by latest), price, price-desc. 3-outcome counter-control test BLOCKED by sgcaptcha. sortParam = '?orderby=date' recorded but sortVerified = false; runtime must re-verify.",
+      "Stage 7 (watermark): chose api-date-since-watermark (canonical WC behavior). Two-probe ?after= validation BLOCKED. Runtime crawler must use waf-cookie-manager to confirm.",
+      "Stage 8 (count): expectedProductCount = 5848 from /wp-json/wp/v2/product?per_page=1 x-wp-total header (verified pre-sgcaptcha). WC Store API blocked by Cloudflare 403 even with iPhone UA - cannot use store-api as count source. wp-rest-header is the only working path.",
+      "Stage 9 (assembly): emitted candidate + markdown twin; validator not run programmatically (operator gate)."
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "userAgentOverride": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high (one successful WP REST probe x-wp-total: 5848)",
+      "productCountMethod": "high",
+      "catalogUrls": "medium - 22 parent=0 cats from taxonomy API; full walk+dedup BLOCKED by sgcaptcha; brand sub-feeds likely redundant",
+      "extractionTested": "high",
+      "sortParam": "low - options enumerated from <select> but 3-outcome counter-control BLOCKED; sortVerified=false",
+      "paginationPattern": "high (saw /page/1.../page/88 directly)",
+      "perPage": "medium - 24 is page-1 default; max-probe BLOCKED",
+      "crawlers.watermark.method": "medium - WC plugin assumption; two-probe NOT verified at audit time"
+    },
+    "_partial": true,
+    "_partialReasons": [
+      "SiteGround sgcaptcha became persistent on audit IPv6 after ~3-4 sequential WP-REST sequential calls; >15 min wait did not clear it (status 202 with meta refresh persisted).",
+      "Could not complete: Stage 4d full walk+dedup, Stage 5 perPage max-probe (48), Stage 6 3-outcome counter-control sort verification, Stage 7 WP REST two-probe ?after= filter verification, WC Store API verifyEndpoint health check (Cloudflare 403)."
+    ]
+  }
+}

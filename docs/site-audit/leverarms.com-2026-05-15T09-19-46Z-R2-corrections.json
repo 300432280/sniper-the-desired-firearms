@@ -1,0 +1,153 @@
+{
+  "runId": "leverarms-2026-05-15T09-19-46Z-R2",
+  "method": "live re-investigation using different verification path than R1",
+  "ground_truth_priority": "live evidence > DB > R1 candidate",
+  "corrections": [
+    {
+      "field": "hasWaf",
+      "r1Value": false,
+      "dbValue": true,
+      "verdict": "R1 correct",
+      "confidence": "high",
+      "evidence": [
+        "Rapid 10x burst on /shop/ -> 10/10 200 (cf-cache HIT)",
+        "Rapid 10x burst on /wp-json/wc/store/v1/products?per_page=10 -> 10/10 200",
+        "Rapid 10x burst on /wp-json/wp/v2/product?per_page=10 -> 10/10 200",
+        "Rapid 5x burst on /shop/page/N/ -> 200 (after p1 301->/shop/)",
+        "All cf-ray + cf-cache HIT on cached paths; no 403 / 429 / 503 on any crawler URL",
+        "Origin nginx returns 403 ONLY on SQLi-UNION/XSS payload patterns and on .env/.git/xmlrpc honeypots (R1 wafProbeResult) - those URLs are not in the crawl path"
+      ],
+      "reasoning": "DB has hasWaf=true defensively because origin filters payloads. Crawler URL space (HTML categories + WP REST + WC Store API) is unobstructed at any sustained rate. Per crawler decision rule, hasWaf SHOULD be false. SKILL.md gap: Stage 2 needs to differentiate 'WAF blocks payloads we won't send' vs 'WAF blocks paths we will visit'."
+    },
+    {
+      "field": "expectedProductCount",
+      "r1Value": 357,
+      "dbValue": 965,
+      "currentLiveValue": 972,
+      "verdict": "BOTH stale - live total is 972 (gained 7 since DB capture)",
+      "confidence": "high",
+      "evidence": [
+        "GET /wp-json/wp/v2/product?per_page=1 -> x-wp-total: 972",
+        "GET /wp-json/wc/store/v1/products?per_page=1 -> x-wp-total: 357",
+        "Walked wp/v2/product full 10 pages -> 972 unique IDs, ALL status=publish",
+        "Walked wc/store/v1/products full 4 pages -> 357 unique IDs",
+        "Math check: instock(351) + onbackorder(6) + outofstock(615) = 972 exact",
+        "DB stores 965 (last captured 2026-04-12), now 972 (+7)"
+      ],
+      "delta_classification": {
+        "615_admin_only_delta_explained": "OUT-OF-STOCK products. NOT drafts (no draft post status accessible publicly), NOT private (all 972 are status=publish), NOT hidden (catalog_visibility filter ineffective), NOT category-hidden. The WC Store API default excludes outofstock; WP REST returns all published products regardless of stock.",
+        "verification": "Live probe GET /wp-json/wc/store/v1/products?stock_status=outofstock -> x-wp-total: 615 exact match"
+      },
+      "schema_note": "DB schema correctly stores BOTH: expectedProductCount=965 (admin total) AND expectedInStockCount=357 (Store API). R1 output target carries only one. Operator should choose: admin-total tracks delisting/new products; in-stock-total tracks customer-visible churn. For watermark crawler (which surfaces new products via api-date-since-watermark), admin-total is the correct check."
+    },
+    {
+      "field": "productCountMethod.endpoint",
+      "r1Value": "/wp-json/wc/store/v1/products",
+      "dbValue": "/wp-json/wp/v2/product",
+      "verdict": "DB correct (matches the count the crawler should track)",
+      "confidence": "high",
+      "evidence": [
+        "Watermark crawler uses api-date-since-watermark via WP REST date filters (date_query honored on /wp-json/wp/v2/product)",
+        "WP REST x-wp-total=972 includes OOS - these are products the watermark crawler WILL re-encounter when they restock and matters for newness detection",
+        "WC Store API excludes OOS - would mask 615 products from coverage checks"
+      ]
+    },
+    {
+      "field": "catalogUrls",
+      "r1Value": ["all-product","kit","ammo","guns"],
+      "dbValue": ["guns","ammo","all-surplus","kit","all-product","food"],
+      "r1Count": 4,
+      "dbCount": 6,
+      "verdict": "DB correct - keep all 6 (Rule C 'never drop for being empty/redundant today')",
+      "confidence": "high",
+      "evidence": [
+        "Walked each of 6 categories via WC Store API category filter (per-page=100, paginated)",
+        "Per-cat counts: guns=34, ammo=124, all-surplus=106, kit=217, all-product=332, food=11",
+        "Union of all 6 = 357 (= Store API global total)",
+        "Union of R1's 4 (all-product, kit, ammo, guns) = 357 (also full coverage TODAY)",
+        "Delta: 0 products are exclusively in all-surplus or food right now"
+      ],
+      "reasoning": "R1's walk-and-dedup proof is mathematically sound TODAY but flawed in principle. Rule C anti-pattern: 'never drop a category for being empty/redundant today - tomorrow's product may only land there.' all-surplus is a meaningful semantic bucket (surplus/used) - a new SKS landing there would not appear in 'guns' if the merchant assigned only the all-surplus tag. Keep all 6 for forward-compatibility. R1's Stage 4d 'union test drops redundant' rule directly contradicts SKILL.md Rule C - this is a SKILL.md harness bug, not an R1 execution bug."
+    },
+    {
+      "field": "perPage",
+      "r1Value": 100,
+      "dbValue": 16,
+      "verdict": "context-dependent - both valid for different paths",
+      "confidence": "high",
+      "evidence": [
+        "WC Store API: per_page=100 honored (walked 4 pages of 100/100/100/57 = 357)",
+        "HTML /product-category/*/page/N/ : fixed at 16/page (theme PHP loop hardcoded; ?per_page= query ignored)",
+        "Pagination URL /product-category/all-product/page/3/ -> 200 confirms HTML pagination intact"
+      ],
+      "recommendation": "Profile should carry BOTH: top-level perPage=16 for HTML fallback path, paginationPattern.perPage=100 for API-driven path. R1 ships 100 + nested 16 (inverted). DB ships 16 only. Skill output target needs API/HTML split."
+    },
+    {
+      "field": "paginationPattern.template",
+      "r1Value": "/page/{N}/",
+      "dbValue": "page/{N}/",
+      "verdict": "R1 correct - leading slash REQUIRED",
+      "confidence": "high",
+      "evidence": [
+        "Read catalog-crawler.ts:121-125: stripped = baseUrl.endsWith('/') ? slice(0,-1) : baseUrl; return stripped + template.replace('{N}', ...)",
+        "Simulation with baseUrl='https://leverarms.com/product-category/guns/' and template='page/{N}/' -> 'https://leverarms.com/product-category/gunspage/2/' (BROKEN - concatenated without separator)",
+        "Simulation with baseUrl='https://leverarms.com/product-category/guns/' and template='/page/{N}/' -> 'https://leverarms.com/product-category/guns/page/2/' (CORRECT)",
+        "Live probe of broken URL https://leverarms.com/product-category/gunspage/2/ -> HTTP 404",
+        "Live probe of correct URL https://leverarms.com/product-category/guns/page/2/ -> HTTP 200"
+      ],
+      "reasoning": "DB value 'page/{N}/' would produce broken URLs at runtime if crawler ever switched to HTML path. The crawler currently uses WP REST so the bug is latent. DB needs leading-slash fix."
+    },
+    {
+      "field": "paginationPattern.perPage",
+      "r1Value": 16,
+      "dbValue": "(absent)",
+      "verdict": "R1 inverted - see perPage row; nest=100 for API, top-level=16 for HTML",
+      "confidence": "medium"
+    },
+    {
+      "field": "crawlers.bootstrap.apiEndpoints",
+      "r1Value": "{wcStoreProducts, wpRestProducts, productCategories}",
+      "dbValue": "{productDiscovery, priceEnrichment} + htmlFallback + dataFlow + method:single-continuous",
+      "verdict": "Both are audit-trail residue (Rule B) - NEITHER is consumed by runtime",
+      "confidence": "high",
+      "fictional_vs_runtime_grep": {
+        "method": "Grep over backend/src (entire codebase) for: apiEndpoints (plural), productDiscovery, priceEnrichment, htmlFallback, dataFlow, single-continuous, crawlers.bootstrap, .bootstrap.",
+        "result": "ZERO matches for ALL of: apiEndpoints, productDiscovery, priceEnrichment, htmlFallback, dataFlow, single-continuous in backend/src and backend/prisma",
+        "only_match_for_apiEndpoint_singular": "scraper.ts:667-673 + auction-icollector.ts:50,205 - but that is profile.apiEndpoint (singular, top-level, iCollector-specific). NOT crawlers.bootstrap.apiEndpoints.",
+        "bootstrap_word_matches": "60+ occurrences of 'bootstrap' in backend/src, all referring to crawlPhase==='bootstrap' as a string literal (state machine). ZERO reference siteProfile.crawlers.bootstrap.apiEndpoints or any nested key under .bootstrap.",
+        "verdict": "crawlers.bootstrap.* in siteProfile is OPERATOR DOCUMENTATION ONLY. No runtime adapter or crawler reads it. The actual API endpoints are hard-coded in scraper/adapters/woocommerce.ts (WP REST + WC Store API paths)."
+      },
+      "implication": "SKILL.md should either: (a) explicitly mark crawlers.bootstrap.apiEndpoints as 'audit-only / informational', or (b) drop it entirely. Currently it's a contested field that does nothing. R1's flat shape vs DB's 2-step shape are both equally non-functional."
+    },
+    {
+      "field": "searchUrl",
+      "r1Value": "(omitted)",
+      "dbValue": "/?s={keyword}&post_type=product",
+      "verdict": "DB correct - live-probed",
+      "confidence": "high",
+      "evidence": [
+        "GET /?s=ammo&post_type=product -> HTTP 200, returns WooCommerce search results page",
+        "First result title found: 'Chinese military SKS ammunition bandolier'",
+        "Standard WordPress + WooCommerce default search URL pattern"
+      ]
+    }
+  ],
+  "summary": {
+    "fields_evaluated": 9,
+    "r1_correct": 3,
+    "db_correct": 4,
+    "both_stale": 1,
+    "both_audit_residue": 1,
+    "highest_confidence_corrections": [
+      "hasWaf: R1 correct (false) - 10/10 200 burst on crawler URL space",
+      "expectedProductCount: live=972 (DB stale 965, R1 357 is in-stock not total)",
+      "paginationPattern.template: R1 correct '/page/{N}/' - DB 'page/{N}/' breaks URL builder"
+    ],
+    "skill_md_harness_gaps": [
+      "Stage 2 hasWaf decision rule conflates 'WAF on payload patterns' with 'WAF on crawler paths' - needs explicit crawler-URL-space rapid-burst test",
+      "Stage 4d walk-and-dedup union test contradicts Rule C anti-pattern when redundancy is by-content (today) - needs softening to 'merge into single catalogUrl ONLY when categories are 100% subset-equal, NOT redundant-by-overlap'",
+      "expectedProductCount field can't represent WooCommerce dual-count (admin/in-stock); needs explicit second field or canonical pick documented",
+      "crawlers.bootstrap.apiEndpoints is unconsumed runtime field - drop from output target or mark audit-only"
+    ]
+  }
+}

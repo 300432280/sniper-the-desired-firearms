@@ -1,0 +1,133 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T18:27:13Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches HTTP 200; cf-ray present in BATCH 1 only (passive Cloudflare); no Sucuri/sgcaptcha/Incapsula/MalCare/Wordfence body markers in any batch; rapid burst clean; honeypot 404s; SQLi/XSS reflected and sanitized via WP, not blocked",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray: 9fc431cb1d2ee080-YYZ"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "pluginWafBodyMarkers": []
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 132,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://canadafirstammo.ca/product-category/shop-all/",
+    "https://canadafirstammo.ca/product-category/accessories/",
+    "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+    "https://canadafirstammo.ca/product-category/clearance/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://canadafirstammo.ca/product/atrs-custom-338-lapua-ackley-improved/",
+      "title": "ATRS Custom 338 Lapua Ackley Improved",
+      "price": 9999.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://canadafirstammo.ca/product/beretta-eyes-ears-combo/",
+      "title": "Beretta Eyes & Ears Combo",
+      "price": 24.48,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://canadafirstammo.ca/product/canada-first-hoodie/",
+      "title": "Canada First Hoodie",
+      "price": 20.99,
+      "stockStatus": "out_of_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "storeApi": "/wp-json/wc/store/v1/products",
+        "wpRest": "/wp-json/wp/v2/product"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/shop-all/", "allOption": 109 },
+      { "slug": "/product-category/accessories/", "allOption": 48 },
+      { "slug": "/product-category/clearance/", "allOption": 68 },
+      { "slug": "/product-category/accessoriesoptics/", "allOption": 26 },
+      { "slug": "/product-category/ammunition/", "allOption": 32 },
+      { "slug": "/product-category/firearms/", "allOption": 15 },
+      { "slug": "/product-category/plates-apparel/", "allOption": 9 },
+      { "slug": "/product-category/reloading/", "allOption": 3 },
+      { "slug": "/product-category/apparel/", "allOption": 2 },
+      { "slug": "/product-category/training/", "allOption": 2 },
+      { "slug": "/product-category/gunsmithing/", "allOption": 0 },
+      { "slug": "/product-category/uncategorized/", "allOption": 0 }
+    ],
+    "totalsSumCheck": "WC Store API global x-wp-total=132 (customer-visible); 4-URL min-cover {shop-all, accessories, accessoriesoptics, clearance} union via per-cat Store API walk = 132 unique product IDs (100% coverage, 0% drift); /shop-2/ HTML walk pages 1-12 = 130 (2 hidden products with visibility=hidden missing from default shop loop); WP v2 REST x-wp-total=962 (all post statuses incl. drafts/private)"
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "B4R1-canadafirstammo.ca-2026-05-15T18-39-00Z",
+    "theme": "Minimog 4.0.2 (WC theme); Elementor 4.0.8; orderby=date NOT a Shoptimizer-NOOP — verified honored via 3-outcome counter-control",
+    "perPageFixedAt12": "Minimog theme exposes posts_per_page:12 fixed in JS settings; ?per_page / ?count / ?wc-page-size all silently ignored; perPage=12 is the verified HTML ceiling",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "expectedProductCount": "high",
+      "catalogUrls": "high",
+      "sortParam": "high",
+      "paginationPattern": "high",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200 clean, www 301 to apex. Canonical = https://canadafirstammo.ca (no trailing slash).",
+      "Stage 2: 8-batch probe all 200; cf-ray BATCH 1 only; no plugin-WAF markers in any batch body; hasWaf=false (Cloudflare passive only).",
+      "Stage 3: generator meta confirms WooCommerce 10.7.0 + WP 6.9.4 + Minimog 4.0.2 theme + Elementor 4.0.8. adapterType=woocommerce.",
+      "Stage 4: WC taxonomy API returned 12 top-level cats (parent=0). Walked all 12 cats page 1+2 via WC Store API. Union = 132 IDs. Greedy min-cover = 4 URLs {shop-all 109, accessories 48, accessoriesoptics 26, clearance 68}; 100% coverage verified (132/132 IDs, 0 missing).",
+      "Stage 4 extraction: GenericRetailAdapter.extractCatalogProducts on shop-all p1 HTML returned 12 products, all 4 fields (title, url, price, stockStatus, sourceId) populated cleanly.",
+      "Stage 5: Probed /page/{N}/ on shop-all; p1 vs p2 unique slugs zero-overlap = PASS. perPage=12 fixed by Minimog theme; ?per_page, ?count, ?wc-page-size all silently ignored.",
+      "Stage 6: 3-outcome counter-control with cache-bust: default first3=[10319,6922,11409]; orderby=date first3=[30620,13365,13361] (strictly descending IDs, newest); orderby=price first3=[8942,11997,12476]. date != default AND price != default => sort honored. sortParam=?orderby=date verified.",
+      "Stage 7: WP REST two-probe: after=2099 => x-wp-total=0; after=1999 => x-wp-total=962. WC Store API two-probe: after=2099 => 0; after=1999 => 132. Both APIs honor date filter => method=api-date-since-watermark.",
+      "Stage 8: WC Store API /wp-json/wc/store/v1/products?per_page=1 => x-wp-total=132 (customer-visible). Reconciled with Stage 4 walked union = 132 (0% drift)."
+    ]
+  }
+}

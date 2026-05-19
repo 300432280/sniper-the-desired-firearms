@@ -1,0 +1,138 @@
+{
+  "profileVersion": 1,
+
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-11T06:47:25Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200 OK; cf-ray header present on every BATCH 1 path (apex, robots.txt, sitemap.xml) but no challenge bodies, no honeypot blocking, no SQLi/XSS rule firing, no rate-limit on rapid burst. Cloudflare in front, passive mode. HIGH confidence cloudflare-passive.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "cfHeaders": ["cf-ray: 9f9f3b801dd5a3f1-YYZ", "server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false
+  },
+
+  "hasCaptcha": true,
+  "captchaType": "recaptcha-v3",
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 5840,
+  "productCountMethod": "wc-store-api-header",
+
+  "catalogUrls": [
+    "https://marstar.ca/shop/"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://marstar.ca/product/grip-safety-3/",
+      "title": "Grip Safety",
+      "price": 28.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://marstar.ca/product/magazine-catch-7/",
+      "title": "Magazine Catch",
+      "price": 24.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://marstar.ca/product/mk-i-dust-cover/",
+      "title": "MK I Dust Cover",
+      "price": 18.00,
+      "stockStatus": "in_stock"
+    }
+  ],
+
+  "sortParam": null,
+  "sortVerified": false,
+
+  "perPage": 999,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 999,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST /wp-json/wp/v2/product?after=<date> filter verified honored. Two-probe test: after=2099-01-01 returns x-wp-total: 0 (future floor), after=2024-01-01 returns x-wp-total: 511 (511 products created after Jan 2024). API filter is the canonical watermark path; HTML ?orderby=date is ignored by the Shoptimizer theme so navigate-from-watermark is not viable on HTML."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "wp-rest-product_cat-parent-0",
+    "categories": [
+      { "slug": "/product-category/firearm-parts-and-accessories/", "allOption": 2829 },
+      { "slug": "/product-category/accessories/", "allOption": 1931 },
+      { "slug": "/product-category/firearms/", "allOption": 775 },
+      { "slug": "/product-category/ammunition/", "allOption": 174 },
+      { "slug": "/product-category/Misc/", "allOption": 116 },
+      { "slug": "/product-category/clearance/", "allOption": 106 },
+      { "slug": "/product-category/uncategorized-3/", "allOption": 45 }
+    ],
+    "totalsSumCheck": "Sum of 7 top-level WP REST product_cat counts = 5976. WC Store API global total = 5840. Difference = 136 = 2.3% cross-category overlap (products tagged in 2+ top-level cats, e.g. firearms + clearance). /shop/ result-count header reports 'Showing 1-999 of 5775' on rendered HTML (drafts/hidden excluded, 65-item delta from API). catalogUrls collapsed to single /shop/ URL: Shoptimizer theme renders sub-category tiles (zero <a href='/product/'>) on parent-category pages; /shop/ is the only HTML endpoint that renders all 5840 products as a single paginated grid (page 1 = 999, 6 pages total = 5775 visible)."
+  },
+
+  "lastVerified": "2026-05-11",
+
+  "auditNotes": {
+    "runId": "calibration-2026-05-11T06-47-25Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "expectedProductCount": "verified",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified-single-url-covers-100pct",
+      "paginationPattern": "verified-zero-overlap",
+      "sortParam": "verified-noop-html-orderby-ignored",
+      "extractionTested": "verified",
+      "watermarkMethod": "verified-wp-rest-after-two-probe",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1: apex marstar.ca returns 200 cleanly; www.marstar.ca also 200. No <link rel=canonical> override. canonicalOrigin = https://marstar.ca.",
+      "Stage 2: 8/8 batches 200; cf-ray header on every BATCH 1 path -> cloudflare-passive. Homepage HTML carries reCAPTCHA v3 (render=6Lcp...; action=order_tracking) on the order-tracking form -> hasCaptcha=true, captchaType=recaptcha-v3 (catalog browsing is not gated).",
+      "Stage 3: woocommerce identified via <meta generator=WooCommerce 9.9.7>, wp-content/plugins/woocommerce/ refs, wp-content/themes/shoptimizer/. WP=6.8.5. No age-gate markers. needsPlaywright=false (static HTML works for catalog).",
+      "Stage 4: Probed each of 7 top-level WP REST product_cat (parent=0) categories. Shoptimizer theme renders ONLY sub-category tiles on parent pages (firearms, accessories, firearm-parts-and-accessories) - zero <a href=/product/> on those pages. /shop/ is the only HTML endpoint that renders all products as a paginated grid. Per Rule C smallest-URL-set: /shop/ alone covers 100% (5775 visible / 5840 API) - single URL beats 7+ leaf-category URLs.",
+      "Stage 5: tested /shop/page/2/ vs /shop/ - 0 overlap between page-1 (999 unique) and page-2 (994 unique). Probed ?per_page=2000, ?limit=2000, ?products_per_page=2000, ?posts_per_page=2000, ?ppp=2000 - ALL ignored (server cap-locked at 999). perPage=999 is verified maximum.",
+      "Stage 6: <select name=orderby> exposes standard WC options (menu_order/date/title-asc/etc). 3-outcome counter-control test on /shop/?orderby=<v>&nc=<random>: default==date==title-asc - all three produce identical first-3-slugs (grip-safety-3, magazine-catch-7, mk-i-dust-cover). HTML sort is noop (Shoptimizer theme overrides query loop). Cross-check: sitemap lastmod newest = sks-stripper-clips (2026-05-11) but DOM first product is grip-safety-3 - confirms default rendering is menu_order, not date. sortParam=null, sortVerified=false.",
+      "Stage 7: api-date-since-watermark - WP REST /wp-json/wp/v2/product?after=<iso> verified honored via two-probe (after=2099 -> 0; after=2024-01-01 -> 511). Method A is canonical for this site. Method B (navigate-from-watermark) ruled out by Stage 6 HTML-sort noop.",
+      "Stage 8: wc-store-api-header /wp-json/wc/store/v1/products?per_page=1 returned x-wp-total: 5840. WP REST /wp-json/wp/v2/product?per_page=1 same 5840. /shop/ HTML 'Showing 1-999 of 5775 results' (customer-visible subset). Used API value 5840 per Stage 8 priority-1.",
+      "Stage 9: validator pending; promotion to DB out-of-scope (calibration mode)."
+    ]
+  }
+}

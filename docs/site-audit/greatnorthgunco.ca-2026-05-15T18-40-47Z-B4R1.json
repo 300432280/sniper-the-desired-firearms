@@ -1,0 +1,140 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "imunify360",
+  "wafLastProbedAt": "2026-05-15T18:26:23Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Imunify360 interactive JS challenge gates /shop/, /product-category/*, /product/*, /wp-json/* — passes only by passing webdriver/outerWidth/plugins/mimeTypes anti-bot checks. Homepage and sitemaps pass through unchallenged.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": [".env (403)", ".git/config (403)"],
+    "botUaBlocked": false,
+    "imunify360Challenge": "openresty/1.29.2.3 returns ~11KB JS challenge page on /shop/, /product-category/*, /product/*, /wp-json/* (title 'One moment, please...', script `f03s36su46c0`, form action `/z0f76a1d14fd21a8fb5fd0d03e0fdc3d3cedae52f`). Homepage and /sitemap*.xml NOT challenged (origin LiteSpeed). Imunify360 anti-bot checks: navigator.webdriver, /headless|bytespider/i UA test, PluginArray.prototype, MimeTypeArray.prototype, languages, outerWidth/outerHeight zero. Headless Playwright with stealth init scripts (override webdriver=undefined, outerWidth=1920, plugins/mimeTypes via Object.create) DOES pass — confirmed by /shop/ returning 24 products and WC Store API returning x-wp-total=516. Plain axios/curl from probe IP gets the challenge interstitial."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 4292,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": ["/shop/"],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://greatnorthgunco.ca/product/husqvarna-1640-in-30-06-10/",
+      "title": "Husqvarna 1640 in 30-06",
+      "price": 475.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://greatnorthgunco.ca/product/sako-l61r-in-7-rem-mag/",
+      "title": "Sako L61R in 7 Rem Mag",
+      "price": 435.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://greatnorthgunco.ca/product/ata-arms-over-under-shotgun-in-12ga-ejectors/",
+      "title": "ATA Arms Over/Under Shotgun in 12ga (Ejectors)",
+      "price": 399.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productDiscovery": "/wp-json/wp/v2/product",
+        "priceEnrichment": "/wp-json/wc/store/v1/products"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "wp-rest-product_cat",
+    "categories": [
+      { "slug": "/product-category/used-firearms/", "allOption": 295 },
+      { "slug": "/product-category/new-knives/", "allOption": 66 },
+      { "slug": "/product-category/accessories-parts/", "allOption": 29 },
+      { "slug": "/product-category/new-scopes/", "allOption": 26 },
+      { "slug": "/product-category/surplus/", "allOption": 19 },
+      { "slug": "/product-category/lee-enfield-parts/", "allOption": 19 },
+      { "slug": "/product-category/bayonets/", "allOption": 17 },
+      { "slug": "/product-category/uncategorized/", "allOption": 16 },
+      { "slug": "/product-category/new-firearms/", "allOption": 10 },
+      { "slug": "/product-category/used-scopes/", "allOption": 9 },
+      { "slug": "/product-category/mauser-parts/", "allOption": 4 },
+      { "slug": "/product-category/several-available-surplus/", "allOption": 3 },
+      { "slug": "/product-category/new-shotguns/", "allOption": 1 },
+      { "slug": "/product-category/several-available/", "allOption": 1 },
+      { "slug": "/product-category/ljungman-parts/", "allOption": 1 },
+      { "slug": "/product-category/ammunition/", "allOption": 0 },
+      { "slug": "/product-category/sale/", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Sum of WC product_cat counts = 295+66+29+26+19+19+17+16+10+9+4+3+1+1+1+0+0 = 516, matches WC Store API x-wp-total=516 (customer-visible). WP v2 admin REST x-wp-total=4292 (all-time incl. drafts/sold) — discrepancy is `catalog_visibility` filter. Single /shop/ catalogUrl is 100%-coverage of customer-visible 516 (22 pages * 24 per page); expectedProductCount=4292 from admin REST tracks all-time history."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "greatnorthgunco.ca-2026-05-15T18-40-47Z-B4R1",
+    "probeIp": "audit-host",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "perPage": "high",
+      "paginationPattern": "high",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200 LiteSpeed; www 301 to apex. canonical=https://greatnorthgunco.ca",
+      "Stage 2: 8-batch probe — no CDN (no cf-ray, no sucuri), no SQLi/XSS/rate-limit. Honeypots .env/.git/config return generic 403 (LiteSpeed origin filter, not WAF). BUT /shop/ + /wp-json/ + /product-category/* return openresty/1.29 with 11-12KB JS challenge ('One moment, please...', form to /z0f76a1d14fd21a8fb5fd0d03e0fdc3d3cedae52f). Imunify360 Bot Protection — anti-bot checks: navigator.webdriver, /headless|bytespider/i UA test, plugin/mime spoofing, language, outerWidth zero. Stealth Playwright (init scripts overriding navigator.webdriver=undefined, outerWidth=1920, plugins/mimeTypes prototypes) bypasses challenge. hasWaf=true (operationally blocks plain-HTTP crawler).",
+      "Stage 3: WordPress 6.9.4 + WooCommerce 10.7.0 (giga-store-pro theme). Yoast SEO, LiteSpeed Cache. reCAPTCHA v3 site-wide via Contact Form 7 — informational only, does NOT gate catalog. No age-gate. needsPlaywright=true (Imunify challenge requires stealth bypass on catalog + API endpoints).",
+      "Stage 4: catalogUrls=['/shop/'] proven 100%-coverage of customer-visible 516 (22 pages * 24 = 528 max, page 22 partial). Sum of 17 product_cat counts (wp/v2/product_cat) = 516, matches /shop/ x-wp-total. Per-category split possible but /shop/ is simpler and provably complete. extractionTested via WC standard markup (woocommerce-LoopProduct-link + woocommerce-Price-amount). All 17 categories firearm-relevant.",
+      "Stage 5: pagination type=path /page/{N}/. Page-1 vs page-2 zero-overlap test PASSED (24 distinct products each). perPage=24, capped by theme; ?ppp=100 ignored (still returns 24). Last page marker /shop/page/22/.",
+      "Stage 6: sortParam=?orderby=date verified via 3-outcome test with cache-bust. default=husqvarna-1640..., orderby=date=husqvarna-1640... (default IS newest), orderby=price=enfield-no1-safety-screw... (different) → verdict 'honored-default-is-newest'. Independent cross-check: husqvarna-1640 has the most recent lastmod (2026-05-15T13:19) in product-sitemap5.xml — confirms default IS newest-first.",
+      "Stage 7: WC Store API two-probe via warmed Playwright session — after=2099-01-01 returns x-wp-total=0; after=1999-01-01 returns x-wp-total=516. api-date-since-watermark VERIFIED. WP v2 admin REST (same path) returns x-wp-total=4292.",
+      "Stage 8: expectedProductCount=4292 via wp-rest-header on /wp-json/wp/v2/product (header x-wp-total). Matches sitemap dedup loc count = 4292. Customer-visible count is 516 (WC Store API) — chose admin REST 4292 to match DB-baseline approach. HOWEVER: runtime product-count-probe.ts wp-rest-header arm uses plain axios (no Playwright fallback) — will hit Imunify challenge with hasWaf=true unless operator patches probe to use fetchWithPlaywright when hasWaf is true. Flagged in SKILL gaps.",
+      "Stage 9: validator-ready. Validator passes: profileVersion, platform, adapterType, hasWaf, hasCaptcha, expectedProductCount, productCountMethod, catalogUrls, paginationPattern, sortParam/sortVerified."
+    ],
+    "knownGaps": [
+      "Runtime product-count-probe.ts (wp-rest-header arm, line 149-154) uses plain axios — will fail with Imunify challenge on this site. Walk-only path (line 363+) has hasWaf->Playwright guard, but wp-rest-header does not. Operator should either (a) add Playwright fallback to wp-rest-header arm, or (b) switch productCountMethod to catalog-walk-only.",
+      "DB siteProfile (2026-04-07 snapshot) has hasWaf=false and needsPlaywright=false. Either Imunify360 was deployed between Apr 2026 and now, OR the audit IP at that time was not challenged (skill WAF-IP-dependence rule). Operator should re-confirm from production crawler IP before promoting hasWaf=true to DB."
+    ]
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-13T08:19:34Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every batch) but all 8 batches returned 200 on homepage; SQLi/XSS/rapid-burst/no-UA all clean. Honeypot 403s (/wp-admin, /wp-login.php, /.env, /.git/config) originate from BigCommerce origin (those paths never exist on BC), not from a CDN challenge. No plugin-level WAF body markers. hasWaf=false per skill rule (Cloudflare-passive does not actively block).",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 returned 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-admin/ (403)", "/wp-login.php (403)", "/.env (403)", "/.git/config (403)"],
+    "honeypotBlockedBy": "bigcommerce-origin (not CDN — BC returns 403 on unknown app-shape paths)",
+    "botUaBlocked": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3482,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "https://oleysarmoury.com/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "https://oleysarmoury.com/firearms/",
+    "https://oleysarmoury.com/ammunition/",
+    "https://oleysarmoury.com/optics/",
+    "https://oleysarmoury.com/accessories/",
+    "https://oleysarmoury.com/bargain-bin/",
+    "https://oleysarmoury.com/clearance/",
+    "https://oleysarmoury.com/air-guns-and-supplies/",
+    "https://oleysarmoury.com/decals/",
+    "https://oleysarmoury.com/trail-cameras/",
+    "https://oleysarmoury.com/blinds-stands-accessories/",
+    "https://oleysarmoury.com/training-aid/",
+    "https://oleysarmoury.com/air-soft/",
+    "https://oleysarmoury.com/steambow/",
+    "https://oleysarmoury.com/consignment/",
+    "https://oleysarmoury.com/consignment-non-firearm/",
+    "https://oleysarmoury.com/cleaning-and-maintenance/",
+    "https://oleysarmoury.com/secure-firearms-storage/",
+    "https://oleysarmoury.com/unwanted-firearms/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://oleysarmoury.com/cz-600-plus-alpha-223-24/",
+      "title": "CZ 600 Plus Alpha 223 24\"",
+      "price": 1249.99,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://oleysarmoury.com/cz-457-ergo-17-hmr-5r-poly-525mm-1-2-x20/",
+      "title": "CZ 457 ERGO 17 HMR 5R POLY 525MM 1/2X20",
+      "price": 999.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://oleysarmoury.com/morrison-lever-weston-44-mag-20-10-1-walnut-laser-engraved/",
+      "title": "Morrison Lever Weston 44 Mag 20 10+1 Walnut Laser Engraved",
+      "price": 1099.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/firearms/", "allOption": 571 },
+      { "slug": "/ammunition/", "allOption": 836 },
+      { "slug": "/optics/", "allOption": 381 },
+      { "slug": "/accessories/", "allOption": 1302 },
+      { "slug": "/bargain-bin/", "allOption": 241 },
+      { "slug": "/clearance/", "allOption": 142 },
+      { "slug": "/air-guns-and-supplies/", "allOption": 46 },
+      { "slug": "/decals/", "allOption": 31 },
+      { "slug": "/trail-cameras/", "allOption": 12 },
+      { "slug": "/blinds-stands-accessories/", "allOption": 11 },
+      { "slug": "/training-aid/", "allOption": 4 },
+      { "slug": "/air-soft/", "allOption": 2 },
+      { "slug": "/steambow/", "allOption": 2 },
+      { "slug": "/consignment/", "allOption": 2 },
+      { "slug": "/consignment-non-firearm/", "allOption": 0 },
+      { "slug": "/cleaning-and-maintenance/", "allOption": 0 },
+      { "slug": "/secure-firearms-storage/", "allOption": 0 },
+      { "slug": "/unwanted-firearms/", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Sum of per-category walked uniques (limit=100): 3,583 raw; walked union deduped = 3,482 (~2.9% overlap). Products sitemap loc count = 3,482 — exact match. /bargain-bin/ alone contributes 237 unique products not reachable from any other top-level category, /clearance/ contributes 21 — both REQUIRED for 100% coverage. /swag/ (64 hoodies/hats/decals) excluded (pure apparel per Rule C scope)."
+  },
+  "lastVerified": "2026-05-13",
+  "auditNotes": {
+    "runId": "R1-2026-05-13T08-28-56Z",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "perPage": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "high"
+    },
+    "probeIp": "audit-station (Canadian residential, May 2026)",
+    "wafCaveat": "Cloudflare reputation is per-IP. Re-confirm hasWaf=false from production crawler IP before promoting — an unblocked audit IP can wrongly downgrade WAF handling for a blocked production IP.",
+    "perPageEvidence": "?limit=100 honored: page 1 -> 100 unique product URLs; page 2 -> 100 different URLs; zero overlap p1<->p2 on /firearms/. ?limit=250 returned same 101 cards as ?limit=100 (BC quick-view doubling artifact + cap). Pagination 'Page X of 6' label is hardcoded against BC default ~50/page and is NOT reliable at limit=100 — actual walk shows 5x100+71 = 571 products for /firearms/.",
+    "sortVerdict": "honored-default-is-newest. defaultFirst3 == sortedFirst3 (sort=newest) AND counterFirst3 (sort=alphaasc) != default. Default IS newest-first.",
+    "sitemapMatchesWalk": "products sitemap <loc> count = walked union deduped = 3,482 exactly."
+  }
+}

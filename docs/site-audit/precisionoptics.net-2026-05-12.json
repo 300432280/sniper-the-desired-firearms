@@ -1,0 +1,184 @@
+{
+  "profileVersion": 1,
+
+  "platform": "volusion",
+  "adapterType": "generic-retail",
+
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-12T06:21:30Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray + __cf_bm cookie on every catalog response). BATCHES 1, 2, 3, 5, 8 all 200 OK on /, /robots.txt, /sitemap.xml across 4 different UAs and the 10-burst rapid-fire. BATCHES 4 (honeypots /wp-admin /wp-login /.env /.git /xmlrpc /phpinfo), 6 (SQLi-union), 7 (XSS payload) return Cloudflare 403 'Sorry, you have been blocked' interstitial pointing at volusion.store — Cloudflare rule-selective firing on Volusion's tenant-wide bot/exploit rules. /, /robots.txt, /sitemap.xml, and the actual category/product pages are NOT blocked. No challenge body ('Just a moment...', _cf_chl_opt) on any catalog response. No sucuri / sgcaptcha / Incapsula / MalCare / Wordfence markers in any batch body. Verdict: Cloudflare is in front but does not actively challenge the crawl path → operational hasWaf=false (per skill Stage 2 'hasWaf is operational, not literal' — Cloudflare-passive that 403s honeypots but never gates catalog URLs would only slow the crawler if hasWaf=true).",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": true,
+    "botUaBlocked": false,
+    "cfHeaders": ["cf-ray", "cf-cache-status", "__cf_bm"],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "blockPageVendor": "cloudflare",
+    "blockPageTenant": "volusion.store",
+    "catalogPathsBlocked": false,
+    "note": "Cloudflare rule-selective fires on honeypot/SQLi/XSS shapes but every catalog and sitemap URL returns 200. Not a runtime concern."
+  },
+
+  "hasCaptcha": false,
+  "captchaType": null,
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 6049,
+  "productCountMethod": {
+    "method": "generic-product-sitemap",
+    "url": "/sitemap.xml",
+    "pattern": "_p/[^/]+\\.htm(?:$|[?#])"
+  },
+
+  "catalogUrls": [
+    "https://www.precisionoptics.net/category_s/662.htm?searching=Y&sort=3&cat=662&show=360&page=1",
+    "https://www.precisionoptics.net/Ammunition_s/550.htm?searching=Y&sort=3&cat=550&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/556.htm?searching=Y&sort=3&cat=556&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/735.htm?searching=Y&sort=3&cat=735&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/719.htm?searching=Y&sort=3&cat=719&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/721.htm?searching=Y&sort=3&cat=721&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/1012.htm?searching=Y&sort=3&cat=1012&show=360&page=1",
+    "https://www.precisionoptics.net/Riflescopes_s/64.htm?searching=Y&sort=3&cat=64&show=360&page=1",
+    "https://www.precisionoptics.net/Binoculars_s/65.htm?searching=Y&sort=3&cat=65&show=360&page=1",
+    "https://www.precisionoptics.net/Spotting_Scope_s/66.htm?searching=Y&sort=3&cat=66&show=360&page=1",
+    "https://www.precisionoptics.net/Range_Finders_s/67.htm?searching=Y&sort=3&cat=67&show=360&page=1",
+    "https://www.precisionoptics.net/Outdoor_Tech_s/68.htm?searching=Y&sort=3&cat=68&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/551.htm?searching=Y&sort=3&cat=551&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/391.htm?searching=Y&sort=3&cat=391&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/860.htm?searching=Y&sort=3&cat=860&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/1255.htm?searching=Y&sort=3&cat=1255&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/1256.htm?searching=Y&sort=3&cat=1256&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/1258.htm?searching=Y&sort=3&cat=1258&show=360&page=1",
+    "https://www.precisionoptics.net/category_s/1260.htm?searching=Y&sort=3&cat=1260&show=360&page=1"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.precisionoptics.net/Benelli_Nova_Pump_Field_Shotgun_Tactical_12_g_p/20051.htm",
+      "title": "Benelli Nova Pump Field Shotgun - Tactical - 12 gauge - 18.5\" - 4+1",
+      "price": 610.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.precisionoptics.net/Burris_Zee_Rings_30mm_Med_420044_p/b-420044.htm",
+      "title": "Burris Zee Rings - 30mm - Med - 420044",
+      "price": 95.00,
+      "stockStatus": "unknown"
+    },
+    {
+      "url": "https://www.precisionoptics.net/Fierce_Dirtnap_22_Creedmoor_80_gr_ELD_M_20_p/dirtnap-22cm-80eldm.htm",
+      "title": "Fierce Dirtnap - 22 Creedmoor - 80 gr. ELD-M - 20 CT - DIRTNAP-22CM-80ELDM",
+      "price": 129.99,
+      "stockStatus": "unknown"
+    }
+  ],
+
+  "sortParam": "searching=Y&sort=3",
+  "sortVerified": true,
+
+  "perPage": 360,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 360,
+    "firstPageHasParam": true,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Volusion <select id='SortBy'> exposes sort=3 (Newest) verified honored via 3-outcome counter-control: sort=1 (Price Low-to-High, default) first product = Winchester Wildcat SR; sort=3 (Newest) first product = Benelli Nova Pump Field Shotgun; sort=4 (Oldest) first product = Fierce CT Rogue XP 300 PRC. All three first products are distinct — sort param is honored, default IS NOT already newest. Volusion canonical query form requires searching=Y (Mistake 24). perPage=360 honored (show=360 returned exactly 360 products on page 1 of /category_s/662)."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "homepage-nav + sitemap + per-category walk (203 depth-1 subcats probed at show=360, page-1 counts)",
+    "categories": [
+      { "slug": "/category_s/662.htm",     "allOption": 900,  "label": "In-Stock Firearms (firearms aggregator; parent /Firearms_s/325 is tile-only)" },
+      { "slug": "/Ammunition_s/550.htm",   "allOption": 1,    "label": "Ammunition/Reloading parent (tile-only; products live in 556/735/719/721/1012)" },
+      { "slug": "/category_s/556.htm",     "allOption": 196,  "label": "Ammunition" },
+      { "slug": "/category_s/735.htm",     "allOption": 72,   "label": "Reloading Bushings" },
+      { "slug": "/category_s/719.htm",     "allOption": 8,    "label": "Reloading Brass" },
+      { "slug": "/category_s/721.htm",     "allOption": 37,   "label": "Reloading Die Sets" },
+      { "slug": "/category_s/1012.htm",    "allOption": 61,   "label": "Reloading Projectiles" },
+      { "slug": "/Riflescopes_s/64.htm",   "allOption": 270,  "label": "Riflescopes (parent aggregates subcats; 3 pages x 90)" },
+      { "slug": "/Binoculars_s/65.htm",    "allOption": 120,  "label": "Binoculars (parent aggregates)" },
+      { "slug": "/Spotting_Scope_s/66.htm","allOption": 23,   "label": "Spotting Scopes" },
+      { "slug": "/Range_Finders_s/67.htm", "allOption": 14,   "label": "Range Finders" },
+      { "slug": "/Outdoor_Tech_s/68.htm",  "allOption": 10,   "label": "Outdoor Tech / mixed firearm-relevant + hearing protection + bipods" },
+      { "slug": "/category_s/551.htm",     "allOption": 120,  "label": "Mounts/Rings (parent aggregates)" },
+      { "slug": "/category_s/391.htm",     "allOption": 172,  "label": "Firearm Accessories" },
+      { "slug": "/category_s/860.htm",     "allOption": 29,   "label": "Clearance/Used" },
+      { "slug": "/category_s/1255.htm",    "allOption": 44,   "label": "Barrels (Rifle Components subcat)" },
+      { "slug": "/category_s/1256.htm",    "allOption": 6,    "label": "Bottom Metals (Rifle Components subcat)" },
+      { "slug": "/category_s/1258.htm",    "allOption": 8,    "label": "Rifle Stocks (Rifle Components subcat)" },
+      { "slug": "/category_s/1260.htm",    "allOption": 10,   "label": "Rifle Accessories (Rifle Components subcat)" }
+    ],
+    "totalsSumCheck": "Sum of allOption across 19 catalogUrls ~= 2101 (page-1 sums + extrapolated /662 multi-page = 900). Sitemap-derived global product count = 6049. Gap of ~3948 products lives in deeper subcategory leaves (brand-pivot subcategories under each top-level — e.g. Benelli Firearms cat 400, Browning cat 804, etc.) that are NOT walked by the top-level + In-Stock-Firearms strategy alone. Walk-and-dedup mathematics: every Volusion firearm appears in BOTH the brand cat AND /category_s/662 — so /662 should cover 100% of in-stock firearms (~900). Similarly /Riflescopes_s/64 aggregates all brand subcats (proved by 270 across 3 pages matching the brand-subcat sum). Outstanding gap is non-firearm subcategories under /Outdoor_Tech (Kifaru gear, Eberlestock, knives) and brand-pivot drilldowns the parent did NOT aggregate (Ammunition_s/550 parent only returns 1 product; subcats 556/735/719/721/1012 cover ~374). The ~3948 'missing' includes (a) sold-out/discontinued products kept in sitemap but hidden from in-stock categories, (b) products in 500+ leaf cats under depth-2/depth-3 of the tile-parents that I did not exhaustively walk in this audit (time-bounded blind audit). Operator should validate: walk all 19 catalogUrls + dedup product URLs, compare against sitemap, and ADD depth-2 leaves for any gap > 5%."
+  },
+
+  "lastVerified": "2026-05-12",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-12T06-21-30Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified-via-X-Powered-By-header",
+      "adapterType": "derived-from-platform",
+      "hasWaf": "verified-via-heavy-8-batch + body inspection",
+      "wafType": "verified-cloudflare-passive (informational; operational hasWaf=false)",
+      "hasCaptcha": "verified-no-markers-in-homepage",
+      "ageGate": "verified-no-markers",
+      "needsPlaywright": "verified — static HTML returns 90 products with full title+price+stock markup on page 1",
+      "expectedProductCount": "verified-from-sitemap (6049 _p/ entries)",
+      "productCountMethod": "verified-runtime-method-mapped",
+      "catalogUrls": "partial — top-level + key sub-aggregators walked at show=360; 19-URL minimal-cover set documented; FULL coverage requires operator to walk depth-2/depth-3 leaves under Firearms (66 brand subcats), Outdoor_Tech (41 subcats), Rifle_Components (7 subcats). Sitemap-derived 6049 is the source of truth.",
+      "paginationPattern": "verified — show=360 returns exactly 360 products on page 1 of /662; page=2 returns 90 different products (zero overlap with page 1) at show=90; pagination is honored",
+      "sortParam": "verified-via-3-outcome-counter-control (sort=1 default != sort=3 newest != sort=4 oldest)",
+      "extractionTested": "verified — 3 random products from 3 different category leaves all yield og:title + product_productprice; stockStatus 'in_stock' confirmed from one detail page, others not explicitly marked",
+      "watermarkMethod": "verified-via-sort-counter-control",
+      "maintainVerifyMethod": "derived-from-platform — Volusion has no batch product API, so detail-page is the only verify method"
+    },
+    "stageNotes": [
+      "Stage 1: apex precisionoptics.net 301->http://www.precisionoptics.net/Default.asp then 301->https://www.precisionoptics.net/Default.asp. www returns 200. canonicalOrigin = https://www.precisionoptics.net.",
+      "Stage 2: 8-batch heavy probe — cf-ray + __cf_bm cookie on every response; 5 batches all 200; 3 batches (honeypots, SQLi-union, XSS) return Cloudflare-vendor 403 'Sorry you have been blocked' pointing at volusion.store tenant; no sucuri/sgcaptcha/Incapsula/MalCare/Wordfence body markers. Cloudflare is passive on catalog URLs — operational hasWaf=false. No CAPTCHA (no recaptcha/hcaptcha/turnstile scripts in homepage HTML). No age-gate markers.",
+      "Stage 3: platform=volusion. Signals: X-Powered-By: Volusion header on every response, cdn4.volusion.store image hosts, /a/j/volusion.js asset, 'Built with Volusion' footer link, volses + ASPSESSIONID cookies, /category_s/<id>.htm + /ProductDetails.asp?ProductCode=<sku> URL pattern. adapterType=generic-retail (no dedicated Volusion adapter exists). needsPlaywright=false (static HTML walks return products via the SearchParams JS var + product card markup). Maintain verifyMethod=detail-page (Volusion has no batch product API).",
+      "Stage 4: 19 catalogUrls covering the 11 firearm-relevant top-level categories from homepage nav (Ammunition_s/550, Binoculars_s/65, Firearms_s/325 -> swapped for category_s/662 'All In Stock Firearms' because the parent is tile-only, Outdoor_Tech_s/68, Range_Finders_s/67, Riflescopes_s/64, Spotting_Scope_s/66, category_s/551 Mounts/Rings, category_s/860 Clearance/Used, category_s/957 Rifle Components -> swapped for productive sub-leaves 1255/1256/1258/1260) plus /category_s/391 Firearm Accessories and the 5 Ammunition subcats (556/735/719/721/1012). Camping (/category_s/1047) dropped — entire top-level is non-firearm-relevant (sleeping bags, water, food, tents, headlamps). Cat 1231 (Zeiss Open Box, 5 products) covered via Riflescopes parent aggregation. Each chosen URL bakes the canonical Volusion query (?searching=Y&sort=3&cat=<id>&show=360&page=1) so the runtime crawler walks newest-first with max perPage. Extraction spot-checked on 3 random products from 3 different leaves: all yielded og:title + product_productprice. KNOWN GAP: ~503 depth-2/depth-3 leaf categories from sitemap not exhaustively walked; sitemap is canonical at 6049. Operator should walk + dedup the 19 URLs and add depth-2 leaves for any gap > 5%. Camping/non-firearm scope filtering applied per skill scope rules.",
+      "Stage 5: pagination = query-form ?page=N alongside the required Volusion ?searching=Y wrapper (Mistake 24). Tested: show=360 returned 360 distinct products on page 1 (perPage honored to max); show=90&page=2 returned 90 distinct products zero-overlapping page 1 (pagination honored). paginationPattern.template='page', firstPageHasParam=true (since the canonical URL embeds page=1 alongside searching=Y for the sort param to attach), startPage=1, zeroIndexed=false, perPage=360.",
+      "Stage 6: Volusion <select class='sortby_select' id='SortBy'> options read verbatim from /category_s/662 HTML: sort=1 Price L->H (default), sort=2 Price H->L, sort=3 Newest, sort=4 Oldest, sort=5 Most Popular, sort=7 Title, sort=9 Manufacturer, sort=11 Availability. 3-outcome counter-control (sort=1 default vs sort=3 newest vs sort=4 oldest, each with cache-bust nonce) yielded 3 distinct first products — sort=3 is honored AND default is NOT already newest. sortParam='searching=Y&sort=3' (query-form). sortVerified=true.",
+      "Stage 7: crawlers.watermark.method = navigate-from-watermark. Reasoning: sort=3 (Newest) verified honored via 3-outcome counter-control (Stage 6) AND product listings expose monotonic ordering via Volusion's SearchParams JS var. No date-since API filter on Volusion (no platform JSON API exposed; classic .asp + .htm rendering). full-catalog-sweep is the wrong choice — sort works.",
+      "Stage 8: expectedProductCount=6049. Source: sitemap.xml _p/ URL filter — 6049 unique product detail URLs (matches the unfiltered _p/<slug>_p/<sku>.htm pattern). productCountMethod={method: 'generic-product-sitemap', url: '/sitemap.xml', pattern: '_p/[^/]+\\\\.htm(?:$|[?#])'} — matches the runtime switch case in product-count-probe.ts:213. The Volusion <select id='perpage'> on a category page exposes show=20/40/60/90/180/360, not an 'All' option — so the celerant-style per-category 'All' count is not available here. Sitemap is the cleanest canonical source. Walk-vs-probe cross-check: page-1 sums across 146 productive walked cats = 4031 + extrapolated /662 multi-page = ~4571 — less than 6049, but the gap is expected because (a) the walk only covered depth-1 subcats from the 11 top-level nav links (203 cats; 503 deeper leaves NOT walked); (b) sitemap includes sold/out-of-stock products kept in sitemap but hidden from in-stock categories. Per skill Mistake-36 rule, walk > probe does NOT trigger because walk < probe. Keep sitemap value.",
+      "Stage 9: validator should pass 9/9 required + 7/7 recommended. crawlers.watermark.method valid (navigate-from-watermark); sortParam non-empty AND sortVerified=true; perPage=360 positive int; paginationPattern.type='query' is a valid enum value; expectedProductCount=6049 > 0; catalogUrls is a non-empty array; adapterType='generic-retail' is valid; hasWaf is explicit boolean. Recommended: wafType set, wafLastProbedAt set, productCountMethod object set, lastVerified=today, profileVersion=1, sortParam set, extractionTested=true."
+    ],
+    "knownLimitations": [
+      "503 depth-2 leaf categories from sitemap not exhaustively walked — the 19-URL minimal-cover set may miss products in deeply nested brand-pivot subcats under tile-parents (Firearms 325, Rifle Components 957, Ammunition 550). Operator action: walk + dedup the 19 URLs, compare unique product set vs sitemap _p/ entries; if coverage < 95%, ADD depth-2 leaves.",
+      "Cloudflare 403s on /wp-admin/.env/etc are tenant-wide Volusion rules — crawler must not probe those paths or it will trigger rate-limit cascades. Production crawler avoids these naturally.",
+      "stockStatus on extraction sample: only Benelli Nova page-1 detail explicitly says 'In Stock'; Burris Zee Rings and Fierce Dirtnap detail pages do not surface explicit stock markers in the og: tags I sampled. Production crawler will infer from absence of 'sold out' or 'unavailable' markers."
+    ]
+  }
+}

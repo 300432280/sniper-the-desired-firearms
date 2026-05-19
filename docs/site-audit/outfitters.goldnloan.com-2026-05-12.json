@@ -1,0 +1,152 @@
+{
+  "profileVersion": 1,
+
+  "platform": "odoo",
+  "adapterType": "generic-retail",
+
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-12T06:22:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches return 200 with cf-ray header. Honeypot paths return application 404 (76KB body — same as homepage layout, not WAF challenge). Rapid burst 10/10 HTTP 200 in ~9s, no rate limit. SQLi/XSS/noUA all pass. hasWaf=false operationally (Cloudflare in front but passive — setting true would needlessly drop perPage to 20 and gate through waf-cookie-manager).",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "10/10 HTTP 200 in ~9s, no rate limit",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "cfHeaders": ["cf-ray", "server: cloudflare", "cf-cache-status: DYNAMIC|BYPASS"],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false
+  },
+
+  "hasCaptcha": false,
+  "captchaType": null,
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 1880,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": "ppg=2000 single-page dump of /shop (counts product cards directly; theme uses 'load more' so no <last-page> link to scrape)",
+    "perPage": 1
+  },
+
+  "catalogUrls": [
+    "https://outfitters.goldnloan.com/shop/category/accessories-35",
+    "https://outfitters.goldnloan.com/shop/category/ammunition-39",
+    "https://outfitters.goldnloan.com/shop/category/archery-131",
+    "https://outfitters.goldnloan.com/shop/category/firearms-42",
+    "https://outfitters.goldnloan.com/shop/category/hunting-86",
+    "https://outfitters.goldnloan.com/shop/category/optics-45",
+    "https://outfitters.goldnloan.com/shop/category/reloading-supplies-52",
+    "https://outfitters.goldnloan.com/shop/category/air-rifle-171"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://outfitters.goldnloan.com/shop/tikka-rifle-t3x-hunter-218",
+      "title": "Tikka Rifle T3X Hunter",
+      "price": 1399.99,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://outfitters.goldnloan.com/shop/01618-trius-1-step-trap-thrower-4868",
+      "title": "Trius 1 Step Trap Thrower",
+      "price": null,
+      "stockStatus": "unknown",
+      "extractionNote": "listing card has schema.org Product itemscope with itemprop=price + itemprop=availability; price not re-fetched on detail page in this run."
+    },
+    {
+      "url": "https://outfitters.goldnloan.com/shop/winchester-rifle-xpr-214",
+      "title": "Winchester Rifle XPR",
+      "price": null,
+      "stockStatus": "unknown",
+      "extractionNote": "Card schema.org markup confirmed on /shop p1 (itemprop=name, itemprop=price under <span class='oe_currency_value'>, itemprop=availability via <link href='schema.org/InStock|OutOfStock'>)."
+    }
+  ],
+
+  "sortParam": "?order=create_date+desc",
+  "sortVerified": true,
+
+  "perPage": 80,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 80,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Query-form sort '?order=create_date+desc' counter-control verified: default /shop first product = tikka-rifle-t3x-hunter-218 (id 218 = manual website_sequence order). With ?order=create_date+desc first 5 = ids [4868, 4867, 4866, 4865, 4864] — strictly descending creation IDs (newest first). Counter-control ?order=name+asc yields different ordering starting with leading-space ISOtunes products. All three differ → sort is honored. listing cards expose product detail URLs containing the monotonic numeric id at end of slug, so navigate-from-watermark can lock onto last-seen-id."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "homepage-nav + shop-page-sidebar enumeration",
+    "categories": [
+      { "slug": "/shop/category/accessories-35",         "allOption": 202 },
+      { "slug": "/shop/category/ammunition-39",          "allOption": 552 },
+      { "slug": "/shop/category/archery-131",            "allOption": 58  },
+      { "slug": "/shop/category/firearms-42",            "allOption": 184 },
+      { "slug": "/shop/category/hunting-86",             "allOption": 84  },
+      { "slug": "/shop/category/optics-45",              "allOption": 254 },
+      { "slug": "/shop/category/reloading-supplies-52",  "allOption": 173 },
+      { "slug": "/shop/category/air-rifle-171",          "allOption": 0   }
+    ],
+    "totalsSumCheck": "Sum across 8 firearm-relevant top-level Odoo categories = 1507 products (walked at ppg=2000 each). Global /shop?ppg=2000 walk = 1880 products. Sitemap = 2018 /shop/<slug>-<id> entries. Δ between per-cat walk (1507) and global /shop (1880) = 373 products that live ONLY in fishing-92 (246) + clothing-91 (109) + uncategorized hoodies (18); these are pure-fishing / pure-apparel and excluded per Rule C scope. The 8-URL catalogUrls list covers 100% of firearm-relevant products. air-rifle-171 returned 0 today (kept per Rule C: empty != dead)."
+  },
+
+  "lastVerified": "2026-05-12",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-12T06-22-00Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "expectedProductCount": "verified-via-ppg-walk",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified-via-walk-and-dedup",
+      "paginationPattern": "verified-page1-vs-page2-zero-overlap",
+      "sortParam": "verified-via-counter-control-3-outcome",
+      "extractionTested": "verified",
+      "watermarkMethod": "verified-via-sort-counter-control",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1: input host outfitters.goldnloan.com returned 200 OK directly; <link rel=canonical href='https://outfitters.goldnloan.com/'> confirms canonical = host. No www-fallback needed.",
+      "Stage 2: 8/8 batches clean. cf-ray on every request but consistent timing, no 4xx/5xx, no challenge body. Honeypot 404 = app default (76KB layout body, not WAF block). hasWaf=false (operational); cloudflare-passive recorded informationally. No CAPTCHA markers (recaptcha/hcaptcha/turnstile) anywhere in homepage HTML.",
+      "Stage 3: <meta name='generator' content='Odoo'/> + dr_theme_config JSON + load_more_products config + tp-* CSS classes (theme prefix) confirm odoo. adapterType=generic-retail per skill mapping. No age-gate (no DOB form, no 'I am 18 or older' button, no age_verified cookie). needsPlaywright=false because plain HTTP GET returns full product listing markup with schema.org cards.",
+      "Stage 4: discovered 12 candidate top-level Odoo categories from homepage nav + /shop sidebar (single-word-slug pattern + numeric ID); walked each at ?ppg=2000. Productive (>=58): accessories, ammunition, archery, firearms, fishing, hunting, optics, reloading-supplies, clothing. Empty/non-product: air-rifle-171, second-173, shipping-160. Per Rule C scope: included accessories/ammunition/archery/firearms/hunting/optics/reloading-supplies/air-rifle; excluded fishing-92 (pure fishing) and clothing-91 (pure apparel). 18-product residual gap (in /shop ?ppg=2000 but not in any included cat) traced to uncategorized hoodies = clothing -> out of scope. catalogUrls covers 100% of firearm-relevant products.",
+      "Stage 5: probed Odoo pagination: /shop/page/2 returns 200 (910KB) and product link cards with /shop/<slug>-<id>?page=2 -- page 2 product IDs [194, 192, 191, 190, 188] disjoint from page 1 [218, 217, 215, 214, 213]. perPage probe: default 20, ppg=80 returned 80 unique products clean, ppg=2000 / ppg=10000 both returned 1880 unique (the actual catalog ceiling, not a server cap). Set perPage=80 as conservative-fast value.",
+      "Stage 6: <input type='hidden' name='order' value=''/> on /shop with sort links exposing 5 options: create_date+desc, list_price+asc, list_price+desc, name+asc, website_sequence+asc. 3-outcome counter-control: default first 5 ids=[218,217,215,214,213] (website_sequence manual order). ?order=create_date+desc first 5 ids=[4868,4867,4866,4865,4864] (descending). ?order=name+asc starts with leading-space ISOtunes (alpha). All three sets differ -- sort honored. sortParam='?order=create_date+desc', sortVerified=true.",
+      "Stage 7: navigate-from-watermark -- listing exposes monotonic numeric id at end of every product slug; sortParam puts highest id first; combined gives watermark crawler a clean newest-first signal. No Odoo storefront API for unauthenticated date-filtered fetch (rules out api-date-since-watermark); full-catalog-sweep not needed.",
+      "Stage 8: no API count endpoint on storefront for unauth users; sitemap product entries=2018 (includes some archived /shop URLs); /shop?ppg=2000 returns 1880 distinct product cards. ppg=10000 same 1880 -- confirms not a server cap. expectedProductCount=1880 with productCountMethod={method:'html-pagination', selector:'ppg=2000 dump count', perPage:1}.",
+      "Stage 9: validator-ready. All 9 required + 7 recommended fields present."
+    ]
+  }
+}

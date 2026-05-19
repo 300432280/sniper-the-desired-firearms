@@ -1,0 +1,127 @@
+{
+  "runId": "B4R2",
+  "domain": "gotenda.com",
+  "verdictTimestamp": "2026-05-15T18:58:08Z",
+  "method": "Independent Playwright re-probe with Sucuri cookie acquisition + strict ul.products>li.product selector + 3-method expectedProductCount triangulation + taxonomy API counts",
+  "perFieldVerdict": {
+    "catalogUrls": {
+      "r1Value": [
+        "/product-category/firearms-canada/",
+        "/product-category/accessories/",
+        "/product-category/ammunition-for-sale-in-canada-tenda-canada/",
+        "/product-category/gun-optics-canada/",
+        "/product-category/knives-tools/",
+        "/product-category/reloading/",
+        "/product-category/hunting-outdoor/"
+      ],
+      "dbValue": [
+        "/product-category/firearms/",
+        "/product-category/ammunition/",
+        "/product-category/accessories/",
+        "/product-category/reloading/",
+        "/product-category/optic/",
+        "/product-category/knives/",
+        "/product-category/hunting-outdoor/",
+        "/shop/"
+      ],
+      "winner": "R1",
+      "confidence": "HIGH",
+      "evidence": "Live Playwright probe with valid Sucuri cookie returned HTTP 404 + body 'Oops! That page can't be found!' for 3 of DB's 8 URLs: /firearms/, /ammunition/, /knives/. /optic/ returned HTTP 200 but is a near-empty legacy category (24 products on page 1) and is NOT the same as taxonomy-API slug gun-optics-canada (count=2258 per /wp-json/wp/v2/product_cat). DB has been crawling 4 dead/wrong URLs since 2026-04-07 (5+ weeks). All 7 R1 candidate URLs returned HTTP 200 with correct h1 titles. Page-2 walk verified: firearms-canada/page/2/ -> 24 products, ammunition.../page/2/ -> 24 products, gun-optics-canada/page/2/ -> 24 products (tile-only-on-page-1 theme behavior confirmed).",
+      "correctedValue": [
+        "/product-category/firearms-canada/",
+        "/product-category/accessories/",
+        "/product-category/ammunition-for-sale-in-canada-tenda-canada/",
+        "/product-category/gun-optics-canada/",
+        "/product-category/knives-tools/",
+        "/product-category/reloading/",
+        "/product-category/hunting-outdoor/"
+      ]
+    },
+    "perPage": {
+      "r1Value": 24,
+      "dbValue": 100,
+      "winner": "R1",
+      "confidence": "HIGH",
+      "evidence": "Re-probed /shop/ with explicit per_page values using strict selector ul.products>li.product: per_page=100 -> 24 cards, per_page=48 -> 24 cards, per_page=24 -> 24 cards, no param -> 24 cards. Theme silently caps HTML at 24/page regardless of query param. DB perPage=100 is fiction for HTML walk. Note: WC Store API /wp-json/wc/store/v1/products DOES honor per_page=100 (it is the API perPage, not HTML perPage) - if DB perPage referred to API enrichment chunk size it is ambiguously named. R1 correctly assigns perPage=24 because this field describes HTML catalog walking which is what paginationPattern.template /page/{N}/ navigates.",
+      "correctedValue": 24
+    },
+    "expectedProductCount": {
+      "r1Value": 16588,
+      "dbValue": 16440,
+      "winner": "R1",
+      "confidence": "HIGH",
+      "evidence": "Three independent methods today (2026-05-15): (a) WC Store API GET /wp-json/wc/store/v1/products?per_page=1 -> x-wp-total=16588; (b) WP REST GET /wp-json/wp/v2/product?per_page=1 -> x-wp-total=16588; (c) Sitemap union across 17 product-sitemap*.xml files via <url> tag count -> 16589 (1-off, within rounding). Triangulated count: 16588. DB value 16440 (verified 2026-04-07) is 5wk stale; site has grown by 148 products (consistent with WooCommerce retail churn).",
+      "correctedValue": 16588
+    },
+    "productCountMethod": {
+      "r1Value": { "method": "wp-rest-header", "endpoint": "/wp-json/wc/store/v1/products", "header": "x-wp-total" },
+      "dbValue": { "method": "sitemap-index", "urls": "17 product-sitemap*.xml files" },
+      "winner": "R1",
+      "confidence": "MEDIUM-HIGH",
+      "evidence": "Both methods work and produce 16588 vs 16589 (1-off). product-count-probe.ts supports both. R1's wp-rest-header is 1 request vs 17 (sitemap-index). SKILL Stage 8 priority #1 is customer-visible total; wp-rest-header is the canonical WooCommerce response. sitemap-index can over-count (includes hidden/oos) but here matches within 1 product. R1 method is preferred for efficiency + canonicality. Either is acceptable; R1's choice is the recommended runtime method.",
+      "correctedValue": { "method": "wp-rest-header", "endpoint": "/wp-json/wc/store/v1/products", "header": "x-wp-total" }
+    },
+    "hasCaptcha": {
+      "r1Value": false,
+      "dbValue": true,
+      "winner": "R1",
+      "confidence": "HIGH",
+      "evidence": "SKILL Stage 2 specifies hasCaptcha is OPERATIONAL (gates crawler paths). reCAPTCHA v3 is Contact Form 7 site-wide script load only and does not gate /shop/, /product-category/*, or any product detail page. R1 captured captchaType=recaptcha-v3 as metadata while correctly recording operational=false. DB's hasCaptcha=true is script-tag-presence reading. Both can coexist if we treat them as different fields: hasCaptcha (operational gate) = false; captchaType (technology fingerprint) = recaptcha-v3.",
+      "correctedValue": false
+    },
+    "needsPlaywright": {
+      "r1Value": false,
+      "dbValue": true,
+      "winner": "INCONCLUSIVE-BUT-LEAN-R1",
+      "confidence": "MEDIUM",
+      "evidence": "needsPlaywright is NOT consumed by runtime crawl path - grep'd src/services/* shows zero runtime branch on this field. Production WC adapter + waf-cookie-manager handles Sucuri: solve challenge ONCE via Playwright, cache cookies in Redis (TTL 30 min), reuse for all plain-HTTP/API calls. R1 reads it as runtime-fetch flag (plain HTTP after cookie) -> false. DB reads it as solver-needs-Playwright -> true. Both readings are defensible; field semantics are ambiguous in current SKILL.md. Recommend leaving as R1 false and adding a SKILL.md clarification: needsPlaywright = does the catalog/watermark fetch require Playwright per-request (post-WAF-solve)? NOT does the WAF solver itself need Playwright (Sucuri JS challenge always needs Playwright once).",
+      "correctedValue": false
+    },
+    "sortParam": {
+      "r1Value": "?orderby=date",
+      "dbValue": "?orderby=date&order=desc",
+      "winner": "EQUIVALENT-PREFER-DB",
+      "confidence": "HIGH",
+      "evidence": "Live canary test: first 3 product IDs on /shop/, /shop/?orderby=date, /shop/?orderby=date&order=desc are IDENTICAL [750165,750084,750081]. /shop/?orderby=price is DIFFERENT [206086,206126,206088]. Both R1 and DB forms produce the same result. DB's explicit &order=desc is defensive (date in WC defaults to desc but explicit prevents theme drift). R1's shorter form matches HTML <option selected> value. Use DB form for runtime safety.",
+      "correctedValue": "?orderby=date&order=desc"
+    },
+    "shop_safety_net": {
+      "r1Value": "excluded",
+      "dbValue": "/shop/ included as 8th catalogUrl",
+      "winner": "R1-FOR-SCHEMA-DB-NOTE-VALID",
+      "confidence": "MEDIUM",
+      "evidence": "Sum of 7 R1 firearm-relevant cats per taxonomy API = 3970+3349+2289+2258+1529+1426+1075 = 15,896. Global expectedProductCount = 16,588. Gap = 692. Excluded cats (per R1 Stage 4 reasoning): promotions=1324, tenda-alpha=587, tenda-strike=403 are OVERLAPPING sale subsets (a /firearms-canada/ product also tagged promotional appears in both - not double inventory). Pure non-firearm cats (gift-card=6, free-gift-350=2) are tiny. The 692-product gap likely = uncategorized parent-level products + overlap dedup math. /shop/ would catch any uncategorized products. Recommendation: KEEP R1's 7-cat list as the firearm-relevant spine; production already uses WP REST product discovery (covers ALL products by ID) so any uncategorized products are picked up by bootstrap regardless of catalogUrls. catalogUrls is for HTML watermark walking - 7 cats cover 15,896/16,588 = 95.8% of inventory, with WP REST API filling the rest. The 692 uncovered are acceptable since they are: (a) likely uncategorized one-offs (b) caught by bootstrap WP REST anyway.",
+      "correctedValue": [
+        "/product-category/firearms-canada/",
+        "/product-category/accessories/",
+        "/product-category/ammunition-for-sale-in-canada-tenda-canada/",
+        "/product-category/gun-optics-canada/",
+        "/product-category/knives-tools/",
+        "/product-category/reloading/",
+        "/product-category/hunting-outdoor/"
+      ]
+    }
+  },
+  "convergedFields": {
+    "platform": "woocommerce",
+    "adapterType": "woocommerce",
+    "hasWaf": true,
+    "wafType": "sucuri",
+    "wafWorkaround.method": "cookie-cache",
+    "paginationPattern.type": "path",
+    "paginationPattern.template": "/page/{N}",
+    "crawlers.watermark.method": "api-date-since-watermark",
+    "crawlers.bootstrap.apiEndpoints": {
+      "productDiscovery": "/wp-json/wp/v2/product",
+      "priceEnrichment": "/wp-json/wc/store/v1/products"
+    },
+    "searchUrl": "/?s={keyword}&post_type=product"
+  },
+  "summary": {
+    "totalSubstantiveDivergences": 6,
+    "r1Wins": 5,
+    "dbWins": 1,
+    "inconclusive": 0,
+    "fieldsRequiringSchemaClarification": ["needsPlaywright", "hasCaptcha"]
+  }
+}
