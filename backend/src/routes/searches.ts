@@ -335,11 +335,55 @@ router.post('/group/:groupId/scan', requireAuth, async (req: Request, res: Respo
 
     const searches = await prisma.search.findMany({
       where: { searchAllGroupId: groupId, userId: req.user!.userId },
-      select: { id: true, keyword: true, websiteUrl: true, lastChecked: true, isActive: true },
+      select: { id: true, keyword: true, websiteUrl: true, lastChecked: true, isActive: true, inStockOnly: true },
     });
     if (searches.length === 0) return res.status(404).json({ error: 'Group not found' });
 
     const searchIds = searches.map((s) => s.id);
+
+    // Sync Match table from ProductIndex for each search in the group.
+    // Without this step, freshly-created search-all groups return 0 matches because
+    // matchNewProducts() (which writes to Match) only fires on newly-crawled items —
+    // it never backfills pre-existing ProductIndex entries against a new search.
+    // Mirrors the single-search /:id/scan endpoint logic.
+    for (const search of searches) {
+      let searchDomain: string;
+      try {
+        searchDomain = new URL(search.websiteUrl).hostname.replace(/^www\./, '');
+      } catch { continue; }
+
+      const site = await prisma.monitoredSite.findFirst({
+        where: { domain: { contains: searchDomain } },
+        select: { id: true },
+      });
+      if (!site) continue;
+
+      const indexMatches = await searchProductIndex(search.keyword, [site.id], { inStockOnly: search.inStockOnly });
+      if (indexMatches.length === 0) continue;
+
+      const existingUrls = new Set(
+        (await prisma.match.findMany({
+          where: { searchId: search.id },
+          select: { url: true },
+        })).map(m => m.url),
+      );
+
+      const newProducts = indexMatches.filter(p => !existingUrls.has(p.url));
+      if (newProducts.length > 0) {
+        await prisma.match.createMany({
+          data: newProducts.map(p => ({
+            searchId: search.id,
+            title: p.title,
+            price: p.price,
+            regularPrice: p.regularPrice,
+            url: p.url,
+            hash: 'pi:group-scan',
+            thumbnail: p.thumbnail,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     const [matches, totalMatches] = await Promise.all([
       prisma.match.findMany({
