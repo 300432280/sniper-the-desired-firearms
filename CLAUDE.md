@@ -159,6 +159,8 @@ Real incidents from earlier work on this project. Cited so future sessions don't
 - **Don't add site-specific workarounds without testing the generic adapter first.** Recurring incidents of bespoke code added when the generic approach already worked.
 - **Weeks of "WAF limitation" claims** turned out to be wrong URLs. Verify the URL is correct before blaming the WAF.
 - **WAF rate-limit delays exist for a reason.** The 800ms inter-request delay was added to prevent rate limiting. Don't remove it on a "speed" recommendation without first confirming rate limits are no longer a risk.
+- **`worker.ts:549` silent loss-of-signal under `verifyMethod="store-api"`.** The L537-546 guard prevents wrongful deactivation (2026-04-03 incident fix), but L549's unconditional `handledProductIds.push` causes the caller at L711 to early-return — never reaching the Playwright fallback at L759-769. Result: OOS-transition products silently lose `stockStatus`/`lastSeenAt`/`price` updates → restock detection dies. Fix on branch `fix/batch-3-runtime-bugs-2026-05-19` moves the push inside the `if (apiProduct)` branch.
+- **`wafType` is consumed by frontend admin UI, not just the crawler.** The crawler routes on `hasWaf` boolean only. `wafType` has zero non-presence-check reads in `backend/src/`, but `frontend/src/app/dashboard/admin/profiles/page.tsx` reads it at 5 places (sort key, column display, sticky-key, diff key, change-detection). Grep both directories before declaring a profile field "unused."
 
 ## Gotchas
 - On Windows: bash escapes `$disconnect` in inline node `-e` commands. Write `.js` script files instead.
