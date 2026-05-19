@@ -12,3 +12,20 @@ prisma/migrations/
 backend/scripts/pre-bootstrap-output/
 .claude/scheduled_tasks.lock
 frontend/tsconfig.tsbuildinfo
+
+# Audit / probe scratch (not artifacts — those live in docs/site-audit/)
+_audit_tmp/
+_r3_tmp/
+backend/_audit_tmp/
+
+# One-off query scripts and probe temps from audit sessions
+backend/_query-*.js
+backend/scripts/_tmp-*.ts
+
+# Path-mangle artifacts (script wrote ${var}/_audit_tmp/... where var was empty)
+ProjectsFIREARM-ALERT_*
+
+# Stray scratch files from past audit sessions
+liang_r1.json
+sm1.xml
+sm2.xml
