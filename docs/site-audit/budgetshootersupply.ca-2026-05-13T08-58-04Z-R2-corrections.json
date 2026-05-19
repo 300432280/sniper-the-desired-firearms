@@ -1,0 +1,148 @@
+{
+  "_meta": {
+    "round": "R2",
+    "site": "budgetshootersupply.ca",
+    "auditedAt": "2026-05-13T08:58:04Z",
+    "vsR1Candidate": "docs/site-audit/budgetshootersupply.ca-2026-05-13T04-29-21Z-R1.json",
+    "vsDbProfile": "Site.siteProfile fetched 2026-05-13",
+    "decisionRule": "Trust neither side; live-probe truth; cross-check against runtime code"
+  },
+
+  "expectedProductCount": {
+    "value": 2808,
+    "evidence": "Live: GET /wp-json/wp/v2/product?per_page=1 -> x-wp-total: 2808 (2026-05-13 08:44Z). DB stored 2756 (stale snapshot from 2026-04-11). R1 chose 1586 (Store API customer-visible). Both stale or wrong-source; live truth is 2808. Choosing WP REST (broader, all-published) per DB design intent for back-in-stock alerting.",
+    "confidence": "high"
+  },
+
+  "productCountMethod": {
+    "value": { "method": "wp-rest-header", "endpoint": "/wp-json/wp/v2/product", "header": "x-wp-total" },
+    "evidence": "Two reasons to choose WP REST over Store API: (1) WC Store API hides OOS (1586 vs 2808 = 1222 hidden), and back-in-stock alerting requires the broader population. (2) Runtime woocommerce.ts:340 calls /wp-json/wp/v2/product for both discovery and watermark, so count source matches crawl source. R1's choice followed SKILL.md priority naively. DB choice correct.",
+    "confidence": "high"
+  },
+
+  "apiDateFilter": {
+    "value": {
+      "param": "modified_after",
+      "format": "ISO8601",
+      "monotonic": true,
+      "evidence": "Live 2026-05-13: ?after=2099 -> 0; ?after=1999 -> 2808; ?modified_after=2099 -> 0; ?modified_after=1999 -> 2808. KEY: ?after=last-7d -> 7 NEW products; ?modified_after=last-7d -> 311 products. modified_after catches 304 stock/price updates the after filter misses.",
+      "verifiedAt": "2026-05-13"
+    },
+    "evidence": "Runtime woocommerce.ts:337 hardcodes params.modified_after = options.dateAfter (not after). Empirical 44x difference at 7d window proves modified_after is the right field for restock-detection. R1's ?after= mention in `reason` string is misleading because runtime never sends that param.",
+    "confidence": "high"
+  },
+
+  "catalogUrls": {
+    "value": [
+      "/product-category/ammunition/",
+      "/product-category/black-powder/",
+      "/product-category/books-reloading-manuals/",
+      "/product-category/bullet-casting-loading-tools-components-categories/",
+      "/product-category/chronographs/",
+      "/product-category/categories-clearance-items/",
+      "/product-category/custom-orders/",
+      "/product-category/gun-cleaner-lube-tools-patches/",
+      "/product-category/hearing-protection/",
+      "/product-category/kestrel/",
+      "/product-category/king-competition/",
+      "/product-category/muzzleloading/",
+      "/product-category/optics/",
+      "/product-category/pal-ups/",
+      "/product-category/rifle-pistol-reloading-components/",
+      "/product-category/rifle-pistol-reloading-tools-lubes/",
+      "/product-category/rifle-scopes/",
+      "/product-category/shotshell-reloading-components/",
+      "/product-category/shotshell-reloading-tools-presses/",
+      "/product-category/speed-loaders/",
+      "/product-category/uncategorized/",
+      "/product-category/used-items/"
+    ],
+    "evidence": "BOTH WRONG, R1 closer. DB's [/products/] yields 0 products via woocommerce.extractCatalogProducts at runtime (live verified - /products/ is Woodmart AJAX, only sidebar widget refs in static HTML). DB's htmlCrawlViable=false flag NOT consumed by runtime (grep confirmed zero refs in src/services). R1's 22 URLs work: 17 leaf categories extract 12 products per page from p1. The 5 parent-tile categories yield 0 on p1 (wd-with-subcat) but products appear from p2 (verified: ammunition p2 = 12 via adapter; pal-ups walked 18 pages = ~225 products vs Store API 213). Playwright fallback at catalog-crawler.ts:435 handles 5 parent-tile p1 cases.",
+    "confidence": "high"
+  },
+
+  "htmlCrawlViable": {
+    "value": true,
+    "evidence": "DB declared false; R1 implicitly true. Live: woocommerce adapter extracts 12 products per leaf-category page (pal-ups p1-p18 walked cleanly). DB note 'Woodmart AJAX shop, only 5 sidebar widgets' is correct ONLY for /products/, not for /product-category/<slug>/page/N/. R1 correct; DB applied a /products/-specific observation to the wrong scope.",
+    "confidence": "high"
+  },
+
+  "paginationPattern": {
+    "value": { "type": "path", "template": "/page/{N}/", "perPage": 100, "firstPageHasParam": false, "startPage": 1, "zeroIndexed": false },
+    "evidence": "DB's type=api-page + template=page={N} falls through to default query in buildPaginatedUrl (catalog-crawler.ts:118-165 has no api-page branch), producing /products/?page=2 (wrong: WC uses /page/N/ path). R1's type=path + template=/page/{N}/ matches catalog-crawler path-type handler and live HTML pagination. Live: ?per_page=100 honored at /product-category/pal-ups/page/2/?per_page=100 (100 products extracted).",
+    "confidence": "high"
+  },
+
+  "crawlersBootstrap": {
+    "value": {
+      "method": "single-continuous",
+      "apiEndpoints": {
+        "productDiscovery": "/wp-json/wp/v2/product",
+        "priceEnrichment": "/wp-json/wc/store/v1/products"
+      },
+      "htmlFallback": false
+    },
+    "evidence": "Documentation-only field; runtime grep confirms 0 references to crawlers.bootstrap.method, apiEndpoints, htmlFallback in backend/src/services. R1 used keys wpRestProduct/wcStoreProducts; DB keys productDiscovery/priceEnrichment are more descriptive. Keep DB shape.",
+    "confidence": "medium"
+  },
+
+  "sortVerifiedMethod": {
+    "value": "api-id-jump",
+    "evidence": "Live 2026-05-13: page1 first id=97796 last id=95713; page2 first id=95706. Monotonically descending across page boundary. DB choice canonical for WC sites (actual API data > HTML counter-control). R1's HTML 3-outcome would also pass but API-level proof is stronger.",
+    "confidence": "high"
+  },
+
+  "htmlCrawlNote": {
+    "value": "Woodmart theme: /products/ shop page is AJAX-loaded (woodmart-ajax-shop-on), only 5 sidebar widget refs in static HTML. BUT /product-category/<slug>/page/N/ DOES render static product grids (12 per page via .wd-product). 5 of 22 categories have parent-tile mode on page 1 (wd-with-subcat) - those pages yield 0 products but real products appear from page 2 onward. Catalog-crawler Playwright fallback at line 435 handles those 5 page-1 cases.",
+    "evidence": "Refined DB note (correct for /products/ but mis-applied as universal). R1 omitted any note.",
+    "confidence": "high"
+  },
+
+  "theme": {
+    "value": "woodmart",
+    "evidence": "Top-level field per DB. R1 only surfaced this inside auditNotes.platformFingerprints. SKILL.md treats theme as discrete profile field.",
+    "confidence": "high"
+  },
+
+  "perPage": {
+    "value": 100,
+    "evidence": "Live: ?per_page=100 honored on /product-category/pal-ups/page/2/ - returned 100 unique product links. Both DB and R1 agree. Confirmed.",
+    "confidence": "high"
+  },
+
+  "dataFlow": {
+    "value": {
+      "steps": [
+        { "api": "WP REST API /wp-json/wp/v2/product", "provides": ["title","url","thumbnail","categories","sourceId"], "notes": "Primary discovery. 2808 products live 2026-05-13. Supports orderby=date and modified_after/modified_before." },
+        { "api": "WC Store API /wp-json/wc/store/v1/products", "provides": ["price","regularPrice","stockStatus","thumbnail"], "notes": "Enrichment. 1586 customer-visible products. Prices in cents (divide by 100)." }
+      ]
+    },
+    "evidence": "DB had this; R1 omitted. Runtime-consumed: NO (operator documentation). Update product count 2756 -> 2808 to reflect live total.",
+    "confidence": "medium"
+  },
+
+  "wafProbeEvidence": {
+    "value": "structured-preferred",
+    "evidence": "R1 uses structured object per SKILL.md spec; DB stores prose summary. SKILL.md harness expects structured. Both contain same operational verdict (no CDN WAF, Apache origin mod_security rule-selective, hasWaf=false operationally).",
+    "confidence": "high"
+  },
+
+  "_categoryRecursionFinding": {
+    "wpRestRecursesIntoChildren": false,
+    "wcStoreApiRecursesIntoChildren": true,
+    "testCategory": "162 (Ammunition, 12 subcats)",
+    "wpRestCount": 5,
+    "wcStoreApiCount": 98,
+    "evidence": "Live 2026-05-13: GET /wp-json/wp/v2/product?per_page=1&product_cat=162 -> x-wp-total: 5 (direct-assigned only). GET /wp-json/wc/store/v1/products?per_page=1&category=162 -> x-wp-total: 98 (recurses into 12 children). 19.6x difference. Validates DB catalogUrlsNote.",
+    "implication": "If operator switches catalog crawl to per-category WP REST product_cat=N filter, coverage collapses 95% silently. DB chose global /wp/v2/product crawl with no category filter. R1's HTML walk approach sidesteps the issue because HTML category pages render full descendant product set."
+  },
+
+  "_filterParamFinding": {
+    "afterParamHonored": true,
+    "modifiedAfterParamHonored": true,
+    "differentResultSets": true,
+    "evidence": "?after=last-7d -> 7 products; ?modified_after=last-7d -> 311 products. At 30d: ?after=42 vs ?modified_after=821. modified_after captures NEW + UPDATED (stock/price/restock); after captures NEW only.",
+    "runtimeBinding": "woocommerce.ts:337 hardcodes params.modified_after = options.dateAfter. The site profile apiDateFilter.param value is descriptive metadata; actual runtime always uses modified_after.",
+    "skillMdGap": "SKILL.md Stage 7 ONLY mentions ?after= probe. For WooCommerce, modified_after is the canonical watermark filter."
+  }
+}

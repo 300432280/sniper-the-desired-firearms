@@ -14,7 +14,7 @@
  */
 
 import { prisma } from '../lib/prisma';
-import { getAdapterForUrl } from './scraper/adapter-registry';
+import { getAdapterForUrl, _getSiteCacheEntry } from './scraper/adapter-registry';
 import { fetchPageWithMeta, randomDelay } from './scraper/http-client';
 import { consumeToken } from './token-budget';
 import { matchNewProducts } from './keyword-matcher';
@@ -257,9 +257,14 @@ export async function crawlCatalogTier(params: {
   capacity: number;
   hasWaf?: boolean;
 }): Promise<CatalogCrawlResult> {
-  const { siteId, url, tier, tierState, tokensAllocated } = params;
+  const { siteId, url, domain, tier, tierState, tokensAllocated } = params;
   const { adapter } = await getAdapterForUrl(url);
   const origin = new URL(url).origin;
+
+  // siteProfile is the source of truth for per-site config. Read perPage from it;
+  // fall back to the historical WAF/non-WAF defaults only when the profile is missing the field.
+  const profileEntry = _getSiteCacheEntry(domain.replace(/^www\./, ''));
+  const profilePerPage: number | undefined = profileEntry?.siteProfile?.perPage ?? undefined;
 
   let pagesScanned = 0;
   let tokensUsed = 0;
@@ -282,7 +287,7 @@ export async function crawlCatalogTier(params: {
 
         const catalogPage = await adapter.fetchCatalogPage(origin, page, {
           sortBy: 'newest',
-          perPage: params.hasWaf ? 20 : 50,
+          perPage: profilePerPage || (params.hasWaf ? 20 : 50),
           dateAfter: tierState.dateRangeStart || undefined,
           dateBefore: tierState.dateRangeEnd || undefined,
           hasWaf: params.hasWaf,

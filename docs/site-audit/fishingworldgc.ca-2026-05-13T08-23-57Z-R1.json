@@ -1,0 +1,137 @@
+{
+  "profileVersion": 1,
+  "platform": "shopify",
+  "adapterType": "shopify",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-13T08:19:18Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cloudflare-passive — cf-ray header on all batches; SQLi/XSS/honeypot all 200 or 404; rapid-burst clean; no challenge bodies. No active WAF blocking.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstStatuses": ["10x 200"],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotPathsResult": "404 from Shopify origin (/wp-admin /wp-login /xmlrpc /.git/config /phpinfo); /.env returned 200 storefront",
+    "botUaBlocked": false,
+    "noUaStatus": 403,
+    "verdict": "cloudflare-passive — no active blocking; standard Shopify+CF setup"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2011,
+  "productCountMethod": {
+    "method": "shopify-products-walk",
+    "endpoint": "/products.json",
+    "perPage": 250
+  },
+  "catalogUrls": [
+    "https://fishingworldgc.ca/collections/all"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://fishingworldgc.ca/products/shockguard-flashlight-stun-baton-sg-1132",
+      "title": "Shock Guard - Flashlight Stun Baton - SG-1132",
+      "price": 89.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://fishingworldgc.ca/products/burris-fullfield-3-12x42-e3-ksb-1",
+      "title": "Burris Fullfield 3-12X42 E3 KSB 1\"",
+      "price": 434.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://fishingworldgc.ca/products/henry-frontier-lever-22lr-24",
+      "title": "Henry Lever Action Octagon Frontier .22 S/L/LR, 24\"",
+      "price": 799.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort_by=created-descending",
+  "sortVerified": true,
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productDiscovery": "/products.json",
+        "priceEnrichment": null
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "searchUrl": "/search?q={keyword}&type=product",
+  "topLevelCategories": {
+    "source": "shopify-collections-json",
+    "categories": [
+      { "slug": "shooting-sports", "allOption": 1526 },
+      { "slug": "all-guns", "allOption": 726 },
+      { "slug": "all-ammo-1", "allOption": 592 },
+      { "slug": "shooting-miscellaneous-1", "allOption": 232 },
+      { "slug": "hunting-accessories", "allOption": 228 },
+      { "slug": "centre-fire-rifle", "allOption": 184 },
+      { "slug": "shot-gun", "allOption": 175 },
+      { "slug": "centrefire-ammo", "allOption": 171 },
+      { "slug": "rings-mounts", "allOption": 164 },
+      { "slug": "shotgun-ammo", "allOption": 145 },
+      { "slug": "magazines-1", "allOption": 143 },
+      { "slug": "scopes-1", "allOption": 139 },
+      { "slug": "rimfire-rifles-1", "allOption": 125 },
+      { "slug": "gun-parts", "allOption": 111 },
+      { "slug": "optics", "allOption": 99 },
+      { "slug": "pump-action-1", "allOption": 88 },
+      { "slug": "break-action-1", "allOption": 72 },
+      { "slug": "reloading-supplies", "allOption": 66 },
+      { "slug": "red-dots", "allOption": 38 },
+      { "slug": "pre-owned", "allOption": 38 }
+    ],
+    "totalsSumCheck": "/collections.json returns 250 collections; aggregator slugs (shooting-sports, all-guns, all-ammo-1) heavily overlap subcategories. Total firearm-relevant products = 2011 verified via /products.json walk = /collections/all walk = sitemap product <loc> count (perfect three-way reconcile). /collections/all provides 100% coverage with 1 URL — chosen as minimum-cover set per Rule C."
+  },
+  "lastVerified": "2026-05-13",
+  "auditNotes": {
+    "runId": "fishingworldgc.ca-R1-2026-05-13",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "catalogUrls": "high",
+      "expectedProductCount": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "paginationPattern": "high",
+      "watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex https://fishingworldgc.ca returns 200; www redirects 301 with x-redirect-reason: canonical_host_redirection. Canonical = apex.",
+      "Stage 2: heavy 8-batch probe at 2026-05-13T08:19:18Z — cf-ray every batch, server: cloudflare. Honeypots /wp-* /xmlrpc /.git /phpinfo all 404 from Shopify origin (404 page = 210298 bytes). /.env got 200 (Shopify serves storefront on unknown paths). No-UA returned 403 (4515 bytes — Shopify origin filter). SQLi/XSS payloads returned 200. Verdict: cloudflare-passive — set hasWaf:false operationally per skill (no active blocking).",
+      "Stage 3: homepage HTML contains Shopify.shop = 'fishing-world-hunting.myshopify.com', cdn.shopify.com preconnect, shopify-section divs. No age-gate markup, no recaptcha/hcaptcha/turnstile script tags. needsPlaywright:false (plain Shopify HTML).",
+      "Stage 4: /collections.json returned 250 collections totaling 10367 in summed products_count (heavy cross-collection overlap). /products.json walk (9 pages × 250) yielded 2011 unique IDs. /collections/all walk yielded same 2011 unique IDs (perfect overlap proof). Site has 2011 products well under the Shopify dept-feed soft-cap; /collections/all is the minimum-cover URL.",
+      "Stage 4g: extracted 3 random products (positions 1, mid, last on page 1 of /products.json). All 3 have title, numeric price > 0, in_stock variant, valid /products/<handle> URL. Spot-check fetch of /products/burris-fullfield-3-12x42-e3-ksb-1 returned 200.",
+      "Stage 5: pagination via /products.json?limit=250&page={N} — walked pages 1-9, page 2 first handle != page 1 first handle (zero-overlap). Last page returned 11 products. HTML pagination on /collections/all uses ?page={N} with perPage=24 (Shopify theme default).",
+      "Stage 6: HTML /collections/all?sort_by=created-descending grid-item-1 = f-a-i-r-model-combi-12ga-45-70 (published 2026-05-11). Counter-control ?sort_by=title-ascending grid-item-2 = 3d-gunworks-bx-1-triple-mag-coupler (alphabetic ascending). Different first products = sort honored. Note: Shopify /products.json IGNORES sort_by per Mistake 32 quirk, but the API's natural order IS published_at-desc (proven monotonic across the 2011-product walk).",
+      "Stage 7: /products.json walk is monotonic published_at-desc across 2011 products (first 2026-05-11, last 2023-05-14). sortParam honored on HTML. Method = navigate-from-watermark (HTML sort or API natural order both yield newest-first).",
+      "Stage 8: shopify-products-walk method — endpoint /products.json, perPage 250. Count 2011 reconciles with sitemap_products_1.xml (2012 <loc> minus 1 homepage entry = 2011) and /collections/all walk (2011)."
+    ]
+  }
+}

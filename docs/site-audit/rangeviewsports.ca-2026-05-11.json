@@ -1,0 +1,132 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-11T06:46:56Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare passive — cf-ray on every response, all 8 batches returned 200 with no challenge body; SQLi/XSS/honeypot/no-UA all passed cleanly. WordPress security plugin redirects /wp-admin/ to /securityblock/ (200) but this is application-layer, not WAF.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "server: cloudflare", "cf-cache-status"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all-200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotNotes": "/wp-admin/ -> 200 redirect to /securityblock/ (WordPress plugin, not WAF); /xmlrpc, /.env, /.git, /phpinfo -> 403 from origin (server-level block)",
+    "botUaBlocked": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "captchaNotes": "CAPTCHA 4 WordPress (c4wp) plugin installed but inactive — recaptcha_site_key empty, enable_recaptcha=\"2\" (off). No google.com/recaptcha/api.js on homepage or /my-account/.",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 5407,
+  "productCountMethod": "wc-store-api-header",
+  "expectedProductCountSource": "GET /wp-json/wc/store/v1/products?per_page=1 -> x-wp-total: 5407 (also confirmed via /wp-json/wp/v2/product -> x-wp-total: 5407)",
+  "catalogUrls": [
+    "/product-category/firearms/",
+    "/product-category/firearm-accessories/",
+    "/product-category/ammo/",
+    "/product-category/optics/",
+    "/product-category/shooting-range-accessories/",
+    "/product-category/reloading/",
+    "/product-category/knives/",
+    "/product-category/outdoor/",
+    "/product-category/courses-services/",
+    "/product-category/special-order/",
+    "/product-category/other-categories/",
+    "/product-category/no-category/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.rangeviewsports.ca/product/used-federation-firearms-spm-12-shotgun-od-green-3-12ga-9-barrel-no-box/",
+      "title": "Used Federation Firearms SPM-12 Shotgun, OD Green, 3\" 12Ga 9\" Barrel *No Box*",
+      "price": 350.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.rangeviewsports.ca/product/used-stoeger-p3000-shotgun-12ga-28-with-box/",
+      "title": "Used Stoeger P3000 Shotgun, 12Ga 28\" *With Box*",
+      "price": 360.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.rangeviewsports.ca/product/cz-457-lrp-long-range-precision-rifle-22-lr-24-5-barrel/",
+      "title": "CZ 457 LRP Long Range Precision Rifle, 22 LR 24.5\" Barrel",
+      "price": 1799.90,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "sortVerdict": "honored-default-is-newest — default (no param) returns same first 3 post-IDs as ?orderby=date (260709, 260703, 260693); counter-control ?orderby=price returns different first 3 (166643, 240649, 260328) proving the sort actually drives result order",
+  "perPage": 500,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 500,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "paginationVerifiedNote": "Path-form /page/2/ tested with per_page=50: 50 products on p1, 50 on p2, zero overlap. Query-form ?paged=2 also works (same zero-overlap result). perPage ceiling probed: ?per_page=50/100/200/500 each return exactly that many products; ?per_page=600/750/900/1000 silently revert to default 16 (size 316KB vs 2.4MB for 500) — verified ceiling = 500.",
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST date filter verified honored: GET /wp-json/wp/v2/product?after=2099-01-01T00:00:00 -> x-wp-total: 0; ?after=1999-01-01T00:00:00 -> x-wp-total: 5407 (= global). Method A available — preferred over Method B."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "products": "/wp-json/wp/v2/product",
+        "storeProducts": "/wp-json/wc/store/v1/products",
+        "categories": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api (/wp-json/wp/v2/product_cat across 4 pages, 372 categories total)",
+    "categories": [
+      { "slug": "/product-category/firearms/", "id": 7042, "allOption": 1061 },
+      { "slug": "/product-category/firearm-accessories/", "id": 7052, "allOption": 1613 },
+      { "slug": "/product-category/ammo/", "id": 7045, "allOption": 811 },
+      { "slug": "/product-category/optics/", "id": 7046, "allOption": 595 },
+      { "slug": "/product-category/shooting-range-accessories/", "id": 30457, "allOption": 593 },
+      { "slug": "/product-category/reloading/", "id": 7049, "allOption": 350 },
+      { "slug": "/product-category/knives/", "id": 6001, "allOption": 168 },
+      { "slug": "/product-category/outdoor/", "id": 34206, "allOption": 82 },
+      { "slug": "/product-category/courses-services/", "id": 34563, "allOption": 26 },
+      { "slug": "/product-category/special-order/", "id": 21972, "allOption": 920 },
+      { "slug": "/product-category/other-categories/", "id": 35187, "allOption": 9 },
+      { "slug": "/product-category/no-category/", "id": 36700, "allOption": 71 }
+    ],
+    "totalsSumCheck": "Sum of selected catalogUrls counts = 6299; global x-wp-total = 5407; ~16% overlap (892 products multi-categorized — preowned firearms also tagged in firearms+used-guns; brand overlays cz-canada/browning/magpul-canada/etc. cover-by-overlay; sale/promo overlays 2026-holiday-sale/promotions/back-in-stock likewise). no-category (71) holds invoice pay-links + admin orphans not present in any other category — kept in spine to preserve 100% coverage per Rule C.",
+    "page1DedupWalk": "100 products per page on each of 11 candidates (outdoor=82, courses-services=26, other-categories=9) — cumulative unique grew firearms+100, fa+100, ammo+100, optics+100, sra+100, reloading+100, knives+100, outdoor+82, courses+26, special-order+96, other+9 = 913 unique on page-1 set. No candidate < 5% NEW; no pair > 30% overlap. None dropped."
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "rangeviewsports-2026-05-11-calibration",
+    "mode": "calibration (existing-site)",
+    "fieldConfidence": {
+      "platform": "HIGH (WC plugin + WP generator + Woodmart theme)",
+      "hasWaf": "HIGH (cf-ray on every response across 8 batches)",
+      "expectedProductCount": "HIGH (WC Store API + WP REST both return 5407)",
+      "catalogUrls": "MEDIUM (12 URLs derived from taxonomy API; full per-category walk not run — coverage inferred from category-ID overlap sampling on a-oversized/preowned/holiday-sale showing products consistently double-tagged in functional spine; no-category sampled with 100% unique products, kept)",
+      "sortParam": "HIGH (3-outcome counter-control passed)",
+      "perPage": "HIGH (probed 50/100/200/500/600/750/900/1000 — verified ceiling = 500)",
+      "paginationPattern": "HIGH (zero-overlap test passed for both path /page/2/ and query ?paged=2; chose path as WC canonical)",
+      "watermark.method": "HIGH (date filter two-probe both honored)"
+    }
+  }
+}

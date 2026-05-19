@@ -1,0 +1,117 @@
+{
+  "profileVersion": 1,
+  "platform": "hikashop-joomla",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-12T06:21:31Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cf-ray on www = passive; apex returns 403 cf-mitigated challenge but www origin is clean. All catalog paths (homepage, /recent, /product, /rifles, product detail) return 200 with full product markup under desktop Chrome UA. No challenge body, no plugin-WAF markers. canonical = www; hasWaf operationally false.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray: 9fa752dcda49bf5d-YYZ", "Server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "apexBehavior": "apex (https://lockharttactical.com/) returns HTTP 403 with Cf-Mitigated: challenge + Server: cloudflare + Cloudflare Turnstile CSP. www subdomain returns 200 cleanly.",
+    "challengeMarkersOnWww": "none",
+    "pluginWafMarkers": "none (no MalCare / Wordfence / sgcaptcha / Incapsula markers in any tested response body)",
+    "originStack": "LiteSpeed (x-turbo-charged-by: LiteSpeed header)"
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2452,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": ".hikashop_results_counter",
+    "perPage": 1
+  },
+  "catalogUrls": [
+    "https://www.lockharttactical.com/recent"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.lockharttactical.com/product/ltac-conspiracy-stripped-lower-receiver",
+      "title": "LTAC Conspiracy Stripped Lower Receiver",
+      "price": 349.00,
+      "stockStatus": "unknown"
+    },
+    {
+      "url": "https://www.lockharttactical.com/product/real-kit-cz-hk",
+      "title": "Laser Ammo - H&K Airsoft Pistol Conversion Barrel And Laser",
+      "price": 410.71,
+      "stockStatus": "unknown"
+    },
+    {
+      "url": "https://www.lockharttactical.com/product/real-kit-cz-beretta",
+      "title": "Laser Ammo - Beretta Airsoft Pistol Conversion Barrel And Laser",
+      "price": null,
+      "stockStatus": "unknown",
+      "priceVisible": false
+    }
+  ],
+  "sortParam": "",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "limitstart",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 0,
+    "zeroIndexed": true
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "/recent is a Joomla/HikaShop menu item baked with filter_order=b.product_created&filter_order_Dir=DESC (newest-first). Sort honored verified via counter-control: /recent first 3 slugs = ltac-conspiracy-stripped-lower-receiver, real-kit-cz-hk, real-kit-cz-beretta (newest LTAC releases) vs /product (alpha-ascending) first 3 slugs = fury-dft-..., kestrel-5500-..., law-enforcement-cardboard-target — clearly different first products = sort honored, path-baked at the menu-item level."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "globalCatalog": "https://www.lockharttactical.com/recent?limit={N}&limitstart={M}",
+        "globalCatalogAll": "https://www.lockharttactical.com/recent?limit=0"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/conspiracyrifles", "allOption": 5 },
+      { "slug": "/rifles", "allOption": 11 },
+      { "slug": "/kits", "allOption": 14 },
+      { "slug": "/parts", "allOption": 0 },
+      { "slug": "/statas", "allOption": 15 },
+      { "slug": "/clearance", "allOption": 115 }
+    ],
+    "totalsSumCheck": "Top-nav per-category sum = 160 (5+11+14+0+15+115). /parts is a tile/landing page (0 direct products; 5 subcategory tiles: gunsmithing-tools=21, magwell=0+10subsubs, parts-kits=7, support-gear=30, upper-receiver=1+11subsubs). Per-category union vastly under-covers (~287 + deeper subs unknown) vs global count 2,452. Top nav exposes only ~6 of the site's 125 HikaShop categories. /recent aggregates ALL products newest-first in one URL and matches the global product-block count exactly (2,452 = 2,452 in limit=0 response). /recent is the only 100%-coverage path with minimum URL count; per-category list is documented here for operator reference but is NOT used as catalogUrls because doing so would require enumerating 125 deep subcategories with significant overlap. /clearance and the per-top-nav categories are strict subsets of /recent by walk-and-dedupe.",
+    "globalCount": 2452,
+    "globalCountSource": "Counter string 'Results 1 - 2452 of 2452' on /recent?limit=0; cross-verified by counting 2452 .hikashop_product_block divs in the same response."
+  },
+  "lastVerified": "2026-05-12",
+  "auditNotes": {
+    "runId": "lockharttactical-2026-05-12-blind",
+    "fieldConfidence": {
+      "platform": "high — meta generator + com_hikashop + Joomla framework markers all confirm",
+      "adapterType": "high — HikaShop is generic-retail per skill platform→adapter table",
+      "hasWaf": "high — apex challenges but www catalog paths all clean; operationally false",
+      "captchaType": "high — recaptcha-v3 script tag site-wide (likely on contact/registration forms only); hasCaptcha=false operationally",
+      "expectedProductCount": "high — counter string exact match against block count in limit=0 response",
+      "catalogUrls": "high — /recent walk shows 2,452 blocks = global count; per-category union much smaller (~287 from top-nav) so /recent is the only minimum-URL 100% path",
+      "sortParam": "high — counter-control passed (/recent vs /product return visibly different first products; /recent baked b.product_created DESC, /product baked b.product_name ASC)",
+      "paginationPattern": "high — ?limitstart=N&limit=N verified on page 2 ('Results 41 - 80 of 2452')",
+      "perPage": "high — ?limit=100 verified ('Results 1 - 100 of 2452'); ?limit=0 (all mode) also honored but ships an 8.7 MB response so 100 is the production-safe perPage; HikaShop <select> options: 20, 40, 60, 80, 100, 0",
+      "watermarkMethod": "high — /recent is newest-first by Joomla menu config + paginatable; classical navigate-from-watermark pattern",
+      "productCountMethod": "medium — html-pagination with selector .hikashop_results_counter and perPage=1 will need the count-probe to parse 'Results X - Y of N' regex; an alternate would be to walk /recent?limit=0 once for a Set-size count, but that's catalog-walk-only (not a runtime method)"
+    },
+    "platformSpecificNotes": "HikaShop on Joomla 4.4.2, HikaShop Business 5.0.4. Per-menu-item sort+filter baked via filter_order_<menu-id-and-mode> hidden inputs (b.product_created, b.product_name, b.product_hit, a.ordering). Pagination is ?limitstart=N&limit=N (Joomla standard). perPage <select> values: 20/40/60/80/100/0 (0=all). Product detail URL = /product/<slug> (canonical); listings emit /<menu-alias>/product/<slug> (e.g. /recent/product/<slug>, /rifles/product/<slug>) all serving the same canonical content. Stock status NOT rendered on /recent listing cards (bare empty hikashop_product_stock_count span); the production maintain phase must fetch product detail to obtain stock — verifyMethod=detail-page set accordingly. reCAPTCHA-v3 script loaded site-wide via Contact Form 7-equivalent; does NOT gate catalog reads (verified by 200 responses on every probed path).",
+    "openQuestions": [
+      "stock parsing on /recent listing returns 'unknown' for all cards because hikashop_product_stock_count span is empty in this menu config — production crawler should rely on detail-page parse for stockStatus; confirm generic-retail.ts hikashop extractor handles this.",
+      "limit=0 returns 8.7 MB of HTML in one shot — safe to use occasionally for full-catalog-sweep but production walks should use limit=100 with limitstart pagination (25 pages of ~100 each). The HikaShop AJAX listing endpoint (/index.php?option=com_hikashop&ctrl=product&task=listing&tmpl=raw&Itemid=267) referenced in clearance.html may be worth probing as a JSON-cleaner alternative but was not exercised this run.",
+      "/parts is a tile-only landing (0 direct products, 5 subcategory tiles); some of those subs (magwell, upper-receiver) are themselves tile-only with 10-11 further subcategories. The deep category tree (125 categories total per /category page header) is not documented in topLevelCategories.categories[] because /recent already gives 100% coverage; if operator wants per-category narrowing for keyword-alert routing, that's a separate concern."
+    ]
+  }
+}

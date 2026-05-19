@@ -1,0 +1,115 @@
+{
+  "site": "fishingworldgc.ca",
+  "round": "R2",
+  "auditTime": "2026-05-13T08:49:12Z",
+  "candidateUnderReview": "docs/site-audit/fishingworldgc.ca-2026-05-13T08-23-57Z-R1.json",
+  "verdict": "R1 candidate accepted with one downgrade: topLevelCategories.allOption numbers are unreliable (over-report 2-3x; came from /collections.json products_count, which counts non-published items). The collapse decision and global product count are independently verified.",
+
+  "corrections": [
+    {
+      "field": "productCountMethod.method (DB)",
+      "candidateValue": "shopify-products-walk",
+      "dbValue": "products-json-walk",
+      "correctedValue": "shopify-products-walk",
+      "confidence": "high",
+      "evidence": "Read backend/src/services/product-count-probe.ts switch arms (lines 148-451): valid arms are 'wp-rest-header', 'json-api-count', 'json-api-length', 'html-pagination', 'sitemap', 'sitemap-index', 'generic-product-sitemap', 'ecwid-storefront-search', 'shopify-products-walk' (line 272), 'klevu-api-count', 'stream-page-count'. Bare 'products-json-walk' is NOT in the switch — falls through to default (line 446-451) which returns null + warns. R1 diff claim verified: DB-bug silently disables count probe.",
+      "method": "static analysis of switch statement"
+    },
+    {
+      "field": "hasWaf",
+      "candidateValue": false,
+      "dbValue": true,
+      "correctedValue": false,
+      "confidence": "high",
+      "evidence": "Live probe 2026-05-13T08:45Z confirmed cf-passive: response headers contain CF-RAY (9fb062a85a2ade44-YYZ), Server: cloudflare, cf-cache-status: DYNAMIC. Attack-pattern probe bodies (SQLi ?id=1' OR '1'='1, XSS <script>alert(1)</script>, ?cmd=cat /etc/passwd, /.env) all returned HTTP 200 with full 335KB storefront HTML — NOT challenge pages, NOT 403/406/429. /wp-admin /wp-login.php /xmlrpc.php /.git/config returned 404 from Shopify origin (not CF challenge). No active blocking observed. Per SKILL.md Stage 2 + Mistake 23 cf-passive convention: hasWaf:false. Different method from R1 (R1 ran heavy-8-batch headers-only; R2 inspected response BODIES for challenge markers).",
+      "method": "live-probe response body inspection"
+    },
+    {
+      "field": "catalogUrls",
+      "candidateValue": ["https://fishingworldgc.ca/collections/all"],
+      "dbValue": "23 URLs (collections/all + 22 sub-collections)",
+      "correctedValue": ["https://fishingworldgc.ca/collections/all"],
+      "confidence": "high",
+      "evidence": "Live walk reconcile: /products.json walk (9 pages × 250) returned 2011 unique product IDs (set P). /collections/all/products.json walk (9 pages × 250) returned 2011 unique product IDs (set A). P\\A = 0, A\\P = 0 — byte-equivalent. Walked 4 sub-collections fresh 2026-05-13T08:49Z: centre-fire-rifle (88 products), shotgun-ammo (75), pre-owned (12), shooting-miscellaneous-1 (172). Every S(slug) is a strict subset of A: S\\A = 0 and S\\P = 0 for all 4. Sub-collections add zero unique IDs to /collections/all → redundant by Rule C union test. Sitemap_products_1.xml has 2012 <loc> entries (= 2011 + 1 homepage). Three-way reconcile confirmed.",
+      "method": "live-walk byte-set diff of /products.json vs /collections/all vs 4 sub-collections"
+    },
+    {
+      "field": "expectedProductCount",
+      "candidateValue": 2011,
+      "dbValue": 1953,
+      "correctedValue": 2011,
+      "confidence": "high",
+      "evidence": "Three-way reconcile 2026-05-13: /products.json walk = 2011, /collections/all walk = 2011, sitemap <loc> count = 2012 - 1 homepage = 2011. DB value of 1953 was correct 32 days ago (last audit 2026-04-11); site has grown +58 products in 32 days (+1.8/day). Pure data-drift, R1 correct.",
+      "method": "live full-catalog walk + sitemap cross-check"
+    },
+    {
+      "field": "topLevelCategories.categories[].allOption",
+      "candidateValue": "allOption numbers per slug, e.g. centre-fire-rifle:184, pre-owned:38",
+      "dbValue": "(absent - DB has catalogUrlStats instead)",
+      "correctedValue": "DOWNGRADE confidence to medium. The allOption numbers came from /collections.json products_count which OVER-REPORTS: centre-fire-rifle real walk = 88 vs products_count 184 (2.09x), shotgun-ammo real 75 vs 145 (1.93x), pre-owned real 12 vs 38 (3.17x), shooting-miscellaneous-1 real 172 vs 232 (1.35x). Likely includes draft/unpublished/archived products that /products.json filters out. The slug LIST and ranking are still useful for navigation discovery; the COUNTS are not reliable as catalog-size estimates.",
+      "confidence": "medium",
+      "evidence": "Live JSON walks of each sub-collection's /products.json vs the products_count field in /collections.json. Mismatch range 1.35x-3.17x.",
+      "method": "comparison of /collections.json products_count vs live sub-collection /products.json walks"
+    },
+    {
+      "field": "crawlers.maintain.verifyMethod",
+      "candidateValue": "detail-page",
+      "dbValue": "json-ld",
+      "correctedValue": "detail-page",
+      "confidence": "high",
+      "evidence": "worker.ts:768 comment: 'verifyMethod === detail-page — visit each product URL via Playwright'. The only branch with explicit handling is store-api (line 397) which Shopify lacks (Admin API requires auth). detail-page is the canonical Shopify mapping per current SKILL.md. DB's 'json-ld' falls through to the same Playwright path so it happens to function, but is not the canonical label and would fail future SKILL.md tightenings that strict-check the label.",
+      "method": "runtime code path tracing of worker.ts verify flow"
+    },
+    {
+      "field": "paginationPattern.perPage",
+      "candidateValue": 250,
+      "dbValue": 24,
+      "correctedValue": 250,
+      "confidence": "high",
+      "evidence": "Runtime catalog-crawler.ts:288-294 calls adapter.fetchCatalogPage with perPage=profilePerPage. Shopify adapter uses /products.json which has a 250-cap (verified: ?limit=250&page=1 returns exactly 250 on the first 8 pages). DB's 24 is the HTML theme default which is only used as a fallback when /products.json fails. The runtime PRIMARY transport is /products.json so paginationPattern.perPage must be 250.",
+      "method": "runtime transport tracing + live API limit verification"
+    },
+    {
+      "field": "crawlers.maintain.verifyEndpoint",
+      "candidateValue": null,
+      "dbValue": "(missing)",
+      "correctedValue": null,
+      "confidence": "high",
+      "evidence": "Shopify storefront has no /products/<handle>.json verification endpoint that doesn't require Admin API auth. worker.ts requires verifyEndpoint only for store-api method (line 400). detail-page method needs no endpoint (visits the canonical product URL directly). null is correct.",
+      "method": "worker.ts branch analysis"
+    }
+  ],
+
+  "newFindings": [
+    {
+      "finding": "PRODUCTS_JSON IGNORES sort_by BUT NATURAL ORDER IS published_at-desc",
+      "evidence": "Live test 2026-05-13T08:49Z: GET /products.json?limit=5 and GET /products.json?limit=5&sort_by=created-descending returned IDENTICAL product sequences (10380587761980, 10382098170172, 10382094729532, 10376191082812, 10376190951740). Published_at values are monotonically descending: 2026-05-11T15:31:01, 2026-05-11T15:25:26, 2026-05-11T15:25:18, 2026-05-06T16:12:21, 2026-05-06T16:10:02. Confirms Mistake 32 quirk applies, and confirms the natural order doubles as 'newest first' so navigate-from-watermark works without explicit sort.",
+      "impact": "none - R1's note is correct; HTML sort_param honored, API natural order suffices."
+    },
+    {
+      "finding": "JSON-LD blocks present on product pages",
+      "evidence": "GET /products/burris-fullfield-3-12x42-e3-ksb-1 contains 2 <script type='application/ld+json'> blocks. Either detail-page (Playwright on product URL) or json-ld parse would work; detail-page is the canonical SKILL.md label.",
+      "impact": "informational; R1's detail-page choice is canonical"
+    }
+  ],
+
+  "matchesR1": [
+    "platform: shopify",
+    "adapterType: shopify",
+    "needsPlaywright: false",
+    "ageGate.detected: false",
+    "hasCaptcha: false",
+    "expectedProductCount: 2011",
+    "sortParam: ?sort_by=created-descending",
+    "sortVerified: true (HTML)",
+    "paginationPattern.type: query, template: page, firstPageHasParam: false, startPage: 1",
+    "crawlers.watermark.method: navigate-from-watermark",
+    "crawlers.bootstrap.apiEndpoints.productDiscovery: /products.json"
+  ],
+
+  "confidenceBreakdown": {
+    "high": 7,
+    "medium": 1,
+    "low": 0
+  }
+}

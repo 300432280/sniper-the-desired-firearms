@@ -1,0 +1,146 @@
+{
+  "profileVersion": 1,
+
+  "platform": "celerant-coldfusion",
+  "adapterType": "generic-retail",
+
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-09T14:32:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200 OK; no cf-ray, no x-sucuri-id, no Incapsula cookies. Honeypot paths return 200 (Celerant ignores path, returns app's default page — same byte size 34977 across all). HIGH confidence hasWaf=false.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false
+  },
+
+  "hasCaptcha": false,
+  "captchaType": null,
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 3277,
+  "productCountMethod": "celerant-perpage-all-option",
+
+  "catalogUrls": [
+    "https://www.bullseyenorth.com/accessories/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/ammunition/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/firearms/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/knives/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/magazines/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/optics/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/reloading/browse/orderby/new-arrivals/perpage/36",
+    "https://www.bullseyenorth.com/storage/browse/orderby/new-arrivals/perpage/36"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.bullseyenorth.com/firearms/umarex-hk-mp5-37218",
+      "title": "Umarex HK MP5 .22LR Rifle",
+      "price": 749.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.bullseyenorth.com/ammunition/federal-9mm-115gr-fmj-50rd-12421",
+      "title": "Federal American Eagle 9mm 115gr FMJ — 50 Rounds",
+      "price": 24.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.bullseyenorth.com/optics/vortex-crossfire-3-9x40-29841",
+      "title": "Vortex Crossfire II 3-9x40 Riflescope",
+      "price": 299.00,
+      "stockStatus": "out_of_stock"
+    }
+  ],
+
+  "sortParam": "",
+  "sortVerified": true,
+
+  "perPage": 36,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Path-baked sort verified via /orderby/<value>/ swap counter-control. Default newest-first product (umarex-hk-mp5-37218 on /firearms) differs from counter-control alpha-A-Z first product (-derya--ria-tm22-37335) — proves the path-form sort is honored. perPage=36 from canonical sorted catalog URL."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "homepage-nav",
+    "categories": [
+      { "slug": "/accessories", "allOption": 1181 },
+      { "slug": "/ammunition",  "allOption": 478  },
+      { "slug": "/firearms",    "allOption": 540  },
+      { "slug": "/knives",      "allOption": 308  },
+      { "slug": "/magazines",   "allOption": 147  },
+      { "slug": "/optics",      "allOption": 448  },
+      { "slug": "/reloading",   "allOption": 175  },
+      { "slug": "/storage",     "allOption": 184  }
+    ],
+    "totalsSumCheck": "Sum of allOption across 8 top-level categories = 3461. /all-products allOption = 3277. Difference = 184 = 5.6% cross-category overlap. After dedup, walking the 8 catalog URLs above will produce ~3277 unique products."
+  },
+
+  "lastVerified": "2026-05-09",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-09T14-32-00Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "expectedProductCount": "verified",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified",
+      "paginationPattern": "verified",
+      "sortParam": "verified-via-counter-control",
+      "extractionTested": "verified",
+      "watermarkMethod": "verified-via-counter-control",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1: apex returned 200 cleanly; no <link rel=canonical> override. canonicalOrigin = https://www.bullseyenorth.com.",
+      "Stage 2: 8/8 batches clean. No CAPTCHA markers in homepage HTML.",
+      "Stage 3: celerant-coldfusion identified by Server: Null + CFID/CFTOKEN cookies + .cfm refs. No age-gate. Maintain verifyMethod=detail-page (not WooCommerce).",
+      "Stage 4: 8 candidates from homepage nav after filtering /all-products aggregator and product-detail noise. Page-1 sample walk: each candidate contributed >12% NEW unique → all kept.",
+      "Stage 5: tested ?page=N (ignored), /page/N (works). zero-overlap confirmed page1 vs page2.",
+      "Stage 6: <select id='sortby'> exposed via path /orderby/<value>/. Counter-control swap (new-arrivals → name-asc) flipped first product. sortParam='' (path-baked).",
+      "Stage 7: navigate-from-watermark — path-baked sort verified upstream, no date filter API.",
+      "Stage 8: <select id='perpage'><option value='3277'>All</option> on canonical sorted URL. expectedProductCount=3277.",
+      "Stage 9: validator passed (9/9 required, 7/7 recommended)."
+    ]
+  }
+}

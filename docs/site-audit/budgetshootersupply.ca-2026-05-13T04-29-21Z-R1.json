@@ -1,0 +1,180 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-13T08:19:09Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "No CDN WAF headers; Apache origin; SQLi/XSS payloads return 403 (origin rule-selective filter) but bare GET, rapid burst, honeypots, and no-UA all 200 — operationally hasWaf=false for catalog crawl path",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "incapsulaHeaders": [],
+    "serverHeader": "Apache",
+    "xPoweredBy": "WP Rocket/3.20.2",
+    "rapidBurst10Status": "all 200",
+    "sqliRuleFired": true,
+    "sqliStatus": 403,
+    "xssRuleFired": true,
+    "xssStatus": 403,
+    "honeypotPathsBlocked": false,
+    "honeypotStatuses": {
+      "wp-admin": 200,
+      "wp-login": 200,
+      "xmlrpc": 404,
+      ".env": 404,
+      ".git/config": 404,
+      "phpinfo.php": 404
+    },
+    "botUaStatus": 200,
+    "noUaStatus": 200,
+    "wafType": "origin-rule-selective-not-blocking-crawler"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1586,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://budgetshootersupply.ca/product-category/ammunition/",
+    "https://budgetshootersupply.ca/product-category/black-powder/",
+    "https://budgetshootersupply.ca/product-category/books-reloading-manuals/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/",
+    "https://budgetshootersupply.ca/product-category/chronographs/",
+    "https://budgetshootersupply.ca/product-category/categories-clearance-items/",
+    "https://budgetshootersupply.ca/product-category/custom-orders/",
+    "https://budgetshootersupply.ca/product-category/gun-cleaner-lube-tools-patches/",
+    "https://budgetshootersupply.ca/product-category/hearing-protection/",
+    "https://budgetshootersupply.ca/product-category/kestrel/",
+    "https://budgetshootersupply.ca/product-category/king-competition/",
+    "https://budgetshootersupply.ca/product-category/muzzleloading/",
+    "https://budgetshootersupply.ca/product-category/optics/",
+    "https://budgetshootersupply.ca/product-category/pal-ups/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/",
+    "https://budgetshootersupply.ca/product-category/rifle-scopes/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/",
+    "https://budgetshootersupply.ca/product-category/speed-loaders/",
+    "https://budgetshootersupply.ca/product-category/uncategorized/",
+    "https://budgetshootersupply.ca/product-category/used-items/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://budgetshootersupply.ca/product/federal-ammo-22lr-40gr-solid-champion-1240fps-50-box/",
+      "title": "FEDERAL AMMO 22LR 40gr SOLID CHAMPION 1240fps 50/box",
+      "price": null,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://budgetshootersupply.ca/product/weatherby-brass-257-weatherby-unprimed-box-of-50/",
+      "title": "Weatherby Brass 257 Weatherby Unprimed Box of 50",
+      "price": 198.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://budgetshootersupply.ca/product/winchester-primer-large-rifle-magnum-100-tray/",
+      "title": "WINCHESTER PRIMER LARGE RIFLE MAGNUM 100/tray",
+      "price": 22.00,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST /wp/v2/product?after= filter honored (two-probe: future date returns x-wp-total:0; 1999-01-01 returns x-wp-total:2808 - full backlog)"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "wcStoreProducts": "/wp-json/wc/store/v1/products",
+        "wpRestProduct": "/wp-json/wp/v2/product",
+        "productCategories": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "rifle-pistol-reloading-components", "allOption": 775 },
+      { "slug": "rifle-pistol-reloading-tools-lubes", "allOption": 478 },
+      { "slug": "pal-ups", "allOption": 214 },
+      { "slug": "ammunition", "allOption": 98 },
+      { "slug": "shotshell-reloading-components", "allOption": 97 },
+      { "slug": "bullet-casting-loading-tools-components-categories", "allOption": 89 },
+      { "slug": "shotshell-reloading-tools-presses", "allOption": 15 },
+      { "slug": "optics", "allOption": 10 },
+      { "slug": "black-powder", "allOption": 9 },
+      { "slug": "king-competition", "allOption": 8 },
+      { "slug": "chronographs", "allOption": 5 },
+      { "slug": "muzzleloading", "allOption": 5 },
+      { "slug": "categories-clearance-items", "allOption": 4 },
+      { "slug": "uncategorized", "allOption": 4 },
+      { "slug": "books-reloading-manuals", "allOption": 2 },
+      { "slug": "gun-cleaner-lube-tools-patches", "allOption": 2 },
+      { "slug": "hearing-protection", "allOption": 1 },
+      { "slug": "custom-orders", "allOption": 0 },
+      { "slug": "kestrel", "allOption": 0 },
+      { "slug": "rifle-scopes", "allOption": 0 },
+      { "slug": "speed-loaders", "allOption": 0 },
+      { "slug": "used-items", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Top-level Store-API count sum = 1818 (counts via ?category=ID&per_page=1 header); customer-visible total = 1586. Overlap ~232 products (multi-category assignment). Two excluded categories (freeze-dried-food, self-heating-food, both count=0) are food, out of firearm-relevant scope."
+  },
+  "lastVerified": "2026-05-13",
+  "auditNotes": {
+    "runId": "R1-2026-05-13",
+    "probeIp": "audit IP (Windows session 2026-05-13)",
+    "platformFingerprints": "WooCommerce + Woodmart theme + WP Rocket + Yoast SEO; Server: Apache",
+    "originRuleSelectiveFilter": "SQLi/XSS query-string payloads return 403 with HTML body (not Wordfence runtime); blocks attack patterns only. Crawler does not send these, so hasWaf=false operationally.",
+    "perPageCap": "?per_page=250 honored on /product-category/<slug>/page/2/; per_page=1000 silently falls back to default 12 (server cap somewhere between 500 and 1000). Shipping 100 (verified clean, low latency).",
+    "parentCategoryQuirk": "Woodmart theme: parent category page 1 (e.g. /product-category/ammunition/) shows subcategory tiles via .wd-with-subcat - page 2+ paginate real products. Crawler must walk past page 1.",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "medium - re-confirm from production IP; rule-selective behavior could be Apache mod_security or Wordfence runtime in front, but did not gate any non-payload request",
+      "expectedProductCount": "high (Store API x-wp-total)",
+      "catalogUrls": "medium - top-level taxonomy URLs; full walk-and-dedup not exhaustively performed; coverage proof relies on Store API total agreement (1586) with category-walk total (1818 with ~232 overlap)",
+      "sortVerified": "high (3-outcome counter-control on cached-bust requests showed all 3 different)",
+      "perPage": "high (verified at 250; shipping conservative 100)",
+      "watermarkMethod": "high (WP REST date filter two-probe passed)"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200, www 301->apex, <link rel=canonical> = apex. canonicalOrigin = https://budgetshootersupply.ca",
+      "Stage 2: heavy 8-batch probe. No CDN WAF (no cf-ray/x-sucuri/incap). SQLi/XSS 403s - origin rule-selective, not blocking catalog. hasWaf=false operational; hasCaptcha=false (no reCAPTCHA/hCaptcha/Turnstile markers).",
+      "Stage 3: WooCommerce + Woodmart theme + WP Rocket 3.20.2 + Yoast SEO 27.4. age_verify=no in woodmart_settings JS. needsPlaywright=false (Store API + HTML category pages work via plain HTTP).",
+      "Stage 4: 24 top-level categories from /wp-json/wp/v2/product_cat; 2 food categories excluded (freeze-dried-food, self-heating-food); 22 catalogUrls kept (incl. 5 empty/count=0 that returned 200). Parent-category tile-page quirk noted.",
+      "Stage 5: pagination type=path /page/{N}/. perPage=12 default, verified up to 250 (page-2 on RPC category with ?per_page=250 returned 250 distinct products). Shipping perPage=100.",
+      "Stage 6: <select name=\"orderby\"> options: menu_order/popularity/rating/date/price/price-desc. 3-outcome test with cache-bust: default(menu_order) != ?orderby=date != ?orderby=price -> sort honored.",
+      "Stage 7: WC two-probe - /wp-json/wp/v2/product?after=2099 -> x-wp-total:0; ?after=1999 -> x-wp-total:2808. api-date-since-watermark.",
+      "Stage 8: Store-API header x-wp-total:1586 (customer-visible). WP REST /wp/v2/product header would give ~2808 (includes drafts).",
+      "Stage 9: validator not run (no programmatic invocation in this blind run); JSON written, calibration-diff to follow."
+    ]
+  }
+}

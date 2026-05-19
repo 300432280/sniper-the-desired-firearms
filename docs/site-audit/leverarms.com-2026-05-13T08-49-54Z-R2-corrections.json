@@ -1,0 +1,172 @@
+{
+  "runId": "R2-2026-05-13T08-49-54Z",
+  "site": "leverarms.com",
+  "candidateUnderReview": "docs/site-audit/leverarms.com-2026-05-13T08-24-20Z-R1.json",
+  "method": "Live HTTP probing (curl + node) against leverarms.com. NO DB writes. 800ms inter-request delay. Side-by-side comparison of R1 candidate vs DB siteProfile.",
+  "verdict": "R1 candidate is correct on every load-bearing field. The DB siteProfile contains stale/legacy residue that should NOT be propagated. Two DB-side errors flagged for correction.",
+  "corrections": [
+    {
+      "field": "hasWaf",
+      "r1Value": false,
+      "dbValue": true,
+      "correctedValue": false,
+      "confidence": "high",
+      "reasoning": "Re-ran heavy 8-batch WAF probe. Cloudflare passive (cf-ray + __cf_bm on every response). Rapid 10x burst all 200. Crawler paths (/, /product-category/*, /wp-json/wc/store/v1/*) all 200. SQLi/XSS payloads + honeypots (xmlrpc.php, .env, .git/config, wp-config.php) return 403 with body 'nginx 403 Forbidden' — origin-side rules, NOT a Cloudflare challenge. No bot-UA blocking (python-requests/2.28 -> 200). No sucuri headers anywhere. No plugin-WAF body markers. Per SKILL.md operational rule, rule-selective Cloudflare on attack payloads only != WAF blocking the crawler. R1's hasWaf=false is correct. DB row is internally inconsistent (hasWaf=true + wafType=cloudflare-passive + needsPlaywright=false) — residue from a previous misclassification (DB notes flagged a prior 'sucuri' tag).",
+      "evidence": {
+        "rapidBurst10x": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+        "sucuriHeadersFound": [],
+        "cfHeaders": ["cf-ray", "__cf_bm", "cf-cache-status"],
+        "honeypot403": ["xmlrpc.php", ".env", ".git/config", "wp-config.php"],
+        "sqli403Body": "nginx 403 Forbidden",
+        "xss403Body": "nginx 403 Forbidden",
+        "botUaStatus": 200,
+        "noUaStatus": 200
+      }
+    },
+    {
+      "field": "wafType",
+      "r1Value": "cloudflare-passive",
+      "dbValue": "cloudflare-passive",
+      "correctedValue": "cloudflare-passive",
+      "confidence": "high",
+      "reasoning": "Both agree. Re-probe confirms cloudflare-passive. No sucuri.",
+      "evidence": { "cfRayObserved": "9fb063fb2a22a450-YYZ (and on every subsequent response)" }
+    },
+    {
+      "field": "expectedProductCount",
+      "r1Value": 356,
+      "dbValue": 965,
+      "liveProbed": { "storeApiTotal": 356, "wpRestTotal": 971, "wpRestOutOfStock": 615 },
+      "correctedValue": 356,
+      "confidence": "high",
+      "reasoning": "Per SKILL.md priority order, customer-visible Store API count wins. Live probe: x-wp-total=356 on /wp-json/wc/store/v1/products (default stock_status=instock). wp/v2/product reports 971 total (DB had stale 965; current is 971). The 615 admin-only delta = out-of-stock products. PROOF: 356 (instock) + 615 (outofstock via ?stock_status=outofstock) = 971 (wp/v2 total). Walked both APIs end-to-end, deduped by id, confirmed every wc/store id is in wp/v2 AND every wp/v2 id is fetchable individually via wc/store (it is the LIST endpoint that hides out-of-stock per WooCommerce's 'Hide out of stock items from the catalog' setting, not the single-product endpoint). Sample admin-only IDs (53130, 53127, 52921) all have class_list containing 'outofstock'; comparison product 53271 (in store list) has 'instock'. Coverage gate at backend/src/services/product-count-probe.ts uses this number as the divisor for bootstrap completion (95% threshold) — using 971 (admin) would force the crawler to find out-of-stock products it can never see via the catalog HTML, which is wrong. 356 is the operationally correct denominator.",
+      "evidence": {
+        "storeApiX-WP-Total": 356,
+        "wpRestX-WP-Total": 971,
+        "wpRestStockStatusOutOfStock": 615,
+        "math": "356 + 615 = 971 (matches wp/v2 total)",
+        "sampleAdminOnlyClassList": "outofstock present on id 53130 (USED MOSSBERG 500); 'instock' on id 53271 (RUSSIAN SKS)"
+      }
+    },
+    {
+      "field": "productCountMethod.endpoint",
+      "r1Value": "/wp-json/wc/store/v1/products",
+      "dbValue": "/wp-json/wp/v2/product",
+      "correctedValue": "/wp-json/wc/store/v1/products",
+      "confidence": "high",
+      "reasoning": "Tied to expectedProductCount correction above. The Store API endpoint matches what the crawler will actually walk (catalog pages exclude out-of-stock by default), making the coverage ratio meaningful. wp/v2 endpoint would force a 64% under-count perpetually."
+    },
+    {
+      "field": "paginationPattern.template",
+      "r1Value": "/page/{N}/",
+      "dbValue": "page/{N}/",
+      "correctedValue": "/page/{N}/",
+      "confidence": "high",
+      "reasoning": "DB value is WRONG. Read backend/src/services/catalog-crawler.ts:121-125: buildPaginatedUrl with type=path strips the trailing slash from baseUrl, then concatenates the template literally. DB template 'page/{N}/' would produce 'https://leverarms.com/product-category/gunspage/2/' (no slash between 'guns' and 'page') — verified 404. R1 template '/page/{N}/' produces 'https://leverarms.com/product-category/guns/page/2/' — verified 200. The leading slash is REQUIRED. DB row predates a fix to buildPaginatedUrl or was hand-edited.",
+      "evidence": {
+        "dbTemplateProducedUrl": "https://leverarms.com/product-category/gunspage/2/",
+        "dbTemplateStatus": 404,
+        "r1TemplateProducedUrl": "https://leverarms.com/product-category/guns/page/2/",
+        "r1TemplateStatus": 200,
+        "runtimeCodeRef": "backend/src/services/catalog-crawler.ts:121-125"
+      }
+    },
+    {
+      "field": "crawlers.bootstrap.apiEndpoints",
+      "r1Value": { "products": "/wp-json/wc/store/v1/products", "categories": "/wp-json/wp/v2/product_cat" },
+      "dbValue": { "priceEnrichment": "/wp-json/wc/store/v1/products", "productDiscovery": "/wp-json/wp/v2/product" },
+      "correctedValue": { "products": "/wp-json/wc/store/v1/products", "categories": "/wp-json/wp/v2/product_cat" },
+      "confidence": "high",
+      "reasoning": "RUNTIME CODE CHECK: grep across backend/src for 'apiEndpoints', 'productDiscovery', 'priceEnrichment', 'crawlers.bootstrap' returns ZERO matches. This field is documentation/audit-trail only — NOT consumed by any runtime adapter or scheduler. The WooCommerce bootstrap path is hardcoded in scraper/adapters/woocommerce.ts to /wp-json/wc/store/v1/products; it does not look this field up. Therefore the 2-step shape claimed in the R1 diff is FICTIONAL — there is no '2-step bootstrap cascade'. The DB's 'productDiscovery + priceEnrichment' naming is an operator-applied label with no runtime effect. R1's 'products + categories' naming is equally valid and matches the SKILL.md example shape. Neither value will affect crawler behavior. Recommend R1's flatter naming as the convention (matches the SKILL.md example output).",
+      "evidence": {
+        "grepCrawlersBootstrap": "no matches in backend/src",
+        "grepApiEndpoints": "no matches in backend/src",
+        "grepProductDiscovery": "no matches in backend/src",
+        "grepPriceEnrichment": "no matches in backend/src",
+        "runtimeShapeConsumed": "none (field is residue)"
+      }
+    },
+    {
+      "field": "crawlers.maintain.* extras (verifyBehavior, method:db-verification, cooldowns, tierShares, tierWindows)",
+      "r1Value": "absent",
+      "dbValue": "present",
+      "correctedValue": "absent",
+      "confidence": "high",
+      "reasoning": "Per SKILL.md Rule B and feedback_site_profile_schema.md, these are operator-set runtime scheduling fields. They are NOT pre-bootstrap targets. R1 correctly omits them — they will be populated post-onboarding by the operator/scheduler."
+    },
+    {
+      "field": "searchUrl",
+      "r1Value": "omitted",
+      "dbValue": "/?s={keyword}&post_type=product",
+      "correctedValue": "/?s={keyword}&post_type=product",
+      "confidence": "high",
+      "reasoning": "For platform=woocommerce, this is deterministic and universally true (WC reuses the WP search permalink with post_type filter). SKILL.md Stage 3 says 'omit if not derived' but for WC this IS derivable from the platform alone. Recommend R1 emit this field for WC sites.",
+      "evidence": { "platform": "woocommerce", "wcSearchPattern": "always /?s={keyword}&post_type=product" }
+    },
+    {
+      "field": "expectedInStockCount",
+      "r1Value": "absent",
+      "dbValue": 357,
+      "correctedValue": "absent",
+      "confidence": "medium",
+      "reasoning": "Not part of the SKILL.md schema. DB has 357 (off by 1 from current 356; 1 product likely added/removed between DB save and now). This is a useful operator field but not required for crawler operation. Leave out of candidate; operator can backfill."
+    },
+    {
+      "field": "crawlers.watermark extras (apiEndpoint, dateParam)",
+      "r1Value": { "apiEndpoint": "/wp-json/wc/store/v1/products", "dateParam": "after" },
+      "dbValue": "absent (only method)",
+      "correctedValue": { "apiEndpoint": "/wp-json/wc/store/v1/products", "dateParam": "after" },
+      "confidence": "medium",
+      "reasoning": "SKILL.md Stage 7 shows shape as {method, reason?}. Extra fields are non-canonical but informationally useful for the operator. They have no runtime impact (the watermark adapter resolves the endpoint from platform). Keep them — they document the proven path. Live-verified: ?after=2026-05-08T00:00:00 returns x-wp-total=1 (date filter honored)."
+    },
+    {
+      "field": "topLevelCategories block",
+      "r1Value": "present (6 cats with walked counts and 0% drift)",
+      "dbValue": "absent",
+      "correctedValue": "keep R1",
+      "confidence": "high",
+      "reasoning": "R1's claim live-verified by sampling: 6 product_cat parent=0 entries (all-product/200, all-surplus/186, ammo/188, food/1755, guns/1603, kit/1606). Union over Store API category param = 356 = global x-wp-total. SKILL.md recommends this audit-trail block."
+    },
+    {
+      "field": "url (MonitoredSite row)",
+      "r1Value": "not a candidate field",
+      "dbValue": "https://www.leverarms.com",
+      "correctedValue": "https://leverarms.com",
+      "confidence": "high",
+      "reasoning": "Apex 200 with <link rel=canonical> pointing at apex. www subdomain 301-redirects to apex. DB row's url field should be updated to apex for canonical consistency. (Not a siteProfile field per se; flagged for DB hygiene.)",
+      "evidence": { "apexStatus": 200, "canonical": "https://leverarms.com/", "wwwBehavior": "301 -> apex" }
+    },
+    {
+      "field": "needsPlaywright",
+      "r1Value": false,
+      "dbValue": false,
+      "correctedValue": false,
+      "confidence": "high",
+      "reasoning": "Both agree. Re-confirmed: static curl returns full HTML with product cards on /product-category/guns/ (verified post-IDs match Playwright-rendered DOM). Static fetch sufficient."
+    },
+    {
+      "field": "extractionSample title strings",
+      "r1Value": "placeholder strings (e.g. 'post-4152 (guns p1 first)')",
+      "dbValue": "n/a",
+      "correctedValue": "use real names from Store API (e.g. 'RUSSIAN TYPE 45 SKS RIFLE 1950 SPRING LOADED FIRING PIN 18782')",
+      "confidence": "high",
+      "reasoning": "R1 left placeholder titles instead of the actual product names that were available in the Store API response. Cosmetic, but should be fixed for operator-readability."
+    }
+  ],
+  "summary": {
+    "totalDivergentFields": 16,
+    "loadBearingCorrections": 4,
+    "cosmeticCorrections": 5,
+    "fieldsR1Won": 12,
+    "fieldsDbWon": 1,
+    "fieldsTied": 3,
+    "highConfidence": 11,
+    "mediumConfidence": 2,
+    "lowConfidence": 0
+  },
+  "runtimeVerdicts": {
+    "apiEndpointsShape": "NEITHER shape is consumed by runtime. Field is residue. R1's flatter naming matches SKILL.md example; keep it. The R1 diff's claim of a '2-step bootstrap cascade' is fictional — no such code path exists in backend/src.",
+    "wafReprobe": "Cloudflare passive only. No sucuri (zero sucuri headers in any of 8 batches). No plugin WAF. Rapid 10x burst 200. R1's hasWaf=false is operationally correct; DB hasWaf=true is stale residue from the previously-flagged sucuri misclassification.",
+    "adminVsStorefrontCount": "Store API 356 vs wp/v2 971. Delta = 615 products. Classification: ALL 615 are out-of-stock products (proven by Store API ?stock_status=outofstock returning x-wp-total=615; 356+615=971 exact). NOT drafts, NOT private, NOT hidden, NOT in different categories. Standard WooCommerce 'Hide out of stock from catalog' setting."
+  }
+}

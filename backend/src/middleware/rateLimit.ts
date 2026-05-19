@@ -26,7 +26,9 @@ export const generalLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  // Dev: 1000 attempts so iterating on auth doesn't lock you out.
+  // Prod: 10 attempts per 15 min.
+  max: process.env.NODE_ENV === 'production' ? 10 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   store: makeStore('auth'),

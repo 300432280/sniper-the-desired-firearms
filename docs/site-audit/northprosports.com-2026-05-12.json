@@ -1,0 +1,134 @@
+{
+  "profileVersion": 1,
+  "platform": "opencart",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-12T06:21:36Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches returned 200 with Server: Apache, identical 171,623-byte body across UAs and rapid burst; no cf-ray / sucuri / incapsula / malcare / sgcaptcha markers; honeypot paths (.env, .git/config, wp-admin) returned 404 not 403; SQLi/XSS query strings returned 200 (no rule filter fired). Bare OpenCart on a stock Apache origin.",
+  "wafProbeEvidence": {
+    "server": "Apache",
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotPathsStatus": "404 (path not found, not WAF block)",
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "cookieMarkers": ["OCSESSID=...", "language=en-gb", "currency=CAD"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2078,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": "div.col-sm-6.text-right",
+    "perPage": 100
+  },
+  "catalogUrls": [
+    "https://northprosports.com/index.php?route=product/category&path=28&sort=p.date_added&order=DESC&limit=100",
+    "https://northprosports.com/index.php?route=product/category&path=766&sort=p.date_added&order=DESC&limit=100",
+    "https://northprosports.com/index.php?route=product/category&path=267&sort=p.date_added&order=DESC&limit=100",
+    "https://northprosports.com/index.php?route=product/category&path=552&sort=p.date_added&order=DESC&limit=100",
+    "https://northprosports.com/index.php?route=product/category&path=45&sort=p.date_added&order=DESC&limit=100",
+    "https://northprosports.com/index.php?route=product/category&path=400&sort=p.date_added&order=DESC&limit=100"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://northprosports.com/index.php?route=product/product&path=28&product_id=22944",
+      "title": "*Display Model* CZ-USA 600 ST3 American 300WinMag - 24\" Barrel",
+      "price": 1087.00,
+      "stockStatus": "unknown",
+      "note": "Listing parent category is 'FIREARMS IN STOCK' so presence implies in_stock; OpenCart listing markup has no per-card stock badge."
+    },
+    {
+      "url": "https://northprosports.com/index.php?route=product/product&path=28&product_id=19632",
+      "title": "Canuck Folding Enforcer 2 - Double Folding 12ga Shotgun",
+      "price": 599.95,
+      "stockStatus": "unknown"
+    },
+    {
+      "url": "https://northprosports.com/index.php?route=product/product&path=28&product_id=20008",
+      "title": "Benelli M4 Tactical Semi-Automatic 12ga Shotgun w/Telescoping Stock",
+      "price": 3049.99,
+      "stockStatus": "unknown"
+    }
+  ],
+  "sortParam": "?sort=p.date_added&order=DESC",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Sort param ?sort=p.date_added&order=DESC verified honored via counter-control swap (default first ID 22944 vs date-DESC first ID 24240 vs price-ASC first ID 21032 — three distinct first products prove sort is honored); date-DESC page 1 last ID 23103 followed by page 2 first ID 23102 confirms monotonic newest-first traversal across pages. OpenCart has no usable global API for date-since-watermark."
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/index.php?route=product/category&path=28",  "name": "FIREARMS IN STOCK",        "allOption": 340 },
+      { "slug": "/index.php?route=product/category&path=766", "name": "AMMUNITION IN STOCK",       "allOption": 345 },
+      { "slug": "/index.php?route=product/category&path=267", "name": "RELOADING IN STOCK",        "allOption": 352 },
+      { "slug": "/index.php?route=product/category&path=552", "name": "OPTICS IN STOCK",           "allOption": 168 },
+      { "slug": "/index.php?route=product/category&path=45",  "name": "ARCHERY IN STOCK",          "allOption": 585 },
+      { "slug": "/index.php?route=product/category&path=400", "name": "HUNTING ACCESSORIES",       "allOption": 292 },
+      { "slug": "/index.php?route=product/category&path=32",  "name": "CLOTHING & FOOTWEAR",       "allOption": 124, "excludedReason": "pure apparel — out of firearm-relevant scope per Rule C" },
+      { "slug": "/index.php?route=product/category&path=1088","name": "**CURRENT REBATES & PROMO CODES**", "allOption": 1, "excludedReason": "promo aggregator, not a real product catalog" }
+    ],
+    "totalsSumCheck": "Sum of 6 firearm-relevant per-category totals = 340+345+352+168+585+292 = 2082. Pairwise overlap: cat 28 ∩ 766 = 3 products, cat 45 ∩ 400 = 1 product. Union of all 6 firearm-relevant categories = 2078 unique product IDs. Verified via full walk at ?limit=1000 for each cat (limit=1000 honored — server returns entire category in one page)."
+  },
+  "lastVerified": "2026-05-12",
+  "auditNotes": {
+    "runId": "northprosports.com-2026-05-12-blind-r1",
+    "fieldConfidence": {
+      "platform": "high — Powered By OpenCart comment in footer + index.php?route= URL scheme + OCSESSID cookies + standard OpenCart <select id='input-sort'> markup",
+      "hasWaf": "high — 8-batch heavy probe, all 200, no CDN/plugin markers, no rule trips",
+      "catalogUrls": "high — full walk at ?limit=1000 per category, pairwise overlap measured, union vs sum reconciled",
+      "sortParam": "high — Mistake 21 hidden option ?sort=p.date_added&order=DESC verified via 3-outcome counter-control (default vs date-DESC vs price-ASC) plus cross-page monotonic ID descent",
+      "paginationPattern": "high — page=2 returns 0-overlap 100 products vs page=1 on cat 28; perPage=100 default selected by <select id='input-limit'>",
+      "perPage": "medium-high — <select id='input-limit'> max option is 100, but server actually honors ?limit=500 and ?limit=1000 (verified — archery returned all 585 unique IDs at limit=1000). Conservative 100 used in catalogUrl; runtime can opt to bake limit=1000 if a single fetch per category is preferred over 4-6 pages.",
+      "expectedProductCount": "medium — value comes from Stage 4d walk-derived union of 6 firearm-relevant categories (2078). No single-URL probe source exists on this site (sitemap endpoint returns 200 with empty body; no taxonomy API). productCountMethod is set to html-pagination as a best-fit placeholder but will under-count (selector targets a single category page's 'Showing X of Y' text and returns one category's count, not the union). Reconcile-after-walking rule applied: walked-count is the canonical figure.",
+      "productCountMethod": "low — none of the 11 canonical methods fits 'sum across 6 category URLs'. html-pagination selector points at a single catalog page's Showing text; on production it will fetch the origin (/) which has no 'Showing X of Y' markup and return null. Flagged for operator review.",
+      "needsPlaywright": "high — plain curl returned full product HTML on every catalog page tested; OpenCart serves server-rendered HTML with no SPA hydration step",
+      "crawlers.watermark.method": "high — sort verified honored + Stage 4 IDs monotonic across pages; no API date filter exists for OpenCart, ruling out method A; sort + ID monotonicity satisfies method B's preconditions",
+      "ageGate": "high — no markers in 171KB homepage HTML"
+    },
+    "stageNotes": [
+      "Stage 1 — canonical: https://northprosports.com (apex 200, www 200 both clean; no <link rel='canonical'> declared; preserved input apex)",
+      "Stage 2 — WAF: hasWaf=false, hasCaptcha=false, ageGate.detected=false. Server: Apache, no CDN headers anywhere in 8-batch probe, no plugin WAF markers in any 403 (no 403s fired). XSS query returned 200 with 14-byte body — that's a PHP query-filter result page (empty search), not a WAF block.",
+      "Stage 3 — platform: opencart (Powered By OpenCart commented in footer + index.php?route= URL scheme everywhere + OCSESSID session cookies + standard <select id='input-sort'>/<select id='input-limit'> markup). adapterType=generic-retail (generic-retail.ts:75-76,958-959 has [class*='product-thumb'] and [class*='product-layout'] OpenCart selectors). needsPlaywright=false (HTML rendered server-side, plain curl returns full product cards). No age-gate.",
+      "Stage 4 — catalogUrls: 8 top-level categories discovered via main-nav crawl. Excluded /path=32 CLOTHING & FOOTWEAR (pure apparel, out of scope) and /path=1088 CURRENT REBATES (promo aggregator). The 6 firearm-relevant catalogUrls (28/766/267/552/45/400) walked at ?limit=1000 — server honored limit and returned entire categories in single requests (340/345/352/168/585/292 products respectively). Pairwise overlap measured: only 4 duplicate IDs across all 6 categories (sum=2082, union=2078). No firearm-relevant category is redundant; each contributes hundreds of unique IDs. extractionTested=true with 3 sample products having title/price/url; stockStatus=unknown because OpenCart listing markup has no per-card stock badge (category is named 'IN STOCK' implying merchant policy).",
+      "Stage 5 — pagination: ?page={N}, query-form. Verified by fetching page 2 of cat 28 — returned 100 products, zero overlap with page 1. perPage=100 is the <select id='input-limit'> default and largest visible option; ?limit=500 and ?limit=1000 are also server-honored (verified on cat 28 and cat 45). Shipping perPage=100 as the conservative baseline; catalogUrls bake limit=100 for predictability.",
+      "Stage 6 — sort: Mistake 21 hidden option verified. Visible <select id='input-sort'> options are only sort_order/name/price/model — no date-added option. Direct probe of ?sort=p.date_added&order=DESC returned distinct first products (24240 vs default 22944 vs price-ASC 21032) confirming the param is honored. ?sort=p.product_id&order=DESC also works but product_id is NOT chronological at NPS (first ID 5242 — lower than default — so product_id was not used for watermark). sortParam='?sort=p.date_added&order=DESC', sortVerified=true.",
+      "Stage 7 — watermark: navigate-from-watermark. Method A (api-date-since-watermark) unavailable — OpenCart has no public REST endpoint for date-since filtering. Method B preconditions satisfied: sort verified honored + IDs monotonic across pages (date-DESC page 1 ends at ID 23103, page 2 starts at ID 23102). reason field populated.",
+      "Stage 8 — count: 2078 from Stage 4d walk-derived union. No single-URL probe source exists. /sitemap.xml returns 404; OpenCart sitemap plugin route /index.php?route=extension/feed/google_sitemap returns 200 OK but with empty body. productCountMethod set to html-pagination as best-fit placeholder but flagged in fieldConfidence as 'low' — recommend operator either skip runtime count probe or add a new sum-across-urls method.",
+      "Stage 9 — assembly: validator pass expected (9 required fields populated; 7 recommended fields populated)."
+    ]
+  }
+}

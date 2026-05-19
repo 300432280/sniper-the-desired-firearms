@@ -1,0 +1,227 @@
+{
+  "$schema": "R2-corrections-v1",
+  "site": "pavillonchassepeche.ca",
+  "candidate": "docs/site-audit/pavillonchassepeche.ca-2026-05-13T08-30-12Z-R1.json",
+  "dbReference": "MonitoredSite.siteProfile lastVerified=2026-04-12",
+  "runId": "R2-live-2026-05-13T08-55-17Z",
+  "corrections": [
+    {
+      "diffNumber": 1,
+      "field": "catalogUrls (scope)",
+      "dbValue": "6 URLs (all 6 top-level cats)",
+      "r1Value": "2 URLs (chasse + salines, firearm-relevant only)",
+      "corrected": ["/categorie-produit/chasse/", "/categorie-produit/salines/"],
+      "confidence": "high",
+      "verdict": "R1 correct. R1's 2-URL minimum-cover set is the smallest set whose union covers 100% of firearm-relevant products per Rule C.",
+      "evidence": [
+        "WC Store API: chasse cat id=21 count=412; armes-a-feu (id=63, parent=21) count=263; munition (id=83, parent=63 -> parent=21) count=50; all firearm-relevant subcats roll up to chasse archive.",
+        "peche (id=144) page1: 0 firearm-tagged products.",
+        "plein-air (id=110) page1: 2 firearm-tagged (STEINER PREDATOR, BUCKNER SPOTTING SCOPE) both ALSO tagged with chasse:21.",
+        "liquidation (id=1063) page1: 7 firearm-tagged products, ALL also tagged with chasse:21.",
+        "salines (id=795) full walk (49 products): 0 in chasse (100% disjoint hunting attractants).",
+        "vetements/tirage have zero firearm-relevant content per Rule C exclusion list."
+      ]
+    },
+    {
+      "diffNumber": 2,
+      "field": "catalogUrls (language)",
+      "dbValue": "/en/product-category/<en-slug>/",
+      "r1Value": "/categorie-produit/<fr-slug>/",
+      "corrected": ["/categorie-produit/chasse/", "/categorie-produit/salines/"],
+      "confidence": "high",
+      "verdict": "R1 correct. DB's EN catalogUrls reach only 29% of products due to incomplete WPML translation.",
+      "evidence": [
+        "apex returns lang=fr-FR, canonical=apex/ (no /en/ redirect, no /fr/ prefix).",
+        "FR scope WC Store: X-WP-Total=1245.",
+        "EN scope WC Store: X-WP-Total=1251 (near-identical product set with EN-prefixed permalinks).",
+        "EN top-level cats sum to ONLY 363 products (clothing=63, fishing=27, hunting-en-6=78, liquidation-en=123, outdoors-en-4=22, saltworks=49, tirage=1). 363/1251=29% coverage.",
+        "EN firearms cat count=53 vs FR armes-a-feu count=263. EN ammunition count=28 vs FR munition count=50."
+      ]
+    },
+    {
+      "diffNumber": 3,
+      "field": "expectedProductCount",
+      "dbValue": 1318,
+      "r1Value": 1245,
+      "corrected": 1245,
+      "confidence": "medium",
+      "verdict": "R1 correct. 1245 (Store API customer-visible) matches what the coverage gate sees. Medium confidence because 1253 (WP REST) would also be defensible.",
+      "evidence": [
+        "WC Store API per_page=1: X-WP-Total=1245 (customer-visible, includes 8 OOS still-listed).",
+        "WP REST per_page=1: X-WP-Total=1253 (publish-status, includes 8 catalog-hidden Store API filters out).",
+        "DB 1318 from 2026-04-12 is stale by 73 products."
+      ]
+    },
+    {
+      "diffNumber": 4,
+      "field": "productCountMethod.endpoint",
+      "dbValue": "/wp-json/wp/v2/product (with scratch fields)",
+      "r1Value": "/wp-json/wc/store/v1/products (clean)",
+      "corrected": "/wp-json/wc/store/v1/products",
+      "confidence": "high",
+      "verdict": "R1 correct. Store API matches runtime crawl; scratch fields violate Rule B.",
+      "evidence": [
+        "product-count-probe.ts:148-154 reads only method/endpoint/header; extras ignored.",
+        "Rule B forbids operator audit residue in runtime fields."
+      ]
+    },
+    {
+      "diffNumber": 5,
+      "field": "perPage",
+      "dbValue": 100,
+      "r1Value": 36,
+      "corrected": 36,
+      "confidence": "high",
+      "verdict": "R1 correct. DB conflated API max with HTML pagination perPage.",
+      "evidence": [
+        "HTML /categorie-produit/chasse/armes-a-feu/ default: 36 cards.",
+        "HTML ?per_page=100: 36 cards (ignored).",
+        "HTML ?posts_per_page=100: 36 cards (ignored).",
+        "WC Store API per_page=100: returns 100 (honored).",
+        "WC Store API per_page=24: returns 24 (honored).",
+        "WC Store API per_page=250: HTTP 400 (capped at 100)."
+      ]
+    },
+    {
+      "diffNumber": 6,
+      "field": "paginationPattern.perPage",
+      "dbValue": "absent",
+      "r1Value": 36,
+      "corrected": 36,
+      "confidence": "high",
+      "verdict": "R1 correct.",
+      "evidence": ["HTML probe = 36 cards. catalog-crawler.ts:756 buildPaginatedUrl consumes perPage."]
+    },
+    {
+      "diffNumber": 7,
+      "field": "paginationPattern.firstPageHasParam/startPage/zeroIndexed",
+      "dbValue": "absent",
+      "r1Value": "false / 1 / false",
+      "corrected": { "firstPageHasParam": false, "startPage": 1, "zeroIndexed": false },
+      "confidence": "high",
+      "verdict": "R1 correct.",
+      "evidence": ["WC /page/2/ structure: page 1 bare URL, page 2 /page/2/ (no param, 1-indexed)."]
+    },
+    {
+      "diffNumber": 8,
+      "field": "crawlers.maintain.verifyMethod",
+      "dbValue": "json-ld",
+      "r1Value": "store-api",
+      "corrected": "store-api",
+      "confidence": "high",
+      "verdict": "R1 correct. 'json-ld' is unreachable dead code.",
+      "evidence": [
+        "worker.ts:381 tryStoreApiVerify only routes when verifyMethod === 'store-api' (line 397).",
+        "worker.ts:762-769 fallback expects 'detail-page'.",
+        "'json-ld' is not handled anywhere in worker.ts."
+      ]
+    },
+    {
+      "diffNumber": 9,
+      "field": "crawlers.maintain.verifyEndpoint",
+      "dbValue": "absent",
+      "r1Value": "/wp-json/wc/store/v1/products",
+      "corrected": "/wp-json/wc/store/v1/products",
+      "confidence": "high",
+      "verdict": "R1 correct. Required when verifyMethod='store-api'.",
+      "evidence": ["worker.ts:399: if (!verifyEndpoint) return null;"]
+    },
+    {
+      "diffNumber": 10,
+      "field": "wafLastProbedAt",
+      "dbValue": "2026-04-12",
+      "r1Value": "2026-05-13T08:19:51Z",
+      "corrected": "2026-05-13T08:19:51Z",
+      "confidence": "high",
+      "verdict": "R1 correct (fresher, full ISO).",
+      "evidence": ["8-batch probe 2026-05-13."]
+    },
+    {
+      "diffNumber": 11,
+      "field": "lastVerified",
+      "dbValue": "2026-04-12",
+      "r1Value": "2026-05-13",
+      "corrected": "2026-05-13",
+      "confidence": "high",
+      "verdict": "R1 correct (fresher).",
+      "evidence": ["Live probes 2026-05-13."]
+    },
+    {
+      "diffNumber": 12,
+      "field": "wafProbeEvidence",
+      "dbValue": "absent",
+      "r1Value": "populated",
+      "corrected": "populated",
+      "confidence": "high",
+      "verdict": "R1 correct.",
+      "evidence": ["8-batch headers: Server=LiteSpeed, X-LiteSpeed-Cache=hit; rapidBurst 10/10 200; no CF/Sucuri/SiteGround markers."]
+    },
+    {
+      "diffNumber": 13,
+      "field": "userAgentOverride",
+      "dbValue": "absent",
+      "r1Value": null,
+      "corrected": null,
+      "confidence": "high",
+      "verdict": "R1 correct.",
+      "evidence": ["Schema requires explicit null."]
+    },
+    {
+      "diffNumber": 14,
+      "field": "ageGate",
+      "dbValue": "absent",
+      "r1Value": { "detected": false, "type": null, "bypassCookie": null },
+      "corrected": { "detected": false, "type": null, "bypassCookie": null },
+      "confidence": "high",
+      "verdict": "R1 correct.",
+      "evidence": ["No age-gate JS on apex/catalog; product pages accessible without cookie."]
+    },
+    {
+      "diffNumber": 15,
+      "field": "DB operator-only fields",
+      "dbValue": "present (name, budget, timeout, crawlPhase, multilingual, siteCategory, t1IntervalMin, expectedInStockCount, hasRateLimit, dataFlow, tier configs, bootstrap.method, htmlFallback, notes)",
+      "r1Value": "absent",
+      "corrected": "leave absent",
+      "confidence": "high",
+      "verdict": "R1 correct. MonitoredSite-level operator config, not pre-bootstrap probe target.",
+      "evidence": ["feedback_site_profile_schema.md."]
+    },
+    {
+      "diffNumber": 16,
+      "field": "topLevelCategories",
+      "dbValue": "absent",
+      "r1Value": "populated",
+      "corrected": "populated",
+      "confidence": "high",
+      "verdict": "R1 correct.",
+      "evidence": ["Per-cat counts cross-checked against WC Store API categories endpoint - all R1 counts match."]
+    },
+    {
+      "diffNumber": 17,
+      "field": "extractionTested / extractionSample",
+      "dbValue": "absent",
+      "r1Value": "populated",
+      "corrected": "populated",
+      "confidence": "high",
+      "verdict": "R1 correct.",
+      "evidence": ["3 product objects all match live WC Store API GET on category=63 (armes-a-feu)."]
+    },
+    {
+      "diffNumber": 18,
+      "field": "productCountMethod extras",
+      "dbValue": "wpRestTotal/enScopeTotal/storeApiTotal/rootScopeTotal present",
+      "r1Value": "absent",
+      "corrected": "absent",
+      "confidence": "high",
+      "verdict": "R1 correct.",
+      "evidence": ["product-count-probe.ts reads only configured header; extras silently ignored. Rule B."]
+    }
+  ],
+  "summary": { "totalDiffs": 18, "r1Correct": 18, "r1Incorrect": 0, "inconclusive": 0, "confidenceBreakdown": { "high": 17, "medium": 1, "low": 0 } },
+  "topVerdicts": {
+    "wpmlCanonicalLanguage": "FR confirmed live. apex returns lang=fr-FR, canonical=apex/, no /en/ redirect. FR scope WC Store=1245 vs EN scope=1251. EN cats sum to 363 (29% coverage). FR catalogUrls are correct.",
+    "perCategoryFirearmRelevanceScope": "chasse(412) + salines(49) = 461 firearm-relevant. peche=0; plein-air=2 (both also in chasse); liquidation=7 firearm-tagged (all in chasse); vetements/tirage=0. R1's 2-URL minimum cover correct per Rule C.",
+    "htmlVsApiPerPage": "HTML capped at 36 cards (?per_page/?posts_per_page ignored). WC Store API honors per_page<=100; HTTP 400 above. paginationPattern.perPage must be HTML=36."
+  },
+  "overallVerdict": "ACCEPT R1 candidate. All 18 divergences resolve in R1's favor."
+}

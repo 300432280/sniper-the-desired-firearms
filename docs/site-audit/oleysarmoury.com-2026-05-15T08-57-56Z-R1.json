@@ -1,0 +1,145 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T08:46:06Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "no-waf: all 8 batches 200 (or 404 on honeypot path with no Cloudflare challenge); cf-ray header not present on direct GET; Cloudflare is in front (__cf_bm cookie + Server: cloudflare) but does not actively challenge requests",
+  "wafProbeEvidence": {
+    "cfHeaders": ["__cf_bm cookie present", "Server: cloudflare", "cf-cache-status: DYNAMIC/MISS"],
+    "cfRayHeaderSeen": false,
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "pluginWafMarkers": [],
+    "verdictNote": "BC Stencil storefront on cdn11.bigcommerce.com behind Cloudflare. No active WAF challenges across all 8 batches. Set hasWaf:false so the crawler does not unnecessarily drop perPage to 20."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3505,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "https://oleysarmoury.com/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "https://oleysarmoury.com/accessories/?limit=100&sort=newest",
+    "https://oleysarmoury.com/ammunition/?limit=100&sort=newest",
+    "https://oleysarmoury.com/firearms/?limit=100&sort=newest",
+    "https://oleysarmoury.com/optics/?limit=100&sort=newest",
+    "https://oleysarmoury.com/bargain-bin/?limit=100&sort=newest",
+    "https://oleysarmoury.com/air-guns-and-supplies/?limit=100&sort=newest",
+    "https://oleysarmoury.com/decals/?limit=100&sort=newest",
+    "https://oleysarmoury.com/air-soft/?limit=100&sort=newest",
+    "https://oleysarmoury.com/blinds-stands-accessories/?limit=100&sort=newest",
+    "https://oleysarmoury.com/steambow/?limit=100&sort=newest",
+    "https://oleysarmoury.com/swag/?limit=100&sort=newest",
+    "https://oleysarmoury.com/trail-cameras/?limit=100&sort=newest",
+    "https://oleysarmoury.com/training-aid/?limit=100&sort=newest",
+    "https://oleysarmoury.com/consignment-non-firearm/?limit=100&sort=newest"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://oleysarmoury.com/hornady-black-300-blackout-208g-amax-20rds/",
+      "title": "Hornady Black 300 Blackout 208g AMAX - 20rds",
+      "price": 49.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://oleysarmoury.com/hornady-subsonic-30-30-175g-sub-x-20rds/",
+      "title": "Hornady Subsonic 30-30 175g SUB-X - 20rds",
+      "price": 50.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://oleysarmoury.com/hodgdon-blackhorn-209-high-performance-muzzleloading-powder-1lb/",
+      "title": "Hodgdon Blackhorn 209 High Performance Muzzleloading Powder 1lb",
+      "price": 149.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "sitemap": "https://oleysarmoury.com/xmlsitemap.php?type=products&page=1",
+        "catalogPages": "https://oleysarmoury.com/<category>/?limit=100&sort=newest&page={N}"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      {"slug": "/accessories/", "allOption": 1304, "uniqueHere": 1245},
+      {"slug": "/ammunition/", "allOption": 839, "uniqueHere": 826},
+      {"slug": "/firearms/", "allOption": 585, "uniqueHere": 523},
+      {"slug": "/optics/", "allOption": 381, "uniqueHere": 375},
+      {"slug": "/bargain-bin/", "allOption": 243, "uniqueHere": 218},
+      {"slug": "/clearance/", "allOption": 142, "uniqueHere": 0, "droppedReason": "fully redundant - all 142 products appear in other categories; verified via union test"},
+      {"slug": "/air-guns-and-supplies/", "allOption": 48, "uniqueHere": 41},
+      {"slug": "/swag/", "allOption": 64, "uniqueHere": 64},
+      {"slug": "/decals/", "allOption": 31, "uniqueHere": 31},
+      {"slug": "/trail-cameras/", "allOption": 12, "uniqueHere": 9},
+      {"slug": "/blinds-stands-accessories/", "allOption": 11, "uniqueHere": 6},
+      {"slug": "/training-aid/", "allOption": 4, "uniqueHere": 4},
+      {"slug": "/air-soft/", "allOption": 2, "uniqueHere": 2},
+      {"slug": "/steambow/", "allOption": 2, "uniqueHere": 1},
+      {"slug": "/consignment-non-firearm/", "allOption": 0, "uniqueHere": 0, "keptReason": "empty today (200 OK + 0 products) - keep per Rule C, may have products tomorrow"}
+    ],
+    "totalsSumCheck": "Walked union (deduplicated by product_id across the 14 kept categories) = 3505 products, matching xmlsitemap.php?type=products page-1 <loc> count exactly (3505). 100% coverage. Clearance dropped after union test confirmed 0 unique products."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "oleysarmoury.com-2026-05-15T08-57-56Z-R1",
+    "probeIp": "audit IP (Cloudflare did not challenge - production crawler IP must be re-confirmed if blocked)",
+    "fieldConfidence": {
+      "platform": "HIGH (meta platform='bigcommerce.stencil' + cdn11.bigcommerce.com/s-6j8taxjw04 + stencil bundles)",
+      "hasWaf": "HIGH (all 8 batches 200; no cf-ray on apex GET; no plugin markers)",
+      "expectedProductCount": "HIGH (sitemap 3505 = walked-union 3505 exact match)",
+      "sortParam": "HIGH (3-outcome test: default==newest, counter!=default; product IDs monotonic-DESC)",
+      "perPage": "HIGH (?limit=100 returned 100 unique; ?limit=250 capped at 100)",
+      "paginationPattern": "HIGH (?page=2 returned 100 unique IDs, zero overlap with ?page=1)",
+      "catalogUrls": "HIGH (walked-union ID-deduped, 14 categories cover 100% of sitemap products)"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200 clean; www 301 -> apex. canonicalOrigin = https://oleysarmoury.com (canonical <link> agrees).",
+      "Stage 2: heavy 8-batch probe ran clean (all 200 except honeypot 404). Cloudflare front (__cf_bm cookie) without active challenge - Cloudflare-passive. hasWaf:false avoids unnecessary perPage drop in catalog-crawler.",
+      "Stage 3: <meta name='platform' content='bigcommerce.stencil'/>, cdn11.bigcommerce.com/s-6j8taxjw04 (store hash), stencil theme bundles -> bigcommerce-stencil; adapterType=generic-retail. Plain HTTP returns full product HTML -> needsPlaywright:false. No age-gate markers, no CAPTCHA markers.",
+      "Stage 4: nav has 'Shop By Category' (15 entries) + 'Shop By Brand' (excluded as overlapping). Walked all 15 categories at ?limit=100 fully through pagination, deduped by data-product-id. Union = 3505, matches sitemap exactly. Clearance dropped (0 unique-here). Consignment-non-firearm kept (200 + 0 products today, may have products tomorrow per Rule C). Final catalogUrls = 14 top-level categories with sort+limit baked in.",
+      "Stage 5: ?page=N query pagination. perPage probe: ?limit=50 returned 50 unique, ?limit=100 returned 100 unique, ?limit=250 capped at 100. Verified ?page=2 with limit=100 returned 100 unique IDs, zero overlap with page 1. perPage=100.",
+      "Stage 6: <select name='sort'> options [featured(default), newest, bestselling, alphaasc, alphadesc, avgcustomerreview, priceasc, pricedesc]. 3-outcome cache-busted: default first-3 = [10124,10123,10122] == sort=newest first-3 = [10124,10123,10122] != counter (alphaasc) first-3 = [8837,7317,7318]. Verdict honored-default-is-newest. sortParam=?sort=newest, sortVerified:true. Note: product IDs are monotonically descending (auto-increment), confirming newest-first ordering.",
+      "Stage 7: Method B navigate-from-watermark applies. Sort verified honored in Stage 6 and monotonic-DESC product IDs provide a strong date proxy. BC GraphQL is auth-gated so Method A (api-date-since-watermark) is not feasible without storefront token.",
+      "Stage 8: sitemap method via /xmlsitemap.php?type=products&page=1 -> 3505 <loc> entries, all product URLs (BC's typed sitemap is product-only). Walked-union exact match.",
+      "Stage 9: Validator pass on 9 required fields. Two deliverables written (JSON + MD)."
+    ]
+  }
+}

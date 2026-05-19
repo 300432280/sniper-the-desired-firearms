@@ -1,0 +1,124 @@
+{
+  "profileVersion": 1,
+  "platform": "magento-2.x",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-05-12T06:21:36Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cf-ray on every fetch; bot UA (curl) and no-UA return 403 Cloudflare block page; honeypot paths (.env, .git/config, phpinfo.php) blocked with 403; XSS/SQLi payloads blocked; desktop/mobile browser UAs return 200 cleanly",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: 9fa752f6ad84a2d9-YYZ", "Server: cloudflare", "cf-cache-status: BYPASS"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all 200 with desktop UA",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [".env", ".git/config", "phpinfo.php"],
+    "botUaBlocked": true,
+    "blockPageMarker": "Sorry, you have been blocked - Cloudflare"
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "needsPlaywright": false,
+  "expectedProductCount": 12414,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": [
+      "/sitemap_en-1-1.xml",
+      "/sitemap_en-1-2.xml"
+    ]
+  },
+  "catalogUrls": [
+    "https://www.londerosports.com/en/firearms?product_list_order=new&product_list_limit=80",
+    "https://www.londerosports.com/en/air-guns?product_list_order=new&product_list_limit=80",
+    "https://www.londerosports.com/en/archery?product_list_order=new&product_list_limit=80",
+    "https://www.londerosports.com/en/clothing?product_list_order=new&product_list_limit=80",
+    "https://www.londerosports.com/en/hunting?product_list_order=new&product_list_limit=80",
+    "https://www.londerosports.com/en/knives?product_list_order=new&product_list_limit=80",
+    "https://www.londerosports.com/en/optics?product_list_order=new&product_list_limit=80",
+    "https://www.londerosports.com/en/outdoor?product_list_order=new&product_list_limit=80",
+    "https://www.londerosports.com/en/reloading?product_list_order=new&product_list_limit=80"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.londerosports.com/en/winchester-209-primers", "title": "Winchester W209 #209 Shotgun Shells Primers 100/Pack", "price": 12.99, "stockStatus": "in_stock" },
+    { "url": "https://www.londerosports.com/en/bore-tech-eliminator-bore-cleaner", "title": "Bore Tech Eliminator Bore Cleaner", "price": 29.99, "stockStatus": "in_stock" },
+    { "url": "https://www.londerosports.com/en/aguila-standard-22-lr-40-grain-ammunition", "title": "Aguila 22 LR Standard Velocity 40 gr Ammunition", "price": 4.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?product_list_order=new",
+  "sortVerified": true,
+  "perPage": 80,
+  "paginationPattern": {
+    "type": "query",
+    "template": "p",
+    "perPage": 80,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "?product_list_order=new sort verified via 3-outcome counter-control (default=bestsellers / new / price_asc all distinct first-product slugs); Magento toolbar paginates ?p=N; newest products surface at p=1"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "graphql": "https://www.londerosports.com/en/graphql",
+        "categoryListExample": "POST /en/graphql body {\"query\":\"{categories(filters:{parent_id:{eq:\\\"2\\\"}}){items{id name url_path product_count}}}\"}"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "graphql + nav-crawl",
+    "categories": [
+      { "slug": "/en/firearms", "allOption": 4881 },
+      { "slug": "/en/air-guns", "allOption": 393 },
+      { "slug": "/en/archery", "allOption": 1260 },
+      { "slug": "/en/clothing", "allOption": 398 },
+      { "slug": "/en/hunting", "allOption": 1003 },
+      { "slug": "/en/knives", "allOption": 338 },
+      { "slug": "/en/optics", "allOption": 679 },
+      { "slug": "/en/outdoor", "allOption": 314 },
+      { "slug": "/en/reloading", "allOption": 1376 },
+      { "slug": "/en/fishing", "allOption": 1719, "excluded": "non-firearm-relevant (pure fishing per Rule C scope)" },
+      { "slug": "/en/promotions", "allOption": 740, "excluded": "subset aggregator (overlaps with category-tagged products)" }
+    ],
+    "totalsSumCheck": "firearm-relevant sum-of-categories = 10,642 (with cross-category overlap likely 20-30%); sitemap raw <loc> count = 12,414 (mixes ~600 category URLs + ~11,800 product URLs but is 8 months stale from 2025-09-04); GraphQL global products{total_count} caps at 10000 ceiling"
+  },
+  "lastVerified": "2026-05-12",
+  "auditNotes": {
+    "runId": "blind-2026-05-12-round-1",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "catalogUrls": "medium-without-walk-dedup",
+      "sortParam": "high (3-outcome counter-control passed)",
+      "perPage": "high (limit=80 verified, limit=all timed out)",
+      "expectedProductCount": "low (sitemap is 8 months stale)",
+      "productCountMethod": "medium (sitemap-index works but stale; runtime probe has no GraphQL POST method)"
+    },
+    "openIssues": [
+      "Sitemap freshness: sitemap_en-1-N.xml lastmod = 2025-09-03/04, count likely under-reports live by ~15-20%",
+      "Magento GraphQL products{total_count} caps at 10000 — cannot be used for global count via runtime json-api-count (GET only)",
+      "html-pagination runtime fetches origin (homepage) not a category page — Magento toolbar lives on category pages so this method does not fit as-is",
+      "Stage 4 walk-and-dedup pending Round 2 — current catalogUrls based on per-category counts; overlap between categories (e.g. hunting knives in /hunting AND /knives) not yet quantified"
+    ],
+    "stageNotes": [
+      "Stage 1: apex 301->www; canonical /en/ (bilingual site with /fr/ mirror)",
+      "Stage 2: cloudflare-active confirmed; bot UAs blocked with full Cloudflare block page; desktop browser UA passes all 8 batches; recaptcha-v3 invisible on login form only - catalog open",
+      "Stage 3: magento-2.x confirmed by Magento_PageBuilder, x-magento-init, /static/version1777303708/ path; theme = Megnor/mag110246_6_child",
+      "Stage 4: 11 top-level categories from nav; 9 firearm-relevant after Rule C scope (drop fishing as pure, drop promotions as aggregator subset). Walk-and-dedup not yet run.",
+      "Stage 5: ?p={N} verified by page1/page2 zero-overlap test; perPage=80 verified (limit=all >60s timeout, not viable)",
+      "Stage 6: ?product_list_order=new (DESC default) verified via 3-outcome counter-control - default(bestsellers)='winchester-209-primers', new='used-remington-552-speedmaster-22-lr-23-rifle', price_asc='darts-paper-target'; all distinct",
+      "Stage 7: navigate-from-watermark - sort honored, newest surfaces at p=1, no Magento public REST date filter (frontend requires admin token)",
+      "Stage 8: sitemap-index chosen as least-bad fit (raw count 12414 includes ~600 category URLs + ~11800 product URLs; stale 8mo). GraphQL would be ideal but runtime json-api-count is GET-only - open improvement.",
+      "Stage 9: candidate assembled; classifiedRules N/A (not classifieds); ecwidStoreId N/A (not ecwid)"
+    ]
+  }
+}

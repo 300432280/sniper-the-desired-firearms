@@ -1,0 +1,132 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "rule-selective",
+  "wafLastProbedAt": "2026-05-11T06:47:17Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "no vendor WAF (no cf-ray / no x-sucuri / no incapsula); LiteSpeed + mod_security rule-selective: SQLi/XSS/honeypot paths 403, catalog 200; CPFence CAPTCHA gates /wp-login.php only, not catalog",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "server": "LiteSpeed",
+    "rapidBurstStatus": "all 200",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [".env", ".git/config", "phpinfo.php", "xmlrpc.php"],
+    "botUaBlocked": false,
+    "wpLoginCaptchaRedirect": "captcha.cpfence.app"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 16,
+  "productCountMethod": "wc-store-api-header",
+  "catalogUrls": [
+    "https://www.corwin-arms.com/product-category/axes/",
+    "https://www.corwin-arms.com/product-category/firearms/",
+    "https://www.corwin-arms.com/product-category/firearms-accessories/",
+    "https://www.corwin-arms.com/product-category/other/",
+    "https://www.corwin-arms.com/product-category/swords-and-knives/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.corwin-arms.com/product/axe-hawk-head/",
+      "title": "Axe Hawk Head",
+      "price": 39.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.corwin-arms.com/product/axe-hawk-head-6/",
+      "title": "Axe Hawk Head",
+      "price": 39.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.corwin-arms.com/product/825/",
+      "title": "Axe Hawk Head",
+      "price": 39.00,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST product endpoint honors ?after= filter (two-probe verified: ?after=2099 -> 0, ?after=1999 -> 16 = global count)"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "products": "/wp-json/wc/store/v1/products",
+        "wpRestProduct": "/wp-json/wp/v2/product",
+        "productCat": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/axes/", "allOption": 8 },
+      { "slug": "/product-category/firearms/", "allOption": 1 },
+      { "slug": "/product-category/firearms-accessories/", "allOption": 2 },
+      { "slug": "/product-category/other/", "allOption": 3 },
+      { "slug": "/product-category/swords-and-knives/", "allOption": 2 },
+      { "slug": "/product-category/accessories/", "allOption": 0 },
+      { "slug": "/product-category/clearance/", "allOption": 0 },
+      { "slug": "/product-category/helmets-and-headwear/", "allOption": 0 },
+      { "slug": "/product-category/magazines-and-clips/", "allOption": 0 },
+      { "slug": "/product-category/optics/", "allOption": 0 },
+      { "slug": "/product-category/uncategorized/", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Sum of non-empty allOption = 8+1+2+3+2 = 16 = WC Store API x-wp-total = 16 (zero overlap, full coverage with 5 non-empty top-level slugs)"
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "corwin-arms-2026-05-11-blind-calibration",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium",
+      "wafType": "medium",
+      "hasCaptcha": "high",
+      "expectedProductCount": "high",
+      "catalogUrls": "high",
+      "sortParam": "high",
+      "paginationPattern": "medium",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex 301 -> https://www.corwin-arms.com/",
+      "Stage 2: LiteSpeed + rule-selective WAF (SQLi/XSS 403, honeypot 403, catalog 200); CPFence CAPTCHA on /wp-login.php only; no cf-ray, no Sucuri, no Incapsula; no Cloudflare; catalog UA-agnostic (4/4 UAs returned 200)",
+      "Stage 3: <meta generator> = WordPress 6.9.4 + WooCommerce 10.7.0 (Divi theme). adapterType=woocommerce. No age-gate markers.",
+      "Stage 4: 11 top-level product_cat from WP taxonomy API; 5 with count>0 cover 100% (8+1+2+3+2=16); 6 empty. catalogUrls = 5 non-empty.",
+      "Stage 5: standard WC archive pagination /page/{N}/; perPage=12 (theme default, no category exceeds 12 today). /page/1/ -> 301.",
+      "Stage 6: <select class='orderby'> in axes page; default=menu_order, candidate=date, counter=price. DOM post-id orders: default=[821,825,827], date=[2041,839,837], price=[821,825,827]. date != default -> honored.",
+      "Stage 7: WC two-probe (?after=2099 -> 0; ?after=1999 -> 16) -> Method A api-date-since-watermark.",
+      "Stage 8: WC Store API GET /wp-json/wc/store/v1/products?per_page=1 -> x-wp-total: 16. Method = wc-store-api-header.",
+      "Stage 9: validator pending; promotion not in this skill."
+    ]
+  }
+}

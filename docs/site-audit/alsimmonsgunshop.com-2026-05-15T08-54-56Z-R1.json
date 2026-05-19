@@ -1,0 +1,130 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T08:47:04Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front but no active challenge; all 8 batches return 200 on catalog paths; only bot-UA (curl/8.0) and wp-admin honeypots get 403. SQLi/XSS not blocked. hasWaf set to operational false; setting it true would unnecessarily slow the WooCommerce store API path.",
+  "wafProbeEvidence": {
+    "cfRayHeader": "9fc0e04aad8d8ea1-YYZ",
+    "serverHeader": "cloudflare",
+    "rapidBurstStatuses": "10x 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-admin/ -> 403 (WP login lockdown)", "/wp-login.php -> 403", "/xmlrpc.php -> 403"],
+    "botUaBlocked": true,
+    "noUaStatus": 200,
+    "noUaBytes": 252203,
+    "pluginWafMarkers": "none (MalCare/Wordfence/Sucuri/Incapsula/sgcaptcha all absent from body scans across batches 1-8)"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 160,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/shop/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://alsimmonsgunshop.com/product/winchester-1300-speed-pump-defender-12ga-14359n/",
+      "title": "Winchester 1300 SPEED PUMP Defender 12GA (14359N)",
+      "price": 399.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://alsimmonsgunshop.com/product/russian-simonov-sks-7-62x39mm-w-extras-14351nc/",
+      "title": "Russian Simonov SKS 7.62x39mm w/extras (14351NC)",
+      "price": 1199.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://alsimmonsgunshop.com/product/benelli-m4-t-pro-12ga-14337n/",
+      "title": "Benelli M4 T-Pro 12GA (14337N)",
+      "price": 3719.95,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 9,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productDiscovery": "/wp-json/wp/v2/product",
+        "priceEnrichment": "/wp-json/wc/store/v1/products"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "wp-json/wp/v2/product_cat",
+    "categories": [
+      { "slug": "/product-category/used-non-restricted/", "allOption": 64 },
+      { "slug": "/product-category/magazines/", "allOption": 85 },
+      { "slug": "/product-category/new-non-restricted/", "allOption": 11 },
+      { "slug": "/product-category/collectable-22s/", "allOption": 3 },
+      { "slug": "/product-category/accessories/", "allOption": 0 },
+      { "slug": "/product-category/used-non-restricted/consignment/", "allOption": 49 }
+    ],
+    "totalsSumCheck": "3+85+11+64 = 163 vs /shop/ walked 160 vs Store API X-WP-Total 160. Three products double-counted across taxonomies; /shop/ walk dedup = 160. Per Rule C minimum-cover: /shop/ alone covers 100% (every productive category's products are a subset of /shop/ walked union)."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "R1-blind-2026-05-15T08-54-56Z",
+    "probeIp": "audit-host",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200; www -> 301 to apex; <link rel=canonical> = https://alsimmonsgunshop.com/. canonical = apex.",
+      "Stage 2: cf-ray on all BATCH 1 responses; rapid burst, SQLi, XSS, no-UA all return 200; only python-requests-style bot UA gets 403 and wp-admin honeypots return 403 (WP standard); no MalCare/Wordfence/Sucuri body markers across batches 1-8. Cloudflare-passive -> hasWaf false (operational).",
+      "Stage 3: <meta name=generator content='WooCommerce 10.7.0'>, WordPress 6.9.4, theme homestore (storefront child). adapterType woocommerce. No CAPTCHA scripts on homepage; no age-gate markers.",
+      "Stage 4: WC product_cat taxonomy returns 9 categories (5 productive at count>0 plus consignment child). Walked /shop/ + each productive category page-by-page. /shop/ = 160 dedup, sum of categories = 163, all 163 are subsets of /shop/ 160 (3 cross-tagged). Per Rule C minimum-cover: catalogUrls = ['/shop/'].",
+      "Stage 4g: 3 random products from /shop/ page 1 (positions 0, 4, 8) all extracted title + price + stockStatus + url cleanly. extractionTested true.",
+      "Stage 5: zero-overlap test page1 vs page2 = 0 shared. Pagination type path, template /page/{N}/, startPage 1, zeroIndexed false, firstPageHasParam false. perPage=9 (theme default; Store API caps at 100 with HTTP 400 on >100).",
+      "Stage 6: 3-outcome test with cache-bust. default == ?orderby=date (identical first 3 slugs). counter-control ?orderby=price returns totally different slugs. Verdict: honored-default-is-newest. sortParam '?orderby=date', sortVerified true.",
+      "Stage 7: WC Store API two-probe future=0, past=160 (matches Store API total). after= filter works. crawlers.watermark.method api-date-since-watermark.",
+      "Stage 8: Store API endpoint /wp-json/wc/store/v1/products returns X-WP-Total: 160 (customer-visible inventory). Admin REST /wp-json/wp/v2/product returns 1662 (includes drafts/private). Used 160 as expectedProductCount because that matches the public catalog the crawler walks. productCountMethod {method:'wp-rest-header', endpoint:'/wp-json/wc/store/v1/products', header:'x-wp-total'}."
+    ]
+  }
+}

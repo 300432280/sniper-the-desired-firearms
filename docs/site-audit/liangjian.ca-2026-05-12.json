@@ -1,0 +1,134 @@
+{
+  "profileVersion": 1,
+  "platform": "godaddy-ols",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-12T06:22:01Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches returned 200 with consistent ~160ms latency. Server header is DPS/2.0.0 (GoDaddy Digital Presence Server) on every request. No cf-ray, no x-sucuri, no Incapsula cookies, no MalCare/Wordfence body markers. Rapid burst (10 sequential GETs) all 200. Honeypot paths (/wp-admin, /.env, /.git/config, /xmlrpc.php) return 404 (not blocked). SQLi and XSS payloads return 200 same as default. No WAF.",
+  "wafProbeEvidence": {
+    "serverHeader": "DPS/2.0.0+sha-49dcc52",
+    "cfRayPresent": false,
+    "sucuriHeaderPresent": false,
+    "incapsulaCookiePresent": false,
+    "malcareBodyMarker": false,
+    "wordfenceBodyMarker": false,
+    "rapidBurstAllOk": true,
+    "rapidBurstCount": 10,
+    "honeypotPathsReturn404NotBlocked": true,
+    "sqliPayloadStatus": 200,
+    "xssPayloadStatus": 200,
+    "noUaStatus": 200
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1952,
+  "productCountMethod": {
+    "method": "generic-product-sitemap",
+    "url": "/sitemap.ols.xml",
+    "pattern": "/shop/ols/products/[^/?#]+$"
+  },
+  "catalogUrls": [
+    "/shop"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://liangjian.ca/shop/ols/products/nij-iiia-body-armor-plate",
+      "title": "Level 3A Body Armor Plate",
+      "price": 120,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://liangjian.ca/shop/ols/products/cz-75-sp-01-sp-01-shadow-slide-stop",
+      "title": "CZ 75 SP-01/ SP-01 SHADOW Slide Stop",
+      "price": 75,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://liangjian.ca/shop/ols/products/henry-h001-22-classic-22-lr-blued-wood-stk-lever-action-rifle",
+      "title": "Henry H001-22 Classic 22 LR Blued Wood Stk Lever Action Rifle",
+      "price": 540,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "q[descend_by_created_at]=true",
+  "sortVerified": true,
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "api-page",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": true,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "apiAlternative": {
+    "type": "mysimplestore",
+    "baseUrl": "https://31990017-c17c-4c86-89ca-5fc9b6a1bb06.mysimplestore.com",
+    "storeId": "31990017-c17c-4c86-89ca-5fc9b6a1bb06",
+    "productsEndpoint": "/api/v2/products",
+    "appParam": "app=vnext",
+    "sortParam": "q[descend_by_created_at]=true",
+    "maxPerPage": 1000,
+    "verifiedPerPage": 250,
+    "notes": "Plain HTTP works at scale. Walked 8 pages x 250 = 1952 unique product ids, no rate-limit, no errors. q[descend_by_created_at]=true monotonically decreasing ids (3292,3291,3290). Default sort returns id-asc. Counter-control q[ascend_by_name]=true returns alphabetical first results — 3-outcome test confirms sort is honored, not NOOP. Date filters (created_at_gteq, created_at_gt, created_at_after) silently ignored (return full 1952). Category filters (category_slug_eq, category_id_eq, etc.) silently ignored. Therefore the API only supports flat-catalog sort+paginate; per-category catalog walks are NOT possible via the API. The product objects have categories:[] populated as empty arrays."
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Sort q[descend_by_created_at]=true verified honored via 3-outcome counter-control test (default=id-asc, sorted=id-desc 3292/3291/3290, counter=alpha-asc). Date filter (api-date-since-watermark Method A) is NOT honored — q[created_at_gteq], q[created_at_gt], q[created_at_after] all return full total_count=1952 regardless of value. Therefore Method A is impossible, Method B applies: walk newest-first by sort, stop at watermark."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "products": "/api/v2/products",
+        "host": "https://31990017-c17c-4c86-89ca-5fc9b6a1bb06.mysimplestore.com"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "api-flat-catalog",
+    "categories": [
+      { "slug": "/shop", "allOption": 1952 }
+    ],
+    "totalsSumCheck": "Site has 149 storefront category URLs (visible in /sitemap.ols.xml under /shop/ols/categories/<slug>) but the mysimplestore JSON API does not honor any category filter (category_slug_eq, categories_slug_eq, category_id_eq, category=, category_slug= all return the unfiltered total_count=1952). The API exposes a single flat catalog. catalogUrls collapsed to a single entry '/shop' because the API-driven runtime path covers 100% of products in one walk (8 pages x 250)."
+  },
+  "lastVerified": "2026-05-12",
+  "auditNotes": {
+    "runId": "liangjian.ca-2026-05-12-blind",
+    "harnessMode": "blind-audit-round-1",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "expectedProductCount": "high",
+      "sortParam": "high",
+      "perPage": "high",
+      "needsPlaywright": "high",
+      "catalogUrls": "high",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1 (canonical): apex https://liangjian.ca returns 200 directly. www redirects 301 to apex. Canonical = apex.",
+      "Stage 2 (WAF/CAPTCHA): heavy 8-batch probe shows DPS/2.0.0 server, no CDN markers, all paths/payloads return 200, no plugin-WAF body markers. hasWaf=false. No CAPTCHA script tags in homepage HTML.",
+      "Stage 3 (platform): GoDaddy OLS confirmed via img1.wsimg.com image CDN, /shop URL prefix, GoDaddy footer link, DPS server header. /shop static HTML has zero PRODUCT_LIST_RENDERED markers — SPA. adapterType=generic-retail (which already has the mysimplestore branch wired at generic-retail.ts:351 and the GoDaddy OLS Playwright selector at line 88/971). No age-gate.",
+      "Stage 4 (catalogUrls): mysimplestore API at https://31990017-c17c-4c86-89ca-5fc9b6a1bb06.mysimplestore.com/api/v2/products returns total_count=1952. Walked 8 pages x 250 = 1952 unique ids, full coverage in one walk. API does not honor category filters — flat catalog only. catalogUrls=['/shop'] is the operator-facing canonical URL; the runtime hits the mysimplestore origin via apiAlternative branch. Extraction spot-check on 3 products (positions 0, 500, 999) all yielded title+url+price+stockStatus — extractionTested=true.",
+      "Stage 5 (pagination): API ?page=N&per_page=N. Verified perPage ceiling = 1000 (per_page=2500 silently capped at 1000). Shipping perPage=250 to match existing apiAlternative.maxPerPage (250) and keep page-size in line with what was previously validated; bumping to 1000 is a follow-up optimization. paginationPattern.type=api-page since this is JSON API pagination, not HTML.",
+      "Stage 6 (sort): newest-first sort = q[descend_by_created_at]=true. 3-outcome counter-control test passed: default returns id-asc (1,3,4); sorted returns id-desc (3292,3291,3290 created 2026-05-11); counter (q[ascend_by_name]=true) returns alphabetical (74-style, A-Zoom...). sortVerified=true.",
+      "Stage 7 (watermark): Method A (api-date-since-watermark) attempted — Ransack date filters q[created_at_gteq], q[created_at_gt], q[created_at_after] all silently ignored (return full total). Method B (navigate-from-watermark) applies: sort verified honored upstream and each product carries created_at; walk newest-first stops at watermark.",
+      "Stage 8 (count): /sitemap.ols.xml has 2103 <loc> entries; filtering on /shop/ols/products/<slug>$ pattern yields 1952 entries — exact match to API total_count=1952. productCountMethod=generic-product-sitemap (the canonical name; older DB profiles label this 'sitemap-filtered'). Note the runtime json-api-count enum builds URL as origin+endpoint and cannot point to foreign-origin mysimplestore.com — so generic-product-sitemap is the working choice today.",
+      "Stage 9 (assembly): One catalogUrl, one canonical sort, no WAF, no CAPTCHA, no age-gate, navigate-from-watermark via sort+created_at. Production crawler already has the mysimplestore branch wired (generic-retail.ts:351) and the SPA HTML fallback selector (line 88,971); no new code required."
+    ]
+  }
+}

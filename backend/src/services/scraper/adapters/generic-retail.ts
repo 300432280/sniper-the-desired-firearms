@@ -87,6 +87,8 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.grid-product',               // Ecwid (triggersandbows)
       '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]', // GoDaddy OLS (liangjian.ca)
       'a[href*="/marketplace/"]',    // TownPost classifieds (Next.js SPA, anchor-wrapped cards)
+      '[class*="oe_product"]',       // Odoo Website Sale (outfitters.goldnloan.com) — explicit; .card fallback already catches most
+      'form[class*="oe_product"]',   // Odoo form-wrapped product cards
     ];
 
     for (const selector of SELECTORS) {
@@ -970,6 +972,8 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.grid-product',               // Ecwid (triggersandbows)
       '[data-aid="PRODUCT_LIST_RENDERED"] [data-ux="GridCell"]', // GoDaddy OLS (liangjian.ca)
       'a[href*="/marketplace/"]',    // TownPost classifieds (Next.js SPA, anchor-wrapped cards)
+      '[class*="oe_product"]',       // Odoo Website Sale (outfitters.goldnloan.com) — explicit; .card fallback already catches most
+      'form[class*="oe_product"]',   // Odoo form-wrapped product cards
     ];
 
     // Sidebar blocks that Magento 2 (and similar platforms) render even on
@@ -1288,7 +1292,12 @@ export class GenericRetailAdapter extends AbstractAdapter {
       '.pages-item-next a, ' +                                        // Magento
       'a.page-numbers.next, ' +                                         // WordPress
       '[data-aid="PAGINATION_ARROW_FORWARD"] a, ' +                     // GoDaddy OLS (liangjian.ca)
-      'a[data-aid="PAGINATION_ARROW_FORWARD"]'                          // GoDaddy OLS (alternate)
+      'a[data-aid="PAGINATION_ARROW_FORWARD"], ' +                      // GoDaddy OLS (alternate)
+      '.pager .next-page a, ' +                                        // NopCommerce (reliablegun.com)
+      '.pager a:contains("Next"), ' +                                  // NopCommerce text-based fallback
+      '.next-page a, ' +                                               // Generic .next-page wrapper
+      'a[aria-label="Next"], ' +                                       // Aria-labeled (Odoo, accessible templates)
+      'nav[class*="paginate"] a[aria-label*="Next"]'                   // Odoo Website Sale paginate nav
     ).first();
 
     if (nextLink.length) {

@@ -1,0 +1,130 @@
+{
+  "_meta": {
+    "runId": "R2-live-investigation",
+    "site": "fishingworldgc.ca",
+    "r1Source": "docs/site-audit/fishingworldgc.ca-2026-05-15T08-52-14Z-R1.json",
+    "r1DiffSource": "docs/site-audit/fishingworldgc.ca-2026-05-15T08-52-14Z-R1-diff.md",
+    "auditedAt": "2026-05-15T09:21:18Z",
+    "method": "live-walk: /products.json (1992), /collections/all HTML (1987), 5 DB sub-collections; WAF 30-burst on /collections/all + /products.json; runtime grep on worker.ts + product-count-probe.ts",
+    "rule": "no DB writes; 400-800ms inter-request delay; if inconclusive say so"
+  },
+  "corrections": [
+    {
+      "field": "paginationPattern.perPage",
+      "r1Value": 34,
+      "dbValue": 24,
+      "correctedValue": 24,
+      "winner": "DB",
+      "confidence": "high",
+      "evidence": "Live count of <div class=\"product-card\"> wrappers in /collections/all page=1 HTML = 24. Distinct /products/ hrefs on page=1 = 24. R1's '34' came from a slug regex that also matched cross-collection anchors (/collections/<x>/products/<slug>) inflating the count. Theme is click-pagination_mode, 24 cards/page. 1992/24 = 83 HTML pages; walk completed in 83 pages with 1987 unique slugs (~99.7% of /products.json baseline).",
+      "verifyCommand": "curl /collections/all | count <div class=\"product-card\""
+    },
+    {
+      "field": "perPage",
+      "r1Value": 34,
+      "dbValue": 250,
+      "correctedValue": 250,
+      "winner": "DB",
+      "confidence": "high",
+      "evidence": "siteProfile.perPage (top-level) is the API perPage used by /products.json walks, per product-count-probe.ts:276 (shopify-products-walk reads m.perPage || 250). HTML perPage belongs in paginationPattern.perPage (separate field). R1 conflated the two and emitted 34 in both."
+    },
+    {
+      "field": "catalogUrls",
+      "r1Value": ["/collections/all"],
+      "dbValue": "23-URL spine (per-category)",
+      "correctedValue": ["/collections/all"],
+      "winner": "R1",
+      "confidence": "high",
+      "evidence": "Rule C minimum-cover INTERSECT test: walked 5 DB sub-collections via HTML pagination (all-guns=360, all-ammo-1=350, shooting-miscellaneous-1=168, hunting-accessories=165, magazines-1=79). Union = 1051 unique slugs. ALL 1051 are present in /products.json (1992) AND ALL 1051 are present in /collections/all HTML walk (1987). 0 sub-collection products are outside /collections/all. Conclusion: per-category URLs add ZERO coverage; /collections/all is the 100%-coverage spine. NOTE: sub-collection HTML pagination is soft-capped (all-guns reports 725 products but HTML walk yields only 360) — the cap does not affect coverage because /collections/all does NOT have the cap and reaches 1987 ~= 1992."
+    },
+    {
+      "field": "hasWaf",
+      "r1Value": false,
+      "dbValue": true,
+      "correctedValue": false,
+      "winner": "R1",
+      "confidence": "high",
+      "evidence": "Rapid 30-burst on /collections/all: 30/30 = HTTP 200, total elapsed 856ms (avg 28ms/req). Rapid 30-burst on /products.json: 30/30 = HTTP 200, total elapsed 1271ms. cf-ray present, server=cloudflare. Cookies set: ONLY _shopify_y, _shopify_s, _shopify_essential, _shopify_analytics, _shopify_marketing, localization. NONE of cf_clearance, __cf_bm, __cfwaitingroom, cf_chl_* were observed. CF in passive transparent-proxy mode. Operationally hasWaf=false per skill rule."
+    },
+    {
+      "field": "expectedProductCount",
+      "r1Value": 1992,
+      "dbValue": 1953,
+      "correctedValue": 1992,
+      "winner": "R1",
+      "confidence": "high",
+      "evidence": "/products.json walk (limit=250) returns 1992 unique handles (pages 1-7 = 250 each, page 8 = 242). HTML page1 footer literally says 'filters-toolbar__product-count: 1992 products'. DB 1953 is stale (DB lastVerified=2026-04-11; site grew by 39)."
+    },
+    {
+      "field": "productCountMethod.method",
+      "r1Value": "shopify-products-walk",
+      "dbValue": "products-json-walk",
+      "correctedValue": "shopify-products-walk",
+      "winner": "R1",
+      "confidence": "high",
+      "evidence": "product-count-probe.ts:69 (type literal) and :272 (switch case) both use literal 'shopify-products-walk'. The string 'products-json-walk' does not appear in the runtime switch — DB value is label-drift and would fall through to default (no-op)."
+    },
+    {
+      "field": "crawlers.maintain.verifyMethod",
+      "r1Value": "detail-page",
+      "dbValue": "json-ld",
+      "correctedValue": "detail-page",
+      "winner": "R1",
+      "confidence": "high",
+      "evidence": "worker.ts has TWO literal-equality checks: (1) line 397 `verifyMethod !== 'store-api'` (WooCommerce fast-path), (2) line 768 comment documents 'verifyMethod === \"detail-page\"' as the canonical fallback. Any non-null verifyMethod that is not 'store-api' falls through to verifyProductsViaPlaywright (worker.ts:769). DB 'json-ld' is operationally equivalent (same Playwright fallback path) BUT is label-drift; the canonical/documented value is 'detail-page'. Confidence high on R1 being the documented canonical."
+    },
+    {
+      "field": "productCountMethod.endpoint",
+      "r1Value": "/products.json",
+      "dbValue": "absent",
+      "correctedValue": "/products.json",
+      "winner": "R1",
+      "confidence": "high",
+      "evidence": "product-count-probe.ts:275 reads m.endpoint with default '/products.json'. Discriminated-union shape requires it. DB freeform shape would fall to the default but emits the wrong method name anyway."
+    }
+  ],
+  "noChangeNeeded": [
+    {
+      "field": "platform",
+      "value": "shopify",
+      "note": "Both agree; Shopify confirmed via /products.json + _shopify_* cookies + cdn.shopify."
+    },
+    {
+      "field": "sortParam",
+      "value": "?sort_by=created-descending",
+      "note": "Both agree; R1 stage 6 verified counter-control."
+    },
+    {
+      "field": "crawlers.watermark.method",
+      "value": "navigate-from-watermark",
+      "note": "Both agree; Shopify public /products.json does not support date filter (shopify.ts:18 supportsDateFilter=false), so navigate-from-watermark is correct."
+    },
+    {
+      "field": "needsPlaywright",
+      "value": false,
+      "note": "Both agree; plain HTTP fetch returns full HTML."
+    },
+    {
+      "field": "hasCaptcha",
+      "value": false,
+      "note": "Both agree; hCaptcha is contact/login-form only, not catalog."
+    },
+    {
+      "field": "ageGate",
+      "value": {"detected": false},
+      "note": "Both agree."
+    },
+    {
+      "field": "wafType",
+      "value": "cloudflare-passive",
+      "note": "Both agree."
+    }
+  ],
+  "inconclusive": [],
+  "openQuestions": [
+    {
+      "question": "5-product gap between /products.json (1992) and /collections/all HTML walk (1987)",
+      "answer": "Not material for production. /products.json is the canonical product-count source (productCountMethod.method = shopify-products-walk reads it). HTML walk under-count of 5 is most likely lazy-load tail or theme rendering edge case (some out-of-stock items may not render in HTML grid). Both numbers within 0.25%."
+    }
+  ]
+}

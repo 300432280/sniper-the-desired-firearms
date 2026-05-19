@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma';
 import type { SiteAdapter } from './types';
 import { normalizeDomain } from './utils/url';
 
+import { warnIfAdapterMismatch } from './adapter-registry-mismatch';
 import { ShopifyAdapter } from './adapters/shopify';
 import { WooCommerceAdapter } from './adapters/woocommerce';
 import { GenericRetailAdapter } from './adapters/generic-retail';
@@ -113,6 +114,7 @@ export async function getAdapterForUrl(url: string): Promise<AdapterLookupResult
   // Exact domain match
   const siteInfo = siteCache.get(domain);
   if (siteInfo) {
+    warnIfAdapterMismatch(domain, siteInfo);
     const adapter = adapters[siteInfo.adapterType] || adapters.generic;
     return {
       adapter,
@@ -129,6 +131,7 @@ export async function getAdapterForUrl(url: string): Promise<AdapterLookupResult
     const parentDomain = parts.slice(i).join('.');
     const parentInfo = siteCache.get(parentDomain);
     if (parentInfo) {
+      warnIfAdapterMismatch(parentDomain, parentInfo);
       const adapter = adapters[parentInfo.adapterType] || adapters.generic;
       return {
         adapter,

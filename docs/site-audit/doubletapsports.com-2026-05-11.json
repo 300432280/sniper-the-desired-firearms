@@ -1,0 +1,95 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-11T06:47:03Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "CF-RAY present on all batches; real-browser UAs return 200; bot-UA 403 (CF bot-fight); no challenges; no honeypot/SQLi/XSS rule firing; rapid burst clean.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: 9f9f3af34d98f00c-YYZ", "cf-cache-status: DYNAMIC", "Server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10x 200 OK over ~30s",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": true
+  },
+  "hasCaptcha": true,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1855,
+  "productCountMethod": "wc-store-api-header",
+  "catalogUrls": [
+    "https://doubletapsports.com/product-category/brands/",
+    "https://doubletapsports.com/product-category/parts/",
+    "https://doubletapsports.com/product-category/accessories/",
+    "https://doubletapsports.com/product-category/reloading/",
+    "https://doubletapsports.com/product-category/holsters-pouches-belts/",
+    "https://doubletapsports.com/product-category/ammunition/",
+    "https://doubletapsports.com/product-category/firearms/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://doubletapsports.com/product/remington-700-bld-308-win-bolt-action-rifle-used/", "title": "Remington 700 BLD .308 Win Bolt Action Rifle (Used)", "price": 975.00, "stockStatus": "in_stock" },
+    { "url": "https://doubletapsports.com/product/revolution-armory-mauler-pump-action-shotgun-16-5/", "title": "Revolution Armory Mauler Pump Action Shotgun 16.5\"", "price": 399.99, "stockStatus": "in_stock" },
+    { "url": "https://doubletapsports.com/product/mossberg-500-field-security-combo-used/", "title": "Mossberg 500 Field/Security Combo (Used)", "price": 600.00, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 1000,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 1000,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": { "method": "api-date-since-watermark" },
+    "bootstrap": { "apiEndpoints": { "productCount": "/wp-json/wc/store/v1/products?per_page=1", "productList": "/wp-json/wc/store/v1/products", "taxonomy": "/wp-json/wp/v2/product_cat?per_page=100&hide_empty=false" } },
+    "maintain": { "verifyMethod": "store-api", "verifyEndpoint": "/wp-json/wc/store/v1/products" }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/brands/", "allOption": 1613 },
+      { "slug": "/product-category/parts/", "allOption": 848 },
+      { "slug": "/product-category/accessories/", "allOption": 361 },
+      { "slug": "/product-category/reloading/", "allOption": 306 },
+      { "slug": "/product-category/holsters-pouches-belts/", "allOption": 265 },
+      { "slug": "/product-category/doubletap-wholesale/", "allOption": 91 },
+      { "slug": "/product-category/range-gear/", "allOption": 68 },
+      { "slug": "/product-category/range-wholesale/", "allOption": 48 },
+      { "slug": "/product-category/ammunition/", "allOption": 45 },
+      { "slug": "/product-category/clearance/", "allOption": 29 },
+      { "slug": "/product-category/firearms/", "allOption": 17 },
+      { "slug": "/product-category/specials/", "allOption": 13 },
+      { "slug": "/product-category/revolution-armory/", "allOption": 3 },
+      { "slug": "/product-category/chronographs/", "allOption": 1 },
+      { "slug": "/product-category/newest-arrivals/", "allOption": 1 }
+    ],
+    "totalsSumCheck": "Sum of all 15 non-empty top-level cat counts = 3,709 (heavy duplication: products tagged under both a brand and a function-cat). Walked union of all 15 = 1,855 = global expectedProductCount (100% coverage verified). Greedy elimination found 7 top-level cats whose union also = 1,855 (brands, parts, accessories, reloading, holsters-pouches-belts, ammunition, firearms — these contain all 326 products NOT covered redundantly by another). The 8 dropped cats (chronographs, clearance, range-wholesale, doubletap-wholesale, newest-arrivals, range-gear, revolution-armory, specials) are 100% subset of those 7."
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "calibration-2026-05-11",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high (reCAPTCHA-v3 from Contact Form 7 — gates contact form, not product browsing)",
+      "ageGate": "high",
+      "expectedProductCount": "high (WC Store API + WP REST agree at 1855)",
+      "catalogUrls": "high (walked union = 1855 = global count; 7-cat greedy minimum verified)",
+      "paginationPattern": "high (page1 vs /page/2/ zero-overlap; ?page=2 ignored)",
+      "sortParam": "high (counter-control date/price first 3 differ from default)",
+      "perPage": "verified-clean to 1000 on parts cat; per_page=2500 took 56s on brands — operator may prefer 250 for SLA"
+    }
+  }
+}

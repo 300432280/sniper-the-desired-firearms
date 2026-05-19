@@ -1,0 +1,131 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-10T07:19:28Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare passive (cf-ray on every request, all baseline GETs 200) with rule-selective hardening: honeypot paths (/wp-admin, /wp-login.php, /.env, /.git/config, /phpinfo.php) return 403, UNION-SELECT and XSS-shaped query strings return 403; all normal paths and rapid burst pass cleanly.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 200 OK",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": ["/wp-admin/", "/wp-login.php", "/.env", "/.git/config", "/phpinfo.php"],
+    "botUaBlocked": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 16985,
+  "productCountMethod": "bc-xmlsitemap",
+  "catalogUrls": [
+    "https://store.theshootingcentre.com/firearms/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/optics/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/ammunition/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/reloading/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/gun-parts-accessories/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/optics-accessories/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/gear/?sort=newest&limit=100",
+    "https://store.theshootingcentre.com/clearance/?sort=newest&limit=100"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://store.theshootingcentre.com/sako-90-finnlight-rifle-stainless-7mm-prc-24-5-barrel-model-sybx9969a1r37y0/",
+      "title": "Sako 90 Finnlight Rifle, Stainless: 7mm PRC, 24.5\" Barrel, Model SYBX9969A1R37Y0",
+      "price": 2670.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://store.theshootingcentre.com/ruger-american-rifle-gen-ii-standard-rifle-6mm-creedmoor-20-barrel-model-46912/",
+      "title": "Ruger American Rifle Gen II Standard Rifle: 6mm Creedmoor, 20\" Barrel, Model 46912",
+      "price": 979.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://store.theshootingcentre.com/tikka-t3x-varmint-rifle-stainless-22-250-rem-23-7-barrel-model-tftt1352a73c9g6/",
+      "title": "Tikka T3x Varmint Rifle, Stainless: 22-250 Rem, 23.7\" Barrel, Model TFTT1352A73C9G6",
+      "price": 2425.00,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "BC Stencil has no public date-filter API (Storefront GraphQL is auth-gated). Sort=newest verified honored via 3-outcome counter-control on /firearms/ (default alphaasc Adler vs newest Sako vs counter alphadesc Zastava — three distinct first-product slugs). Pagination ?page=N zero-overlap verified between p1 and p2 with sort=newest&limit=100. perPage=100 verified honored (max <select name=\"limit\"> option, returns exactly 100 cards on page 1)."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/firearms/", "allOption": null, "inStockCount": 966 },
+      { "slug": "/optics/", "allOption": null, "inStockCount": 500 },
+      { "slug": "/ammunition/", "allOption": null, "inStockCount": 962 },
+      { "slug": "/reloading/", "allOption": null, "inStockCount": 74 },
+      { "slug": "/gun-parts-accessories/", "allOption": null, "inStockCount": 1629 },
+      { "slug": "/optics-accessories/", "allOption": null, "inStockCount": 623 },
+      { "slug": "/gear/", "allOption": null, "inStockCount": 2263 },
+      { "slug": "/clearance/", "allOption": null, "inStockCount": 146 }
+    ],
+    "totalsSumCheck": "Sum of in-stock per-category counts (walked, sort=newest&limit=100) = 7,163. Authoritative bc-xmlsitemap product count = 16,985. Gap = 9,822 (~58%). The gap is OOS products: BC Stencil hides out-of-stock items from category listings by default but includes ALL products (in-stock + OOS) in /xmlsitemap.php?type=products. The 16,985 sitemap count is the operator's chosen authoritative inventory size because OOS products must be tracked for restock alerts. /clearance/ overlaps with other categories at runtime; cross-category dedup happens via product URL during crawl indexing."
+  },
+  "lastVerified": "2026-05-10",
+  "auditNotes": {
+    "runId": "audit-2026-05-10T07-29-31Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot, calibration re-run with operator corrections",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "expectedProductCount": "verified-via-sitemap",
+      "productCountMethod": "operator-mandated-bc-xmlsitemap",
+      "catalogUrls": "verified",
+      "paginationPattern": "verified-via-zero-overlap",
+      "extractionTested": "verified",
+      "sortParam": "verified-via-counter-control",
+      "perPage": "verified-via-100-card-fetch",
+      "watermarkMethod": "verified",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": {
+      "stage1": "Apex (store.theshootingcentre.com) returned 200 cleanly with no <link rel=\"canonical\"> override. canonicalOrigin = https://store.theshootingcentre.com.",
+      "stage2": "8-batch heavy probe: cf-ray on every request, BC-Ray response header, x-bc-store-id: 1000882963. Baseline GETs (Batch 1, 2, 3, 5, 8) all 200. Batch 4 honeypot paths (/wp-admin, /wp-login.php, /.env, /.git/config, /phpinfo.php) return 403 — Cloudflare path-selective rules. Batch 6 UNION-SELECT and Batch 7 XSS-shaped queries return 403 — Cloudflare rule-selective. No challenge bodies, no _cf_chl_opt, no sucuri/incapsula/akamai/malcare markers. hasCaptcha=false (no recaptcha/hcaptcha/turnstile in homepage HTML).",
+      "stage3": "Identified BigCommerce Stencil from cdn11.bigcommerce.com asset prefix, BC-Ray response header, x-bc-store-id: 1000882963, and stencil-prefixed CSS classes. No age-gate markers in homepage (412KB body grep for 'age verif|18 years|legal age|i am 18|date of birth|agegate|dob' returns 0). Maintain verifyMethod = detail-page (not WooCommerce, no public batch product API on BC).",
+      "stage4": "Top-level catalog set extracted from <ul class=\"navPages-list navPages-list--categories\"> first ul: 8 has-subMenu entries — firearms, optics, ammunition, reloading, gun-parts-accessories, optics-accessories, gear, clearance. /gunsmithing/ (visible in homepage links but NOT in main nav category list) is a services info page (h1=Services, h2=Rifles/Pistols/Shotguns service descriptions, 0 product cards) — dropped from catalogUrls. Brand-shortcut homepage links (/browning/, /federal/, /hornady/, /leupold/, /magpul/, /sitka-gear/, /tikka/, /vortex-optics/, /weatherby/, /yeti/) are brand filters that overlap with category pages — dropped. Page-1 walk on each candidate confirmed 100 cards extracted per category (using awk multi-line on h4.card-title -> a href). Extraction spot-check: 3 random product detail pages (positions 1, 50, 100 from /firearms/?sort=newest&limit=100 page 1) all returned title (>5 chars), price (>$0), and JSON-LD availability=InStock. extractionTested=true.",
+      "stage5": "Tested ?page=N pagination on /firearms/?sort=newest&limit=100 — page 1 returned 100 distinct product slugs (Sako 90 / Franchi Momentum / Derya TM22 first 3), page 2 returned 100 distinct product slugs (Tikka T3x Tact A1 / Tikka T3x Hunter / Sako S20 Precision first 3), comm -12 overlap = 0 of 100. paginationPattern.type=query, template='page' (param name only per Mistake 14), perPage=100, firstPageHasParam=false, startPage=1, zeroIndexed=false.",
+      "stage6": "<select name=\"sort\" id=\"sortsb\"> options: featured, newest, bestselling, alphaasc, alphadesc, avgcustomerreview, priceasc, pricedesc. Default on /firearms/ is alphaasc (selected attribute). 3-outcome counter-control test: default first product = Adler Arms RF-224 TAC (alpha-A start), ?sort=newest first product = Sako 90 Finnlight, ?sort=alphadesc first product = Zastava Yugoslavian SKS 59/66. All three first-products differ -> sort honored (Mistake 29 BC Stencil false-negative trap avoided — default is NOT featured/newest equivalence). sortParam='?sort=newest', sortVerified=true.",
+      "stage7": "Method A (api-date-since-watermark) not available — BC Stencil has no public date-filter API; Storefront GraphQL is auth-gated and BC Catalog REST API is admin-side. Method B (navigate-from-watermark) qualifies: Stage 6 verdict=honored, Stage 5 zero-overlap pagination verified, sort=newest is monotonic newest-first. crawlers.watermark.method='navigate-from-watermark'.",
+      "stage8": "Operator-mandated method: bc-xmlsitemap (Stage 8 priority order #7, ahead of catalog-walk-only #12). Fetched /xmlsitemap.php (sitemap index): 3 product sitemap pages — type=products page=1/2/3. Per-page <loc> counts: p1=3132, p2=9997, p3=3856. Total = 16,985. All <loc> entries have product-shape URLs (/<slug>/) — no category, brand, or info-page URLs leak into the products sitemap. expectedProductCount=16985, productCountMethod='bc-xmlsitemap'. This count is OOS-inclusive (BC Stencil hides OOS from category listings but includes all products in xmlsitemap) — required for restock-alert coverage.",
+      "stage9": "Validator pass expected: 9/9 required + 7/7 recommended. Both artifacts written to docs/site-audit/."
+    }
+  }
+}

@@ -1,0 +1,408 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "wordfence",
+  "wafLastProbedAt": "2026-05-15T08:45:51Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Wordfence rule-selective: SQLi/XSS payload 403, normal GETs 200; rate-burst clean; honeypot 404 (not 403)",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "wordfenceMarkersInHtml": true,
+    "note": "Wordfence CSS/JS present on every page; SQLi/XSS payloads return 403 but normal catalog GETs return 200. Operationally, the WAF does NOT block the crawler's URL space but recording hasWaf=true defensively (Stage 2 \"when unsure, set true\")."
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1577,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://budgetshootersupply.ca/product-category/pal-ups/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/30-caliber-308/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/rifle-die-sets/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/new-brass-cases/new-rifle-brass-cases/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/shellholders-shellplates-shell-carriers/shellholders/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/45-caliber-457-459/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/22-caliber-222-227/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/case-length-gauges/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/shotshell-wads/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/6-5-caliber-264/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/press-die-parts/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/9mm-caliber-355-356/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/45-caliber-451-452/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/38-caliber-357/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/rifle-factory-crimp-dies/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/new-brass-cases/new-pistol-brass-cases/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/pistol-die-sets/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/case-trimmers-accessories/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/handgun-bullet-molds/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/bullet-pullers-puller-collets/",
+    "https://budgetshootersupply.ca/product-category/ammunition/centerfire-pistol-ammunition/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/powder-measures-scales/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/7mm-284/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/measuring-tools/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/primers/small-pistol-primers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/smokeless-powder/vihtavuori-powder/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/rifle-bullet-molds/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/previously-fired-brass-cases/previously-fired-brass-rifle-cases/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/size-dies/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/shellholders-shellplates-shell-carriers/shellplates/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/shotshell-shot/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/primers/small-rifle-primers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/44-caliber-429/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/primers/large-rifle-primers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/256-caliber/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/303-caliber-311-312/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/primers/large-pistol-primers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/40-caliber10mm-400-401/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/decapping-dies-pins/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/press-conversion-kits/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/270-68-caliber-277/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/6mm-243/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-go-no-go-case-length-gauges/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/priming-tools/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/reloading-presses/hand-press-kits/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/previously-fired-brass-cases/previously-fired-brass-pistol-cases/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/45-caliber-452-long-colt/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/pistol-factory-crimp-dies/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/shotshell-press-die-parts/powder-bushings/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/reloading-presses/progressive-presses/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/gas-checks/",
+    "https://budgetshootersupply.ca/product-category/king-competition/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/shotshell-cards-buffers/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/shotshell-hulls/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/25-caliber-257/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/case-expanding-dies-parts/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/7-62x39-310/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/smokeless-powder/accurate-powder/",
+    "https://budgetshootersupply.ca/product-category/black-powder/black-powder-black-powder/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/shotgun-molds/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/shotshell-primers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/338-caliber-338-339/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/8mm-323/",
+    "https://budgetshootersupply.ca/product-category/chronographs/",
+    "https://budgetshootersupply.ca/product-category/muzzleloading/",
+    "https://budgetshootersupply.ca/product-category/optics/rifle-scopes-optics/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/shotshell-misc-reloading-components/",
+    "https://budgetshootersupply.ca/product-category/ammunition/12-gauge-buckshot-ammo/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/375-caliber-375/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/44-caliber-426-428/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/50-caliber-500/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/9-3mm-366/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/bullet-feeders-feeder-dies/bullet-feeders/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-feeders-feeder-plates/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/case-lubes-pads/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/primer-pocket-swagers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/primer-pocket-tools/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/shotshell-boxes/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/30-caliber-308-7-62x25-tokarev/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/32-40-caliber-320/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/380-caliber/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/41-caliber-386/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/chamfer-deburring-tools/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/reloading-press-led-lights/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/categories-shotshell-reloading-tools-presses-reloading-presses/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/rifle-neck-size-dies/",
+    "https://budgetshootersupply.ca/product-category/optics/scope-rings/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/shotshell-press-die-parts/shotshell-roll-crimpers/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/shotshell-slugs/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/reloading-presses/single-stage-presses/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/20-caliber-204/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/32-caliber-311-312-32acp/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/32-caliber-321/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/38-40/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/38-55-caliber-379/",
+    "https://budgetshootersupply.ca/product-category/accessories/",
+    "https://budgetshootersupply.ca/product-category/black-powder/beeswax/",
+    "https://budgetshootersupply.ca/product-category/books-reloading-manuals/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/bullet-feeders-feeder-dies/bullet-feeder-dies-feeder-tubes/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/cast-bullet-waxes-lubes/",
+    "https://budgetshootersupply.ca/product-category/gun-cleaner-lube-tools-patches/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/lead-ladles/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/lead-melter-pot/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/primer-flash-hole-tools/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/shellholders-shellplates-shell-carriers/shellholder-sets/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/used-molds/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/17-caliber-172/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/38-caliber-379/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/50-bmg-caliber-510/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/8x56rmm-300-caliber/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/makarov/",
+    "https://budgetshootersupply.ca/product-category/optics/binoculars/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/bulge-buster-kit/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/primers/cannon-fuse/",
+    "https://budgetshootersupply.ca/product-category/categories-clearance-items/gun-cases/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/gunsmith-tools/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/lead-hardness-tester/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/mold-handles/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/neck-turning-tools/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/plastic-ammo-storage-boxes/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/bullet-feeders-feeder-dies/power-bullet-feeder/",
+    "https://budgetshootersupply.ca/product-category/optics/reflex-sights/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/tumblers-media-polish/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/reloading-presses/turret-presses/",
+    "https://budgetshootersupply.ca/product-category/ammunition/10-gauge-shotgun-slug-ammo/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/22-caliber-savage/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/35-caliber-358/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/41-caliber-411/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/44-40/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/475-caliber-475/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/primers/50-bmg-primers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/rifle-bullets-projectiles/7-35mm-300-caliber/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/8mm-320-nambu/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/pistol-bullets-projectiles/8mm-330-lebel/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/ammo-cans/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/brass-dryer/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/shotshell-press-die-parts/brass-shotshell-rezing-die/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/bullet-lead-flux/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/case-holders/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/casting-thermometer/",
+    "https://budgetshootersupply.ca/product-category/black-powder/charger/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/commercial-rollsizer/",
+    "https://budgetshootersupply.ca/product-category/black-powder/conical-bullets/",
+    "https://budgetshootersupply.ca/product-category/custom-orders/",
+    "https://budgetshootersupply.ca/product-category/kestrel/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/primers/large-rifle-berdan-primers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/primers/musket-caps/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/smokeless-powder/norma-powder/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/powder-check-dies/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/case-prep-tools-lubes/power-case-prep-centers/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/previously-fired-brass-cases/previously-fired-nickel-plated-223-rifle-cases/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/previously-fired-brass-cases/previously-fired-nickel-plated-9mm-luger-pistol-cases/",
+    "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/pure-lead-ingots/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/shotshell-press-die-parts/reloading-press-charge-bars/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/reloading-stands/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/categories-rifle-pistol-reloading-tools-lubes-reloading-tray/",
+    "https://budgetshootersupply.ca/product-category/rifle-scopes/",
+    "https://budgetshootersupply.ca/product-category/black-powder/round-ball-black-powder/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/shell-sorter/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/shellholders-shellplates-shell-carriers/shellplate-carriers/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/shotgun-books/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/shotshell-press-die-parts/shotshell-press-parts/",
+    "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/mec-supersizer-16ga/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/sonic-cleaners-cleaning-solution/",
+    "https://budgetshootersupply.ca/product-category/ammunition/surplus-ammunition-ammunition/",
+    "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/smokeless-powder/surplus-powder/",
+    "https://budgetshootersupply.ca/product-category/used-items/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://budgetshootersupply.ca/product/weatherby-brass-257-weatherby-unprimed-box-of-50/",
+      "title": "Weatherby Brass 257 Weatherby Unprimed Box of 50",
+      "price": 198,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://budgetshootersupply.ca/product/prev-fired-mixed-headstamp-polished-308-win-cases-100-bag/",
+      "title": "Prev Fired Mixed Headstamp Polished .308 Win Brass Cases 100/Bag",
+      "price": 40,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://budgetshootersupply.ca/product/hodgdon-h4831-sc-shortcut-1lb-powder-smokeless-powder/",
+      "title": "Hodgdon - H4831-SC SHORTCUT 1LB POWDER Smokeless Powder",
+      "price": 124,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "wcStoreApiProducts": "/wp-json/wc/store/v1/products",
+        "wcStoreApiCategories": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      {
+        "slug": "rifle-pistol-reloading-components",
+        "allOption": 769,
+        "link": "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-components/"
+      },
+      {
+        "slug": "rifle-pistol-reloading-tools-lubes",
+        "allOption": 472,
+        "link": "https://budgetshootersupply.ca/product-category/rifle-pistol-reloading-tools-lubes/"
+      },
+      {
+        "slug": "pal-ups",
+        "allOption": 210,
+        "link": "https://budgetshootersupply.ca/product-category/pal-ups/"
+      },
+      {
+        "slug": "shotshell-reloading-components",
+        "allOption": 96,
+        "link": "https://budgetshootersupply.ca/product-category/shotshell-reloading-components/"
+      },
+      {
+        "slug": "ammunition",
+        "allOption": 94,
+        "link": "https://budgetshootersupply.ca/product-category/ammunition/"
+      },
+      {
+        "slug": "bullet-casting-loading-tools-components-categories",
+        "allOption": 89,
+        "link": "https://budgetshootersupply.ca/product-category/bullet-casting-loading-tools-components-categories/"
+      },
+      {
+        "slug": "shotshell-reloading-tools-presses",
+        "allOption": 15,
+        "link": "https://budgetshootersupply.ca/product-category/shotshell-reloading-tools-presses/"
+      },
+      {
+        "slug": "optics",
+        "allOption": 10,
+        "link": "https://budgetshootersupply.ca/product-category/optics/"
+      },
+      {
+        "slug": "black-powder",
+        "allOption": 9,
+        "link": "https://budgetshootersupply.ca/product-category/black-powder/"
+      },
+      {
+        "slug": "king-competition",
+        "allOption": 8,
+        "link": "https://budgetshootersupply.ca/product-category/king-competition/"
+      },
+      {
+        "slug": "chronographs",
+        "allOption": 5,
+        "link": "https://budgetshootersupply.ca/product-category/chronographs/"
+      },
+      {
+        "slug": "muzzleloading",
+        "allOption": 5,
+        "link": "https://budgetshootersupply.ca/product-category/muzzleloading/"
+      },
+      {
+        "slug": "categories-clearance-items",
+        "allOption": 4,
+        "link": "https://budgetshootersupply.ca/product-category/categories-clearance-items/"
+      },
+      {
+        "slug": "accessories",
+        "allOption": 2,
+        "link": "https://budgetshootersupply.ca/product-category/accessories/"
+      },
+      {
+        "slug": "books-reloading-manuals",
+        "allOption": 2,
+        "link": "https://budgetshootersupply.ca/product-category/books-reloading-manuals/"
+      },
+      {
+        "slug": "gun-cleaner-lube-tools-patches",
+        "allOption": 2,
+        "link": "https://budgetshootersupply.ca/product-category/gun-cleaner-lube-tools-patches/"
+      },
+      {
+        "slug": "speed-loaders",
+        "allOption": 1,
+        "link": "https://budgetshootersupply.ca/product-category/speed-loaders/"
+      },
+      {
+        "slug": "custom-orders",
+        "allOption": 0,
+        "link": "https://budgetshootersupply.ca/product-category/custom-orders/"
+      },
+      {
+        "slug": "kestrel",
+        "allOption": 0,
+        "link": "https://budgetshootersupply.ca/product-category/kestrel/"
+      },
+      {
+        "slug": "rifle-scopes",
+        "allOption": 0,
+        "link": "https://budgetshootersupply.ca/product-category/rifle-scopes/"
+      },
+      {
+        "slug": "used-items",
+        "allOption": 0,
+        "link": "https://budgetshootersupply.ca/product-category/used-items/"
+      }
+    ],
+    "totalsSumCheck": "Top-level cat counts sum to 1795 vs WC Store API total 1577 — overlap ~14% (pal-ups cross-flag drives most of it). Leaf walk union = 1566; 5 products live only in parent categories that render subcategory tiles (unreachable via leaf catalogUrls but indexed by api-date-since-watermark watermark)."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "pre-bootstrap-R1-2026-05-15T09-08Z",
+    "probeIp": "audit IP — operator must re-confirm hasWaf from production crawler IP before promotion",
+    "fieldConfidence": {
+      "platform": "high — multiple WooCommerce markers + Woodmart theme + Elementor; WC Store API working",
+      "hasWaf": "medium — Wordfence installed, fires on SQLi/XSS payloads (403) but not on crawler URL space; set true defensively",
+      "wafType": "high — explicit Wordfence CSS/JS/login-security plugin assets",
+      "hasCaptcha": "high — reCAPTCHA-v3 is Wordfence login-security only, does not gate catalog",
+      "expectedProductCount": "high — direct WC Store API x-wp-total header",
+      "catalogUrls": "medium — 167 leaf URLs cover 1566/1577 products (99.3%); 5 products live only in parent categories that render subcategory tiles (Woodmart behavior). Watermark via api-date-since-watermark covers the gap.",
+      "sortParam": "high — 3-outcome counter-control test verified ?orderby=date",
+      "paginationPattern": "high — page-1 vs page-2 zero-overlap test passed on /page/2/",
+      "perPage": "medium — verified per_page=100/250/500 all work; ceiling between 500 and 750; shipped 100 as safest single-page-for-typical-cat default"
+    },
+    "coverageGapNote": "5 product IDs (7566, 28679, 17808, 13962, 13216) live ONLY on intermediate parent category pages that Woodmart renders as subcategory tiles. catalogUrls miss these but the api-date-since-watermark crawler (uses WC Store API) sees all 1577 products. Acceptable: 0.3% gap, all reloading-press accessories with low velocity.",
+    "catalogUrlCount": 167,
+    "catalogUrlProductive": 124,
+    "catalogUrlEmpty": 43,
+    "perPageCeiling": {
+      "verified": [
+        "100",
+        "250",
+        "500"
+      ],
+      "blocked": [
+        "750",
+        "1000"
+      ],
+      "shipped": 100,
+      "note": "WP posts_per_page filter caps. Choosing 100 keeps each fetch under ~1.5MB."
+    }
+  }
+}

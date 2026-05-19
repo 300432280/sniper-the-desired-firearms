@@ -1,0 +1,152 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-09T14:09:25Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "8/8 batches returned 200; cf-ray on every response; no challenges, no rule-fire, no rate-limit. Honeypot 403s come from BC origin (not WAF).",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "Server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all-200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-admin/", "/wp-login.php", "/.env", "/.git/config"],
+    "honeypotBlockSource": "bigcommerce-origin-not-waf",
+    "botUaBlocked": false,
+    "noUaBlocked": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3414,
+  "productCountMethod": "bc-xmlsitemap",
+  "catalogUrls": [
+    "/firearms?sort=newest",
+    "/ammo?sort=newest",
+    "/optics?sort=newest",
+    "/pistol-parts?sort=newest",
+    "/rifle-parts?sort=newest",
+    "/shotgun-parts?sort=newest",
+    "/magazines-clips?sort=newest",
+    "/gear-kit?sort=newest",
+    "/emergency-survival-gear?sort=newest",
+    "/storage-maintenance?sort=newest",
+    "/reloading?sort=newest",
+    "/on-sale?sort=newest",
+    "/pre-owned?sort=newest"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://firearmsoutletcanada.com/cz-600-alpha-8x57-is-20-6004-2011-rek1aaax/",
+      "title": "CZ 600+ Alpha - 8x57 IS, 20\" [6004-2011-REK1AAAX]",
+      "price": 1299.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://firearmsoutletcanada.com/charles-daly-honcho-tactical-pump-20ga-2-3-4-or-3-14-barrel-cf930-418/",
+      "title": "Charles Daly Honcho Tactical Pump - 20GA, 2-3/4\" or 3\", 14\" Barrel [CF930.418]",
+      "price": 249.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://firearmsoutletcanada.com/sulun-arms-sr-45-revolver-45-apc-9-8-5-shot-sr-45/",
+      "title": "Sulun Arms SR-45 Revolver - .45 APC, 9.8\", 5-shot [SR-45]",
+      "price": 1099.95,
+      "stockStatus": "out_of_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 52,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 52,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Sort ?sort=newest verified honored via counter-control swap (alphaasc + pricedesc both produce different first-3 from default; default coincidentally equals newest — Mistake 29 false-negative case caught). Pagination ?page=N proved honored via zero-overlap test. No public BC date-filter API available (Storefront GraphQL requires auth)."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "productSitemap": "/xmlsitemap.php?type=products&page=1",
+        "categorySitemap": "/xmlsitemap.php?type=categories&page=1",
+        "sitemapIndex": "/xmlsitemap.php"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/firearms", "allOption": 928 },
+      { "slug": "/ammo", "allOption": 397 },
+      { "slug": "/optics", "allOption": 196 },
+      { "slug": "/pistol-parts", "allOption": 17 },
+      { "slug": "/rifle-parts", "allOption": 318 },
+      { "slug": "/shotgun-parts", "allOption": 176 },
+      { "slug": "/magazines-clips", "allOption": 137 },
+      { "slug": "/gear-kit", "allOption": 480 },
+      { "slug": "/emergency-survival-gear", "allOption": 106 },
+      { "slug": "/storage-maintenance", "allOption": 136 },
+      { "slug": "/reloading", "allOption": 95 },
+      { "slug": "/on-sale", "allOption": null },
+      { "slug": "/pre-owned", "allOption": 7 }
+    ],
+    "totalsSumCheck": "Sum of per-category counts (excluding /on-sale aggregator) = 2,993 unique URLs across 11 cats; union = 2,983 (0.3% cross-cat overlap). Sitemap (xmlsitemap.php?type=products) = 3,414. Gap = 431 products (~13%) live only in subcategories that BC Stencil parent listings hide. Runtime crawler should rely on bc-xmlsitemap as authoritative count and use catalogUrls for browse-style traversal."
+  },
+  "lastVerified": "2026-05-09",
+  "auditNotes": {
+    "runId": "audit-2026-05-09T14-25-01-000Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "adapterType": "verified",
+      "hasWaf": "verified",
+      "wafType": "verified",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "needsPlaywright": "verified",
+      "expectedProductCount": "verified",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified-with-coverage-note",
+      "paginationPattern": "verified-via-zero-overlap",
+      "sortParam": "verified-via-counter-control",
+      "sortVerified": "verified",
+      "perPage": "verified",
+      "extractionTested": "verified",
+      "watermarkMethod": "verified",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1 (Canonical URL): www variant 301-redirects to apex; <link rel='canonical' href='https://firearmsoutletcanada.com/'> confirms apex is canonical. canonicalOrigin = https://firearmsoutletcanada.com.",
+      "Stage 2 (WAF + CAPTCHA): cf-ray header on every batch; all 8/8 batches returned 200; no challenges, no SQLi/XSS rule fires, no rate-limit on 10-burst, no UA filtering, no Sucuri/sgcaptcha/Incapsula/MalCare/Akamai markers. Verdict: cloudflare-passive (no active rules). Honeypot paths /wp-admin/, /wp-login.php, /.env, /.git/config returned 403 from BigCommerce origin (552 bytes, no CF challenge body) — origin-level not WAF. CAPTCHA: no reCAPTCHA / hCaptcha / Turnstile markers in homepage HTML.",
+      "Stage 3 (Platform): Identified as bigcommerce-stencil from <meta name='platform' content='bigcommerce.stencil' />, x-bc-store-id: 1003133358 response header, cdn11.bigcommerce.com/s-ezlzxhcsxg/stencil/ asset URLs, and stencil-prefixed CSS bundles. Klevu JS overlay present (apiKey klevu-170794377708517081) for site search/quick-search but NOT used for category page rendering (server-rendered Stencil HTML carries product cards directly). adapterType = generic-retail (BC Stencil maps to that). No age-gate detected. needsPlaywright = false (static HTML returns full product card markup).",
+      "Stage 4 (Catalog URLs): 13 top-level catalog URLs from operator's mega-menu (navPages-action). /on-sale included as it is a top-level menu item (operator's choice) though it overlaps with other cats. Walking each with ?sort=newest&limit=1000 yielded 2,983 unique products; sitemap product count = 3,414. The 14% gap (431 missing) live in BC Stencil subcategories that the parent listing hides (verified: vortex-solo-r-t-8x36-tactical-monocular is in /optics/binoculars but NOT in /optics — breadcrumb confirms /optics > Binoculars hierarchy). Decision: keep top-level catalogUrls for runtime browse; rely on bc-xmlsitemap for authoritative count. Adding 79 sub/sub-sub categories would yield ~92 catalog URLs with high overlap and questionable runtime value over the sitemap source.",
+      "Stage 4g (Extraction quality): 3 sample products from /firearms page 1 (cards 0, 25, 44) — all 4 fields populate (title, url, price, stockStatus). Out-of-stock detected via class='...out_of_stock_btn...' on the card's add-to-cart button (verified on Sulun Arms SR-45 card). extractionTested = true.",
+      "Stage 5 (Pagination): ?page=N query param on /firearms?sort=newest — page 1 vs page 2 zero-overlap confirmed (52 products each, no URL intersection). type='query', template='page', perPage=52, firstPageHasParam=false, startPage=1, zeroIndexed=false. ?limit=N is honored too (limit=200 returned 200 cards on page 1; limit=1000 returned 928 on /firearms which is the full category) — limit param available for bulk fetches but perPage=52 is the page-1 default the operator uses.",
+      "Stage 6 (Sort): <select name='sort' id='sort'> exposes 8 options: featured, newest, bestselling, alphaasc, alphadesc, avgcustomerreview, priceasc, pricedesc. Default (Featured) first 3 == ?sort=newest first 3 (CZ 600+ Alpha series). Counter-controls ?sort=alphaasc and ?sort=pricedesc both produced totally different first-3 — proves the sort param IS honored, default just coincidentally matches newest (Mistake 29 case: BC Stencil 'Featured' default can equal newest by coincidence; counter-control catches the false negative). sortParam = '?sort=newest', sortVerified = true.",
+      "Stage 7 (Watermark method): navigate-from-watermark — sort verified honored AND pagination verified honored (zero-overlap), giving the watermark crawler a reliable newest-first walk. No public BC date-filter API (GraphQL Storefront requires auth token). reason field documents the verification chain.",
+      "Stage 8 (Product count): bc-xmlsitemap → /xmlsitemap.php?type=products&page=1 has 3,414 <loc> entries, all product-shaped (.html or trailing-slash with hyphenated slug). expectedProductCount = 3414. Reconciliation note: walked-13-cats yielded 2,983 unique URLs (87% of sitemap); the 13% gap is subcategory-only products hidden on parent listings — sitemap is authoritative, walked-cats are NOT a cap-detection signal here (Mistake 36 cap detection only applies when walked > probe by ≥5%, and this is the inverse).",
+      "Stage 9 (Assembly + validate): 9 required + 7 recommended fields populated. profileVersion=1, lastVerified=2026-05-09. Calibration mode (operator may already have DB row for this domain) — no DB diff performed in this run."
+    ]
+  }
+}

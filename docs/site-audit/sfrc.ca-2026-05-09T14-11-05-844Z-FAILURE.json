@@ -1,0 +1,51 @@
+{
+  "result": "FAILURE",
+  "abortStage": 1,
+  "abortReason": "domain-repurposed-non-firearms",
+  "domain": "sfrc.ca",
+  "runAt": "2026-05-09T14:11:05.844Z",
+  "summary": "Domain sfrc.ca and www.sfrc.ca both 301-redirect to https://lamontagnegf.ca/, which serves a static 'Lamontagne — Groupe financier' landing page (Quebec financial services firm). This is no longer a firearms retail site. The domain appears to have been allowed to lapse and re-registered (or DNS reassigned) to a different business entity. No firearm catalog content remains on any path.",
+  "evidence": {
+    "stage1_canonicalUrl": {
+      "wwwResponse": {
+        "url": "https://www.sfrc.ca/",
+        "method": "HEAD",
+        "status": 301,
+        "redirectLocation": "https://lamontagnegf.ca/",
+        "server": "nginx"
+      },
+      "wwwGetFollowed": {
+        "finalUrl": "https://lamontagnegf.ca/",
+        "status": 200,
+        "bodySize": 4382,
+        "bodyTitle": "Lamontagne — Groupe financier",
+        "bodyOgUrl": "https://lamontagnegf.ca/",
+        "bodyLanguage": "fr",
+        "bodyContent": "Static 'site under construction' page for a Quebec financial services firm offering insurance brokerage, mortgage brokerage, investments (REER/CELI/etc.), and estate planning. Contact at 222 rue Simoneau, Thetford Mines, QC. No e-commerce, no products, no firearms-related content."
+      },
+      "apexResponse": {
+        "url": "https://sfrc.ca/",
+        "status": 200,
+        "bodyIdenticalToWww": true
+      },
+      "legacyPathsCheck": {
+        "shop": "301 -> https://lamontagnegf.ca/shop (then same landing page)",
+        "products": "301 -> https://lamontagnegf.ca/products (then same landing page)",
+        "store": "301 -> https://lamontagnegf.ca/store (then same landing page)",
+        "wpRest": "301 -> https://lamontagnegf.ca/wp-json/wp/v2/product?per_page=1 (no WP REST exists at destination)",
+        "sitemapXml": "301 -> https://lamontagnegf.ca/sitemap.xml (404 at destination)"
+      }
+    },
+    "stage2_wafProbe": {
+      "method": "heavy-8-batch",
+      "result": "Probe ran cleanly against canonical destination (lamontagnegf.ca). All 8 batches returned HTTP 200 with consistent ~110ms timing, no challenge bodies, no cf-ray, no x-sucuri, no Incapsula, no SiteGround. Server header: nginx. WAF probe outcome would be 'hasWaf: false (HIGH confidence)' for the destination site — but the destination is not the target site; the target domain is defunct/repurposed.",
+      "irrelevantToOriginalTarget": true
+    }
+  },
+  "recommendation": "Mark sfrc.ca as defunct in the seed list. If the user wants firearm-retail data from a former SFRC location, that operator must be re-located by name (initials unknown) on a current domain. Pre-bootstrap cannot proceed against a domain that no longer hosts firearms retail content.",
+  "judgmentCalls": [
+    "Confirmed apex and www return identical bodies (cmp -s match) - both redirect to lamontagnegf.ca via nginx 301.",
+    "Verified the destination is not merely a temporarily-parked domain by reading the body: it has unique business content (operator name, address in Thetford Mines, QC, listed services in French, contact phone +1-581-333-2828, copyright Lamontagne groupe financier). This is an actively-served business site, not a registrar parking page.",
+    "Tested 5 legacy firearm-retail-shaped paths (/shop, /products, /store, /wp-json/wp/v2/product, /sitemap.xml). All redirect to identically-shaped paths on lamontagnegf.ca; none reveal any residual firearm content."
+  ]
+}

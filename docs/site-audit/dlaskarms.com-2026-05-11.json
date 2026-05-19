@@ -1,0 +1,113 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-11T06:47:21Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "No WAF/CDN markers; Apache origin direct; all probe paths return 200 with consistent Server: Apache.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "incapsulaMarkers": false,
+    "sgcaptchaRedirect": false,
+    "akamaiHeader": false,
+    "malcareMarker": false,
+    "rapidBurstStatus": "all-200",
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "serverHeader": "Apache",
+    "wpRestSetCookie": "PHPSESSID + breakdance_* session cookies"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 241,
+  "productCountMethod": "wc-store-api-header",
+  "catalogUrls": ["https://dlaskarms.com/shop/"],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://dlaskarms.com/product/22-caliber-bore-brushes-3-pack/", "title": ".30 Caliber Bore Brushes 3-pack", "price": 7.99, "stockStatus": "in_stock" },
+    { "url": "https://dlaskarms.com/product/dlask-arms-custom-1911-pro-copy/", "title": "1911 Pistol, Government Length, Stainless Steel, .45 ACP", "price": 2000.00, "stockStatus": "out_of_stock" },
+    { "url": "https://dlaskarms.com/product/ar-15-buffer-tube-castle-nut/", "title": "AR-15 Buffer Tube Castle Nut", "price": null, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 16,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 16,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": { "method": "api-date-since-watermark" },
+    "bootstrap": {
+      "apiEndpoints": {
+        "wpRestProducts": "/wp-json/wp/v2/product",
+        "wcStoreProducts": "/wp-json/wc/store/v1/products",
+        "wpRestCategories": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": { "verifyMethod": "store-api", "verifyEndpoint": "/wp-json/wc/store/v1/products" }
+  },
+  "topLevelCategories": {
+    "source": "wp-rest-product_cat",
+    "categories": [
+      { "slug": "/product-category/clearance", "allOption": 7 },
+      { "slug": "/product-category/derya", "allOption": 1 },
+      { "slug": "/product-category/dlask-custom-build", "allOption": 9 },
+      { "slug": "/product-category/dlask-custom-parts", "allOption": 80 },
+      { "slug": "/product-category/dlask-custom-shotgun", "allOption": 4 },
+      { "slug": "/product-category/gsg-16", "allOption": 2 },
+      { "slug": "/product-category/gunsmithing-services", "allOption": 6 },
+      { "slug": "/product-category/kidd", "allOption": 12 },
+      { "slug": "/product-category/magazines", "allOption": 10 },
+      { "slug": "/product-category/magpul", "allOption": 15 },
+      { "slug": "/product-category/parts-accessories", "allOption": 213 },
+      { "slug": "/product-category/pistols", "allOption": 5 },
+      { "slug": "/product-category/rifles", "allOption": 18 },
+      { "slug": "/product-category/shotgun", "allOption": 3 },
+      { "slug": "/product-category/shotguns", "allOption": 12 },
+      { "slug": "/product-category/surplus", "allOption": 28 },
+      { "slug": "/product-category/tuf-22", "allOption": 21 },
+      { "slug": "/product-category/tuf-22-customize", "allOption": 1 },
+      { "slug": "/product-category/tuf-22-td", "allOption": 3 },
+      { "slug": "/product-category/tuf-22-td-customize", "allOption": 1 }
+    ],
+    "totalsSumCheck": "Sum across 20 non-empty top-level categories = 451; WC Store API total = 241; multi-category membership accounts for ~87% overcount. /shop/ aggregator returns 241 unique = 100% coverage with 1 URL (Rule C minimum)."
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "calibration-2026-05-11",
+    "mode": "calibration-blind",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "expectedProductCount": "high",
+      "catalogUrls": "medium",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": {
+      "1": "Canonical = apex; www 301s to apex; <link rel=\"canonical\"> confirms.",
+      "2": "BATCH 1 of heavy-waf-probe.sh: no cf-ray, no x-sucuri-id, no Incapsula/MalCare/sgcaptcha/Akamai. Server: Apache direct origin. No CAPTCHA markers in homepage.",
+      "3": "WP + WC plugin assets + Breakdance theme. WC Store API + WP REST product endpoints both respond. adapterType=woocommerce per platform table.",
+      "4": "WP REST product_cat returned 48 categories (26 top-level, 20 non-empty). /shop/ aggregator returns 'Showing 1-16 of 241'. Used /shop/ as single catalogUrl (Rule C minimum URL set covering 100%). Per-category breakdown documented in topLevelCategories.",
+      "5": "Tested ?per_page=250, ?count=250, ?shop_view=infinite — none honored; perPage stays at 16. /shop/page/2/ returns different products from page 1 (zero overlap). path-style /page/{N}/.",
+      "6": "3-outcome counter-control: default (menu_order) -> bore-brushes/1911-pro-plus/mag-extension; ?orderby=date -> deactivated-sig-228/astra-a100/breacher-shotgun; ?orderby=price-desc -> 1911-commander/1911-pro/breacher-shotgun. All three differ -> sort honored.",
+      "7": "Two-probe WP REST ?after= filter: 2099 -> x-wp-total=0, 1999 -> x-wp-total=241=global. Filter honored -> api-date-since-watermark.",
+      "8": "WC Store API: GET /wp-json/wc/store/v1/products?per_page=1 -> X-WP-Total: 241. Matches /shop/ HTML 'Showing 1-16 of 241'.",
+      "9": "Output assembled; validator not run inline (calibration mode); diff against DB siteProfile next."
+    }
+  }
+}

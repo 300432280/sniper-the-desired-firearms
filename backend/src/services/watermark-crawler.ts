@@ -182,8 +182,9 @@ async function crawlApiDateFilter(params: {
   wmOldDateThreshold: number;
   adapter: any;
   origin: string;
+  perPage?: number; // From siteProfile.perPage — overrides default 50
 }): Promise<{ products: CatalogProduct[]; pagesScanned: number; tokensUsed: number; newWatermarkUrl: string | null; newestDateSeen: string | null; fallbackToMethodB: boolean }> {
-  const { siteId, domain, baseBudget, capacity, lastWatermarkDate, hasWaf, adapter, origin } = params;
+  const { siteId, domain, baseBudget, capacity, lastWatermarkDate, hasWaf, adapter, origin, perPage } = params;
 
   let pagesScanned = 0;
   let tokensUsed = 0;
@@ -206,7 +207,7 @@ async function crawlApiDateFilter(params: {
     try {
       catalogPage = await adapter.fetchCatalogPage(origin, page, {
         sortBy: 'oldest',
-        perPage: 50,
+        perPage: perPage || 50,
         dateAfter: lastWatermarkDate,
         hasWaf,
       });
@@ -288,8 +289,9 @@ async function crawlNavigateThenWalk(params: {
   adapter: any;
   origin: string;
   useApi: boolean; // whether adapter has fetchCatalogPage
+  perPage?: number; // From siteProfile.perPage — overrides default 50
 }): Promise<{ products: CatalogProduct[]; pagesScanned: number; tokensUsed: number; newWatermarkUrl: string | null; newestDateSeen: string | null }> {
-  const { siteId, url, domain, baseBudget, capacity, lastWatermarkUrl, lastWatermarkDate, hasWaf, adapter, origin, useApi } = params;
+  const { siteId, url, domain, baseBudget, capacity, lastWatermarkUrl, lastWatermarkDate, hasWaf, adapter, origin, useApi, perPage } = params;
   const CONSECUTIVE_KNOWN_THRESHOLD = params.wmKnownThreshold;
   const CONSECUTIVE_OLD_DATE_THRESHOLD = params.wmOldDateThreshold;
   const lastWmDate = lastWatermarkDate ? new Date(lastWatermarkDate).getTime() : null;
@@ -313,7 +315,7 @@ async function crawlNavigateThenWalk(params: {
 
       let catalogPage: CatalogPage | null;
       try {
-        catalogPage = await adapter.fetchCatalogPage(origin, page, { sortBy: 'newest', perPage: 50, hasWaf });
+        catalogPage = await adapter.fetchCatalogPage(origin, page, { sortBy: 'newest', perPage: perPage || 50, hasWaf });
       } catch (err) {
         console.log(`[WatermarkCrawler] ${domain}: API page ${page} failed — ${err instanceof Error ? err.message : err}`);
         break;
@@ -678,6 +680,7 @@ export async function crawlWatermark(params: {
     entry?.siteProfile?.crawlers?.watermark?.method || 'navigate-from-watermark';
   const catalogUrls: string[] = entry?.siteProfile?.catalogUrls || [];
   const paginationPattern = entry?.siteProfile?.paginationPattern;
+  const profilePerPage: number | undefined = entry?.siteProfile?.perPage ?? undefined;
 
   const CONSECUTIVE_KNOWN_THRESHOLD = params.wmKnownThreshold ?? 40;
   const CONSECUTIVE_OLD_DATE_THRESHOLD = params.wmOldDateThreshold ?? 25;
@@ -719,6 +722,7 @@ export async function crawlWatermark(params: {
         wmKnownThreshold: CONSECUTIVE_KNOWN_THRESHOLD,
         wmOldDateThreshold: CONSECUTIVE_OLD_DATE_THRESHOLD,
         adapter, origin,
+        perPage: profilePerPage,
       });
 
       pagesScanned = result.pagesScanned;
@@ -738,6 +742,7 @@ export async function crawlWatermark(params: {
           wmOldDateThreshold: CONSECUTIVE_OLD_DATE_THRESHOLD,
           adapter, origin,
           useApi: !!adapter.fetchCatalogPage,
+          perPage: profilePerPage,
         });
 
         pagesScanned += fallback.pagesScanned;
@@ -760,6 +765,7 @@ export async function crawlWatermark(params: {
         wmOldDateThreshold: CONSECUTIVE_OLD_DATE_THRESHOLD,
         adapter, origin,
         useApi: !!adapter.fetchCatalogPage,
+        perPage: profilePerPage,
       });
 
       pagesScanned = result.pagesScanned;

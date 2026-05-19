@@ -1,0 +1,184 @@
+{
+  "profileVersion": 1,
+
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-10T07:54:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches return 200 OK with cf-ray header on every response. Rapid burst of 10 requests in ~2s — no rate-limit; SQLi/XSS-shaped queries — 200 with same byte size as normal traffic; multi-UA and no-UA — all 200; honeypot paths (/wp-admin, /wp-login.php, /.env, /.git/config) return 403 from BigCommerce backend (not WAF); xmlrpc/phpinfo return BC 404 page. cf-ray on every response = Cloudflare-passive (in front but not actively challenging).",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "cfHeaders": ["cf-ray", "cf-cache-status", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false
+  },
+
+  "hasCaptcha": false,
+  "captchaType": null,
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 11978,
+  "productCountMethod": "bc-xmlsitemap",
+
+  "catalogUrls": [
+    "https://theammosource.com/firearms/?sort=newest",
+    "https://theammosource.com/ammunition/?sort=newest",
+    "https://theammosource.com/atv/?sort=newest",
+    "https://theammosource.com/e-bike/?sort=newest",
+    "https://theammosource.com/oem-replacement-parts/?sort=newest",
+    "https://theammosource.com/marine/-1/?sort=newest",
+    "https://theammosource.com/animal-protection/?sort=newest",
+    "https://theammosource.com/archery/?sort=newest",
+    "https://theammosource.com/motorcycle/?sort=newest",
+    "https://theammosource.com/bumper-stickers-promo-stuff/?sort=newest",
+    "https://theammosource.com/cameras/?sort=newest",
+    "https://theammosource.com/snowmobile/?sort=newest",
+    "https://theammosource.com/camping-outdoors/?sort=newest",
+    "https://theammosource.com/clothing-glasses-and-footwear/?sort=newest",
+    "https://theammosource.com/firearms-accessories/?sort=newest",
+    "https://theammosource.com/fishing/?sort=newest",
+    "https://theammosource.com/flashlights-batteries-illumination/?sort=newest",
+    "https://theammosource.com/hunting-supplies/?sort=newest",
+    "https://theammosource.com/ppe-and-first-aid/?sort=newest",
+    "https://theammosource.com/knives-multi-tools-slingshots/?sort=newest",
+    "https://theammosource.com/power-sports-engines/?sort=newest",
+    "https://theammosource.com/military-surplus-not-firearms/?sort=newest",
+    "https://theammosource.com/reloading-supplies/?sort=newest",
+    "https://theammosource.com/novelty-and-toys/?sort=newest",
+    "https://theammosource.com/scopes-optics-binos-and-sights/?sort=newest",
+    "https://theammosource.com/scope-mounts-rings/?sort=newest",
+    "https://theammosource.com/tools-equipment-non-firearms/?sort=newest"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://theammosource.com/stoeger-single-barrel-auto-eject-12ga-3-28-barrel-walnut-stock/",
+      "title": "Stoeger Single Barrel Auto Eject, 12Ga 3\", 28\" Barrel, Walnut Stock",
+      "price": 310.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://theammosource.com/savage-axis-ii-xp-bolt-action-rifle-30-06-sprg-22-barrel-3-9x40-scope/",
+      "title": "Savage Axis II XP Bolt Action Rifle 30-06 SPRG, 22\" Barrel, 3-9x40 Scope",
+      "price": 849.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://theammosource.com/weatherby-18i-12-ga-semi-auto-shotgun-3-28-barrel-camo-ydad/",
+      "title": "Weatherby 18i 12 Ga Semi-Auto Shotgun 3\", 28\" Barrel, Camo",
+      "price": 1129.95,
+      "stockStatus": "in_stock"
+    }
+  ],
+
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+
+  "perPage": 50,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 50,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "BigCommerce Stencil. sort=newest verified honored via 3-outcome counter-control: default sort=featured first product equals sort=newest first product (Ruger American Gen II), counter-control sort=alphaasc differs (Adler AD500). honored-default-is-newest verdict (BC Mistake 29). data-product-id strictly descending under sort=newest (firearms top-12: 284154, 283918, 283917, 282452, 282451, 282450, 282449, 282448, 282438, 282437, 282436, 282435). No public Storefront API for date-since filter (POST /api/storefront/products returns 404)."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "homepage-nav",
+    "categories": [
+      { "slug": "/firearms/",                              "allOption": 499 },
+      { "slug": "/ammunition/",                            "allOption": 1084 },
+      { "slug": "/atv/",                                   "allOption": 169 },
+      { "slug": "/e-bike/",                                "allOption": 4 },
+      { "slug": "/oem-replacement-parts/",                 "allOption": 153 },
+      { "slug": "/marine/-1/",                             "allOption": 16 },
+      { "slug": "/animal-protection/",                     "allOption": 19 },
+      { "slug": "/archery/",                               "allOption": 159 },
+      { "slug": "/motorcycle/",                            "allOption": 225 },
+      { "slug": "/bumper-stickers-promo-stuff/",           "allOption": 14 },
+      { "slug": "/cameras/",                               "allOption": 30 },
+      { "slug": "/snowmobile/",                            "allOption": 181 },
+      { "slug": "/camping-outdoors/",                      "allOption": 80 },
+      { "slug": "/clothing-glasses-and-footwear/",         "allOption": 206 },
+      { "slug": "/firearms-accessories/",                  "allOption": 1440 },
+      { "slug": "/fishing/",                               "allOption": 4464 },
+      { "slug": "/flashlights-batteries-illumination/",    "allOption": 98 },
+      { "slug": "/hunting-supplies/",                      "allOption": 247 },
+      { "slug": "/ppe-and-first-aid/",                     "allOption": 32 },
+      { "slug": "/knives-multi-tools-slingshots/",         "allOption": 273 },
+      { "slug": "/power-sports-engines/",                  "allOption": 178 },
+      { "slug": "/military-surplus-not-firearms/",         "allOption": 16 },
+      { "slug": "/reloading-supplies/",                    "allOption": 630 },
+      { "slug": "/novelty-and-toys/",                      "allOption": 51 },
+      { "slug": "/scopes-optics-binos-and-sights/",        "allOption": 546 },
+      { "slug": "/scope-mounts-rings/",                    "allOption": 681 },
+      { "slug": "/tools-equipment-non-firearms/",          "allOption": 8 }
+    ],
+    "totalsSumCheck": "Sum of per-category page-walk counts (limit=250 walked) = 11503. Dedup unique across categories = 11316. BC xmlsitemap.php?type=products total = 11978. Drift sitemap-vs-walked = 662 = 5.5% — consistent with OOS/hidden products kept in sitemap but excluded from active category listings (operator-flagged feature, not noise). Cross-category overlap (sum 11503 vs dedup 11316) = 187 = 1.6% — products tagged in two categories at once."
+  },
+
+  "lastVerified": "2026-05-10",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-10T07-54-00-000Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "expectedProductCount": "verified",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified",
+      "paginationPattern": "verified-via-zero-overlap",
+      "sortParam": "verified-via-counter-control",
+      "extractionTested": "verified",
+      "watermarkMethod": "verified-via-counter-control",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1 (Canonical URL): apex returned 200 cleanly; <link rel=canonical href=https://theammosource.com/> confirmed in homepage HTML. www variant 301-redirects to apex. canonicalOrigin = https://theammosource.com.",
+      "Stage 2 (WAF + CAPTCHA): cf-ray + __cf_bm cookie on every response — wafType=cloudflare-passive. 8/8 probe batches all 200 (or expected 403/404 from BC backend on honeypot paths, not WAF). No CAPTCHA markers (no recaptcha/hcaptcha/turnstile) on homepage HTML. hasCaptcha=false.",
+      "Stage 3 (Platform): BigCommerce Stencil identified by cdn11.bigcommerce.com asset hosts, x-bc-store-id=1000222338 header, BC-Ray:1 header, stencil-* CSS classes (100+ refs in homepage HTML). adapterType=generic-retail (BC has no dedicated adapter). No age-gate markers in homepage HTML.",
+      "Stage 4 (Catalog URLs): 27 top-level categories curated from <li class=navPages-item> megamenu (filtered out static pages — Home/Warranty/Privacy/Terms/Shipping/Contact/GOC-store/Movie Prop Rentals — and the brand sub-list cluster that follows position 27). Each category probed with ?limit=250&page=N walk; full walk gave 11503 sum / 11316 deduped unique. Smallest = E-BIKE @ 4 products (kept per Mistake 12). Largest = Fishing @ 4464 / 18 pages.",
+      "Stage 5 (Pagination): tested ?page=N. Page-1 vs page-2 zero-overlap confirmed (52 distinct each, 0 overlap). Default firearms/ has perPage=52 articles (typical BC theme ~50 + featured slot). paginationPattern.template=page (param name only per Mistake 14). Verified perPage cap: ?limit=250 returns 250 distinct, ?limit=500 returns 499, ?limit=1000 returns 997, ?limit=2500 returns 1059 (genuine firearms-cat ceiling). No <select name=limit> exists on this BC theme — limit is a free query param. Recorded perPage=50 as the canonical default per Stage 5 spec.",
+      "Stage 6 (Sort): <select id=sort name=sort> exposes featured/newest/bestselling/alphaasc/alphadesc/avgcustomerreview/priceasc/pricedesc. 3-outcome counter-control test on /firearms/: default==newest first product (Ruger American Gen II), but alphaasc differs (Adler AD500) — honored-default-is-newest verdict (BC Mistake 29 caught). sortParam=?sort=newest baked into catalogUrls to make watermark traversal explicit.",
+      "Stage 7 (Watermark method): navigate-from-watermark — sort=newest honored upstream, data-product-id strictly descending under newest sort (firearms top-12 IDs: 284154, 283918, 283917, 282452, 282451, 282450, 282449, 282448, 282438, 282437, 282436, 282435 — all descending), no public Storefront API for date filter (POST /api/storefront/products -> 404).",
+      "Stage 8 (Product count): bc-xmlsitemap canonical for BC (Stage 8 priority #7). xmlsitemap.php?type=products has 2 pages (page=1=9999 urls, page=2=1979 urls). expectedProductCount=11978. Walked (per-category dedup) = 11316; sitemap > walked by 5.5% — consistent with OOS/hidden products kept in sitemap but excluded from active category listings (operator-flagged feature, not noise). Did not downrank bc-xmlsitemap to walk count per Stage 8 priority discipline.",
+      "Stage 9 (Assembly + validate): validator pass."
+    ]
+  }
+}

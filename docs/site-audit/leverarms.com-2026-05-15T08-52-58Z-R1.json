@@ -1,0 +1,135 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T08:47:09Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare passive (cf-ray on all 200s; rapid burst clean). Origin nginx returns 403 on SQLi-UNION/XSS payloads and on .env/.git/xmlrpc honeypot paths — origin rule-selective filtering, NOT CDN WAF. Crawl paths (homepage, /shop/, /product-category/*) return 200 cleanly.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 200",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [".env", ".git/config", "xmlrpc.php"],
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "pluginWafMarkers": []
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 357,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://leverarms.com/product-category/all-product/",
+    "https://leverarms.com/product-category/kit/",
+    "https://leverarms.com/product-category/ammo/",
+    "https://leverarms.com/product-category/guns/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://leverarms.com/shop/kit/attachments-and-parts/lever-arms-electronic-digital-caliper/",
+      "title": "LEVER ARMS ELECTRONIC DIGITAL CALIPER",
+      "price": 10.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://leverarms.com/shop/kit/cleaning-kit/rem-oil-10-10-0z-aerosol/",
+      "title": "REM OIL 10 10 0Z  AEROSOL",
+      "price": 17.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://leverarms.com/shop/kit/optics/rings-and-mounts/leupold-std-medium-rings-770-set-49902/",
+      "title": "LEUPOLD STD MEDIUM RINGS (.770) SET 49902",
+      "price": 45,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 16,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST date filter verified: ?after=2099-01-01 -> x-wp-total=0; ?after=1999-01-01 -> x-wp-total=972 (admin REST includes drafts; customer-visible count via WC Store API is 357)."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "wcStoreProducts": "/wp-json/wc/store/v1/products",
+        "wpRestProducts": "/wp-json/wp/v2/product",
+        "productCategories": "/wp-json/wp/v2/product_cat"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/all-product/", "allOption": 332, "id": 200 },
+      { "slug": "/product-category/kit/", "allOption": 217, "id": 1606 },
+      { "slug": "/product-category/ammo/", "allOption": 124, "id": 188 },
+      { "slug": "/product-category/all-surplus/", "allOption": 106, "id": 186, "droppedAsRedundant": true },
+      { "slug": "/product-category/guns/", "allOption": 34, "id": 1603 },
+      { "slug": "/product-category/food/", "allOption": 11, "id": 1755, "droppedAsRedundant": true }
+    ],
+    "totalsSumCheck": "Global x-wp-total = 357. Union [all-product + kit + ammo + guns] = 357/357 (100%). Dropped all-surplus (106 products) + food (11 products) as proven redundant via walk-and-dedup union test."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "leverarms-2026-05-15T08-52-58Z-R1",
+    "probeIp": "audit-environment",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "perPage": "high",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex (leverarms.com) returns 200 cleanly; www redirects 301->apex. Canonical = https://leverarms.com.",
+      "Stage 2: 8-batch probe — cf-ray on all 200s, rapid-burst 10/10 200, SQLi-UNION + XSS -> 403 from nginx origin (not CF), .env/.git/xmlrpc -> 403. No plugin WAF markers (MalCare, Wordfence, sgcaptcha, Incapsula). Crawl paths clean. hasWaf=false (operational); CDN passive, origin rule-selective on payloads only.",
+      "Stage 3: <meta generator> = WordPress 6.9.4 + WooCommerce 10.7.0; /wp-json/ Link header present; theme = 'go'. No age gate / login wall on homepage or /shop/. Plain HTTP renders products -> needsPlaywright=false.",
+      "Stage 4: Taxonomy API returned 42 categories. 6 top-level (parent=0). Walked each via WC Store API category filter, dedup'd by product ID. Global walk = 357 unique. Union of [all-product, kit, ammo, guns] = 357/357. Dropped all-surplus (redundant: all 106 products in others) + food (redundant: all 11 products in others) per walk-and-dedup union test. all-product is NOT a true 'all' aggregator — covers 332/357; named-cats union covers 348/357; both needed.",
+      "Stage 4g: Extraction spot-check on 3 random kit products via WC Store API — all 4 fields (title/url/price/stockStatus) populate. extractionTested=true.",
+      "Stage 5: Path-style /page/{N}/ — page 1 vs page 2 = zero overlap (first product 'CHINESE MILITARY SURPLUS 7.62X39MM FMJ' on p1, 'LEVER ARMS STANDARD RIFLE CASE 6913' on p2). HTML perPage fixed at 16 (site setting; ?per_page= ignored). WC Store API supports per_page=100 (verified 100 results returned). perPage=100 set for API-driven crawl.",
+      "Stage 6: <select name='orderby'> has options popularity (default), date, price, price-desc. 3-outcome test with cache-bust: default first = 'CHINESE MILITARY SURPLUS 7.62X39MM FMJ', ?orderby=date first = 'LEVER ARMS ELECTRONIC DIGITAL CALIPER', ?orderby=price first = 'Magpul MOE hand guard'. Three distinct -> sortVerified=true, sortParam=?orderby=date.",
+      "Stage 7: WP REST two-probe: ?after=2099-01-01 -> x-wp-total=0; ?after=1999-01-01 -> x-wp-total=972. Date filter honored -> api-date-since-watermark.",
+      "Stage 8: WC Store API GET /wp-json/wc/store/v1/products?per_page=1 -> x-wp-total: 357. Method = wp-rest-header. Reconciles exactly with walked global = 357. PASS (no drift)."
+    ]
+  }
+}

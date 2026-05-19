@@ -1,0 +1,169 @@
+{
+  "profileVersion": 1,
+  "platform": "nopcommerce",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-05-12T06:21:32Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "active-cloudflare; browser-UA passes clean; bot-UA / no-UA / honeypot paths / XSS payload all 403; rapid burst (10x) under browser UA 200; CF-RAY header confirmed",
+  "wafProbeEvidence": {
+    "server": "cloudflare",
+    "cfRay": "9fa753115cea7aa8-YYZ",
+    "originHints": "AWS ALB cookies (AWSALB*) downstream of Cloudflare; Nop.customer cookie",
+    "batch1AllPaths200": true,
+    "batch2BotUa403": true,
+    "batch2NoUa403": true,
+    "batch3RapidBurst200x10": true,
+    "batch4HoneypotPaths403": ["/wp-admin/", "/wp-login.php", "/xmlrpc.php", "/.env", "/.git/config", "/phpinfo.php"],
+    "batch6Sqli200": true,
+    "batch7XssRedirectedTo403ErrorPage": true,
+    "batch8NoUa403": true
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "needsPlaywright": false,
+  "expectedProductCount": 6441,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "/sitemap.xml"
+  },
+  "catalogUrls": [
+    "/firearms",
+    "/ammunition",
+    "/used",
+    "/sales",
+    "/accessories",
+    "/optics",
+    "/reloading",
+    "/gun-parts",
+    "/magazines",
+    "/safes-and-cases",
+    "/cleaning-accessories",
+    "/shooting-accessories",
+    "/hunting",
+    "/knives-3",
+    "/hearing-protection",
+    "/holsters",
+    "/dog-training"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "productId": "97413",
+      "url": "https://www.reliablegun.com/ultimatum-precision-deuce-20-left-hand-barreled-action-22lr-22-straight-contour-163-11-deg-crown-ibi-deucw2-lh-22-14t",
+      "title": "Ultimatum Precision Deuce 2.0 Left Hand Barreled Action - 22lr, 22\", Straight Contour 1.63\", 11 deg Crown.",
+      "price": 2899.99,
+      "stockStatus": "in_stock",
+      "stockEvidence": "<span class=\"grid-stock-dot stock-low\"></span><span class=\"grid-stock-qty stock-low\">1</span><span class=\"grid-stock-name\">Vancouver Store</span>"
+    },
+    {
+      "productId": "97410",
+      "url": "https://www.reliablegun.com/used-savage-arms-axis-xp-bolt-action-rifle-223-rem-22-matte-black-matte-black-synthetic-stock-1x-mag-weaver-3-9x40mm-includes-sling-soft-case-good-condition-w3669771",
+      "title": "Used Savage Arms Axis XP Bolt-Action Rifle - 223 Rem, 22\", Matte Black, Matte Black Synthetic Stock, 1x Mag, Weaver 3-9x40mm, Includes Sling & Soft Case, Good Condition",
+      "price": null,
+      "stockStatus": "unknown",
+      "priceVisible": false,
+      "note": "Used consignment listing - price loaded via JS / hidden on grid view"
+    },
+    {
+      "productId": "97408",
+      "url": "https://www.reliablegun.com/ege-panzer-arms-m4-speed-tac-pro-semi-auto-shotgun-12ga-3-188-ported-barrel-grey-cerakote-receiver-and-barrel-black-m-lok-handguard-oversized-bolt-release-and-charging-handle-black-telescopic-stock-bl-2",
+      "title": "EGE Panzer Arms M4 Speed Tac Pro Semi-Auto Shotgun - 12Ga, 3\", 18.8\", Ported Barrel, Grey Cerakote Receiver And Barrel, Black M-LOK Handguard, Oversized Bolt Release And Charging Handle, Black Telescopic Stock, Blade Front Sight Ghost Ring Rear Sight, 5",
+      "price": null,
+      "stockStatus": "unknown",
+      "priceVisible": false
+    }
+  ],
+  "sortParam": "?orderby=15",
+  "sortVerified": true,
+  "perPage": 48,
+  "paginationPattern": {
+    "type": "query",
+    "template": "pagenumber",
+    "perPage": 48,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "notes": "Use ?orderby=15&pagesize=48&pagenumber=N. orderby=15 = Created on DESC. Walk page 1 (newest) backward until watermark productId is hit, then index forward. NopCommerce product IDs are monotonically increasing (auto-increment) - verified: orderby=15 page 1 = 97413,97410,97408..., page 2 starts 96939,96937,96936... (strictly descending). Counter-control: orderby=5 (Name A-Z) returned different ordering (96884,95122) confirming orderby=15 is honored."
+    },
+    "bootstrap": {
+      "apiEndpoints": null,
+      "htmlFallback": true,
+      "notes": "No public REST/JSON API exposed. HTML crawl via catalogUrls only. data-productid attribute on .product-item cards is the canonical NopCommerce numeric ID - use for dedup."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav (homepage top-menu with-subcategories parents)",
+    "categories": [
+      { "slug": "/firearms", "lastPageWithPagesize48": 18, "estimatedProducts": 828, "walkedUnique": 828, "firearmRelevant": true },
+      { "slug": "/ammunition", "lastPageWithPagesize48": 20, "estimatedProducts": 240, "firearmRelevant": true },
+      { "slug": "/used", "lastPageWithPagesize12": 19, "estimatedProducts": 228, "firearmRelevant": true, "overlapWithFirearmsParent": "2/48 page-1 sample (mostly disjoint)" },
+      { "slug": "/sales", "estimatedProducts": 31, "firearmRelevant": true, "note": "Sale-marker overlay; 1/30 overlap with /firearms" },
+      { "slug": "/accessories", "lastPageWithPagesize48": 46, "estimatedProducts": 552, "firearmRelevant": true },
+      { "slug": "/optics", "lastPageWithPagesize48": 21, "estimatedProducts": 252, "firearmRelevant": true },
+      { "slug": "/reloading", "lastPageWithPagesize48": 12, "estimatedProducts": 144, "firearmRelevant": true },
+      { "slug": "/gun-parts", "lastPageWithPagesize48": 16, "estimatedProducts": 192, "firearmRelevant": true },
+      { "slug": "/magazines", "lastPageWithPagesize12": 18, "estimatedProducts": 216, "firearmRelevant": true },
+      { "slug": "/safes-and-cases", "lastPageWithPagesize12": 15, "estimatedProducts": 180, "firearmRelevant": true },
+      { "slug": "/cleaning-accessories", "lastPageWithPagesize12": 20, "estimatedProducts": 240, "firearmRelevant": true },
+      { "slug": "/shooting-accessories", "lastPageWithPagesize48": 9, "estimatedProducts": 108, "firearmRelevant": true },
+      { "slug": "/hunting", "lastPageWithPagesize12": 6, "estimatedProducts": 72, "firearmRelevant": true },
+      { "slug": "/knives-3", "lastPageWithPagesize12": 7, "estimatedProducts": 84, "firearmRelevant": true },
+      { "slug": "/hearing-protection", "estimatedProducts": 25, "firearmRelevant": true },
+      { "slug": "/holsters", "estimatedProducts": 15, "firearmRelevant": true },
+      { "slug": "/dog-training", "estimatedProducts": 1, "firearmRelevant": true, "note": "Single-product cat retained per Mistake 12: never drop for being too small" }
+    ],
+    "excludedFromCatalogUrls": [
+      { "slug": "/camping", "reason": "Pure camping; non-firearm-relevant per Rule C scope" },
+      { "slug": "/cookware", "reason": "Outdoor cooking; non-firearm" },
+      { "slug": "/coolers-food-drinks", "reason": "Food/drinks; non-firearm" },
+      { "slug": "/clothing", "reason": "Pure apparel per Rule C exclude" },
+      { "slug": "/books", "reason": "Books per Rule C exclude" },
+      { "slug": "/first-aid", "reason": "First-aid; non-firearm" }
+    ],
+    "totalsSumCheck": "Sum of firearm-relevant estimated products = ~3408 (rough page-count math). Sitemap raw <loc> = 6441 (includes ~150 category URLs and all-site products including non-firearm). Difference (3408 vs 6291 product-only-sitemap) explained by non-firearm SKUs (clothing, books, camping, food) not in catalogUrls."
+  },
+  "lastVerified": "2026-05-12",
+  "auditNotes": {
+    "runId": "blind-2026-05-12T06-21Z",
+    "fieldConfidence": {
+      "platform": "high (generator meta + Nop.customer cookie + SevenSpikes plugins + Motion theme)",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high (cf-ray + bot-UA/no-UA/XSS all 403 + browser-UA all 200)",
+      "needsPlaywright": "high (static HTML returns product grid with all 4 fields on /firearms)",
+      "expectedProductCount": "medium (sitemap raw 6441 over-reports by ~150 category URLs; true product count ~6291)",
+      "productCountMethod": "medium (sitemap is flat: category and product URLs share same path namespace; no clean filter pattern)",
+      "catalogUrls": "medium (17 firearm-relevant top-levels covering ~3408 walked products; not full-walked + dedup'd across all 17 due to BLIND-audit time budget)",
+      "sortParam": "high (counter-control + monotonic productId descent on page 1 and page 2)",
+      "perPage": "high (?pagesize=96 rejected, fell back to default 12; ?pagesize=48 honored returning 49 IDs page-1 incl 1 cross-sell)",
+      "paginationPattern": "high (page-1 vs page-2 zero overlap on ?pagenumber)"
+    },
+    "wafBypass": "Browser User-Agent header is sufficient; no Playwright required at crawl runtime. Cloudflare rule-selective for XSS/SQLi/bot-UA/no-UA but browser-UA + plain GETs pass with cf-cache-status: DYNAMIC.",
+    "categoryParentChildOverlap": "Parent /firearms walk (828) includes children /rifles, /shotguns, /non-restricted-center-fire (page-1 100% overlap with parent). Walking the parent suffices for the firearms-tree. Sub-categories NOT included in catalogUrls to avoid double-walk overhead - parent /firearms covers them.",
+    "watchdogPriorVerdict": null,
+    "stageNotes": [
+      "Stage 1: apex reliablegun.com 301-redirects to www.reliablegun.com; canonical = https://www.reliablegun.com.",
+      "Stage 2: heavy-8-batch probe - Cloudflare active rule-selective (XSS/SQLi/no-UA/bot-UA blocked); browser-UA crawl path clean. cf-cache-status: DYNAMIC on category pages. No CAPTCHA on homepage or category pages. No age gate.",
+      "Stage 3: <meta name=\"generator\" content=\"nopCommerce\" /> + Nop.customer cookie + SevenSpikes plugins + Nop-Templates Motion theme. .aspx errorpage confirms IIS/ASP.NET origin under Cloudflare. adapterType=generic-retail per SKILL Stage 3 mapping (NopCommerce falls under generic-retail).",
+      "Stage 4: Nav crawl of top-menu top-level (with-subcategories) parents + leaf links. 17 firearm-relevant cats kept; 6 non-firearm cats (clothing, books, camping, cookware, coolers, first-aid) excluded per Rule C. /firearms parent walked 18 pages x pagesize=48 = 828 unique productIds. /used and /firearms mostly disjoint (2/48 page-1 overlap). /sales overlay adds ~30 unique. data-productid is canonical NopCommerce numeric ID - perfect for dedup.",
+      "Stage 4g extraction sample: 3 cards from /firearms?orderby=15&pagesize=48 page 1 - title (from .product-title a), url (from same anchor), price (from .price.actual-price), stockStatus (from .grid-stock-dot/.grid-stock-qty). Product 1 (new firearm): all 4 fields populate. Products 2-3 (used + consignment): title+url populate, price hidden on grid (priceVisible:false) - typical NopCommerce consignment pattern.",
+      "Stage 5: perPage probed - <select id=\"products-pagesize\"> options 6/12/24/48; ?pagesize=96 rejected (server fell back to default 12, last-page=69 confirmed). Max verified = 48. Pagination: ?pagenumber=N (NOT ?page=N - NopCommerce default). page-1 doesn't carry param; page 2 zero-overlap with page 1 (different productIds).",
+      "Stage 6: <select id=\"products-orderby\"> options: 0=Position(default), 5=Name A-Z, 6=Name Z-A, 10=Price L-H, 11=Price H-L, 15=Created on. 3-outcome counter-control with cache-bust: default first 3 productIds {96884,95122,...}; orderby=15 first 3 {97413,97410,97408}; orderby=5 (counter) first 3 {96884,95122,...} == default. Verdict: orderby=15 differs from default = HONORED. Monotonic descent confirmed page 1 (97413,97410,...) -> page 2 (96939,96937,...) on NopCommerce auto-increment productIds. sortParam=?orderby=15, sortVerified=true.",
+      "Stage 7: navigate-from-watermark - sort honored (orderby=15) + monotonic auto-increment productId provides ID-jump verification source. No public WP-REST-equivalent date filter for NopCommerce; full-catalog-sweep not needed.",
+      "Stage 8: /sitemap.xml flat single-file with 6441 <loc> entries. NopCommerce flat URL namespace: categories and products both use single-segment slugs. Estimated ~150 entries are categories/pages; true product count ~6291. productCountMethod = {method:'sitemap', url:'/sitemap.xml'} - accept ~2% category overcount documented in fieldConfidence.",
+      "Stage 9: candidate JSON assembled. extractionTested=true with sample of 3 (1 fully populated, 2 consignment with hidden price). All 9 required validator fields present."
+    ]
+  }
+}

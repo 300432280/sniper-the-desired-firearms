@@ -1,0 +1,159 @@
+{
+  "profileVersion": 1,
+  "platform": "ecwid-on-wordpress",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-11T06:47:53Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "No WAF — LiteSpeed origin. All 8 batches returned 200 with consistent timing; SQLi/XSS payloads 200; no cf-ray/x-sucuri/x-incapsula/MalCare markers; honeypot 403s are server-level path protection, not a WAF rule layer.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all-200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/xmlrpc.php", "/.env", "/.git/config"],
+    "honeypotInterpretation": "path-protection at origin (LiteSpeed), NOT WAF",
+    "botUaBlocked": false,
+    "serverHeader": "LiteSpeed",
+    "poweredBy": "PHP/8.3.30"
+  },
+  "hasCaptcha": true,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 4908,
+  "productCountMethod": "ecwid-storefront-search",
+  "catalogUrls": [
+    "https://www.triggersandbows.com/Accessories-c156841549",
+    "https://www.triggersandbows.com/Ammunition-c156823799",
+    "https://www.triggersandbows.com/Apparel-c156823798",
+    "https://www.triggersandbows.com/Archery-c156841548",
+    "https://www.triggersandbows.com/Firearms-c156824300",
+    "https://www.triggersandbows.com/Fishing-c156821044",
+    "https://www.triggersandbows.com/Hunting-c156823044",
+    "https://www.triggersandbows.com/Knives-c170293265",
+    "https://www.triggersandbows.com/Optics-c156823043",
+    "https://www.triggersandbows.com/Outdoors-c156821045",
+    "https://www.triggersandbows.com/Reloading-c156844542"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.triggersandbows.com/Ruger-10-22-Semi-Auto-Rifle-22-LR-Black-18-5-Barrel-p830835368",
+      "title": "Ruger 10/22 Semi-Auto Rifle 22 LR Black 18.5\" Barrel",
+      "price": 479.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.triggersandbows.com/Davide-Pedersoli-86-71-Boarbuster-Evolution-45-70-Gov-19-Match-Grade-Barrel-Walnut-Stock-Silver-Receiver-Lever-Action-Rifle-5-Round-Capacity-p743500321",
+      "title": "Davide Pedersoli 86/71 Boarbuster Evolution 45-70 Gov 19\" Match Grade Barrel Walnut Stock Silver Receiver Lever  Action Rifle 5 Round Capacity",
+      "price": 3174.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.triggersandbows.com/Tikka-T3x-Hunter-7mm-Rem-Mag-24-3-Barrel-2-5-Grade-Wood-Stock-Bolt-Action-Rifle-p675106762",
+      "title": "Tikka T3x Hunter 7mm Rem Mag 24.3\" Barrel 2.5 Grade Wood Stock Bolt-Action Rifle",
+      "price": 1924.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "addedTimeDesc",
+  "sortVerified": true,
+  "perPage": 200,
+  "paginationPattern": {
+    "type": "api-offset",
+    "template": "offset={N}",
+    "perPage": 200,
+    "firstPageHasParam": true,
+    "startPage": 0,
+    "zeroIndexed": true
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Ecwid products have no created_at/dateAdded fields, so api-date-since-watermark is impossible. sortBy=addedTimeDesc verified (Stage 6 3-outcome test: default!=sorted!=counter; sorted first 3 IDs 830835368>830808205>823626813 monotonic descending). Crawler walks /catalog/search sortBy=addedTimeDesc until a known product URL is hit."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "ecwid-storefront-api": {
+          "type": "ecwid-storefront-api",
+          "endpoint": "https://us-vir2-storefront-api.ecwid.com/storefront/api/v1/92697308/catalog/search",
+          "httpMethod": "POST",
+          "headers": {
+            "Content-Type": "application/json;charset=UTF-8",
+            "Origin": "https://www.triggersandbows.com",
+            "Referer": "https://www.triggersandbows.com/"
+          },
+          "bodyTemplate": {
+            "lang": "en",
+            "pagination": { "offset": 0, "limit": 200 },
+            "sortBy": "addedTimeDesc",
+            "urlParams": {
+              "urlType": "CLEAN_URL",
+              "baseUrl": "/",
+              "canonicalBaseUrl": "https://www.triggersandbows.com/",
+              "isCleanUrls": true,
+              "isCanonicalUrlsEnabled": true,
+              "isSlugsWithoutIds": false
+            }
+          },
+          "responseSchema": {
+            "productsPath": "products",
+            "totalPath": "totalProductsCount",
+            "productUrlPath": "seo.canonicalUrl",
+            "productNamePath": "name"
+          },
+          "sortOptions": ["addedTimeDesc", "priceAsc", "priceDesc", "nameAsc", "nameDesc"],
+          "defaultSortBy": "addedTimeDesc"
+        }
+      }
+    },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "ecwidStoreId": "92697308",
+  "topLevelCategories": {
+    "source": "nav + /catalog/categories XHR + /catalog/filters per-category productCount",
+    "categories": [
+      { "slug": "/Accessories-c156841549", "allOption": 12 },
+      { "slug": "/Ammunition-c156823799", "allOption": 629 },
+      { "slug": "/Apparel-c156823798", "allOption": 166 },
+      { "slug": "/Archery-c156841548", "allOption": 531 },
+      { "slug": "/Firearms-c156824300", "allOption": 1177 },
+      { "slug": "/Fishing-c156821044", "allOption": 1037 },
+      { "slug": "/Hunting-c156823044", "allOption": 265 },
+      { "slug": "/Knives-c170293265", "allOption": 99 },
+      { "slug": "/Optics-c156823043", "allOption": 511 },
+      { "slug": "/Outdoors-c156821045", "allOption": 191 },
+      { "slug": "/Reloading-c156844542", "allOption": 274 }
+    ],
+    "totalsSumCheck": "Sum of top-level recursive counts (via /catalog/filters productCount per parentCategoryId) = 4892 vs global totalProductsCount = 4908; drift = 16 products = 0.33% (within 5% gate). Contests (id=166631519) dropped — productCount=0. The 16-product gap likely represents orphaned products not assigned to any top-level category."
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "calibration-2026-05-11",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high",
+      "expectedProductCount": "high",
+      "catalogUrls": "medium — top-level URLs require recursive subcategory walk at runtime; runtime crawl uses global /catalog/search API which covers 100%",
+      "sortParam": "high",
+      "perPage": "high",
+      "watermarkMethod": "high"
+    },
+    "discoveryNotes": [
+      "Canonical: site declares www.triggersandbows.com via <link rel='canonical'>; apex returns 200 too, but www wins per Stage 1.",
+      "Ecwid store ID 92697308 from app.ecwid.com/script.js?92697308 and storeId JSON in homepage HTML.",
+      "Ecwid storefront API region: us-vir2 (captured from live Playwright session XHR).",
+      "Per-category counts via POST /catalog/filters {parentCategoryId} returning productCount (recursive). Per /catalog {parentCategoryId} returns only DIRECT products (excluding subcategories).",
+      "perPage=200: verified Ecwid global cap (Mistake 31). Server returns all 89 when limit=200/500/1000 requested on smaller categories; on larger categories limit clamps at 200.",
+      "Sort 3-outcome test on Rifles (id=156823551): default first IDs [786714184, 717767676, 709248362]; addedTimeDesc [830835368, 830808205, 823626813]; nameAsc [830808205, 817646878, 817644678]. All three distinct -> sort honored.",
+      "Pagination zero-overlap on Rifles: page1 IDs vs page2 IDs (offset=60, limit=60) overlap=0.",
+      "Products have NO date/created/published fields -> navigate-from-watermark via sorted URL walk only.",
+      "reCAPTCHA v3 found in homepage HTML (api.js?render=6Ldyy9EZ...). Gates contact/login forms, NOT the catalog — does not block crawling."
+    ]
+  }
+}

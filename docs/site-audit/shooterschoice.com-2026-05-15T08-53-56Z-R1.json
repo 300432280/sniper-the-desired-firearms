@@ -1,0 +1,161 @@
+{
+  "profileVersion": 1,
+
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T08:44:58Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front of all responses (cf-ray on every batch). 8/8 batches return 200 for normal paths; rapid burst of 10 requests over ~13s all 200; XSS-shaped query (containing literal <script>) returns 403 17925-byte challenge page = Cloudflare managed rules rule-selective on payload only; honeypot paths (xmlrpc/.env/.git/phpinfo) return canned 1483-byte 403 from origin (NOT WAF body markers — small uniform size). No MalCare/Wordfence/Sucuri/Incapsula markers in any response body. Verdict: Cloudflare passive — does not block normal crawler traffic, so hasWaf=false (per operational rule). Set hasWaf=true defensively if a production crawl from a different IP hits challenges.",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200 (all 10)",
+    "sqliRuleFired": false,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": "partial (xmlrpc/.env/.git -> 403 canned; phpinfo -> 404; wp-admin/wp-login -> 200)",
+    "botUaBlocked": false,
+    "cfHeaders": ["cf-ray present on every batch", "server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "wordfenceInBody": false,
+    "interpretation": "Cloudflare-passive + Cloudflare WAF rule-selective on XSS payload. Normal crawler traffic unaffected."
+  },
+
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 4493,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+
+  "catalogUrls": [
+    "https://shooterschoice.com/shop/"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://shooterschoice.com/shop/brand/kimber-america-brand/1911-pistol-fits-most-1911-single-stack-models/",
+      "title": "1911 Pistol (fits most 1911 single stack models)",
+      "price": 54.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://shooterschoice.com/shop/brand/30-06-outdoors-brand/30-06-classic-crossbow-case-od-green/",
+      "title": "30.06-CLASSIC CROSSBOW CASE/OD GREEN",
+      "price": 64.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://shooterschoice.com/shop/tbsbow-accessories/tbs-glove-armguard-chestguard/tbs-gloves-tabs/tbsgloves-tabs-tbsbow-accessories/aae-elite-cordovan-sm-lh/",
+      "title": "AAE-ELITE CORDOVAN SM LH",
+      "price": 74.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+
+  "perPage": 40,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 40,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WC Store API /wp-json/wc/store/v1/products honors ?after= filter. Two-probe verified: ?after=2099-01-01 returns x-wp-total: 0; ?after=1999-01-01 returns x-wp-total: 4493 (= global count). Same filter is honored on the admin /wp-json/wp/v2/product endpoint (future=0, past=11370 including drafts). HTML ?orderby=date also verified honored (default p1 first ID 210414, orderby=date first ID 263938, orderby=price first ID 243626, all different), so navigate-from-watermark is a viable fallback if API ever changes."
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "products": "/wp-json/wc/store/v1/products",
+        "taxonomy": "/wp-json/wp/v2/product_cat",
+        "maxPerPage": 100
+      }
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "wp-rest-product_cat-taxonomy",
+    "categories": [
+      { "slug": "/category/4027-accessories/",       "allOption": 1068 },
+      { "slug": "/category/4021-ammunition/",        "allOption": 612  },
+      { "slug": "/category/4023-reloading/",         "allOption": 542  },
+      { "slug": "/category/4022-firearms/",          "allOption": 454  },
+      { "slug": "/category/4026-clothing/",          "allOption": 354  },
+      { "slug": "/category/tbsbow-accessories/",     "allOption": 336  },
+      { "slug": "/category/4030-optics/",            "allOption": 323  },
+      { "slug": "/category/tbsbows/",                "allOption": 199  },
+      { "slug": "/category/tbsarrows-components/",   "allOption": 194  },
+      { "slug": "/category/tbshunting-accessories/", "allOption": 184  },
+      { "slug": "/category/4031-knives-cutlery/",    "allOption": 116  },
+      { "slug": "/category/tbsparts-service-tools/", "allOption": 74   },
+      { "slug": "/category/tbs-used-accessories/",   "allOption": 67   },
+      { "slug": "/category/tbsmisc/",                "allOption": 45   },
+      { "slug": "/category/tbstargets-butts/",       "allOption": 35   }
+    ],
+    "totalsSumCheck": "Sum of 15 firearm-relevant top-level categories = 4603; /shop/ result-count = 4493 (=WC Store API x-wp-total). Overlap ~110 (2.4%) from products tagged in multiple categories. Excluded from list: 'brand' (4433, parallel aggregator covering all branded products - would double-count everything), 'uncategorized' (425, catch-all bucket including non-firearm-relevant items), and 8 typo-duplicate slugs ('4027-accessoires', 'tbsarrows-componets', '4021-ammuntion', etc., each count<=115). Chose /shop/ as the single catalogUrls entry because it returns 'Showing 1-40 of 4493 results' = guaranteed 100% coverage with one start URL; per-category list documented here for operator reference and as fallback if /shop/ ever drops out."
+  },
+
+  "searchUrl": "/?s={keyword}&post_type=product",
+
+  "lastVerified": "2026-05-15",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-15T08-53-56Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot, R1 blind run",
+    "drivenByAIDirectly": true,
+    "probeIp": "audit machine (Windows host, residential ISP) - Cloudflare did not challenge; re-confirm WAF section from production crawler IP before promotion",
+    "fieldConfidence": {
+      "platform": "verified",
+      "adapterType": "derived-from-platform",
+      "hasWaf": "verified-operational",
+      "hasCaptcha": "verified-operational",
+      "ageGate": "verified",
+      "expectedProductCount": "verified",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified-via-result-count-match",
+      "paginationPattern": "verified-via-page1-page2-zero-overlap",
+      "sortParam": "verified-via-counter-control",
+      "extractionTested": "verified",
+      "watermarkMethod": "verified-via-two-probe",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1 (Canonical URL): apex shooterschoice.com returns 200 cleanly; www.shooterschoice.com 301s to apex (location: https://shooterschoice.com/). canonicalOrigin = https://shooterschoice.com. No <link rel='canonical'> override needed.",
+      "Stage 2 (WAF + CAPTCHA): 8-batch heavy probe. Cloudflare in front (cf-ray on all batches, server: cloudflare). Rapid burst of 10 requests all 200, no rate-limit. XSS-shaped query containing <script>alert(1)</script> returns 403 17925-byte challenge body - Cloudflare WAF rule-selective on XSS payload only. SQLi-shaped queries return 200. Honeypot paths (.env, .git/config, xmlrpc.php) return canned 1483-byte 403 (uniform size = origin-level filter, not Cloudflare challenge body). phpinfo.php returned 404. wp-admin/wp-login returned 200. No MalCare/Wordfence/Sucuri/Incapsula body markers in any batch. Verdict: Cloudflare-passive (cf-ray present + all normal traffic 200); hasWaf set to false per operational rule. Cloudflare's XSS rule fires only on payloads - does NOT affect catalog crawl. CAPTCHA: reCAPTCHA v3 site-key 6Ldror4ZAAAAACSRjA1i_G8G8Ocp84Y9jrJOnrh6 loaded via Contact Form 7 on every page. Doesn't gate the crawl path (catalog pages and Store API return 200 without challenge); hasCaptcha=false operationally, captchaType=recaptcha-v3 informationally.",
+      "Stage 3 (Platform): WooCommerce 10.7.0 confirmed - wp-content/plugins/woocommerce assets, wc-blocks-style?ver=wc-10.7.0, woocommerce-loop-product CSS classes on category page, body class woocommerce woocommerce-page tax-product_cat. Theme: kingler-theme (Mistake 39: theme != platform; platform stays woocommerce). No age-gate detected - pop-up on homepage is a Mailchimp email signup (pum-overlay-disabled, click_open trigger), not age verification. WC has dedicated adapter so adapterType=woocommerce (not generic-retail). Maintain verifyMethod=store-api (WC default per Stage 3 derived-rules table).",
+      "Stage 4 (Catalog URLs): /shop/ root archive returns 'Showing 1-40 of 4493 results' on page 1 - matches WC Store API x-wp-total exactly. Single URL covers 100% of products with the smallest possible URL count. Documented 15 firearm-relevant top-level categories (sum=4603, ~2.4% cross-category overlap) in topLevelCategories.categories[] for operator reference. taxonomy API /wp-json/wp/v2/product_cat returned 1910 categories across 20 pages - many leaf and typo-duplicate slugs (4030-otpics, 4021-ammuntion, tbsarrows-componets etc., all with count=0). Excluded the 'brand' aggregator (count=4433, would double everything) and 'uncategorized' (425 catch-all).",
+      "Stage 4g (Extraction): 3 random products from /shop/ page 1 - positions 0, 20, 39 - all 4 fields populated. Product card markup: <li class='... product type-product post-<ID> ... instock/outofstock ...'>, <h2 class='woocommerce-loop-product__title'><a href='/shop/<path>/<slug>/'>title</a></h2>, <span class='price'><span class='woocommerce-Price-amount amount'><bdi>$<amount></bdi></span></span>. extractionTested=true.",
+      "Stage 5 (Pagination): /page/{N}/ path form works. page 1 first 5 IDs [210414, 84018, 65609, 145943, 65620] vs page 2 first 5 IDs [256134, 256135, 256138, 256140, 256141] - zero overlap. ?count=N query param IGNORED (returns 40 anyway). perPage=40 hardcoded by theme on HTML; WC Store API max perPage=100. paginationPattern.perPage=40 (HTML walk).",
+      "Stage 6 (Sort): <select name='orderby' class='orderby'> with options menu_order (default) | popularity | rating | date | price | price-desc. 3-outcome counter-control with cache-bust (_=<rand>): default p1 first ID=210414, ?orderby=date first ID=263938, ?orderby=price first ID=243626 - all three different => sort honored. ID 263938 > 256134 (p2 first) > 210414 - descending product ID = newest-first. sortParam='?orderby=date', sortVerified=true.",
+      "Stage 7 (Watermark method): api-date-since-watermark. Two-probe on /wp-json/wc/store/v1/products?after=<date>: future=2099-01-01 -> x-wp-total=0, past=1999-01-01 -> x-wp-total=4493 (=global). Same probe on /wp-json/wp/v2/product: future=0, past=11370 (admin endpoint includes drafts/private). Filter honored on both. WC adapter uses Store API at runtime.",
+      "Stage 8 (Product count): wp-rest-header on /wp-json/wc/store/v1/products?per_page=1 -> x-wp-total=4493. Cross-checked: /shop/ HTML result-count says '1-40 of 4493 results'. Same value. expectedProductCount=4493.",
+      "Stage 9 (Assembly): validator clean; profile written to docs/site-audit/."
+    ]
+  }
+}

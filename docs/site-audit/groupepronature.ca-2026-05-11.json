@@ -1,0 +1,102 @@
+{
+  "profileVersion": 1,
+  "platform": "shopify",
+  "adapterType": "shopify",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-11T06:47:20Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cf-ray present on all paths; all payload batches 200 (SQLi/XSS/burst/honeypot); no-UA returns 403 (standard CF bot-mode) — Cloudflare passive, no challenge",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10x200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": true
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1509,
+  "productCountMethod": "shopify-products-walk",
+  "catalogUrls": [
+    "/collections/chasse-chez-pronature",
+    "/collections/camping-et-plein-air-chez-pronature",
+    "/collections/collection-peche",
+    "/collections/chaussures-de-plein-air-chasse-peche-et-travail-chez-pronature",
+    "/collections/sports-dhiver-winter-sports-chez-pronature",
+    "/collections/vetements-et-materiels-de-plein-air-pour-enfants-chez-pronature",
+    "/collections/liquidation-outlet-chez-pronature"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://groupepronature.ca/products/appelant-lcd-lookout-hen-lcd-lookout-hen-decoy-chezpronature", "title": "Appelant \"LCD Lookout Hen\"", "price": 139.99, "stockStatus": "in_stock" },
+    { "url": "https://groupepronature.ca/products/arbalete-rapid-420-rapid-420-crossbow-chezpronature", "title": "Arbalète \"Rapid 420\"", "price": 649.99, "stockStatus": "in_stock" },
+    { "url": "https://groupepronature.ca/products/carabine-semi-automatique-wildcat-cal-22-lr", "title": "Carabine semi-automatique \"Wildcat\" cal .22 LR", "price": 439.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?sort_by=created-descending",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Shopify sort_by=created-descending verified honored (default == newest, counter-control title-ascending changed first-3); products.json exposes published_at — walk newest-first from sort-baked catalogUrls, stop at watermark"
+    },
+    "bootstrap": {
+      "apiEndpoints": {
+        "globalFeed": "/products.json?limit=250&page={N}"
+      }
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/collections/chasse-chez-pronature", "allOption": 857 },
+      { "slug": "/collections/camping-et-plein-air-chez-pronature", "allOption": 565 },
+      { "slug": "/collections/collection-peche", "allOption": 412 },
+      { "slug": "/collections/chaussures-de-plein-air-chasse-peche-et-travail-chez-pronature", "allOption": 186 },
+      { "slug": "/collections/sports-dhiver-winter-sports-chez-pronature", "allOption": 57 },
+      { "slug": "/collections/vetements-et-materiels-de-plein-air-pour-enfants-chez-pronature", "allOption": 57 },
+      { "slug": "/collections/liquidation-outlet-chez-pronature", "allOption": 420 }
+    ],
+    "totalsSumCheck": "Sum products_count = 2554 vs global products.json walk = 1509. Storefront /products.json walk is the authoritative count. Dept-collection walked union covered 60.9% of global; gap is brand-only/season-only products not assigned to any activity dept. Shopify adapter bootstrap path covers 100% via /products.json."
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "calibration-2026-05-11",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "catalogUrls": "medium",
+      "expectedProductCount": "high",
+      "sortParam": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200, canonical=apex, link rel=canonical confirms",
+      "Stage 2: cf-ray on all paths, no challenge fired on SQLi/XSS/burst/honeypot; no-UA 403; Cloudflare passive",
+      "Stage 3: _shopify_y/_shopify_essential cookies + Shopify.shop JS var + cdn.shopify.com confirm shopify",
+      "Stage 4: 7 activity-dept collections from mega-menu (excluding HOMMES/FEMMES gender re-cuts)",
+      "Stage 5: ?page=N pagination, page1 vs page2 zero overlap, ?limit ignored, perPage stays at 24",
+      "Stage 6: sort_by=created-descending honored-default-is-newest (3-outcome counter-control passed)",
+      "Stage 7: Method B navigate-from-watermark; sort verified + published_at present on products.json",
+      "Stage 8: shopify-products-walk page 1..7 -> 1509 unique product IDs",
+      "Stage 9: assembled"
+    ]
+  }
+}

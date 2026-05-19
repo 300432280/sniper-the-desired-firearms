@@ -1,0 +1,140 @@
+{
+  "profileVersion": 1,
+  "platform": "lightspeed-ecom",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-11T06:47:44Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cf-ray present on every response, all primary paths return 200; honeypot paths (wp-admin/wp-login/.env/.git/phpinfo) return 403 and SQLi UNION SELECT returns 403 — those are Cloudflare path-/rule-selective protections firing on attack patterns only, not on normal catalog traffic. No challenge interstitials. No rate-limit on 10-burst.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray: 9f9f3bf92fba5443-YYZ", "server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 returned 200, ~450ms each",
+    "sqliRuleFired": true,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-login.php (403)", "/xmlrpc.php (403)", "/.env (403)", "/.git/config (403)", "/phpinfo.php (403)"],
+    "botUaBlocked": false,
+    "noUaStatus": 200
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3651,
+  "productCountMethod": "generic-product-sitemap",
+  "catalogUrls": [
+    "https://fulcrum-outdoors.shoplightspeed.com/firearms/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/shooting/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/fishing/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/camping/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/optics/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/hunting/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/archery/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/custom-rifle-building/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/apparel/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/outdoor-cooking/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/e-bikes/?sort=newest",
+    "https://fulcrum-outdoors.shoplightspeed.com/cool-stuff/?sort=newest"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://fulcrum-outdoors.shoplightspeed.com/henry-big-boy-mares-leg-45-colt.html",
+      "title": "Henry Big Boy Mare's Leg .45 Colt",
+      "price": 1649.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://fulcrum-outdoors.shoplightspeed.com/ruger-american-gen-2-204-ruger-burnt-bronze-and-gr.html",
+      "title": "Ruger American Gen 2 .204 Ruger Burnt Bronze and Green 20''",
+      "price": 1049.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://fulcrum-outdoors.shoplightspeed.com/hornady-match-22-creedmoor-80gr-eld-m.html",
+      "title": "Hornady Match 22 Creedmoor 80gr ELD-M",
+      "price": 62.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "suffix-replace",
+    "match": ".html?sort=newest",
+    "template": "page{N}.html?sort=newest",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 2,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Newest sort verified honored (3-outcome counter-control: default popular != ?sort=newest != ?sort=asc). Lightspeed eCom exposes no API date filter. Pagination via pageN.html?sort=newest verified zero-overlap (page1 first=henry-big-boy, page2 first=different). RSS /index.rss provides additional pubDate evidence per product."
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/firearms/", "allOption": 373 },
+      { "slug": "/shooting/", "allOption": 1681 },
+      { "slug": "/fishing/", "allOption": 612 },
+      { "slug": "/camping/", "allOption": 281 },
+      { "slug": "/optics/", "allOption": 276 },
+      { "slug": "/hunting/", "allOption": 187 },
+      { "slug": "/archery/", "allOption": 61 },
+      { "slug": "/custom-rifle-building/", "allOption": 57 },
+      { "slug": "/apparel/", "allOption": 49 },
+      { "slug": "/outdoor-cooking/", "allOption": 30 },
+      { "slug": "/e-bikes/", "allOption": 20 },
+      { "slug": "/cool-stuff/", "allOption": 18 }
+    ],
+    "totalsSumCheck": "Sum of category counts = 3,645; sitemap product URL count (.html filter) = 3,651. Drift = 0.16% — well under 5% gate. 12 top-level categories cover ~100% of products. /catalog/ and /brands/ excluded (catalog = favorites scratch page, brands = brand-filter aggregator that overlaps with categories)."
+  },
+  "lastVerified": "2026-05-11",
+  "auditNotes": {
+    "runId": "fulcrum-2026-05-11-calibration",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "perPage": "high",
+      "paginationPattern": "high",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage 1: Canonical = https://fulcrum-outdoors.shoplightspeed.com (apex returned 200 cleanly, no redirect, <link rel=canonical> matches request host)",
+      "Stage 2: Cloudflare-passive (cf-ray header on every batch, all 200 on /, /robots.txt, /sitemap.xml; honeypot 403s and SQLi-UNION 403 are CF managed-rule path/rule-selective protections that do NOT block normal catalog traffic)",
+      "Stage 3: Platform fingerprints = cdn.shoplightspeed.com asset URLs, /shops/665196/themes/17627/ path, cdn.webshopapp.com legacy CDN reference, session_id cookie. No age-gate markup, no recaptcha/hcaptcha/turnstile scripts. adapterType = generic-retail per platform-table for non-Shopify/WC/Drupal.",
+      "Stage 4: 12 top-level categories discovered from absolute-URL nav anchors. /brands/ and /catalog/ excluded (brand-filter aggregator and favorites scratch page). Sitemap .html-suffix count 3,651 vs sum of per-category page-1 'X products' header counts 3,645 = 0.16% drift.",
+      "Stage 5: pageN.html suffix-replace pagination (Mistake 26 — Lightspeed ignores ?page=N). Verified zero-overlap: /firearms/ page 1 first = adler-rf224-tactical, /firearms/page2.html first = sulun-ss-211. perPage probe: ?limit=36/60/100 returned 36/60/100 unique products; ?limit=200/250 silently reverted to default 12 — max verified = 100.",
+      "Stage 6: <select id=sortselect name=sort> with options default|popular|newest|lowest|highest|asc|desc. Default selected = popular. 3-outcome test on /firearms/: default first = adler-rf224, ?sort=newest first = henry-big-boy, ?sort=asc first = adler-ad500-308 — all different => sort honored.",
+      "Stage 7: navigate-from-watermark. Method A (api-date-since-watermark) unavailable — Lightspeed eCom has no public products.json or after= filter. Method B prerequisites met: sort verified honored AND pagination verified zero-overlap with sort baked in. /index.rss also provides per-product pubDate as supplementary monotonic date evidence.",
+      "Stage 8: generic-product-sitemap — /sitemap.xml total <loc> = 4,476, filter to .html-suffix product URLs = 3,651. Reconciliation: 12 category page-1 'X products' headers sum to 3,645, drift 0.16% — sitemap is authoritative.",
+      "Stage 9: Assembled candidate JSON. needsPlaywright=false (static HTML returns product cards). adapterType=generic-retail (Lightspeed isn't WC/Shopify/Drupal-classifieds)."
+    ]
+  }
+}

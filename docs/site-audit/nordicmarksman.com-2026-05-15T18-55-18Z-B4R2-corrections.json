@@ -1,0 +1,127 @@
+{
+  "site": "nordicmarksman.com",
+  "runId": "B4R2-2026-05-15T18-55-18Z",
+  "supersedes": "B4R1-2026-05-15T18-37-02Z",
+  "baseline": "docs/site-audit/nordicmarksman.com-2026-05-15T18-37-02Z-B4R1.json",
+  "summary": {
+    "totalCorrections": 6,
+    "confidenceHigh": 5,
+    "confidenceMedium": 1,
+    "confidenceLow": 0
+  },
+  "corrections": [
+    {
+      "field": "hasWaf",
+      "r1Value": false,
+      "r2Value": false,
+      "confidence": "high",
+      "evidence": "Re-confirmed via live 5-batch heavy probe 2026-05-15T18:53Z from R2 IP: (BATCH A) 10x rapid burst 100ms apart all 200 (249-316ms); (BATCH B) SQLi/UNION/XSS payloads in URL params all 200 (no WAF rule); (BATCH C) honeypot wp-admin/wp-login.php/.env/.git/config all 403 (origin BC infra, not WAF action - BC has no WordPress paths); (BATCH D) python-requests/curl/empty-UA/Googlebot all 200 (no UA filter); (BATCH E) headers show only Server: cloudflare + CF-RAY + cf-cache-status: DYNAMIC + __cf_bm cookie. NO cf-mitigated header, NO challenge HTML, NO 403/429/503 from WAF. Cloudflare is passive CDN only - per SKILL.md rule cf-ray + ALL 200 + no rule firing = hasWaf:false. DB hasWaf=true is self-contradictory with wafType=cloudflare-passive and was the root cause of perPage=20 throttle.",
+      "agree_with_r1": true
+    },
+    {
+      "field": "wafType",
+      "r1Value": "cloudflare-passive",
+      "r2Value": "cloudflare-passive",
+      "confidence": "high",
+      "evidence": "Live re-probe 2026-05-15T18:53Z. cf-ray header every batch (e.g. 9fc459203f36f46c-YYZ), __cf_bm cookie set, Server: cloudflare. Zero mitigation evidence - agreeing with R1.",
+      "agree_with_r1": true
+    },
+    {
+      "field": "perPage",
+      "r1Value": 50,
+      "r2Value": 20,
+      "confidence": "high",
+      "evidence": "Live verification 2026-05-15T18:54Z: default category page (/accessories/ with no limit param) returns exactly 20 unique data-product-id values. /accessories/?limit=2500 returns 1438 (full category, honored). R1 shipped 50 as a 'conservative baseline' but NEVER verified ?limit=50 - that's a guess between the verified data points 20 (default) and 2500 (ceiling). DB perPage=20 was correct as the platform default. RECOMMENDATION: ship 100 (verified at limit=500 on firearms-and-stocks=441 and limit=2500 on accessories=1438; 100 is a well-honored mid-range value that halves request count vs 50 with no risk) - but operator may choose to stay at 20 if conservative. Set to 20 here to match what the platform actually serves and require an explicit operator decision to raise.",
+      "agree_with_r1": false
+    },
+    {
+      "field": "catalogUrls",
+      "r1Value": [
+        "https://nordicmarksman.com/accessories/?sort=newest",
+        "https://nordicmarksman.com/ammunition/?sort=newest",
+        "https://nordicmarksman.com/apparel-and-gear/?sort=newest",
+        "https://nordicmarksman.com/biathlon/?sort=newest",
+        "https://nordicmarksman.com/cleaning/?sort=newest",
+        "https://nordicmarksman.com/firearms-and-stocks/?sort=newest",
+        "https://nordicmarksman.com/hunting-essentials/?sort=newest",
+        "https://nordicmarksman.com/optics-lights/?sort=newest",
+        "https://nordicmarksman.com/reloading/?sort=newest",
+        "https://nordicmarksman.com/shotguns/?sort=newest",
+        "https://nordicmarksman.com/spare-parts/?sort=newest"
+      ],
+      "r2Value": [
+        "https://nordicmarksman.com/accessories/?sort=newest",
+        "https://nordicmarksman.com/ammunition/?sort=newest",
+        "https://nordicmarksman.com/apparel-and-gear/?sort=newest",
+        "https://nordicmarksman.com/biathlon/?sort=newest",
+        "https://nordicmarksman.com/cleaning/?sort=newest",
+        "https://nordicmarksman.com/firearms-and-stocks/?sort=newest",
+        "https://nordicmarksman.com/hunting-essentials/?sort=newest",
+        "https://nordicmarksman.com/optics-lights/?sort=newest",
+        "https://nordicmarksman.com/reloading/?sort=newest",
+        "https://nordicmarksman.com/shotguns/?sort=newest",
+        "https://nordicmarksman.com/spare-parts/?sort=newest"
+      ],
+      "confidence": "high",
+      "evidence": "Walked all 11 URLs 2026-05-15T18:52Z with 1s delay between fetches. ALL 200, all serve product cards: accessories=261 card-class hits, ammunition=242, apparel-and-gear=241, biathlon=265, cleaning=241, firearms-and-stocks=241 (pids 22002..22000 = newest), hunting-essentials=251, optics-lights=245, reloading=245, shotguns=241 (pids 22002..22000 same newest as firearms-and-stocks - product appears in both cats), spare-parts=241. Sort monotonicity: firearms-and-stocks page 1 = 22002,22001,22000,21999,21998 and page 2 = 21918,21917,21916,21915,21913 - strictly descending pids, zero overlap. Default-vs-sort=newest same first product (canuck-pioneer-pump, pid 22002) confirming default IS newest on BC Stencil. R1's exclusions verified: /archery/ exists (200, pids 21307,21306,21305 - pure bow/arrow non-firearm, EXCLUDE OK per Rule firearm-relevance); /manufacturer/ exists (200, 367KB) but is a brand-tree aggregator over product-categories that are already covered (EXCLUDE OK per Rule overlap). /categories.php (DB's value) verified to be the BC Stencil 'category index' page - title `<title>Categories - Nordic Marksman</title>`, only 20 product cards which is unrelated featured-products, NOT a per-category product listing - DB's catalogUrl was a platform-default placeholder from initial onboarding, not a valid catalog URL.",
+      "agree_with_r1": true
+    },
+    {
+      "field": "productCountMethod",
+      "r1Value": {
+        "method": "sitemap-index",
+        "urls": ["/xmlsitemap.php?type=products&page=1", "/xmlsitemap.php?type=products&page=2"]
+      },
+      "r2Value": {
+        "method": "sitemap-index",
+        "urls": ["/xmlsitemap.php?type=products&page=1", "/xmlsitemap.php?type=products&page=2"]
+      },
+      "confidence": "high",
+      "evidence": "SCHEMA MISMATCH IN DB CONFIRMED BY RUNTIME REPRO. DB stores {method:'sitemap', sitemapUrls:[...], lastCount:4605}. Runtime code at backend/src/services/product-count-probe.ts:204-210 case 'sitemap' reads `${origin}${m.url}` (singular `url` field). With DB shape, `m.url` is undefined and the computed URL is literally `https://nordicmarksman.comundefined/` - DNS lookup fails (ENOTFOUND nordicmarksman.comundefined, reproduced 2026-05-15T18:55Z via /backend/_audit_tmp/test_nm_schema.ts). Outer try/catch at line 453-456 swallows the error and returns null. Today the bug is masked because verifyBootstrapCoverage line 477 short-circuits when stored expectedProductCount is non-null (DB has 4605), but ANY fresh-probe path (operator clears expectedProductCount; new site onboarded with same wrong shape; reconcile job) will silently get null. Correct schema is the canonical 'sitemap-index' branch (lines 212-224) which reads `m.urls` (plural). Live verification 2026-05-15T18:52Z: /xmlsitemap.php?type=products&page=1 = 3023 <loc>, /xmlsitemap.php?type=products&page=2 = 1688 <loc>, sum = 4711.",
+      "agree_with_r1": true
+    },
+    {
+      "field": "expectedProductCount",
+      "r1Value": 4711,
+      "r2Value": 4711,
+      "confidence": "high",
+      "evidence": "Re-counted live 2026-05-15T18:52Z: sitemap page 1 = 3023 locs, page 2 = 1688 locs, sum = 4711. DB value 4605 is from 2026-04-08 (37 days stale). Net +106 products = ~2.9 products/day, consistent with active retailer. Agreeing with R1.",
+      "agree_with_r1": true
+    }
+  ],
+  "r1_fields_left_unchanged": [
+    "profileVersion",
+    "platform",
+    "adapterType",
+    "wafLastProbedAt",
+    "wafProbeMethod",
+    "wafProbeResult",
+    "wafProbeEvidence",
+    "hasCaptcha",
+    "captchaType",
+    "ageGate",
+    "userAgentOverride",
+    "needsPlaywright",
+    "extractionTested",
+    "extractionSample",
+    "sortParam",
+    "sortVerified",
+    "paginationPattern",
+    "crawlers",
+    "topLevelCategories",
+    "lastVerified",
+    "auditNotes"
+  ],
+  "fields_db_carries_that_r1_omitted_correctly": [
+    "searchUrl (/search.php?search_query={keyword} - DB correct, R1 omitted as Stage 3 candidate scope gap; recommend skill harness gap closure)",
+    "siteCategory, crawlPhase, budget, timeout, t1IntervalMin, hasRateLimit, name, domain (operator-set runtime tunings; not pre-bootstrap output)",
+    "crawlers.maintain.cooldowns/tierShares/tierWindows (operator-set)",
+    "crawlers.bootstrap.method/htmlFallback (operator-set)",
+    "dataFlow (audit-trail residue)"
+  ],
+  "runtime_impact_notes": {
+    "hasWaf_db_true_today": "DB hasWaf=true today causes catalog-crawler.ts to gate behavior: WAF cookie manager invoked, perPage clamped, longer delays. With wafType=cloudflare-passive and zero rule firings, this is pure overhead. Flipping to false removes the gate.",
+    "productCountMethod_schema_drift": "DB shape {method:'sitemap', sitemapUrls:[...]} fails closed (silent null) when probed. Today masked by lastCount/expectedProductCount cache. Re-write to canonical {method:'sitemap-index', urls:[...]} so any fresh probe works.",
+    "catalogUrls_placeholder": "DB ['/categories.php'] is BC's category-index landing page (20 unrelated featured cards). Crawlers reading this for catalog walks would only ever see 20 products. The 4605 lastCount in DB came from the sitemap probe, NOT from a catalog walk - coverage gate isAcceptable check (dbCount/expectedCount) is the only thing that would catch this drift today."
+  }
+}

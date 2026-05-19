@@ -1,6 +1,7 @@
 import axios from 'axios';
 import vm from 'vm';
 import crypto from 'crypto';
+import { spawn } from 'child_process';
 import { normalizeDomain } from './utils/url';
 
 // ── Deterministic user agent selection ───────────────────────────────────────
@@ -273,6 +274,12 @@ export async function fetchPage(url: string, cookies?: string, options?: FetchOp
 
 /**
  * Native fetch fallback for servers with non-standard HTTP headers that Axios can't parse.
+ *
+ * On Node 24, the native (undici-based) fetch also rejects malformed headers — Celerant
+ * ColdFusion emits headers like `X-Frame-Options : SAMEORIGIN` (literal space before colon)
+ * which violates RFC 7230. When fetch fails with a parse error we fall through to a
+ * curl child-process spawn, which is the only HTTP client lenient enough to accept those
+ * responses on Node 24.
  */
 async function nativeFetchFallback(
   url: string,
@@ -283,22 +290,147 @@ async function nativeFetchFallback(
   const fetchHeaders: Record<string, string> = { ...headers };
   if (cookies) fetchHeaders['Cookie'] = cookies;
 
-  const resp = await fetch(url, {
-    headers: fetchHeaders,
-    redirect: 'follow',
-    signal: AbortSignal.timeout(15000),
+  try {
+    const resp = await fetch(url, {
+      headers: fetchHeaders,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const html = await resp.text();
+    const responseTimeMs = Date.now() - startTime;
+
+    return {
+      html,
+      responseTimeMs,
+      statusCode: resp.status,
+      signals: { hasWaf: false, hasRateLimit: false, hasCaptcha: false },
+      headers: Object.fromEntries(resp.headers.entries()),
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Node 24 undici-based fetch fails on malformed headers — fall through to curl.
+    if (
+      msg.includes('Parse Error') ||
+      msg.includes('HPE_INVALID') ||
+      msg.includes('header parsing failed') ||
+      msg.includes('Invalid header')
+    ) {
+      console.log(`[HTTP] Native fetch parse error for ${url}, falling back to curl-spawn`);
+      return await curlSpawnFallback(url, headers, cookies);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Last-resort fallback: spawn `curl` as a child process. Curl is the only HTTP client
+ * lenient enough to parse Celerant-style malformed headers on Node 24. Used only when
+ * both axios and native fetch fail with HPE_INVALID_HEADER_TOKEN / parse errors.
+ *
+ * Requires `curl` to be on PATH (default on Windows 10+, macOS, and most Linux distros).
+ */
+async function curlSpawnFallback(
+  url: string,
+  headers: Record<string, string>,
+  cookies?: string,
+): Promise<FetchResult> {
+  const startTime = Date.now();
+
+  const args: string[] = [
+    '-sSL',           // silent + show errors + follow redirects
+    '--max-time', '15',
+    '-i',             // include response headers in stdout
+    '--compressed',   // accept gzip/deflate
+  ];
+  for (const [key, value] of Object.entries(headers)) {
+    args.push('-H', `${key}: ${value}`);
+  }
+  if (cookies) args.push('-H', `Cookie: ${cookies}`);
+  args.push(url);
+
+  return await new Promise<FetchResult>((resolve, reject) => {
+    const proc = spawn('curl', args, { windowsHide: true });
+    const stdoutChunks: Buffer[] = [];
+    let stderr = '';
+    let settled = false;
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+
+    proc.stdout.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
+    proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+
+    const timeoutHandle = setTimeout(() => {
+      proc.kill();
+      finish(() => reject(new Error(`curl-spawn timeout after 18s for ${url}`)));
+    }, 18000);
+
+    proc.on('error', (err) => {
+      clearTimeout(timeoutHandle);
+      finish(() => reject(new Error(`curl-spawn failed to start: ${err.message}`)));
+    });
+
+    proc.on('close', (code) => {
+      clearTimeout(timeoutHandle);
+      if (code !== 0) {
+        finish(() => reject(new Error(`curl-spawn exit code ${code} for ${url}: ${stderr.substring(0, 200)}`)));
+        return;
+      }
+      const responseTimeMs = Date.now() - startTime;
+      const fullOutput = Buffer.concat(stdoutChunks).toString('utf-8');
+
+      // With -L, curl emits one header block per redirect hop, separated by blank lines.
+      // We want the LAST header block (final response) + everything after it (body).
+      const blocks = fullOutput.split(/\r?\n\r?\n/);
+      let statusBlockIdx = -1;
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        if (/^HTTP\/[\d.]+\s+\d+/.test(blocks[i])) {
+          statusBlockIdx = i;
+          break;
+        }
+      }
+
+      if (statusBlockIdx === -1) {
+        // Couldn't find a status line — return raw output as body, 200 OK.
+        finish(() => resolve({
+          html: fullOutput,
+          responseTimeMs,
+          statusCode: 200,
+          signals: { hasWaf: false, hasRateLimit: false, hasCaptcha: false },
+          headers: {},
+        }));
+        return;
+      }
+
+      const headerLines = blocks[statusBlockIdx].split(/\r?\n/);
+      const statusMatch = headerLines[0].match(/HTTP\/[\d.]+\s+(\d+)/);
+      const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : 200;
+
+      const responseHeaders: Record<string, string> = {};
+      for (let i = 1; i < headerLines.length; i++) {
+        const idx = headerLines[i].indexOf(':');
+        if (idx > 0) {
+          const name = headerLines[i].substring(0, idx).trim().toLowerCase();
+          const value = headerLines[i].substring(idx + 1).trim();
+          responseHeaders[name] = value;
+        }
+      }
+
+      const body = blocks.slice(statusBlockIdx + 1).join('\n\n');
+
+      finish(() => resolve({
+        html: body,
+        responseTimeMs,
+        statusCode,
+        signals: { hasWaf: false, hasRateLimit: false, hasCaptcha: false },
+        headers: responseHeaders,
+      }));
+    });
   });
-
-  const html = await resp.text();
-  const responseTimeMs = Date.now() - startTime;
-
-  return {
-    html,
-    responseTimeMs,
-    statusCode: resp.status,
-    signals: { hasWaf: false, hasRateLimit: false, hasCaptcha: false },
-    headers: Object.fromEntries(resp.headers.entries()),
-  };
 }
 
 /**

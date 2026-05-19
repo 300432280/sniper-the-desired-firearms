@@ -1,0 +1,150 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-15T18:25:54Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200; cf-ray present (Cloudflare in front but passive). Honeypot /wp-admin, /.env, /.git/config return 403 (origin defaults — BC is not WordPress). SQLi/XSS payloads return 200 (no active rule-selective WAF). No MalCare/Wordfence/sgcaptcha/Incapsula body markers in batches 2-8.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: 9fc4302729ac39d8-YYZ", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 returned 200 (no rate-limit triggered)",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-admin (403 — BC origin default)", "/wp-login.php (403)", "/.env (403)", "/.git/config (403)"],
+    "botUaBlocked": false,
+    "bcRayHeader": "BC-Ray: 1"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 8173,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "https://wolverinesupplies.com/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "https://wolverinesupplies.com/firearms/?limit=250",
+    "https://wolverinesupplies.com/ammunition/?limit=250",
+    "https://wolverinesupplies.com/AIRGUNSM/?limit=250",
+    "https://wolverinesupplies.com/optics/?limit=250",
+    "https://wolverinesupplies.com/parts/?limit=250",
+    "https://wolverinesupplies.com/reloading/?limit=250",
+    "https://wolverinesupplies.com/apparel/?limit=250",
+    "https://wolverinesupplies.com/surplus/?limit=250",
+    "https://wolverinesupplies.com/used/?limit=250",
+    "https://wolverinesupplies.com/outdoors/?limit=250",
+    "https://wolverinesupplies.com/training/?limit=250",
+    "https://wolverinesupplies.com/gearandkit/?limit=250",
+    "https://wolverinesupplies.com/FIREARMS-ACCESSORIES/?limit=250",
+    "https://wolverinesupplies.com/storagemaintenance/?limit=250",
+    "https://wolverinesupplies.com/gifts-gadgets-media-more/?limit=250"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://wolverinesupplies.com/used-rem-870-20ga-pa-with-18-5-barrel-28-barrel-knox-stock-mag-extension/",
+      "title": "Used Rem 870 .20ga PA with 18.5\" Barrel +28\" barrel knox stock+ mag extension",
+      "price": 750.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://wolverinesupplies.com/eotech-vudu-1-6x24-sr3-reticle-ffp-moa/",
+      "title": "Eotech Vudu 1-6x24 SR3 Reticle FFP MOA",
+      "price": null,
+      "stockStatus": "unknown",
+      "priceVisible": false
+    },
+    {
+      "url": "https://wolverinesupplies.com/grey-ghost-pvc-narcan-patch-1-5-x1-5-velcro/",
+      "title": "Grey Ghost PVC Narcan Patch 1.5\"x1.5\" Velcro",
+      "price": null,
+      "stockStatus": "unknown",
+      "priceVisible": false
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "BC Stencil default page-1 sort is newest-first (verified: /firearms/ default DOM order returns IDs 9026, 9016, 9013 — descending product IDs). Counter-control ?sort=alphaasc shifts first product to ID 544 (alphabetic A-to-Z), confirming sort is honored. Walks page 1 backward to find watermark, then forward to index new products."
+    },
+    "bootstrap": {
+      "apiEndpoints": {}
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav-crawl",
+    "categories": [
+      { "slug": "/firearms/", "allOption": 629 },
+      { "slug": "/ammunition/", "allOption": 462 },
+      { "slug": "/AIRGUNSM/", "allOption": 8 },
+      { "slug": "/optics/", "allOption": 942 },
+      { "slug": "/parts/", "allOption": 1206 },
+      { "slug": "/reloading/", "allOption": 264 },
+      { "slug": "/apparel/", "allOption": 131 },
+      { "slug": "/surplus/", "allOption": 26 },
+      { "slug": "/used/", "allOption": 6 },
+      { "slug": "/outdoors/", "allOption": 202 },
+      { "slug": "/training/", "allOption": 0 },
+      { "slug": "/gearandkit/", "allOption": 291 },
+      { "slug": "/FIREARMS-ACCESSORIES/", "allOption": 1157 },
+      { "slug": "/storagemaintenance/", "allOption": 400 },
+      { "slug": "/gifts-gadgets-media-more/", "allOption": 34 }
+    ],
+    "totalsSumCheck": "Sum of category allOptions = 5758. Walked-union (dedup by product ID) = 5697 (overlap ~61). Sitemap (https://wolverinesupplies.com/xmlsitemap.php?type=products&page=1) shows 8173 product URLs — gap of ~2476 vs walked-union likely due to OOS/hidden products absent from category listings (BC Stencil quirk). Per skill Rule C: sitemap is canonical inventory; per-cat union is the achievable crawler coverage."
+  },
+  "lastVerified": "2026-05-15",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-15T18-43-52Z",
+    "probeIp": "audit-host (re-verify WAF section from production crawler IP before promotion — Cloudflare may apply different rules)",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high (8/8 batches 200, cf-ray passive)",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "needsPlaywright": "high (100 products in plain HTTP HTML)",
+      "expectedProductCount": "high (sitemap)",
+      "catalogUrls": "high (full walk + ID dedup on all 15 candidates)",
+      "sortParam": "high (3-outcome counter-control verified)",
+      "sortVerified": "high",
+      "perPage": "high (?limit=2500 returned 1206 products in 5s; ?limit=250 zero-overlap confirmed)",
+      "paginationPattern": "high (page1 vs page2 zero-overlap)",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage 1: Apex returns 200 cleanly; www 301-redirects to apex. Canonical = https://wolverinesupplies.com.",
+      "Stage 2: Heavy 8-batch probe — all 200, cf-ray present, no challenges. Honeypot /wp-admin etc. 403 because BC isn't WordPress (origin default). No CAPTCHA markers, no age-gate. hasWaf=false (operational; cf-ray passive doesn't gate the crawler).",
+      "Stage 3: Meta tag <meta name='platform' content='bigcommerce.stencil' /> + cdn11.bigcommerce.com + x-bc-store-id: 1003335859 + BC-Ray header. Plain HTTP returns 100 products on /firearms/ -> needsPlaywright=false.",
+      "Stage 4: 15 top-level categories from homepage nav. Walked all 15 (with sleep 0.8s between requests). Per-cat union = 5697 unique IDs; shop-all aggregator walks 5579 (less than per-cat -> dropped). /training/ returns 200 with 0 products -> kept (empty != dead per skill rule). Sitemap shows 8173 product URLs; gap is OOS/hidden BC products absent from category pages.",
+      "Stage 4g: Extraction sample on 3 products -> all yielded title + URL + price/stock (one in_stock with $750, two unknown stockStatus due to listing-only context).",
+      "Stage 5: Pagination = ?page=N query. Page1 vs page2 zero-overlap confirmed (page1 IDs 6788,6791,6793 vs page2 5858,5859,5860). perPage probed: ?limit=2500 returned full /parts/ category (1206 products) in 5s. Conservative perPage=250 baked into catalogUrls.",
+      "Stage 6: 3-outcome test on /firearms/. default DOM order = IDs 9026,9016,9013 (descending); ?sort=newest = same; ?sort=alphaasc = 544,545,941 (alphabetic). Verdict: honored-default-is-newest. sortParam='?sort=newest' (explicit) for clarity; sortVerified=true.",
+      "Stage 7: Watermark = navigate-from-watermark. Default page 1 is newest-first. Walks backward to find watermark, forward to index new.",
+      "Stage 8: Sitemap method — /xmlsitemap.php?type=products&page=1 returns 8173 <loc> entries (all product URLs, no category/brand mixing). Verified second page (?page=2) returns 404 — single-page sitemap. Walked-union (5697) under-counts vs sitemap due to BC Stencil OOS hidden on category pages — sitemap is canonical inventory."
+    ]
+  }
+}

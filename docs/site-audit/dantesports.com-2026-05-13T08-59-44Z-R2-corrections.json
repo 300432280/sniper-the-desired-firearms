@@ -1,0 +1,147 @@
+{
+  "runId": "dantesports.com-2026-05-13T08-59-44Z-R2",
+  "site": "dantesports.com",
+  "method": "live-probe",
+  "purpose": "Round-2 corrections to R1 candidate. Live-probed every divergent field with method DIFFERENT from R1.",
+  "r1Reference": "docs/site-audit/dantesports.com-2026-05-13T08-18-57Z-R1.json",
+  "dbSnapshot": "2026-04-30T08:00:45Z (from DB MonitoredSite.siteProfile)",
+  "fieldCorrections": [
+    {
+      "field": "catalogUrls",
+      "r1Value": "19 entries (16 top-level + 3 subcat: vetements, entretien-d-arme-a-feu-2, lance-pigeon)",
+      "r2CorrectedValue": [
+        "/fr/categorie-produit/armes-a-feu/",
+        "/fr/categorie-produit/optiques/",
+        "/fr/categorie-produit/accessoires/",
+        "/fr/categorie-produit/autre-fr/",
+        "/fr/categorie-produit/munitions/",
+        "/fr/categorie-produit/pieces-et-accessoires-a/",
+        "/fr/categorie-produit/armes-a-air-comprime/",
+        "/fr/categorie-produit/entreposage/",
+        "/fr/categorie-produit/30-jours-de-bushnell/",
+        "/fr/categorie-produit/couteaux/",
+        "/fr/categorie-produit/winchester-historical/",
+        "/fr/categorie-produit/permis/",
+        "/fr/categorie-produit/non-classe/",
+        "/fr/categorie-produit/rugeramericangen2/",
+        "/fr/categorie-produit/rechargement/",
+        "/fr/categorie-produit/promopmc/"
+      ],
+      "confidence": "high",
+      "evidence": "Live HTML walk of /fr/categorie-produit/accessoires/ p1..p25 yielded 293 unique product slugs matching Store API ?category=540 total of 293. ALL 6 sampled subcat products (3 from entretien-d-arme-a-feu-2 + 3 from lance-pigeon) APPEAR in the parent /accessoires/ walk. /autre-fr/ walk yields 267 unique vs Store API 265 (within rounding); all 3 sampled vetements products appear in /autre-fr/. WP REST /fr/wp-json/wp/v2/product walk + cat-ancestor cross-reference: 0 orphans against 16-cat set. R1's orphan analysis used WC Store API categories[] which silently OMITS 'Uncategorized' assignments (cat 2305 non-classe) — that's the source of R1's false 32-orphan finding. The 3 extra subcat URLs are harmless duplicates, NOT required for coverage.",
+      "method": "WP-REST cat-id walk + HTML inclusion test (R1 used Store API categories[] which has the Uncategorized blind spot)"
+    },
+    {
+      "field": "expectedProductCount",
+      "r1Value": 2117,
+      "r2CorrectedValue": 2117,
+      "confidence": "high",
+      "evidence": "Three independent endpoints confirm /fr/ total = 2117: (a) /fr/wp-json/wc/store/v1/products?per_page=1 x-wp-total=2117; (b) bare-origin /wp-json/wc/store/v1/products?per_page=1 x-wp-total=2117 (what the woocommerce adapter actually hits); (c) full 22-page WP REST walk dedupe = 2117. /en/ side returns 2116 (one untranslated product). DB stored 2086 from April; site grew by ~30 products.",
+      "method": "Triple-endpoint x-wp-total confirmation + full walk dedupe"
+    },
+    {
+      "field": "productCountMethod",
+      "r1Value": {"method": "wp-rest-header", "endpoint": "/fr/wp-json/wc/store/v1/products", "header": "x-wp-total"},
+      "r2CorrectedValue": {"method": "wp-rest-header", "endpoint": "/wp-json/wc/store/v1/products", "header": "x-wp-total"},
+      "confidence": "high",
+      "evidence": "Read of product-count-probe.ts:149 confirms: switch on m.method, expects object shape. DB's bare string 'wp-rest-api' falls through default→null (silently disabled). R1's object shape is correct; one tweak: drop the /fr/ prefix because (a) bare origin /wp-json/wc/store/v1/products returns x-wp-total=2117 (same as /fr/), and (b) bare-origin matches what woocommerce adapter actually hits in catalog/watermark crawls — keeps probe consistent with crawler. Both work; bare-origin is the runtime-aligned form.",
+      "method": "Code-path trace + live HTTP test on bare-origin endpoint"
+    },
+    {
+      "field": "perPage",
+      "r1Value": 48,
+      "r2CorrectedValue": 48,
+      "confidence": "high",
+      "evidence": "Bracket-probed /fr/categorie-produit/armes-a-feu/ pagination-link analysis: ?per_page=12 → max-page=92 (ceil 1099/12), ?per_page=24 → 46, ?per_page=48 → 23 (ceil 1099/48), ?per_page=100 → 92 (silent fallback). Honored fixed set is {12, 24, 48}; 36 also drops to 12. R1's 48 = max verified cap. DB's 12 records the floor/default, not max.",
+      "method": "perPage bracket probe via last-page link in pagination block"
+    },
+    {
+      "field": "wafType",
+      "r1Value": "cloudflare-active",
+      "r2CorrectedValue": "cloudflare-active",
+      "confidence": "medium",
+      "evidence": "Live battery: browser-UA on /fr/ + /fr/categorie-produit/armes-a-feu/ + /fr/wp-json/wc/store/v1/products → all 200. curl/8.0.1 UA → 403 (edge UA filter active). XSS payload (browser UA) → 403 + CF block page. SQLi payload → 200 (not blocked). 10-burst browser UA → 10/10 200s (no rate-limit on legitimate UA). Net: Cloudflare with rule-selective edge filtering — bot UA + payload signatures fire 403, normal traffic always 200. SKILL.md line 200 vs 205 are mutually exclusive on this case. Operational impact (perPage drops to 20 in catalog-crawler.ts) is real but production crawler uses browser UA which returns 200. DB's 'cloudflare-passive' is defensible. Operator should decide; recording 'active' is the conservative pick.",
+      "method": "5-vector WAF battery with normal-path browser UA verification",
+      "skillGap": "SKILL.md needs explicit rule: rule-fired 403 on synthetic payloads (XSS, bot UA) when normal browser-UA paths return 200 → keep cloudflare-passive; rule-fired 403 on a real crawler path → cloudflare-active."
+    },
+    {
+      "field": "apexRedirect",
+      "r1Value": "/ → /fr/ (302)",
+      "r2CorrectedValue": "UA-conditional: desktop Chrome UA → 302 to /fr/; iPhone Safari UA → 200 (FR content served at apex). Production runtime uses Chrome UA → sees 302.",
+      "confidence": "high",
+      "evidence": "curl tests: (a) iPhone Safari UA → HTTP 200 with /fr/ rest-api link header; (b) Chrome Win64 UA → HTTP 302 Location=https://dantesports.com/fr/. The redirect-or-rewrite differs by UA — WPML detection logic varies.",
+      "method": "UA-matrix redirect probe (R1 tested only one UA)"
+    },
+    {
+      "field": "crawlers.watermark.apiEndpoint",
+      "r1Value": "/fr/wp-json/wc/store/v1/products",
+      "r2CorrectedValue": "/wp-json/wc/store/v1/products",
+      "confidence": "high",
+      "evidence": "Read of woocommerce.ts:340,422,530: adapter hardcodes endpoint as `${origin}/wp-json/wp/v2/product` and `${origin}/wp-json/wc/store/v1/products` — uses bare origin (no language prefix). siteProfile.crawlers.watermark.apiEndpoint is NOT consumed by the adapter; it's documentation-only. Bare origin returns x-wp-total=2117 (FR catalog by default). Recording /fr/ prefix is misleading: the runtime adapter ignores it and hits bare path. Both DB's /en/ and R1's /fr/ are non-functional decorations — the actual runtime endpoint is bare-origin which returns FR by default.",
+      "method": "Runtime-code trace + live HTTP test on bare-origin endpoint",
+      "skillGap": "SKILL.md Stage 7 should warn that crawlers.watermark.apiEndpoint with language prefix is decoration-only for woocommerce adapter."
+    },
+    {
+      "field": "needsPlaywright",
+      "r1Value": false,
+      "r2CorrectedValue": false,
+      "confidence": "high",
+      "evidence": "Plain GET on /fr/categorie-produit/armes-a-feu/?per_page=48 returns 349 KB HTML with 48 server-rendered <li class=product> elements + 0 SPA markers (no __next, no react-dom, no __INITIAL_STATE). extractCatalogProducts (generic-retail.ts:931 'li.product' selector) will find them directly.",
+      "method": "SPA-marker scan + server-render product-element count"
+    },
+    {
+      "field": "sortParam",
+      "r1Value": "?orderby=date",
+      "r2CorrectedValue": "?orderby=date",
+      "confidence": "high",
+      "evidence": "3-outcome test on /fr/categorie-produit/armes-a-feu/: default vs ?orderby=date have IDENTICAL first slugs ('canuck-wrangler-regulator-action-a-levier-357-mag'); ?orderby=price first slug differs ('charles-daly-101-un-coup-410-ga'). Confirms default == date (newest first).",
+      "method": "3-outcome counter-control test"
+    },
+    {
+      "field": "crawlers.watermark.method",
+      "r1Value": "api-date-since-watermark",
+      "r2CorrectedValue": "api-date-since-watermark",
+      "confidence": "high",
+      "evidence": "2-probe on 3 endpoints (Store /fr/, WP REST /fr/, WP REST /en/): after=2099-01-01 → 0 on all; after=1999-01-01 → matches global total on all. Date filter honored.",
+      "method": "2-probe future-vs-past on multiple endpoints"
+    },
+    {
+      "field": "paginationPattern",
+      "r1Value": {"type":"path","template":"/page/{N}/","perPage":48,"firstPageHasParam":false,"startPage":1,"zeroIndexed":false},
+      "r2CorrectedValue": {"type":"path","template":"/page/{N}/","perPage":48,"firstPageHasParam":false,"startPage":1,"zeroIndexed":false},
+      "confidence": "high",
+      "evidence": "Direct fetch /fr/categorie-produit/accessoires/page/2/ through /page/25/ all return 200 with new products. /page/26/ returns 404. Pattern confirmed.",
+      "method": "Walked /page/N/ on accessoires"
+    }
+  ],
+  "convergent": {
+    "platform": "woocommerce",
+    "adapterType": "woocommerce",
+    "hasWaf": true,
+    "hasCaptcha": false,
+    "ageGate.detected": false,
+    "paginationPattern.type": "path"
+  },
+  "summary": {
+    "totalFieldsReviewed": 11,
+    "correctionsAccepted": 3,
+    "r1Refuted": 1,
+    "r1AndDbBothWrong": 1,
+    "r1AndDbAgree": 0,
+    "inconclusive": 1,
+    "highConfidence": 10,
+    "mediumConfidence": 1,
+    "topCorrections": [
+      "catalogUrls: REJECT R1's 3 extra subcat URLs (R1 was misled by Store-API Uncategorized blind spot; HTML inclusion test proves parent cat /accessoires/ covers all 6 sampled descendant products, and /autre-fr/ covers all 3 vetements products)",
+      "productCountMethod.endpoint + crawlers.watermark.apiEndpoint: drop /fr/ prefix → /wp-json/wc/store/v1/products (woocommerce adapter hardcodes bare origin; siteProfile language-prefixed endpoint is decoration-only)",
+      "wafType=cloudflare-active vs cloudflare-passive: genuinely inconclusive (SKILL self-contradicts); recording 'active' is conservative but DB's 'passive' defensible"
+    ]
+  },
+  "skillGapsFound": [
+    "SKILL Stage 4d 'parent cat does NOT include subcat products' assumption is theme-dependent and on this site is FALSE. Need an HTML inclusion test as the canonical method: walk parent cat HTML, look up a known subcat product slug, verify it appears.",
+    "Audit harness must use WP REST product_cat field (not WC Store API categories[]) when computing category coverage. Store API silently omits 'Uncategorized' (cat 2305 non-classe) assignments — caused R1's false 32-orphan finding.",
+    "SKILL.md Stage 2 cf-active vs cf-passive: line 200 says 'any 5xx/challenge → active' but rule-fired 403 on synthetic payloads (XSS, bot UA) isn't 5xx. Line 205 says 'all 200 → passive' but bot UA always 403. Need clearer rule.",
+    "SKILL Stage 7 should warn that crawlers.watermark.apiEndpoint with language prefix is decoration-only on woocommerce adapter — adapter hardcodes bare-origin endpoints. WPML language scoping happens at the site (bare origin defaults to default-language), not via profile field."
+  ],
+  "notes": "NO DB writes. All probes 800ms-delayed. UA: Chrome Win64 for normal probes; iPhone Safari + curl/8.0.1 for WAF battery only."
+}

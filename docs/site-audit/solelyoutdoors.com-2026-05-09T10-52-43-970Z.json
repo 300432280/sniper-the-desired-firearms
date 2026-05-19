@@ -1,0 +1,191 @@
+{
+  "profileVersion": 1,
+
+  "platform": "lightspeed-ecom",
+  "adapterType": "generic-retail",
+
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-09T10:38:19Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare-passive (cf-ray on every request, x-shop-id from origin). All normal GETs return 200. Honeypot paths /wp-login.php /xmlrpc.php /.env /.git/config /phpinfo.php return 403 with 5498-byte canned body — Cloudflare WAF active rules. SQLi UNION query → 403; plain SQLi quote → 200; XSS → 200. Apex (solelyoutdoors.com) 301 → www. No CAPTCHA, no age-gate. Verdict: Cloudflare-passive (active WAF rules but no JS-challenge interstitial on normal product/catalog paths).",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "__cf_bm cookie", "Server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "200 (10/10 across ~7s)",
+    "sqliRuleFired": true,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": true,
+    "honeypotPathStatus": "/wp-login.php=403, /xmlrpc.php=403, /.env=403, /.git/config=403, /phpinfo.php=403, /wp-admin/=404",
+    "botUaBlocked": false,
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "originHeader": "x-shop-id: 613284 (Lightspeed eCom shop ID)"
+  },
+
+  "hasCaptcha": false,
+  "captchaType": null,
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 1761,
+  "productCountMethod": "generic-product-sitemap",
+
+  "catalogUrls": [
+    "https://www.solelyoutdoors.com/ammunition/bulk-ammo/?sort=newest",
+    "https://www.solelyoutdoors.com/ammunition/handgun-ammo/?sort=newest",
+    "https://www.solelyoutdoors.com/ammunition/rifle-ammo/?sort=newest",
+    "https://www.solelyoutdoors.com/ammunition/rim-fire-ammo/?sort=newest",
+    "https://www.solelyoutdoors.com/ammunition/shotgun-ammo/?sort=newest",
+    "https://www.solelyoutdoors.com/archeryairgunsairsoft-slingshots/airguns/?sort=newest",
+    "https://www.solelyoutdoors.com/archeryairgunsairsoft-slingshots/airsoft/?sort=newest",
+    "https://www.solelyoutdoors.com/archeryairgunsairsoft-slingshots/archery/?sort=newest",
+    "https://www.solelyoutdoors.com/archeryairgunsairsoft-slingshots/slingshots/?sort=newest",
+    "https://www.solelyoutdoors.com/camping/?sort=newest",
+    "https://www.solelyoutdoors.com/firearms/barrels/?sort=newest",
+    "https://www.solelyoutdoors.com/firearms/non-restricted/?sort=newest",
+    "https://www.solelyoutdoors.com/firearms/restricted-rifles/?sort=newest",
+    "https://www.solelyoutdoors.com/firearms/shotguns/?sort=newest",
+    "https://www.solelyoutdoors.com/hunting/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/fishing-knives/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/fixed-blade-knives/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/flashlights/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/folding-knives/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/hatchets-throwing-knives-axes/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/hunting-knives/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/multi-tools/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/premium-knives/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/saws/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/sharpeners/?sort=newest",
+    "https://www.solelyoutdoors.com/knivesaxesflashlights-tools/tactical-tools/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/binoculars-spotting-scopes/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/handgun-sights/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/iron-sights/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/lazer-sights/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/mounts-rails/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/range-finders/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/red-dots/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/rings/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/scopes/?sort=newest",
+    "https://www.solelyoutdoors.com/opitcs-plus/tools-accessories/?sort=newest",
+    "https://www.solelyoutdoors.com/reloading/accessories/?sort=newest",
+    "https://www.solelyoutdoors.com/reloading/brass/?sort=newest",
+    "https://www.solelyoutdoors.com/reloading/bullets-projectiles/?sort=newest",
+    "https://www.solelyoutdoors.com/reloading/dies/?sort=newest",
+    "https://www.solelyoutdoors.com/reloading/gun-powder/?sort=newest",
+    "https://www.solelyoutdoors.com/reloading/presses-equipment/?sort=newest",
+    "https://www.solelyoutdoors.com/reloading/primers/?sort=newest",
+    "https://www.solelyoutdoors.com/shooting-firearm-acessories/bipods-shooting-rests/?sort=newest",
+    "https://www.solelyoutdoors.com/shooting-firearm-acessories/magazines-clips/?sort=newest",
+    "https://www.solelyoutdoors.com/shooting-firearm-acessories/shooting-protection/?sort=newest",
+    "https://www.solelyoutdoors.com/shooting-firearm-acessories/slings-swivels/?sort=newest",
+    "https://www.solelyoutdoors.com/shooting-firearm-acessories/targets/?sort=newest",
+    "https://www.solelyoutdoors.com/shooting-firearm-acessories/tools-accessories/?sort=newest"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.solelyoutdoors.com/henry-big-boy-brass-lever-action-rifle-44mag.html",
+      "title": "Henry Henry Big Boy Brass 44 Mag/44 SPL 20\" BBL Octagon Lever Action Rifle",
+      "price": 1549.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.solelyoutdoors.com/makasi-rifle-mk-15-billet-receiver-556-186-barrel.html",
+      "title": "MAKASI RIFLE MK-15 Billet Receiver 5.56 18.6\" Barrel Pre-Order",
+      "price": 200.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.solelyoutdoors.com/beretta-1301-tactical-mod-2-gry-12ga-2-3-4-or-3-18.html",
+      "title": "Beretta 1301 Tactical MOD 2, GRY - 12GA, 2-3/4\" or 3\" 18.5\" BBL",
+      "price": 2140.00,
+      "stockStatus": "in_stock"
+    }
+  ],
+
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "suffix-replace",
+    "template": "page{N}.html?sort=newest",
+    "match": "?sort=newest",
+    "perPage": 24,
+    "firstPageHasParam": true,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Stage 6 sort verdict = honored (default first product 'norinco-type-81-sr...' != ?sort=newest first product 'henry-big-boy-brass...' != ?sort=lowest first product 'makasi-rifle-mk-15...' — counter-control swap proved sort is honored on /firearms/non-restricted/). Pagination via suffix-replace /pageN.html?sort=newest verified zero-overlap page-1 vs page-2. Independent newest-first signal confirmed via /index.rss feed (RSS items in <pubDate> DESC order)."
+    },
+    "bootstrap": {
+      "apiEndpoints": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "topLevelCategories": {
+    "source": "homepage-nav + sitemap.xml cross-check",
+    "categories": [
+      { "slug": "/ammunition", "tileOnly": true, "leafSubcats": 5 },
+      { "slug": "/archeryairgunsairsoft-slingshots", "tileOnly": true, "leafSubcats": 4 },
+      { "slug": "/camping", "tileOnly": false, "page1Products": 19, "leafSubcats": 5 },
+      { "slug": "/firearms", "tileOnly": true, "leafSubcats": 4 },
+      { "slug": "/hunting", "tileOnly": false, "page1Products": 24, "leafSubcats": 5 },
+      { "slug": "/knivesaxesflashlights-tools", "tileOnly": true, "leafSubcats": 11 },
+      { "slug": "/opitcs-plus", "tileOnly": true, "leafSubcats": 10 },
+      { "slug": "/reloading", "tileOnly": true, "leafSubcats": 8 },
+      { "slug": "/shooting-firearm-acessories", "tileOnly": true, "leafSubcats": 12 }
+    ],
+    "totalsSumCheck": "Site has 9 top-level navigation categories. 7 of 9 are tile-only landing pages that show subcategory tiles only (no products inline even with sort=newest). 2 (/camping/, /hunting/) aggregate child products on the parent. catalogUrls list uses leaf-subcategory URLs for the 7 tile-only parents + the 2 aggregating parents themselves = 48 leaf URLs total. 8 currently-empty subcategory paths (e.g. /shooting-firearm-acessories/handgun-parts/) excluded from catalogUrls because they returned 0 products at audit time and have no inventory. Sitemap.xml reports 1761 product URLs. /collection/ aggregator walk = 73 full pages * 24 + 9 final-page items = 1761 — exact match. Coverage verified."
+  },
+
+  "lastVerified": "2026-05-09",
+
+  "auditNotes": {
+    "runId": "audit-2026-05-09T10-52-43Z",
+    "harnessVersion": "AI-driven, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "fieldConfidence": {
+      "platform": "verified",
+      "hasWaf": "verified",
+      "hasCaptcha": "verified",
+      "ageGate": "verified",
+      "expectedProductCount": "verified",
+      "productCountMethod": "verified",
+      "catalogUrls": "verified",
+      "paginationPattern": "verified-via-counter-control",
+      "sortParam": "verified-via-counter-control",
+      "extractionTested": "verified",
+      "watermarkMethod": "derived",
+      "maintainVerifyMethod": "derived-from-platform"
+    },
+    "stageNotes": [
+      "Stage 1: apex solelyoutdoors.com 301 redirect to www.solelyoutdoors.com (200 OK). canonicalOrigin = https://www.solelyoutdoors.com.",
+      "Stage 2: 8-batch heavy probe. cf-ray on every batch + Server: cloudflare. /wp-login.php + /xmlrpc.php + /.env + /.git/config + /phpinfo.php = 403 (5498-byte canned body). UNION-select SQLi = 403; plain SQLi quote / XSS / no-UA = 200. No CAPTCHA in HTML. wafType=cloudflare-passive (active rules but no challenge interstitial on normal pages).",
+      "Stage 3: lightspeed-ecom (Shoplightspeed) identified via cdn.shoplightspeed.com asset URLs + 'Lightspeed Netherlands B.V.' copyright + x-shop-id: 613284 origin header + Lightspeed Nova theme (.product-grid col-* classes already supported by generic-retail.ts:73). adapterType=generic-retail. Maintain verifyMethod=detail-page (no batch product API on Lightspeed eCom storefront).",
+      "Stage 4: homepage nav yielded 9 top-level paths. 7 are tile-only parents (recursed to leaf subcategories). /camping/ + /hunting/ parents aggregate child products (kept as own catalog URLs). Total 48 leaf catalog URLs after excluding 0-product subcategories. /collection/ /promotions/ /hot-sales/ /pal-course/ excluded (aggregator / sale / non-product). All catalogUrls bake in ?sort=newest because Lightspeed default is 'popular' not 'newest'.",
+      "Stage 5: tested ?page=2&sort=newest (silently ignored — same products as page 1) and /page2.html?sort=newest (works — different products) on /firearms/non-restricted/. Mistake-26 confirmed: Lightspeed needs suffix-replace pattern. paginationPattern.type=suffix-replace, template=page{N}.html?sort=newest, match=?sort=newest.",
+      "Stage 6: <select name=sort> on /firearms/non-restricted/ exposed values: default, popular (selected), newest, lowest, highest, asc, desc. Default popular != newest != lowest first product. Counter-control test passed. sortParam=?sort=newest, sortVerified=true.",
+      "Stage 7: navigate-from-watermark. Sort verified (Stage 6). Pagination verified (Stage 5). Independent newest-first signal: /index.rss with <pubDate> per item in DESC order. No date-filter API on Lightspeed eCom storefront, so Method A (api-date-since-watermark) not available.",
+      "Stage 8: /sitemap.xml product-URL count = 1761 (filtered to root-level /<slug>.html pattern). Cross-check via /collection/ aggregator walk = 73 full pages * 24 + 9 final-page items = 1761 — exact match. productCountMethod=generic-product-sitemap.",
+      "Stage 9: candidate JSON + markdown report assembled. profileVersion=1, lastVerified=2026-05-09."
+    ]
+  }
+}
