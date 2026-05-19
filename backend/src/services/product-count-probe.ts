@@ -26,8 +26,11 @@ interface JsonApiLengthMethod {
 }
 interface HtmlPaginationMethod {
   method: 'html-pagination';
-  selector: string;   // CSS selector for last-page link/button
-  perPage: number;    // products per page (e.g. 24)
+  selector: string;   // CSS selector for last-page link/button OR a text container holding the total ("Results 1 - 40 of 2452")
+  perPage: number;    // products per page (e.g. 24). Set to 1 when `regex` extracts the TOTAL directly.
+  url?: string;       // path to fetch (e.g. '/firearms/'). Default: origin (homepage).
+  regex?: string;     // regex source applied to the selector's text to capture a number. Default '(\\d+)' (first integer).
+                      // Use 'of\\s+(\\d+)' to extract from "Results 1 - 40 of 2452" patterns.
 }
 interface SitemapMethod {
   method: 'sitemap';
@@ -36,6 +39,37 @@ interface SitemapMethod {
 interface SitemapIndexMethod {
   method: 'sitemap-index';
   urls: string[];     // e.g. ['/media/sitemaps/sitemap_product_001.xml', ...]
+}
+interface GenericProductSitemapMethod {
+  // Filtered sitemap count — only <loc> entries whose URL matches `pattern` count as products.
+  // Used on Magento 1 (ellwoodepps), Lightspeed eCom (fulcrum), and other platforms whose
+  // single /sitemap.xml mixes category and product URLs. Without a filter the raw <loc> count
+  // over-reports (each category page becomes a "product"). Default pattern strips most
+  // category URLs by requiring a .html / .htm leaf suffix.
+  method: 'generic-product-sitemap';
+  url: string;        // e.g. '/sitemap.xml'
+  pattern?: string;   // regex source; default '\\.html?(?:$|[?#])'
+}
+interface EcwidStorefrontSearchMethod {
+  // POST to Ecwid's storefront search API. Body is the Ecwid-standard
+  // {lang,pagination:{offset,limit}} shape; we read `totalProductsCount` (or whatever
+  // `field` is set to) off the JSON response. See generic-retail.ts:588 for the analogous
+  // catalog-page fetcher, which discovered the exact request shape via Mistake-31 harness.
+  method: 'ecwid-storefront-search';
+  endpoint: string;   // e.g. 'https://us-vir2-storefront-api.ecwid.com/storefront/api/v1/<storeId>/catalog/search'
+  field?: string;     // default 'totalProductsCount'; dotted path supported
+  lang?: string;      // default 'en'
+}
+interface ShopifyProductsWalkMethod {
+  // Walks /products.json?limit=250&page=N until an empty page, deduping by product id
+  // across pages. The existing json-api-length method caps at 10 pages and stops on the
+  // first short page — neither is correct for Shopify stores with hundreds of pages
+  // (e.g. groupepronature, intersurplus). Walk-until-empty + dedupe-by-id is the only
+  // safe shape; product positions can shift across requests on a busy store, hence dedupe.
+  method: 'shopify-products-walk';
+  endpoint?: string;  // default '/products.json'
+  perPage?: number;   // default 250 (Shopify max)
+  maxPages?: number;  // safety cap; default 500
 }
 interface KlevuApiCountMethod {
   method: 'klevu-api-count';
@@ -57,10 +91,50 @@ export type ProductCountMethod =
   | HtmlPaginationMethod
   | SitemapMethod
   | SitemapIndexMethod
+  | GenericProductSitemapMethod
+  | EcwidStorefrontSearchMethod
+  | ShopifyProductsWalkMethod
   | KlevuApiCountMethod
   | StreamPageCountMethod;
 
 export const COVERAGE_THRESHOLD = 0.95; // 95% — matches verify-maintain-ready.js
+
+// ── Method-name allowlist ────────────────────────────────────────────────────
+
+/**
+ * The 11 canonical product-count method names. Any value outside this set
+ * usually indicates a drifted site profile (typo, renamed method, stale
+ * onboarding doc, etc.). Adding a new method? Add it here AND add a `case`
+ * to the switch in `probeExpectedProductCount`.
+ */
+export const VALID_METHOD_NAMES = [
+  'wp-rest-header',
+  'json-api-count',
+  'json-api-length',
+  'html-pagination',
+  'sitemap',
+  'sitemap-index',
+  'generic-product-sitemap',
+  'ecwid-storefront-search',
+  'shopify-products-walk',
+  'klevu-api-count',
+  'stream-page-count',
+] as const;
+
+/**
+ * Throw if `m.method` is not one of the 11 canonical names. Called at the top
+ * of `probeExpectedProductCount` so drifted profiles surface loudly instead of
+ * falling into the default branch and silently returning null.
+ */
+export function validateMethod(m: any): void {
+  const name = m?.method;
+  if (typeof name !== 'string' || !(VALID_METHOD_NAMES as readonly string[]).includes(name)) {
+    throw new Error(
+      `[productCountProbe] unknown product-count method: ${JSON.stringify(name)} ` +
+      `(valid: ${VALID_METHOD_NAMES.join(', ')})`
+    );
+  }
+}
 
 export interface CoverageResult {
   dbCount: number;
@@ -107,6 +181,9 @@ export async function probeExpectedProductCount(
 
   try {
     const m = productCountMethod;
+    // Validate up-front so drifted profiles surface as a clear error instead
+    // of silently returning null from the switch's default branch.
+    validateMethod(m);
 
     switch (m.method) {
       case 'wp-rest-header': {
@@ -143,13 +220,23 @@ export async function probeExpectedProductCount(
       }
 
       case 'html-pagination': {
-        const url = origin;
+        const url = m.url ? `${origin}${m.url}` : origin;
         const r = await axios.get(url, { headers, timeout: TIMEOUT, validateStatus: () => true });
         const html = typeof r.data === 'string' ? r.data : '';
         const $ = cheerio.load(html);
         const lastPageEl = $(m.selector).last();
         const text = lastPageEl.text().trim() || lastPageEl.attr('href') || '';
-        const pageNum = parseInt(text.match(/(\d+)/)?.[1] || '0', 10);
+        // Apply the configured regex (default: first integer) to extract the number from `text`.
+        // For "Results 1 - 40 of 2452" totals, callers should set regex='of\\s+(\\d+)' and perPage=1.
+        let rx: RegExp;
+        try {
+          rx = new RegExp(m.regex || '(\\d+)');
+        } catch {
+          console.warn(`[productCountProbe] html-pagination: bad regex '${m.regex}' — returning null`);
+          return null;
+        }
+        const matched = text.match(rx);
+        const pageNum = parseInt(matched?.[1] || '0', 10);
         if (pageNum > 0) return pageNum * m.perPage;
         return null;
       }
@@ -174,6 +261,82 @@ export async function probeExpectedProductCount(
           } catch { /* skip failed sitemap files */ }
         }
         return total > 0 ? total : null;
+      }
+
+      case 'generic-product-sitemap': {
+        // Filtered sitemap: extract every <loc>...</loc> then keep only entries whose URL
+        // matches the supplied (or default) regex. Default targets .html / .htm leaf URLs,
+        // which on Magento 1 and Lightspeed eCom reliably excludes category pages.
+        const url = `${origin}${m.url}`;
+        const r = await axios.get(url, { headers, timeout: 30_000, validateStatus: () => true });
+        const xml = typeof r.data === 'string' ? r.data : '';
+        const patternSrc = m.pattern || '\\.html?(?:$|[?#])';
+        let rx: RegExp;
+        try {
+          rx = new RegExp(patternSrc, 'i');
+        } catch {
+          console.warn(`[productCountProbe] generic-product-sitemap: bad pattern '${patternSrc}' — returning null`);
+          return null;
+        }
+        const locRx = /<loc>([^<]+)<\/loc>/g;
+        let count = 0;
+        let match: RegExpExecArray | null;
+        while ((match = locRx.exec(xml)) !== null) {
+          if (rx.test(match[1])) count++;
+        }
+        return count > 0 ? count : null;
+      }
+
+      case 'ecwid-storefront-search': {
+        // POST the standard Ecwid storefront search body with limit:1 — the response
+        // carries the total in `totalProductsCount` (override via `field`). Request shape
+        // matches what generic-retail.ts:_fetchEcwidStorefrontPage builds at runtime.
+        const body = {
+          lang: m.lang || 'en',
+          pagination: { offset: 0, limit: 1 },
+        };
+        const r = await axios.post(m.endpoint, body, {
+          timeout: TIMEOUT,
+          headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+            ...headers,
+          },
+          validateStatus: () => true,
+        });
+        const field = m.field || 'totalProductsCount';
+        const val = drillField(r.data, field);
+        return typeof val === 'number' && val > 0 ? val : null;
+      }
+
+      case 'shopify-products-walk': {
+        // Walk /products.json?limit=N&page=K, deduping product IDs across pages.
+        // Stop conditions: empty page, max-pages cap, or HTTP error.
+        const endpointPath = m.endpoint || '/products.json';
+        const perPage = m.perPage || 250;
+        const maxPages = m.maxPages || 500;
+        const seen = new Set<number | string>();
+        let page = 1;
+        while (page <= maxPages) {
+          const sep = endpointPath.includes('?') ? '&' : '?';
+          const url = `${origin}${endpointPath}${sep}limit=${perPage}&page=${page}`;
+          let r;
+          try {
+            r = await axios.get(url, { headers, timeout: TIMEOUT, validateStatus: () => true });
+          } catch {
+            break;
+          }
+          if (r.status !== 200) break;
+          const arr = Array.isArray(r.data?.products) ? r.data.products : null;
+          if (!arr || arr.length === 0) break;
+          for (const p of arr) {
+            const id = p?.id;
+            if (id !== undefined && id !== null) seen.add(id);
+          }
+          if (arr.length < perPage) break; // last page
+          page++;
+        }
+        return seen.size > 0 ? seen.size : null;
       }
 
       case 'klevu-api-count': {
@@ -208,8 +371,11 @@ export async function probeExpectedProductCount(
       }
 
       case 'stream-page-count': {
-        // Crawl ALL catalog pages, extract product URLs, deduplicate via Set.
-        // A product may appear in multiple categories — the Set ensures each URL is counted once.
+        // Crawl ALL catalog pages, extract product URLs, deduplicate by a stable per-product KEY.
+        // A product may appear in multiple categories with different URL strings (e.g. OpenCart
+        // appends a category path: `?product_id=12511&path=28` vs `?product_id=12511&path=425`).
+        // URL-string dedup over-counts; we extract `?product_id=N` when present and use that as
+        // the key, otherwise fall back to the URL itself.
         if (!options?.siteId) return null;
         const site = await prisma.monitoredSite.findUnique({
           where: { id: options.siteId },
@@ -223,12 +389,22 @@ export async function probeExpectedProductCount(
         const { adapter } = await getAdapterForUrl(siteUrl);
         if (!adapter.extractCatalogProducts) return null;
 
-        const allProductUrls = new Set<string>();
+        const allProductKeys = new Set<string>();
+        let abortedCatalogs = 0; // track catalogs that didn't finish their walk cleanly
+
+        // Stable product-key extractor. OpenCart-style `?product_id=N` is the most common
+        // cross-cat collision case; for other platforms the URL itself is stable.
+        const productKey = (url: string): string => {
+          const pidMatch = url.match(/[?&]product_id=(\d+)/);
+          if (pidMatch) return `pid:${pidMatch[1]}`;
+          return url;
+        };
 
         for (const rawUrl of catalogUrls) {
           const catalogUrl = rawUrl.startsWith('http') ? rawUrl : `${origin}${rawUrl}`;
           let currentUrl: string | null = catalogUrl;
           let pageNum = 1;
+          let catalogClean = false; // true when the walk terminated at a natural end (no next page / empty page)
           const MAX_PAGES_PER_CATALOG = 200; // safety cap (liangjian has 127 pages)
 
           while (currentUrl && pageNum <= MAX_PAGES_PER_CATALOG) {
@@ -242,14 +418,14 @@ export async function probeExpectedProductCount(
                 const r = await axios.get(currentUrl, { headers, timeout: TIMEOUT, validateStatus: () => true });
                 html = typeof r.data === 'string' ? r.data : '';
               }
-              if (html.length < 500) break;
+              if (html.length < 500) { catalogClean = true; break; }
 
               const $ = cheerio.load(html);
               const products = adapter.extractCatalogProducts($, currentUrl);
-              if (products.length === 0) break;
+              if (products.length === 0) { catalogClean = true; break; }
 
               for (const p of products) {
-                if (p.url) allProductUrls.add(p.url);
+                if (p.url) allProductKeys.add(productKey(p.url));
               }
 
               // Find next page
@@ -258,19 +434,39 @@ export async function probeExpectedProductCount(
                 currentUrl = nextPageUrl.startsWith('http') ? nextPageUrl : `${origin}${nextPageUrl}`;
                 pageNum++;
               } else {
+                catalogClean = true;
                 break;
               }
-            } catch {
+            } catch (e) {
+              // Mid-walk error (rate-limit, timeout, parse failure). DO NOT mark clean — the
+              // count is partial. Warn so operators don't trust the number.
+              const msg = e instanceof Error ? e.message : String(e);
+              console.warn(`[ProductCountProbe] stream-page-count: walk of ${catalogUrl} aborted at page ${pageNum} — ${msg.substring(0, 100)}`);
               break;
             }
 
             await new Promise(r => setTimeout(r, 500)); // rate limit between pages
           }
 
+          if (pageNum > MAX_PAGES_PER_CATALOG) {
+            console.warn(`[ProductCountProbe] stream-page-count: walk of ${catalogUrl} hit MAX_PAGES_PER_CATALOG=${MAX_PAGES_PER_CATALOG} — count is partial`);
+          } else if (!catalogClean) {
+            abortedCatalogs++;
+          }
+
           await new Promise(r => setTimeout(r, 1000)); // rate limit between catalog URLs
         }
 
-        const count = allProductUrls.size;
+        const count = allProductKeys.size;
+
+        // Partial-result warning: if any catalog walks aborted mid-walk, the count is unreliable.
+        if (abortedCatalogs > 0) {
+          console.warn(
+            `[ProductCountProbe] WARNING: stream-page-count returned PARTIAL count ${count} for ${siteUrl} — ` +
+            `${abortedCatalogs}/${catalogUrls.length} catalog walks aborted before reaching last page. ` +
+            `Coverage gate should not trust this number as ground truth.`
+          );
+        }
 
         // Sanity check: if we found very few products but the site is expected to have many,
         // something is likely wrong (missing selectors, WAF blocking, pagination broken)
@@ -287,8 +483,12 @@ export async function probeExpectedProductCount(
         return count > 0 ? count : null;
       }
 
-      default:
+      default: {
+        // Cast to any — unknown method names from siteProfile drift land here. Surface them.
+        const unknownMethod = (m as any)?.method;
+        console.warn(`[productCountProbe] unknown method '${unknownMethod}' — returning null`);
         return null;
+      }
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

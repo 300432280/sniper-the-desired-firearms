@@ -534,6 +534,14 @@ async function tryStoreApiVerify(
           data: updateData,
         }));
         updated++;
+        verified++;
+        // Only mark this product as handled when the Store API actually
+        // returned data for it. If we marked it handled in the `else` branch
+        // below, the caller's `handled === products.length` short-circuit
+        // (processVerifyCrawl, ~L711) would fire and skip the Playwright
+        // fallback — silently losing OOS / restock signals for products the
+        // Store API dropped (visibility filters, pagination edges, soft-deletes).
+        handledProductIds.push(product.id);
       } else {
         // Not found in Store API — may be deleted, but the API has per_page
         // Store API "not found" does NOT mean product is deleted.
@@ -542,11 +550,9 @@ async function tryStoreApiVerify(
         // Do NOT increment verifyErrors or deactivate — just skip.
         // The Playwright detail-page path is the only reliable way to
         // confirm a product is truly deleted (HTTP 404 on the actual URL).
-        // Leave this product for the next verify cycle or Playwright fallback.
+        // DO NOT push to handledProductIds — leaving the product unhandled
+        // lets the caller fall through to Playwright for proper verification.
       }
-
-      verified++;
-      handledProductIds.push(product.id);
     }
 
     // Execute all updates for this chunk in a single transaction

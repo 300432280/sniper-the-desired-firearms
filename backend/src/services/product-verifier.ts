@@ -257,7 +257,7 @@ function analyzeProductPage(
     const titleLower = title.toLowerCase().trim();
     const entry = domain ? _getSiteCacheEntry(domain) : undefined;
     const wantedPattern = entry?.siteProfile?.classifiedRules?.wantedDetection;
-    const wantedRegex = wantedPattern ? new RegExp(wantedPattern, 'i') : /\b(wanted|wtb|wtt|iso)\s*$/;
+    const wantedRegex = buildWantedRegex(wantedPattern);
     if (wantedRegex.test(titleLower)) {
       const data = extractProductData($, html, baseUrl);
       return {
@@ -281,7 +281,50 @@ function analyzeProductPage(
   };
 }
 
+// ── Wanted detection ────────────────────────────────────────────────────────
+
+/**
+ * Build the regex used to detect "wanted/WTB/WTT/ISO" classifieds titles.
+ *
+ * Historical bug: `new RegExp(arrayOfPatterns, 'i')` silently coerced the
+ * array via Array.prototype.toString() (comma-joined) — so `['^wanted','wtb$']`
+ * became `/^wanted,wtb$/i` which matches nothing real. We now join arrays with
+ * `|` so each entry becomes a proper alternation.
+ */
+export function buildWantedRegex(pattern: string | string[] | undefined): RegExp {
+  if (Array.isArray(pattern)) {
+    if (pattern.length === 0) return /\b(wanted|wtb|wtt|iso)\s*$/i;
+    return new RegExp(pattern.join('|'), 'i');
+  }
+  if (typeof pattern === 'string' && pattern.length > 0) {
+    return new RegExp(pattern, 'i');
+  }
+  return /\b(wanted|wtb|wtt|iso)\s*$/i;
+}
+
 // ── Sold detection ──────────────────────────────────────────────────────────
+
+/**
+ * Match a `class="..."` attribute against a sold-class pattern.
+ *
+ * The historical regex `class="[^"]*\bsold\b[^"]*"` matched the word `sold`
+ * anywhere in the class attribute — including alive listings on gunpost.ca
+ * where the class is `field-sold No`. We now require the FULL pattern
+ * (e.g. `field-sold Yes`) as a contiguous token sequence inside the class
+ * attribute, bounded by whitespace or the attribute delimiters, so
+ * `field-sold No` no longer matches `field-sold Yes`.
+ */
+export function matchesSoldClassPattern(html: string, classPattern: string): boolean {
+  // Escape regex meta-chars; allow flexible internal whitespace.
+  const escaped = classPattern
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\s+/g, '\\s+');
+  // Pattern must be bounded by a class-list separator on both sides:
+  // attribute-opening-quote or whitespace on the left, whitespace or
+  // attribute-closing-quote on the right.
+  const re = new RegExp(`class="(?:[^"]*\\s)?${escaped}(?:\\s[^"]*)?"`, 'i');
+  return re.test(html);
+}
 
 function isSold($: cheerio.CheerioAPI, html: string, domain?: string): boolean {
   // Check site profile for custom sold detection patterns
@@ -292,8 +335,7 @@ function isSold($: cheerio.CheerioAPI, html: string, domain?: string): boolean {
       for (const pattern of patterns) {
         if (pattern.startsWith('class=')) {
           const className = pattern.slice(6);
-          const re = new RegExp(`class="[^"]*\\b${className}\\b[^"]*"`, 'i');
-          if (re.test(html)) return true;
+          if (matchesSoldClassPattern(html, className)) return true;
         } else {
           const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
           if (new RegExp(escaped, 'i').test(html)) return true;
