@@ -1,0 +1,129 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-23T02:46:16Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cf-ray present on all 200 batches; honeypot 403 (BC platform behavior, not WAF rule); XSS query returned 400 (server-level reject); SQLi 200 (no WAF rule fired); rapid burst 10/10 200 with stable timing; bot UA + no-UA both 200. No active blocking observed.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "xssReturnedHttp": 400,
+    "honeypotPathsBlocked": ["/wp-admin/ 403", "/wp-login.php 403", "/.env 403", "/.git/config 403"],
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "rapidBurstTested": true,
+    "sustainedWalkPages": 17,
+    "perUaStatusTimeline": { "chrome120": "all 200 across 17-page Rifles walk + 15-page cat probes" },
+    "untestedAttackSurfaces": ["path-traversal", "large-body-POST", "shellshock-UA", "sustained-walk-multi-UA"]
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 13974,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": [
+      "https://store.prophetriver.com/xmlsitemap.php?type=products&page=1",
+      "https://store.prophetriver.com/xmlsitemap.php?type=products&page=2"
+    ]
+  },
+  "catalogUrls": [
+    "/Rifles/",
+    "/Shotguns/",
+    "/ammunition/",
+    "/reloading-equipment/",
+    "/reloading-components/",
+    "/rifle-scopes/",
+    "/optics-accessories/",
+    "/other-optics/",
+    "/stocks/",
+    "/knives/",
+    "/accessories/",
+    "/apparel/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "id": 67365, "title": "Weatherby 224 Weatherby Magnum 37 Gr Select Plus Hammer Custom Bullet 20ct M22437HCB", "price": 124.00, "stockStatus": "in_stock" },
+    { "id": 67354, "title": "Winchester 12 Ga 3 in 1 1/4oz Shot BB DryLok Super Steel Plated Precision Steel Shot 25ct XSV123BB", "price": 43.99, "stockStatus": "in_stock" },
+    { "id": 67353, "title": "Browning 22 LR 36 Gr Copper Plated Hollow Point Target and Hunting 800ct B194122800", "price": 89.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "BC Stencil default sort = newest (verified via 3-outcome test: default == ?sort=newest first IDs [67365,67354,67353,67348,67197]; ?sort=alphaasc returns different first IDs [34800,35736,...]); IDs are monotonically descending integers usable as sourceId."
+    },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "topLevelCategories": {
+    "source": "homepage-nav + per-category page-walk count",
+    "categories": [
+      { "slug": "/Rifles/",              "allOption": 1555 },
+      { "slug": "/Shotguns/",            "allOption": 676 },
+      { "slug": "/ammunition/",          "allOption": 1638 },
+      { "slug": "/reloading-equipment/", "allOption": 1640 },
+      { "slug": "/reloading-components/","allOption": 1413 },
+      { "slug": "/rifle-scopes/",        "allOption": 648 },
+      { "slug": "/optics-accessories/",  "allOption": 1680 },
+      { "slug": "/other-optics/",        "allOption": 233 },
+      { "slug": "/stocks/",              "allOption": 302 },
+      { "slug": "/knives/",              "allOption": 877 },
+      { "slug": "/accessories/",         "allOption": 2534 },
+      { "slug": "/apparel/",             "allOption": 1040 }
+    ],
+    "totalsSumCheck": "Sum of per-category allOption = 14,236; sitemap canonical count = 13,974; drift 1.9% (well under 5% gate). /handguns/ excluded (returns 0 cards — landing-only tile page with no products and no subcategory tiles in body, body links return to top-level peers); /new-products/ and /back-in-stock-price-drops/ excluded (0 cards page 1)."
+  },
+  "lastVerified": "2026-05-22",
+  "auditNotes": {
+    "runId": "B5R1-2026-05-22",
+    "probeIp": "audit-host (Cloudflare YYZ edge)",
+    "verifyMethodPolicy": "detail-page selected; restock alerts required (no WC store-api on BC); maintain uses Playwright detail-page for stock state.",
+    "expectedCountSurface": "sitemap-index (BC xmlsitemap.php?type=products&page=N) — includes OOS / hidden, matches BC default discovery",
+    "wcCountSurface": null,
+    "wcCategoryApi": null,
+    "discoveredApiEndpoints": [],
+    "bigcommerce": { "storeId": "1003122897", "stencilEdition": "Cornerstone-like (no Storefront-GraphQL token observed on homepage)" },
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "medium (proven via per-category walk; handguns deferred)",
+      "sortParam": "high",
+      "perPage": "high",
+      "paginationPattern": "high",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": [
+      "S1: canonical = https://store.prophetriver.com — apex prophetriver.com 302/301 -> store. <link rel=canonical> agrees.",
+      "S2: cf-ray present, 8-batch all 200 on crawl paths; XSS query returned HTTP 400 (server-level not WAF); honeypots 403 (admin paths not WAF rule). hasWaf=false (cloudflare-passive informational). No CAPTCHA in homepage HTML.",
+      "S3: <meta name=platform content=bigcommerce.stencil> + cdn11.bigcommerce.com/s-dcynby20nc + x-bc-store-id:1003122897. BC API endpoints 404 (storefront unauth). Plain HTTP returns full product HTML => needsPlaywright=false.",
+      "S4: 12 top-level catalog URLs from homepage nav; handguns/new-products/back-in-stock-price-drops excluded (0 product cards). Per-category page-walk: 14,236 total ~= sitemap 13,974 (1.9% drift, acceptable). Extraction OK: 3 random products from ammunition page 1 returned title+price+stock.",
+      "S5: ?page=N query-form pagination. p1 vs p2 zero-overlap verified (ammunition first 5 ids p1=[67365,67354,67353,67348,67197] p2=[67146,67145,67143,67142,67141] disjoint). perPage cap probed: limit=50/100 honored, limit=250 silently capped at 100. firstPageHasParam=false (bare /ammunition/ works).",
+      "S6: <select name=sort id=sort> options [featured,newest,bestselling,alphaasc,alphadesc,avgcustomerreview,priceasc,pricedesc]. 3-outcome test: default==?sort=newest (both [67365,67354,67353]), ?sort=alphaasc differs ([34800,35736,36996]) => verdict honored-default-is-newest. sortParam=?sort=newest, sortVerified=true.",
+      "S7: navigate-from-watermark — BC default sort is published-desc, ID-monotonic descending. Product IDs are usable as sourceId. No BC date filter unauth, so api-date-since-watermark not available; nav-from-watermark is correct.",
+      "S8: BC sitemap-index /xmlsitemap.php?type=products with 2 pages = 10000+3974 = 13974 unique <loc> entries (all 1-segment product slugs). Cross-checked vs walked-per-category sum 14236 (1.9% drift). aria-label Page 1 of N is a sliding window not absolute. productCountMethod = sitemap-index (runtime switch case in product-count-probe.ts).",
+      "S9: validator-target shape assembled; pre-bootstrap never writes DB."
+    ]
+  }
+}

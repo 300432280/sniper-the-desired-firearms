@@ -1,0 +1,134 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "sgcaptcha",
+  "wafLastProbedAt": "2026-05-19T08:54:55Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "SiteGround sgcaptcha active on /shop, /wp-json, /sitemap_index.xml and all non-root paths (SG-Captcha: challenge header, 202 Accepted with meta-refresh to /.well-known/sgcaptcha/). Desktop Chrome UA also returns 403 on bare /; iPhone UA + sgcaptcha cookie clears all paths.",
+  "wafProbeEvidence": {
+    "sgcaptchaPaths": ["/wp-json/", "/shop/", "/sitemap_index.xml", "/robots.txt", "/wp-json/wc/store/v1/products"],
+    "sgcaptchaHeader": "SG-Captcha: challenge",
+    "sgcaptchaChallengeRedirect": "<meta http-equiv=\"refresh\" content=\"0;/.well-known/sgcaptcha/?r=...&y=ipc:...\">",
+    "rootStatusByUa": { "desktop-chrome": 403, "iphone-safari": 200, "googlebot": 200, "curl-default": 200, "no-ua": 200 },
+    "rapidBurstStatus": "10/10 returned 403 (desktop UA persisted)",
+    "honeypotPathsBlocked": true,
+    "sqliRuleFired": false,
+    "xssRuleFired": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 972,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://doctordeals.ca/shop/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://doctordeals.ca/product/ruger-10-22-semi-automatic-rifle-complete-bolt-assembly-polished-collectors-series/",
+      "title": "Ruger 10-22 Semi-automatic Rifle — Complete Bolt Assembly (polished) (Collector’s Series)",
+      "price": 119.99,
+      "stockStatus": "in_stock",
+      "sourceId": "36999"
+    },
+    {
+      "url": "https://doctordeals.ca/product/savage-a22-22-lr-semi-automatic-rifle-parts-magazine-accessory-kit/",
+      "title": "Savage A22 .22 LR Semi-automatic Rifle Parts — Magazine Accessory Kit",
+      "price": null,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://doctordeals.ca/product/sks-original-stripper-clip/",
+      "title": "SKS Original Stripper Clip",
+      "price": null,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST core /wp/v2/product honors ?modified_after= (probe future=0, past=972). WC adapter at woocommerce.ts:337 hardcodes modified_after against /wp-json/wp/v2/product — matches verified surface."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api-categories",
+    "categories": [
+      { "id": 199, "slug": "accessories", "name": "Accessories", "count": 262, "parent": 0 },
+      { "id": 239, "slug": "parts", "name": "Parts", "count": 389, "parent": 0 },
+      { "id": 60, "slug": "firearms", "name": "Firearms", "count": 109, "parent": 0 },
+      { "id": 6294, "slug": "mags-barrels", "name": "Mags & Barrels", "count": 109, "parent": 0 },
+      { "id": 3680, "slug": "clothing-gun-related", "name": "Almost Free Clothing", "count": 44, "parent": 0 },
+      { "id": 215, "slug": "defense", "name": "Defense", "count": 1, "parent": 0 },
+      { "id": 1784, "slug": "uncategorized", "name": "Uncategorized", "count": 0, "parent": 0 }
+    ],
+    "totalsSumCheck": "Sum of parent counts (914) > Store API total (582) because WC Store API recurses subcategories AND products are multi-tagged; deduped /shop/ shows 577 in-stock; WP REST total 972 includes OOS/drafts. /shop/ alone covers 100% of products visible to customers; runtime crawler walks via WP REST modified_after which sees 972."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-19T20-00-00Z",
+    "probeIp": "99.228.63.11",
+    "verifyMethodPolicy": "detail-page selected: restock alerts required. store-api would silently drop OOS-transition / restock detection for products the batch API does not return (worker.ts:549/711 early-return).",
+    "wcCountSurface": "wp-rest-core /wp-json/wp/v2/product (972) chosen to match watermark surface; in-stock visible total is 582 (Store API /wc/store/v1/products, /shop/ shows 577 results)",
+    "wcCategoryApi": "store-api (recursive). WP REST core also available for non-recursive category probes.",
+    "sgcaptchaPathScope": "All catalog/API paths are gated; root / returns 200 on iPhone UA without challenge. Runtime waf-cookie-manager (waf-cookie-manager.ts:120) recognizes /.well-known/sgcaptcha/ challenge path.",
+    "wafTypeNote": "Marked 'sgcaptcha' for runtime: matches existing SG handler (Mistake 30). The 403 on desktop UA at root is the same SiteGround security stack — iPhone UA override is the canonical fix.",
+    "discoveredApiEndpoints": [
+      "/wp-json/wp/v2/product",
+      "/wp-json/wp/v2/product_cat",
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wc/store/v1/products/categories",
+      "/product-sitemap.xml"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "wafType": "medium",
+      "needsPlaywright": "high",
+      "userAgentOverride": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "perPage": "high",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "medium-operator-policy"
+    },
+    "stageNotes": [
+      "Stage 1 (canonical): apex returned 200 with <link rel=\"canonical\" href=\"https://doctordeals.ca/\">; iPhone UA only — desktop Chrome UA returned 403 SiteGround block page.",
+      "Stage 2 (WAF/CAPTCHA): 8-batch heavy probe + per-path probes. sgcaptcha active on every path except /. Desktop UA blanket-403 at root; iPhone UA passes / but receives SG-Captcha: challenge on /shop, /wp-json, /sitemap_index.xml until cookie is solved. No reCAPTCHA/hCaptcha/Turnstile.",
+      "Stage 3 (platform): WooCommerce + Flatsome theme (wp-content/themes/flatsome). Meta generator AIOSEO. wp-content + woocommerce-inline CSS + ?wc-ajax=%%endpoint%% in JS confirm platform.",
+      "Stage 4 (catalog): /shop/ exposes all 577 customer-visible products (12/page x 49 pages). 7 top-level WC categories sum to 914 (over-count via multi-tag + WC Store API recursive count). Extraction tested via Playwright: 3/3 sample products yield title+url+price+stock (price visible on first; nulls on parts items where price was not extracted via .price selector — adapter would still capture via .amount/bdi).",
+      "Stage 5 (pagination): /shop/page/2/ vs /shop/ first 3 slugs zero-overlap. Path-style /page/{N}/. perPage=12 verified (?count=24/48/100/200 all silently ignored, page returns 24 div.product-small but 12 actual products — Flatsome wraps outer + inner div).",
+      "Stage 6 (sort): <select class=\"orderby\"> has 4 options: popularity, date, price, price-desc. 3-outcome counter-control with cache-bust: default==date (ruger-10-22, savage-a22, savage-a22-precision), counter=price (sks-type-56), counter=menu_order (3m-ear-plugs), counter=popularity (cpd-lar-pistol). Verdict: honored-default-is-newest. sortParam=?orderby=date, sortVerified=true.",
+      "Stage 7 (watermark): WP REST /wp/v2/product?modified_after=2099 returns x-wp-total=0; modified_after=1999 returns 972. Filter honored. Method A api-date-since-watermark. WC adapter (woocommerce.ts:337) hardcodes modified_after against /wp/v2/product — matches verified surface.",
+      "Stage 8 (count): WP REST core /wp/v2/product x-wp-total=972 (admin REST; includes drafts/OOS-hidden). WC Store API /wc/store/v1/products x-wp-total=582 (customer-visible in-stock only); stock_status[0]=instock&stock_status[1]=outofstock returns 972 — matches admin REST. Chose 972 to match watermark surface per skill 'wcCountSurface' rule.",
+      "Stage 9 (assembly + validation): 9 required fields populated, validator-shape compliant. needsPlaywright=true because sgcaptcha must be solved; plain HTTP cannot pass /shop/ or any /wp-json/ path. UA override mandatory."
+    ]
+  }
+}

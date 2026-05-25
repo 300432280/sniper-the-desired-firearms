@@ -1,0 +1,142 @@
+{
+  "profileVersion": 1,
+  "platform": "nextjs-custom-classifieds",
+  "adapterType": "generic",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-25T03:02:44Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "R1 result confirmed; not re-run in R2.",
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 8889,
+  "expectedProductCountSource": "pagination-walk",
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": "a[href*=\"/marketplace/\"]",
+    "perPage": 21,
+    "totalPages": 424,
+    "lastPagePartial": 6
+  },
+  "catalogUrls": [
+    "https://townpost.ca/category/guns"
+  ],
+  "extractionTested": true,
+  "extractionMethod": "static-html-via-marketplace-link-selector",
+  "extractionSample": [
+    { "url": "https://townpost.ca/marketplace/calgary/guns/1873-winchester-3220/1171321", "id": 1171321 },
+    { "url": "https://townpost.ca/marketplace/wlinak/guns/brno-8037-93x74r/1171326", "id": 1171326 },
+    { "url": "https://townpost.ca/marketplace/richmond/guns/spina-scope-apexfin2-18x24-ir/1171316", "id": 1171316 }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "sortNote": "Default sort is activity-based (bump/renew date), NOT creation date. R2 verified: ?sort=newest, ?sort=date, ?orderBy=date, ?order=newest, ?sort=oldest ALL return identical page-1 result set (sort params ignored server-side; sort UI is client-side Radix combobox). Within-page IDs are NOT monotonically descending (p1 spans 955768..1171326; p4 spans 219709..1170192). Max-per-page only loosely descends (p1=1171326, p2=1171314, p3=1171304, p4=1170192, p5=1171292 - p5 > p4). Watermark must be tracked by URL/activity, NOT by numeric-ID-descent.",
+  "perPage": 21,
+  "pinnedAds": 0,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 21,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false,
+    "wrapBehavior": "page>=425 silently returns page-1 content (max_id=1171326). Crawler must stop at configured lastPage or detect wrap by content fingerprint."
+  },
+  "searchUrl": "/search?q={keyword}",
+  "searchUrlVerified": true,
+  "searchUrlVerifyNote": "R2 verified: /search?q=glock returns 21 marketplace links with title 'Glock in Canada - For Sale by Owner - TownPost'; /search?q=zzzqzqzqzq returns 0 marketplace links. Junk-keyword diff (B3) passes.",
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Page 1 = newest (bump-date sorted; max IDs loosely descend across pages). Pagination ?page=N honored with near-zero overlap (p1 cap p2 = 1, p1 cap p3..5 = 0). No explicit sort param exists (all sort= variants return identical results), but default-newest-bump order is observed. NO numeric-ID monotonicity claim is made; watermark crawler must track URL/lastSeenAt, not numeric-ID descent."
+    },
+    "maintain": {
+      "method": "db-verification",
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "classifiedRules": {
+    "soldDetection": [
+      "Sold ~",
+      "<title>Sold "
+    ],
+    "soldDetectionNote": "R1 speculative; not re-verified in R2. Confirm via R3 by fetching a known-sold listing detail page."
+  },
+  "productUrlSchemes": {
+    "canonical": "/marketplace/<city>/<urlCategory>/<slug>/<numericId>",
+    "joinOn": "numeric-id-suffix"
+  },
+  "topLevelCategories": {
+    "source": "homepage-nav + /categories",
+    "categories": [
+      { "slug": "/category/guns", "allOption": 8889, "notes": "424 pages: 423 full x 21 + 6 partial last page = 8889. R2 walked pages 420, 424, 425, 430..450 to confirm lastPage=424 (p424=6 IDs, p425+ wraps to p1)." }
+    ]
+  },
+  "lastVerified": "2026-05-24",
+  "auditNotes": {
+    "runId": "townpost.ca-2026-05-23T19-00-00Z-B6R2",
+    "probeIp": "audit-host (Windows)",
+    "probeDate": "2026-05-24",
+    "method": "LIVE-PROBE: 5-page pinned-ad test + 5-variant sort-param test + /search?q junk-diff + binary lastPage walk pp 420..450",
+    "fieldVerdicts": {
+      "adapterType": {
+        "verdict": "DB-CORRECT (generic)",
+        "evidence": "classifieds-gunpost selectors (node--type-classified, gunpost-teaser, node__pubdate) match 0 elements in townpost p1. generic-retail.ts:88 + generic.ts:32-33 have selectors for townpost but generic.ts extractCatalogProducts (L95-103) does NOT include 'a[href*=\"/marketplace/\"]' - only generic-retail.ts:964 does. RUNTIME CONCERN: townpost using `generic` adapter (per DB) extracts 0 catalog products because the only selectors that match townpost (item_card, newest-ads) are STALE class names - current HTML uses Tailwind utility classes only. Site needs `a[href*=\"/marketplace/\"]` added to generic.ts:95-103 OR adapterType changed to `generic-retail`.",
+        "blockerForRuntime": true,
+        "blockerCategory": "adapter-extraction-not-profile-field"
+      },
+      "perPage": {
+        "verdict": "R1-CORRECT (21)",
+        "evidence": "5 pages walked: each yields exactly 21 unique IDs after dedup of repeated hrefs within page. ZERO IDs shared across all 5 pages. Pairwise overlap: p1 cap p2=1, all other pairs=0. Total unique = 104 (5x21=105, only 1 within-page accidental dup). The DB's pinnedAds:4 / perPage:17 is FALSIFIED by direct evidence.",
+        "dbWrong": true
+      },
+      "pinnedAds": {
+        "verdict": "DB-WRONG (0, not 4)",
+        "evidence": "Only ONE 'Top Ad' badge appears anywhere across 5 pages (p1 only, counts within the 21). 'featured_expires_at' JSON appears once (p1, within the 21). No IDs repeat across pages."
+      },
+      "expectedProductCount": {
+        "verdict": "R1-CORRECT (8889)",
+        "evidence": "lastPage=424 confirmed (p424=6 IDs spanning 131050..187458; p425..450 all wrap to p1 with identical max_id=1171326 and size 328743 bytes). 423*21+6 = 8889. DB 7484 = WRONG (440*17 math invalid: 440 pages don't exist AND perPage isn't 17)."
+      },
+      "productCountMethod.method": {
+        "verdict": "R1-CORRECT (html-pagination)",
+        "evidence": "DB value 'page-count-times-perpage' is not in product-count-probe.ts canonical names - runtime returns null silently. R1's 'html-pagination' is canonical but R1's selector field was a debug string. R2 sets selector='a[href*=\"/marketplace/\"]' (the actual extraction selector that works)."
+      },
+      "sortParam": {
+        "verdict": "R1-CORRECT (null, not honored)",
+        "evidence": "5 sort variants tested (?sort=newest, ?sort=date, ?orderBy=date, ?order=newest, ?sort=oldest) - all return IDENTICAL p1 result set with same first/last IDs. Sort UI is client-side only."
+      },
+      "watermarkReason_monotonicIDClaim": {
+        "verdict": "R1-WRONG, DB-CORRECT",
+        "evidence": "R1 claimed monotonic ID descent. R2 falsifies: p1 spans 955768..1171326 (within-page range 215558); p4 has ID 219709 mixed with 1170192. Max-per-page loosely descends but is NOT strict (p5 max=1171292 > p4 max=1170192). Default sort IS bump-date as DB sortNote states. navigate-from-watermark method remains correct, but justification rewritten - watermark tracks URL/activity, not numeric-ID-descent."
+      },
+      "searchUrl": {
+        "verdict": "DB-CORRECT (/search?q={keyword})",
+        "evidence": "R2 verified: /search?q=glock returns 21 marketplace links with title containing 'Glock in Canada'; /search?q=zzzqzqzqzq returns 0 marketplace links. Junk-keyword diff (B3) passes."
+      },
+      "lastPage_424_vs_440": {
+        "verdict": "R1-CORRECT (424)",
+        "evidence": "Pages 425, 430, 435, 440, 441, 445, 450 ALL return identical content to /category/guns p1 (same 21 IDs, same byte-size 328743). p424 is a partial page (6 IDs). DB totalPages=440 is WRONG by 16 pages."
+      },
+      "crawlers_maintain_method": {
+        "verdict": "DB-EXTRA (db-verification)",
+        "evidence": "DB has method='db-verification' (cooldown tier-windows). Skill does not require this field at top level; R2 emits both method and verifyMethod for compatibility."
+      },
+      "classifiedRules_soldDetection": {
+        "verdict": "R1-SPECULATIVE, R2-NOT-VERIFIED",
+        "evidence": "Not re-tested in R2 (no known-sold detail-page URL on hand). Carry-forward as 'low confidence' for R3 to test against a real Sold listing."
+      }
+    },
+    "stageNotes": {
+      "method": "R2 LIVE-PROBE: extracted hrefs per page via 'grep -oE href=\"/marketplace/[^\"]+/[0-9]+\"', deduplicated, computed pairwise overlap. Drove sort param matrix (5 variants). Walked pp 420..450 binary to find lastPage. Drove /search?q={keyword} for known + junk keywords. 800ms inter-request delay throughout. Playwright MCP available but NOT required - all evidence captured via static HTML."
+    }
+  }
+}

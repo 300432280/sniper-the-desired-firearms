@@ -1,0 +1,147 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-19T08:52:33Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every response) but all real paths return 200 across 8 batches; honeypot 403s on /wp-admin /.env /.git/config are origin-not-found (BC has no WP paths), not WAF challenges. No SQLi/XSS rule firing. Treat as cloudflare-passive.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "server: cloudflare", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "200x10 (all clean)",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-admin/", "/wp-login.php", "/.env", "/.git/config"],
+    "honeypotNote": "BigCommerce origin doesn't host these paths; 403 is generic origin denial, not a WAF rule",
+    "botUaBlocked": false,
+    "noUaBlocked": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 8169,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "/firearms/",
+    "/ammunition/",
+    "/optics/",
+    "/parts/",
+    "/reloading/",
+    "/gearandkit/",
+    "/storagemaintenance/",
+    "/FIREARMS-ACCESSORIES/",
+    "/AIRGUNSM/",
+    "/used/",
+    "/surplus/",
+    "/outdoors/",
+    "/gifts-gadgets-media-more/",
+    "/apparel/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://wolverinesupplies.com/used-rem-870-20ga-pa-with-18-5-barrel-28-barrel-knox-stock-mag-extension/",
+      "title": "Used Rem 870 .20ga PA with 18.5\" Barrel +28\" barrel knox stock+ mag extension",
+      "price": 750.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://wolverinesupplies.com/savage-axis-2-ba-7mm-08-20-4rd-synthetic-od-green/",
+      "title": "Savage Axis 2 BA 7mm-08 20\" 4rd Synthetic OD Green",
+      "price": 724.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://wolverinesupplies.com/beretta-a400-extreme-plus-sa-12ga-3-5-28-711mm-3-round-optifade-timber/",
+      "title": "Beretta A400 Extreme Plus SA 12ga/3.5\" 28\"/711mm 3-Round Optifade Timber",
+      "price": 2760.00,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav + sitemap-derived",
+    "categories": [
+      { "slug": "/firearms/", "walkedInStockUniqueIds": 625 },
+      { "slug": "/ammunition/", "walkedInStockUniqueIds": 461 },
+      { "slug": "/optics/", "walkedInStockUniqueIds": 940 },
+      { "slug": "/parts/", "walkedInStockUniqueIds": 1204 },
+      { "slug": "/reloading/", "walkedInStockUniqueIds": 264 },
+      { "slug": "/gearandkit/", "walkedInStockUniqueIds": 291 },
+      { "slug": "/storagemaintenance/", "walkedInStockUniqueIds": 396 },
+      { "slug": "/FIREARMS-ACCESSORIES/", "walkedInStockUniqueIds": 1156 },
+      { "slug": "/AIRGUNSM/", "walkedInStockUniqueIds": 8 },
+      { "slug": "/used/", "walkedInStockUniqueIds": 6 },
+      { "slug": "/surplus/", "walkedInStockUniqueIds": 26 },
+      { "slug": "/outdoors/", "walkedInStockUniqueIds": 202 },
+      { "slug": "/gifts-gadgets-media-more/", "walkedInStockUniqueIds": 34 },
+      { "slug": "/apparel/", "walkedInStockUniqueIds": 131 }
+    ],
+    "totalsSumCheck": "14-category walked-union = 5,683 unique in-stock product IDs. /shop-all/ aggregator returns 5,567 (entirely subset of 14-category union). Sitemap (OOS-inclusive) = 8,169. BC Stencil hides OOS from category pages by design; 5,683 / 8,169 = 69.6% delta is expected (~2,486 OOS visible only via sitemap or direct URL)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "wolverinesupplies-2026-05-19-B4R1",
+    "probeIp": "audit-host",
+    "verifyMethodPolicy": "detail-page selected (platform is non-WC/non-Shopify; runtime falls through to Playwright per-product verify for OOS/restock detection).",
+    "wcCountSurface": "n/a (BigCommerce, not WooCommerce)",
+    "verifiedMaxPerPage": 2500,
+    "shippedPerPage": 100,
+    "perPageNote": "Site honors ?limit up to 2500 (12MB / 13s response on /shop-all/?limit=2500). Shipped perPage=100 (BC default categorypage_products_per_page) to balance speed vs response size.",
+    "ageGateProbed": "no age-gate markup in homepage HTML; no DOB form; no cookie-set redirect",
+    "captchaProbed": "no reCAPTCHA/hCaptcha/Turnstile script tags in homepage HTML",
+    "discoveredApiEndpoints": [],
+    "fieldConfidence": {
+      "platform": "high — cdn11.bigcommerce.com, x-bc-store-id:1003335859, stencil/ asset paths, BC-Ray header",
+      "hasWaf": "high — 8-batch probe all clean on real paths; cloudflare-passive only (cf-ray + 200)",
+      "expectedProductCount": "high — sitemap returned 8,169 <loc> entries; cross-verified OOS-only sample (a-r-m-s-15-...) returns 200 in browser",
+      "catalogUrls": "high — walked all 14 top-level non-aggregator categories at limit=1000; 14-category union dominates /shop-all/ aggregator by 116 products; minimum-cover set",
+      "sortParam": "high — 3-outcome counter-control: default IDs 9026,9016,9013 monotonic-descending; alphaasc 544,545,941; sort honored as default",
+      "paginationPattern": "high — zero overlap p1 vs p2 on /firearms/; standard BC ?page=N",
+      "perPage": "high — page-1 returns 100 cards (theme categorypage_products_per_page:100); verified limit=2500 honored",
+      "watermarkMethod": "high — sort verified honored-default-is-newest + product IDs monotonic auto-increment",
+      "productCountMethod": "high — /xmlsitemap.php?type=products&page=1 returns 8,169 <loc> in one file; sitemap method maps directly"
+    },
+    "stageNotes": [
+      "Stage 1: apex returns 200 cleanly; www 301-redirects to apex. Canonical = https://wolverinesupplies.com (apex).",
+      "Stage 2: 8-batch heavy probe. All real-path responses 200; cf-ray header every batch; /wp-admin /.env etc return 403 because BC origin has no WP routes (not WAF). hasWaf=false; wafType=cloudflare-passive (informational).",
+      "Stage 3: cdn11.bigcommerce.com + x-bc-store-id:1003335859 + stencil/ paths + BC-Ray header => platform=bigcommerce-stencil. adapterType=generic-retail. No GraphQL token exposed.",
+      "Stage 4: homepage nav surfaced 12 firearm-relevant top-level paths. Two more (FIREARMS-ACCESSORIES, AIRGUNSM) found via /shop-all/ walk and confirmed via /xmlsitemap.php?type=categories. Walked all 14 at limit=1000, dedup by data-product-id. 14-cat union=5,683 dominates /shop-all/=5,567. Sitemap=8,169 (OOS-inclusive).",
+      "Stage 4g: 3 random firearms-page products fetched as detail pages — all returned title, price, in-stock status, valid URL. extractionTested=true.",
+      "Stage 5: ?page=N pagination zero-overlap p1 vs p2 on /firearms/: 0 shared IDs. perPage default=100. Verified ?limit=2500 also honored but shipping perPage=100.",
+      "Stage 6: <select name=\"sort\"> options: featured (default), newest, bestselling, alphaasc, alphadesc, avgcustomerreview, priceasc, pricedesc. 3-outcome counter-control: default=newest (9026,9016,9013); newest sort matches; alphaasc returns 544,545,941. Verdict=honored-default-is-newest. sortParam=?sort=newest, sortVerified=true.",
+      "Stage 7: sort verified honored + product IDs monotonic auto-increment ascending => navigate-from-watermark.",
+      "Stage 8: /xmlsitemap.php?type=products&page=1 returned 8,169 <loc> entries (single-file sitemap; ?page=2 = 404). Drift vs walked-in-stock (5,683) = 30.4%, accepted per BC Stencil OOS-hidden quirk."
+    ]
+  }
+}

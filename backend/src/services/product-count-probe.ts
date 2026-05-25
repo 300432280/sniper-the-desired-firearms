@@ -122,17 +122,76 @@ export const VALID_METHOD_NAMES = [
 ] as const;
 
 /**
- * Throw if `m.method` is not one of the 11 canonical names. Called at the top
- * of `probeExpectedProductCount` so drifted profiles surface loudly instead of
+ * Throw if `m.method` is not one of the 11 canonical names, or if a sitemap-shape
+ * `url` / `urls[]` is absolute instead of path-only. Called at the top of
+ * `probeExpectedProductCount` so drifted profiles surface loudly instead of
  * falling into the default branch and silently returning null.
+ *
+ * Batch-5 R4 additions (2026-05-22):
+ *   - C1: sitemap.url and sitemap-index.urls[] MUST start with '/' (path-only).
+ *         Absolute URLs collide with `${origin}${m.url}` → double-prefix → fetch
+ *         fails silently. Live caught on frontierfirearms.ca R3.
+ *   - C2: when an unknown method name is close to a canonical name (substring
+ *         match either direction), include "did you mean …?" in the error.
+ *         Operators keep writing `wc-store-api-header` for `wp-rest-header`.
  */
 export function validateMethod(m: any): void {
   const name = m?.method;
   if (typeof name !== 'string' || !(VALID_METHOD_NAMES as readonly string[]).includes(name)) {
+    const valid = VALID_METHOD_NAMES as readonly string[];
+    // C2: substring-based close-match suggestion. Cheap, no Levenshtein dep.
+    // Underscore-normalize ('wp_rest_header' → 'wp-rest-header'), then look for
+    // either-direction substring overlap or a shared trailing token of >=6 chars
+    // (e.g. 'wc-store-api-header' ↔ 'wp-rest-header' share 'header').
+    let suggestion: string | null = null;
+    if (typeof name === 'string' && name.length > 0) {
+      const normalized = name.toLowerCase().replace(/_/g, '-');
+      for (const canonical of valid) {
+        if (normalized === canonical) { suggestion = canonical; break; }
+      }
+      if (!suggestion) {
+        for (const canonical of valid) {
+          if (normalized.includes(canonical) || canonical.includes(normalized)) {
+            suggestion = canonical;
+            break;
+          }
+          const tail = canonical.split('-').slice(-1)[0];
+          if (tail && tail.length >= 6 && normalized.endsWith(tail)) {
+            suggestion = canonical;
+            break;
+          }
+        }
+      }
+    }
+    const hint = suggestion ? ` — did you mean "${suggestion}"?` : '';
     throw new Error(
-      `[productCountProbe] unknown product-count method: ${JSON.stringify(name)} ` +
+      `[productCountProbe] unknown product-count method: ${JSON.stringify(name)}${hint} ` +
       `(valid: ${VALID_METHOD_NAMES.join(', ')})`
     );
+  }
+
+  // C1: sitemap-shape URLs must be path-only so `${origin}${url}` produces a
+  // valid absolute URL. Absolute inputs cause double-prefix → silent null.
+  if (name === 'sitemap') {
+    const url = (m as SitemapMethod).url;
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+      throw new Error(
+        `[productCountProbe] productCountMethod.url must be path-only (start with /), ` +
+        `got absolute URL ${JSON.stringify(url)}`
+      );
+    }
+  } else if (name === 'sitemap-index') {
+    const urls = (m as SitemapIndexMethod).urls;
+    if (Array.isArray(urls)) {
+      for (const u of urls) {
+        if (typeof u === 'string' && /^https?:\/\//i.test(u)) {
+          throw new Error(
+            `[productCountProbe] productCountMethod.urls[] entries must be path-only (start with /), ` +
+            `got absolute URL ${JSON.stringify(u)}`
+          );
+        }
+      }
+    }
   }
 }
 
@@ -226,19 +285,7 @@ export async function probeExpectedProductCount(
         const $ = cheerio.load(html);
         const lastPageEl = $(m.selector).last();
         const text = lastPageEl.text().trim() || lastPageEl.attr('href') || '';
-        // Apply the configured regex (default: first integer) to extract the number from `text`.
-        // For "Results 1 - 40 of 2452" totals, callers should set regex='of\\s+(\\d+)' and perPage=1.
-        let rx: RegExp;
-        try {
-          rx = new RegExp(m.regex || '(\\d+)');
-        } catch {
-          console.warn(`[productCountProbe] html-pagination: bad regex '${m.regex}' — returning null`);
-          return null;
-        }
-        const matched = text.match(rx);
-        const pageNum = parseInt(matched?.[1] || '0', 10);
-        if (pageNum > 0) return pageNum * m.perPage;
-        return null;
+        return parseHtmlPaginationCount(text, m.regex, m.perPage);
       }
 
       case 'sitemap': {
@@ -528,6 +575,38 @@ export async function verifyBootstrapCoverage(
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Parse a captured integer (page-count OR product-total) out of a selector's text,
+ * then multiply by `perPage`. Set `perPage=1` when the captured number IS the total
+ * (e.g. regex `of\\s+(\\d[\\d,]*)` against "Results 1 - 40 of 2,452").
+ *
+ * Strips commas BEFORE parseInt — `parseInt("2,384", 10)` returns 2, which silently
+ * broke canadasgunstore for ~6 weeks (real total 2384, recorded 2). The default
+ * regex `(\\d+)` only matches contiguous digits and would itself drop the comma,
+ * so commas only matter when callers use a comma-tolerant capture like
+ * `(\\d[\\d,]*)` — supporting it here makes both shapes correct.
+ *
+ * Returns null on bad regex, no match, or a zero/negative value.
+ */
+export function parseHtmlPaginationCount(
+  text: string,
+  regexSrc: string | undefined,
+  perPage: number,
+): number | null {
+  let rx: RegExp;
+  try {
+    rx = new RegExp(regexSrc || '(\\d+)');
+  } catch {
+    console.warn(`[productCountProbe] html-pagination: bad regex '${regexSrc}' — returning null`);
+    return null;
+  }
+  const matched = text.match(rx);
+  const raw = matched?.[1] || '0';
+  const n = parseInt(raw.replace(/,/g, ''), 10);
+  if (n > 0) return n * perPage;
+  return null;
+}
 
 /** Drill into a nested object by dot-separated path (e.g. "data.products" → obj.data.products) */
 function drillField(obj: any, path: string): any {

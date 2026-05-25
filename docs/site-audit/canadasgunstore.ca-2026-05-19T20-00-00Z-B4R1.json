@@ -1,0 +1,132 @@
+{
+  "profileVersion": 1,
+  "platform": "activant-inet",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-19T08:54:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "no-waf-no-cdn: all 8 batches 200, no cf-ray, no x-sucuri, no challenge bodies, honeypots 404 not 403, rapid burst all 200, SQLi/XSS shapes all 200",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "challengeBodyMarkers": [],
+    "rapidBurstStatus": ["200","200","200","200","200","200","200","200","200","200"],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotPathsResult": "404",
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "serverHeader": "Apache",
+    "cookiesSet": ["PHPSESSID","INET_MOBILE"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2385,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "url": "/departments/outdoors---hunting-etc--%7C30.html",
+    "selector": ".store_results_navigation_top_wrapper p.text-success",
+    "regex": "of\\s+(\\d+)",
+    "perPage": 255
+  },
+  "catalogUrls": [
+    "https://www.canadasgunstore.ca/departments/outdoors---hunting-etc--%7C30.html"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.canadasgunstore.ca/products/stoeger-s3000c-air-rifle--177-caliber-4x32-scope-included%7CS80513C.html",
+      "title": "Stoeger S3000C Air Rifle .177 Caliber 4x32 Scope Included",
+      "price": 255.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.canadasgunstore.ca/products/weihrauch-air-rifle-c-177-820-fps-made-in-germany%7CHW50.html",
+      "title": "Weihrauch Air Rifle c.177 820 fps Made in Germany",
+      "price": 679.99,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://www.canadasgunstore.ca/products/crosman-c3622skt---c3622s-pcp-powered--bolt-action-hunting-air-rifle-kit%7CC3622SKT.html",
+      "title": "CROSMAN C3622SKT : C3622S PCP Powered, Bolt Action Hunting Air Rifle Kit",
+      "price": 379.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 255,
+  "paginationPattern": {
+    "type": "offset-query",
+    "template": "top",
+    "perPage": 255,
+    "firstPageHasParam": false,
+    "startPage": 0,
+    "zeroIndexed": true
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "Activant/Epicor iNet exposes only skua/skud/namea/named/mfga/mfgd sort options (Item-asc/desc is SKU-string alphabetic, not auto-increment ID). No date/newest sort. No public sitemap.xml / robots.txt / RSS. No independent newest-first signal."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/departments/outdoors---hunting-etc--%7C30.html", "allOption": 2385 },
+      { "slug": "/departments/firearms-%7C30%7CFA.html", "allOption": 677 },
+      { "slug": "/departments/ammunition-%7C30%7CAMM.html", "allOption": 447 },
+      { "slug": "/departments/shooting-%7C30%7CSHO.html", "allOption": 723 },
+      { "slug": "/departments/optics-%7C30%7COPT.html", "allOption": 252 },
+      { "slug": "/departments/hunting-%7C30%7CHNT.html", "allOption": 114 },
+      { "slug": "/departments/knives-and-tools-%7C30%7CKT.html", "allOption": 100 },
+      { "slug": "/departments/apparel-%7C30%7CCLO.html", "allOption": 60 },
+      { "slug": "/departments/promotions-5.html", "allOption": 163 }
+    ],
+    "totalsSumCheck": "Umbrella dept-30 URL walked = 2385 unique products across 10 offset-pages (top=0..2295, last 90). 7 subclass sum (FA+AMM+SHO+OPT+HNT+KT+CLO) = 2373 + ~12 multi-class = 2385. promotions-5 is cross-class aggregator of on-sale items (already in dept-30). Single umbrella URL = 100% coverage with minimum URL count per Rule C."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-19",
+    "probeIp": "audit-host",
+    "discoveredApiEndpoints": [],
+    "verifyMethodPolicy": "detail-page selected; restock alerts required (Inet exposes no batch REST/JSON API — adapter must use Playwright/HTML per-product to detect OOS transitions)",
+    "platformNotes": "Activant/Epicor iNet eCommerce. Apache+PHP, /inet/storefront/store.php backend, PHPSESSID+INET_MOBILE session cookies. URL form: /departments/<slug>-|<deptId>|<subclass>.html (literal `|` URL-encoded as %7C). Pagination via ?top=<offset>. Product URL form: /products/<slug>|<SKU-or-id>.html.",
+    "paginationWalkProof": "Walked all 10 pages of umbrella URL → 2,385 unique product URLs (exact match with displayed 'N found' text). Zero-overlap proven page-1 vs page-2.",
+    "extractionAdapterSelector": ".store_product_list_wrapper (already present at generic-retail.ts:86)",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "catalogUrls": "high",
+      "expectedProductCount": "high",
+      "paginationPattern": "high",
+      "sortParam": "high (none-exists, verified)",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "Stage1: apex returns Epicor 'Site not Found' placeholder (753B). www returns 200 + 38KB. <link rel=canonical href=https://www.canadasgunstore.ca/>. Canonical = www.",
+      "Stage2: 8-batch heavy probe — all 200, no cf-ray, no x-sucuri, no plugin markers, honeypots 404, no CAPTCHA, no age gate.",
+      "Stage3: Activant/Epicor iNet — /inet/styles/, /inet/storefront/store.php, sagro_base_url JS var, img2.activant-inet.com CDN, PHPSESSID+INET_MOBILE cookies. adapterType=generic-retail (selector already at line 86).",
+      "Stage4: 1 umbrella catalogUrl covering 100% of 2385 products. 9 top-level departments enumerated under topLevelCategories.",
+      "Stage5: pagination ?top=<offset>, perPage=255 (server-capped — per_page/store_per_page params ignored), zero-overlap test passed.",
+      "Stage6: <select name=product_list_sort> options skua/skud/namea/named/mfga/mfgd. SKU 'Item' is alphabetic string-sort. No date sort. Counter-control verified honored (default/skud/namea returned different first-3 slugs).",
+      "Stage7: no API date filter, no newest-first sort, no public sitemap, no RSS → full-catalog-sweep.",
+      "Stage8: expectedProductCount=2385 from HTML 'found' text. html-pagination method with `of\\s+(\\d+)` regex against page-of-N gives probe-value 10×255=2550 (6.9% over walked; commas in 2,385 prevent direct regex parse).",
+      "Stage9: validator shape assembled. crawlers.bootstrap omitted (zero runtime consumers)."
+    ]
+  }
+}

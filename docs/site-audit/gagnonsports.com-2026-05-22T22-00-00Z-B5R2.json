@@ -1,0 +1,156 @@
+{
+  "round": "B5R2",
+  "site": "gagnonsports.com",
+  "timestamp": "2026-05-23T22:00:00Z",
+  "method": "live-investigation-different-from-R1",
+  "delay_ms": 800,
+  "dbWrites": false,
+  "investigations": {
+    "test1_firearmsTree": {
+      "purpose": "Verify R1 finding of 227 products in /firearms/* tree; confirm DB note 'No /firearms/ category exists' is stale.",
+      "method": "Direct GET each leaf with ?limit=100, iPhone UA, 800ms delay, extract single-segment .html product links from listing HTML.",
+      "results": {
+        "/firearms/new-firearms/centerfire-rifles/": { "status": 200, "count": 47, "title": "Centerfire Rifles - Gagnon Sporting Goods" },
+        "/firearms/new-firearms/rimfire-rifles/": { "status": 200, "count": 30, "title": "Rimfire Rifles - Gagnon Sporting Goods" },
+        "/firearms/new-firearms/shotguns/": { "status": 200, "count": 74, "title": "Shotguns - Gagnon Sporting Goods" },
+        "/firearms/new-firearms/air-guns/": { "status": 200, "count": 16, "title": "Air Guns - Gagnon Sporting Goods" },
+        "/firearms/new-firearms/restricted-firearms/pistols/": { "status": 200, "count": 0, "note": "Likely auth-walled; page exists with real title 'Pistols - Gagnon Sporting Goods'" },
+        "/firearms/new-firearms/restricted-firearms/revolvers/": { "status": 200, "count": 0 },
+        "/firearms/new-firearms/restricted-firearms/rifles/": { "status": 200, "count": 0 },
+        "/firearms/used-firearms/used-rifles/": { "status": 200, "count": 42, "title": "Used Rifles - Gagnon Sporting Goods" },
+        "/firearms/used-firearms/used-shotguns/": { "status": 200, "count": 19 },
+        "/firearms/used-firearms/used-restricted/": { "status": 200, "count": 0 }
+      },
+      "totalProductiveLeaves": 6,
+      "totalProducts": 228,
+      "verdict": "DB note 'No /firearms/ category exists' is STALE (last verified 2026-04-07). /firearms/* tree exists with 228 products live as of 2026-05-23. R1 candidate is correct to include these URLs."
+    },
+    "test2_uaPoolSustained": {
+      "purpose": "Test whether any UA in production pool gets blocked by Cloudflare on sustained walk (8 pages x 5 UAs = 40 requests).",
+      "method": "Walk /collection/ pages 1-8 with 5 distinct UAs (desktop-chrome, iphone-safari, mac-safari, linux-chrome, android-chrome), 800ms delay each.",
+      "results": {
+        "desktop-chrome": { "statuses": "8/8 = 200", "cfChallenge": 0, "blocked": 0, "avgMs": 284 },
+        "iphone-safari": { "statuses": "8/8 = 200", "cfChallenge": 0, "blocked": 0, "avgMs": 277 },
+        "mac-safari": { "statuses": "8/8 = 200", "cfChallenge": 0, "blocked": 0, "avgMs": 281 },
+        "linux-chrome": { "statuses": "8/8 = 200", "cfChallenge": 0, "blocked": 0, "avgMs": 282 },
+        "android-chrome": { "statuses": "8/8 = 200", "cfChallenge": 0, "blocked": 0, "avgMs": 271 }
+      },
+      "verdict": "40/40 = 200 across all 5 UAs. No 'Just a moment' challenge body. No 403/503/429. iPhone UA is NOT load-bearing. Cloudflare is passive (cf-ray headers present per R1) but does NOT gate the crawler. hasWaf=false is operationally correct; DB's hasWaf=true + iPhone UA workaround is a defensive position that current evidence does not support."
+    },
+    "test3_perPageTiming": {
+      "purpose": "Side-by-side timing perPage=100 vs perPage=24 at scale (skill anti-pattern: any 'X is faster' needs side-by-side timing).",
+      "method": "5 pages of /collection/ at each perPage, same UA, same delay.",
+      "results": {
+        "perPage_100": { "avgMs": 285, "productsPerRequest": 100, "totalProductsIn5Pages": 500 },
+        "perPage_24": { "avgMs": 280, "productsPerRequest": 24, "totalProductsIn5Pages": 120 }
+      },
+      "verdict": "Per-request latency identical (~280ms, 1.8% difference, noise). perPage=100 yields 4.17x more products per request. For 2706-product walk: p100 approximately 28 requests vs p24 approximately 113 requests - 75% fewer requests at same latency. perPage=100 wins decisively. R1 candidate correct, DB value 24 is suboptimal."
+    },
+    "test4_dbExtraUrls": {
+      "purpose": "Test R1's Rule-C-violating exclusion of DB URLs the candidate dropped.",
+      "method": "Direct GET each URL with ?limit=100, iPhone UA, 800ms delay.",
+      "results": {
+        "/sale/hunting-super-specials/new-used-guns/": { "status": 200, "count": 31, "sample": ["beretta-a400-xtreme-plus", "copy-of-beretta-a300-ultima", "mossberg-model-152"] },
+        "/previously-owned-merchandise/": { "status": 200, "count": 1 },
+        "/archery/bows/": { "status": 200, "count": 16 },
+        "/archery/arrows-accessories/": { "status": 200, "count": 100 }
+      },
+      "verdict": "All 4 URLs productive. /sale/hunting-super-specials/new-used-guns/ (31 products) likely overlaps /firearms/* leaves (same product slugs in sample) - include for safety, dedup handles overlap. /previously-owned-merchandise/ near-empty (1 product, non-firearm). /archery/* is scope choice (Rule C exclusion arguable). R1 dropping /sale/new-used-guns/ violated Rule C (no full-walk dedup proof); DB is right to include."
+    },
+    "test5_searchForm": {
+      "purpose": "Resolve searchUrl divergence: ?q= query form vs /search/keyword/ path form.",
+      "method": "Live GET both forms with same keyword 'glock', compare HTTP status, title, product count.",
+      "results": {
+        "queryForm_q_glock": { "status": 200, "title": "Search results for glock - Gagnon Sporting Goods", "productCount": 24 },
+        "pathForm_glock": { "status": 200, "title": "Search results for glock - Gagnon Sporting Goods", "productCount": 24 }
+      },
+      "verdict": "Both forms work identically - LightSpeed rewrites internally. Either field value is correct. Cosmetic divergence; non-blocking."
+    }
+  },
+  "fieldVerdicts": {
+    "hasWaf": {
+      "candidate_R1": false,
+      "db": true,
+      "R2_verdict": "false",
+      "evidence": "40/40 = 200 across 5 UAs over 8-page sustained walk. Cloudflare passive. R1 correct; DB defensive but not supported by current evidence.",
+      "confidence": "high"
+    },
+    "wafWorkaround": {
+      "candidate_R1": null,
+      "db": "{ method: 'mobile-ua' }",
+      "R2_verdict": "null",
+      "evidence": "Desktop and linux UAs work identically to iPhone UA. No UA discrimination observed.",
+      "confidence": "high"
+    },
+    "userAgentOverride": {
+      "candidate_R1": null,
+      "db": "iPhone Safari 17.2",
+      "R2_verdict": "null (operator may choose iPhone defensively)",
+      "evidence": "All 5 UAs 8/8 = 200. iPhone UA not required.",
+      "confidence": "high"
+    },
+    "perPage": {
+      "candidate_R1": 100,
+      "db": 24,
+      "R2_verdict": "100",
+      "evidence": "Per-request latency 285ms (p100) vs 280ms (p24) - within noise. 4.17x more products per request at perPage=100. 75% fewer requests for full walk. No CF burst pressure observed in sustained 8-page walk.",
+      "confidence": "high"
+    },
+    "catalogUrls_firearms_tree": {
+      "candidate_R1": "INCLUDE 10 leaves",
+      "db": "EXCLUDE all (note: 'No /firearms/ category exists')",
+      "R2_verdict": "INCLUDE all 10 leaves",
+      "evidence": "Live walk 2026-05-23: 6 productive leaves (228 products), 4 zero-product leaves all return 200 with real category titles (restricted-firearms likely auth-walled but URLs exist). DB note is stale.",
+      "confidence": "high"
+    },
+    "catalogUrls_sale_used": {
+      "candidate_R1": "EXCLUDE",
+      "db": "INCLUDE /sale/hunting-super-specials/new-used-guns/, /previously-owned-merchandise/",
+      "R2_verdict": "INCLUDE /sale/hunting-super-specials/new-used-guns/ (31 products live, likely overlap with /firearms/used-*); INCLUDE /previously-owned-merchandise/ (1 product, low value but safe)",
+      "evidence": "31 firearm products live at /sale/.../new-used-guns/; sample includes Beretta/Mossberg shotguns matching used-shotguns category. Per Rule C 'only drop when proven redundant via full walk + dedup', R1 exclusion is rule-violating.",
+      "confidence": "high"
+    },
+    "catalogUrls_archery": {
+      "candidate_R1": "EXCLUDE",
+      "db": "INCLUDE /archery/bows/, /archery/arrows-accessories/",
+      "R2_verdict": "operator scope choice - inconclusive",
+      "evidence": "/archery/bows/=16, /archery/arrows-accessories/=100 productive. Pure archery not firearm-shaped. Rule C 'firearm-relevant' include-list explicitly omits bows/arrows. Defensible either way.",
+      "confidence": "medium"
+    },
+    "searchUrl": {
+      "candidate_R1": "/search/?q={keyword}",
+      "db": "/search/{keyword}/",
+      "R2_verdict": "either works; prefer /search/?q={keyword} (matches form action; LightSpeed rewrites both)",
+      "evidence": "Both return 200 with identical title and 24 products for 'glock'.",
+      "confidence": "high"
+    },
+    "expectedProductCount": {
+      "candidate_R1": 2706,
+      "db": 2613,
+      "R2_verdict": "candidate-acceptable (3.6% drift inside 5% gate); recommend recompute as sum of validated catalogUrls",
+      "evidence": "R1 candidate sum check 2706 plausible; DB 2613 = same firearm-relevant subset minus /firearms/* additions plus /sale/+/owned/. Within gate.",
+      "confidence": "medium"
+    },
+    "productCountMethod": {
+      "candidate_R1": "html-pagination",
+      "db": "sitemap-flat (non-canonical)",
+      "R2_verdict": "html-pagination",
+      "evidence": "sitemap-flat is NOT in product-count-probe.ts's 11 canonical method names per R1 diff #11 (B6 shape-gate violation). html-pagination is the canonical runtime probe.",
+      "confidence": "high"
+    }
+  },
+  "summary": {
+    "R1_candidate_strengths_confirmed": ["hasWaf=false", "wafWorkaround=null", "userAgentOverride=null", "perPage=100", "/firearms/* tree inclusion", "productCountMethod=html-pagination"],
+    "R1_candidate_weaknesses_confirmed": ["Dropped /sale/.../new-used-guns/ without dedup proof (Rule C violation)", "Dropped /previously-owned-merchandise/ similarly"],
+    "DB_confirmed_correct": ["Including /sale/.../new-used-guns/", "Including /previously-owned-merchandise/", "searchUrl path form (equally valid)"],
+    "DB_confirmed_stale": ["'No /firearms/ category exists' note (228 firearm products live)", "hasWaf=true defensive (not currently triggered)", "userAgentOverride iPhone (not currently load-bearing)", "perPage=24 (suboptimal vs 100)"],
+    "DB_non_canonical": ["productCountMethod.method='sitemap-flat' (not in 11-method canon)"]
+  },
+  "auditNotes": {
+    "runId": "B5R2",
+    "duration_minutes": 1.3,
+    "totalRequests": 65,
+    "delayMs": 800,
+    "dbWrites": false
+  }
+}

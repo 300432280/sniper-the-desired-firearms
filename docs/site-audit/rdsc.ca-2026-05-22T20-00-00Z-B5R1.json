@@ -1,0 +1,131 @@
+{
+  "profileVersion": 1,
+  "platform": "magento-2.x",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-22T20:00:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cloudflare-passive: cf-ray on all responses, 8/8 batches returned 200, no challenges, no rate-limit triggered, no rule-fires (SQLi/XSS payloads echoed back without 403), honeypot paths return 404 Magento default (not WAF block), no-UA accepted, multi-UA accepted, PHPSESSID cookie set on every response",
+  "wafProbeEvidence": {
+    "cfHeadersDetected": ["server: cloudflare", "CF-RAY: a000ba9b3b45ae18-YYZ", "CF-RAY: a000ba9e8d7db5e5-YYZ", "CF-RAY: a000baa1a9ff051b-YYZ"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 returned 200, 437286 bytes consistent",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotPathsStatus": "404 Magento default, not WAF block",
+    "botUaBlocked": false,
+    "noUaAllowed": true,
+    "multiUaAllowed": true,
+    "rapidBurstTested": true,
+    "sustainedWalkPages": 0,
+    "untestedAttackSurfaces": ["50+page sustained walk per-UA", "auth-attempt probes", "path-traversal probes", "large-body POST", "shellshock UA"]
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v2",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 9343,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": "#toolbar-amount span.toolbar-number:last-child",
+    "perPage": 1
+  },
+  "catalogUrls": [
+    "/firearms-ammunition.html",
+    "/optics-mounts.html",
+    "/handgun-parts.html",
+    "/semi-auto-rifle-parts.html",
+    "/precision-rifle-parts.html",
+    "/lever-action-parts.html",
+    "/shotgun-parts.html",
+    "/gear-kit.html",
+    "/clean-maintain.html"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://rdsc.ca/firearms-ammunition/ruger-10-22-carbine-16-1-carbon-wrapped-barrel-moe-x-22-stock-22lr.html", "title": "Ruger 10/22 Carbine, 16.1\" Carbon Wrapped Barrel, MOE X-22 Stock, 22LR", "price": 829.99, "stockStatus": "in_stock" },
+    { "url": "https://rdsc.ca/firearms-ammunition/derya-arms-tm22-pro-12-threaded-barrel-black-22lr.html", "title": "Derya Arms TM22 PRO, 12\" Threaded Barrel, Black, 22LR", "price": 539.99, "stockStatus": "in_stock" },
+    { "url": "https://rdsc.ca/firearms-ammunition/cz-arms-cz-600-mdt-deep-bronze-24-00-threaded-barrel-6-5-creedmoor.html", "title": "CZ Arms, CZ 600+ MDT Deep Bronze, 24.00\" Threaded Barrel, 6.5 Creedmoor", "price": 3499.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?product_list_order=new&product_list_dir=desc",
+  "sortVerified": true,
+  "perPage": 48,
+  "paginationPattern": {
+    "type": "query",
+    "template": "p",
+    "perPage": 48,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Default sort is newest-first (Magento toolbar config: orderDefault:'new', directionDefault:'desc'); 3-outcome counter-control verified (default == sort=new, price_asc counter-control differs); product IDs descend monotonically on default order (2175480 > 2172372 > 2171619 on page 1, 2153155 on page 2). No public Magento REST date filter available without admin auth."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "productUrlSchemes": {
+    "canonical": "/<slug>-<id>.html",
+    "sitemapForm": "/<slug>-<id>.html",
+    "categoryForm": "/<category-path>/<slug>-<id>.html",
+    "joinOn": "url-slug-suffix"
+  },
+  "searchUrl": "/catalogsearch/result/?q={keyword}",
+  "topLevelCategories": {
+    "source": "magento2-nav-level0-toolbar-amount-per-category",
+    "categories": [
+      { "slug": "/firearms-ammunition.html", "allOption": 1757 },
+      { "slug": "/optics-mounts.html", "allOption": 1188 },
+      { "slug": "/handgun-parts.html", "allOption": 1143 },
+      { "slug": "/semi-auto-rifle-parts.html", "allOption": 1851 },
+      { "slug": "/precision-rifle-parts.html", "allOption": 1116 },
+      { "slug": "/lever-action-parts.html", "allOption": 245 },
+      { "slug": "/shotgun-parts.html", "allOption": 212 },
+      { "slug": "/gear-kit.html", "allOption": 1216 },
+      { "slug": "/clean-maintain.html", "allOption": 272 }
+    ],
+    "totalsSumCheck": "Sum of 9 top-level categories = 9000; /new-products.html aggregator = 9343; sitemap product URL count = 9234. 3.7% drift (343 products) between per-category sum and new-products aggregator likely due to products tagged only in manufacturer/special taxonomies."
+  },
+  "lastVerified": "2026-05-22",
+  "auditNotes": {
+    "runId": "B5R1-rdsc-2026-05-22",
+    "probeIp": "audit-host",
+    "verifyMethodPolicy": "detail-page selected; Magento 2 has no public REST product API without admin auth; restock alerts via per-product Playwright detail-page",
+    "dbColumnFlips": {
+      "hasWaf": false,
+      "wafType": "cloudflare-passive",
+      "wafWorkaround": "clear"
+    },
+    "expectedCountSurface": "new-products.html toolbar-amount last span (customer-visible canonical total 9343)",
+    "discoveredApiEndpoints": [],
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "catalogUrls": "high",
+      "perPage": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "expectedProductCount": "high",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200, www 302->apex. Canonical = https://rdsc.ca",
+      "Stage 2: 8-batch probe 8/8 pass. cf-ray on all, no challenges. PHPSESSID cookie. reCaptcha-v2 in login popup only, not gating catalog. No age-gate.",
+      "Stage 3: Magento 2.x (148 Magento markers, Magento_Ui/js/core/app, Magento_ReCaptchaFrontendUi). adapterType=generic-retail (table default).",
+      "Stage 4: 9 top-level categories from nav level0. Counts via Magento toolbar-amount: 1757+1188+1143+1851+1116+245+212+1216+272 = 9000. All firearm-relevant.",
+      "Stage 5: ?p={N} verified zero-overlap page1 IDs (2175480,2172372,2171619) vs page2 (2153155,2152462,2147766). perPage probe: 24 and 48 honored, 36/60/72/96/120 fall back to 24. Max verified perPage=48.",
+      "Stage 6: Toolbar config 'directionDefault:desc, orderDefault:new'. 3-outcome counter-control: default==sort=new ({2175480,2172372,2171619}), counter-control sort=price_asc ({929864,506614,782790}) differs. Verdict honored-default-is-newest.",
+      "Stage 7: navigate-from-watermark. Magento 2 has no auth-free REST date filter; default sort verified newest; monotonic descending IDs.",
+      "Stage 8: html-pagination method, selector reads toolbar-amount last span on /new-products.html = 9343 (customer-visible total).",
+      "Stage 9: candidate assembled, validator constraints satisfied (productCountMethod in canonical 11, paginationPattern.type=query with template=param-name, sortParam non-empty)."
+    ]
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "profileVersion": 1,
+  "name": "Canada's Gun Store",
+  "platform": "activant-inet",
+  "adapterType": "generic-retail",
+  "siteCategory": "retailer",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-19T08:54:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "no-waf-no-cdn: all 8 batches 200, no cf-ray, no x-sucuri, no challenge bodies, honeypots 404 not 403, rapid burst all 200, SQLi/XSS shapes all 200",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "challengeBodyMarkers": [],
+    "rapidBurstStatus": ["200","200","200","200","200","200","200","200","200","200"],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotPathsResult": "404",
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "serverHeader": "Apache",
+    "cookiesSet": ["PHPSESSID","INET_MOBILE"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "hasRateLimit": false,
+  "expectedProductCount": 2384,
+  "expectedProductCountSource": "html-found-text-and-walk",
+  "productCountMethod": {
+    "method": "html-pagination",
+    "url": "/departments/outdoors---hunting-etc--|30.html",
+    "selector": ".store_results_navigation_top_wrapper p.text-success",
+    "regex": "([\\d,]+)\\s+found",
+    "perPage": 1
+  },
+  "catalogUrls": [
+    "/departments/outdoors---hunting-etc--|30.html"
+  ],
+  "searchUrl": "/inet/storefront/store.php?mode=searchstore&search[searchfor]={keyword}",
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.canadasgunstore.ca/products/stoeger-s3000c-air-rifle--177-caliber-4x32-scope-included|S80513C.html",
+      "title": "Stoeger S3000C Air Rifle .177 Caliber 4x32 Scope Included",
+      "price": 255.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://www.canadasgunstore.ca/products/weihrauch-air-rifle-c-177-820-fps-made-in-germany|HW50.html",
+      "title": "Weihrauch Air Rifle c.177 820 fps Made in Germany",
+      "price": 679.99,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://www.canadasgunstore.ca/products/crosman-c3622skt---c3622s-pcp-powered--bolt-action-hunting-air-rifle-kit|C3622SKT.html",
+      "title": "CROSMAN C3622SKT : C3622S PCP Powered, Bolt Action Hunting Air Rifle Kit",
+      "price": 379.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 255,
+  "paginationPattern": {
+    "type": "offset-query",
+    "template": "top",
+    "perPage": 255,
+    "firstPageHasParam": false,
+    "startPage": 0,
+    "zeroIndexed": true
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "Activant/Epicor iNet exposes only skua/skud/namea/named/mfga/mfgd sort options (Item-asc/desc is SKU-string alphabetic, not auto-increment ID). No date/newest sort. No public sitemap.xml / robots.txt / RSS. No independent newest-first signal."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav",
+    "categories": [
+      { "slug": "/departments/outdoors---hunting-etc--|30.html", "allOption": 2384 },
+      { "slug": "/departments/firearms-|30|FA.html", "allOption": 676 },
+      { "slug": "/departments/ammunition-|30|AMM.html", "allOption": 447 },
+      { "slug": "/departments/shooting-|30|SHO.html", "allOption": 723 },
+      { "slug": "/departments/optics-|30|OPT.html", "allOption": 252 },
+      { "slug": "/departments/hunting-|30|HNT.html", "allOption": 114 },
+      { "slug": "/departments/knives-and-tools-|30|KT.html", "allOption": 100 },
+      { "slug": "/departments/apparel-|30|CLO.html", "allOption": 60 },
+      { "slug": "/departments/promotions-5.html", "allOption": 163 }
+    ],
+    "totalsSumCheck": "R2 live walk 2026-05-19T23:46Z: umbrella dept-30 = 2384 unique products (matches 'found' text). 7-subclass union = 2372 unique. Umbrella-only = 12 (archery/crossbow/CZ-magazine/freight items not classified into the 7 main subclasses). Subclass-only = 0. Subclass sum 676+447+723+252+114+100+60 = 2372. 2372 + 12 umbrella-only = 2384. The 12 orphan SKUs prove the 7-subclass DB catalogUrl set UNDER-covers by 0.5%; umbrella is strictly superset and the correct choice per Rule A (100% coverage) and Rule C (min URL count)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R2-2026-05-19",
+    "probeIp": "audit-host",
+    "discoveredApiEndpoints": [],
+    "verifyMethodPolicy": "detail-page selected; restock alerts required (Inet exposes no batch REST/JSON API)",
+    "platformNotes": "Activant/Epicor iNet eCommerce. Apache+PHP, /inet/storefront/store.php backend, PHPSESSID+INET_MOBILE session cookies. URL form: /departments/<slug>-|<deptId>|<subclass>.html. Pipe character `|` is non-reserved per RFC3986 and both literal `|` and `%7C` return identical 200 responses (verified R2). Node `new URL()` preserves both forms through round-trip without re-encoding (verified R2). DB-historical 'must be literal' note is unfounded — the runtime concat path `${origin}${u}` plus axios both transmit the literal pipe verbatim. Pagination via ?top=<offset>. Product URL form: /products/<slug>|<SKU-or-id>.html.",
+    "paginationWalkProof": "R2 walked all 10 pages of umbrella URL (top=0..2295, step 255) -> 2384 unique product URLs. Exact match with displayed 'N found' text. Walked all 7 subclasses page-by-page -> totals match their respective 'found' counts (676+447+723+252+114+100+60 = 2372).",
+    "extractionAdapterSelector": ".store_product_list_wrapper (already present at generic-retail.ts:86)",
+    "searchUrlNotes": "DB-historical `/search?q={keyword}` returns 404 (verified R2: GET /search?q=glock -> 404). Live search form on homepage submits GET to `/inet/storefront/store.php?mode=searchstore&search[searchfor]={keyword}` (verified R2: GET .../mode=searchstore&search[searchfor]=glock -> 200, '24 found, showing page 1 of 2', 24 glock-related product URLs in DOM). This is the authoritative search endpoint.",
+    "countMethodNotes": "R1's `regex: 'of\\\\s+(\\\\d+)' + perPage: 255` extracted '10' (totalPages) and computed 10x255=2550, overshooting true 2384 by 6.96% (exceeds 5% drift gate). R2 corrected to `regex: '([\\\\d,]+)\\\\s+found' + perPage: 1`. NOTE: the runtime html-pagination case at product-count-probe.ts:222-241 does `parseInt(matched[1])` which truncates '2,384' to 2; the consumer must strip commas before parseInt for this method to work on comma-formatted totals. Flagged to R3/R4 as a small runtime patch.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "catalogUrls": "high (R2 union-vs-umbrella walk: umbrella covers 2384, subclass union covers only 2372)",
+      "expectedProductCount": "high (R2 walked == found-text == 2384)",
+      "paginationPattern": "high",
+      "sortParam": "high (none-exists, verified)",
+      "crawlers.watermark.method": "high",
+      "searchUrl": "high (R2 live-tested searchstore form returns 200 + 24 products)"
+    },
+    "r1Verdicts": {
+      "platform": "R1 wins (custom -> activant-inet)",
+      "expectedProductCount": "both wrong (R1 2385, DB 2361, live 2384)",
+      "productCountMethod": "both wrong (R1 regex captures totalPages not products; DB stream-page-count works but is runtime-internal not a probe). R2 emits corrected html-pagination + flags comma-strip gap.",
+      "catalogUrls_count": "R1 wins (umbrella covers 2384 = all; 7-subclass union covers only 2372 = misses 12)",
+      "catalogUrls_encoding": "both valid; R2 standardizes on literal pipe per DB convention",
+      "searchUrl": "DB wins on PRESENCE (R1 omitted), but DB VALUE wrong (R2 found /inet/storefront/store.php?mode=searchstore&search[searchfor]= endpoint)",
+      "siteCategory_and_name": "DB wins (R2 added as additive)",
+      "hasRateLimit": "DB wins (R2 added as false)",
+      "bootstrap_block": "R1 wins (intentional skill omission of zero-consumer fields)",
+      "crawlers_runtime_fields": "DB wins on operator-runtime fields (cooldowns/tierShares/tierWindows/t1Interval/budget/timeout) not in skill output; R2 leaves them to be merged by operator post-review"
+    },
+    "stageNotes": [
+      "Stage1: apex returns Epicor 'Site not Found' placeholder (753B). www returns 200 + 38KB. Canonical = www.",
+      "Stage2: 8-batch heavy probe — all 200, no cf-ray, no x-sucuri, no plugin markers, honeypots 404, no CAPTCHA, no age gate.",
+      "Stage3: Activant/Epicor iNet platform fingerprint confirmed. adapterType=generic-retail (selector already at generic-retail.ts:86).",
+      "Stage4: 1 umbrella catalogUrl covering 100% of 2384 products. R2 walked all 7 subclasses and confirmed 12 products exist only in the umbrella URL — DB's 7-subclass set under-covers.",
+      "Stage5: pagination ?top=<offset>, perPage=255 (server-capped), zero-overlap test passed.",
+      "Stage6: <select name=product_list_sort> options skua/skud/namea/named/mfga/mfgd. No date sort.",
+      "Stage7: no API date filter, no newest-first sort, no public sitemap, no RSS -> full-catalog-sweep.",
+      "Stage8: expectedProductCount=2384 (live found-text + walked-unique agree exactly).",
+      "Stage9: R2 live-tested searchUrl candidates. /search?q= 404. /inet/storefront/store.php?mode=searchstore&search[searchfor]={keyword} 200 with valid product results."
+    ]
+  }
+}

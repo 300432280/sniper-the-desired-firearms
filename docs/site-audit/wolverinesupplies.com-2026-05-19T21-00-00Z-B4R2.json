@@ -1,0 +1,137 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-19T23:45:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (__cf_bm cookie + cf-cache-status:DYNAMIC + server:cloudflare on every response) but ALL real paths return 200 across 8 batches. Live R2 verification: SQLi payload (?search=' OR 1=1--) returns 200; XSS payload returns 200; no-UA request returns 200; python-requests UA returns 200. Honeypot /.env returns 403 (origin-not-found — BC has no WP/dotenv routes, NOT a WAF challenge). Treat as cloudflare-passive.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["__cf_bm cookie", "cf-cache-status: DYNAMIC", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "200 across 8+ batches (no rate-limit observed at 1req/s)",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/.env"],
+    "honeypotNote": "BigCommerce origin doesn't host /.env or /wp-* paths; 403 is generic origin denial, not a WAF rule",
+    "botUaBlocked": false,
+    "noUaBlocked": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 8186,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "/firearms/",
+    "/ammunition/",
+    "/optics/",
+    "/parts/",
+    "/reloading/",
+    "/gearandkit/",
+    "/storagemaintenance/",
+    "/FIREARMS-ACCESSORIES/",
+    "/AIRGUNSM/",
+    "/used/",
+    "/surplus/",
+    "/outdoors/",
+    "/gifts-gadgets-media-more/",
+    "/apparel/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://wolverinesupplies.com/used-black-rain-ordnance-bro-22-sportsman-sa-22lr-18-457mm-10-round-luth-ar-stock-yellow-0fgk/",
+      "title": "Used Black Rain Ordnance BRO-22 Sportsman SA 22LR 18\"/457mm 10-Round Luth-AR Stock Yellow",
+      "productId": "9080",
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "nav + sitemap-derived + /shop-all/ cross-check",
+    "categories": [
+      { "slug": "/firearms/", "walkedInStockUniqueIds": 626 },
+      { "slug": "/ammunition/", "walkedInStockUniqueIds": 461 },
+      { "slug": "/optics/", "walkedInStockUniqueIds": 940 },
+      { "slug": "/parts/", "walkedInStockUniqueIds": 1204 },
+      { "slug": "/reloading/", "walkedInStockUniqueIds": 264 },
+      { "slug": "/gearandkit/", "walkedInStockUniqueIds": 291 },
+      { "slug": "/storagemaintenance/", "walkedInStockUniqueIds": 396 },
+      { "slug": "/FIREARMS-ACCESSORIES/", "walkedInStockUniqueIds": 1156 },
+      { "slug": "/AIRGUNSM/", "walkedInStockUniqueIds": 8 },
+      { "slug": "/used/", "walkedInStockUniqueIds": 6 },
+      { "slug": "/surplus/", "walkedInStockUniqueIds": 26 },
+      { "slug": "/outdoors/", "walkedInStockUniqueIds": 202 },
+      { "slug": "/gifts-gadgets-media-more/", "walkedInStockUniqueIds": 34 },
+      { "slug": "/apparel/", "walkedInStockUniqueIds": 131 }
+    ],
+    "totalsSumCheck": "R2 cross-check (2026-05-19): /shop-all/?limit=2500 walked at p1/p2/p3 (3 pages) yielded 2500+2500+569=5569 unique in-stock product IDs (zero overlap p1<->p2, zero overlap p2<->p3). Sitemap (OOS-inclusive) = 8186 <loc> entries (single file; page=2 returns 404). 5569/8186 = 68% — BC Stencil hides OOS from category pages by design; ~2617 OOS products visible only via sitemap or direct URL. Sitemap chosen as expectedProductCount source per fleet convention (nordicmarksman/frontierfirearms also use sitemap method)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "wolverinesupplies-2026-05-19-B4R2",
+    "probeIp": "audit-host",
+    "round": 2,
+    "verifyMethodPolicy": "detail-page selected (platform is non-WC/non-Shopify; runtime falls through to Playwright per-product verify for OOS/restock detection). Without crawlers.maintain.verifyMethod set, worker.ts:770-772 logs `MISSING verifyMethod in site profile` and SKIPS verification entirely — verified by reading runtime code.",
+    "wcCountSurface": "n/a (BigCommerce, not WooCommerce)",
+    "verifiedMaxPerPage": 2500,
+    "shippedPerPage": 100,
+    "perPageNote": "Live R2: /shop-all/?limit=2500 returned 2500 products in 10.1s / 11.8 MB. Shipping perPage=100 (BC default categorypage_products_per_page) to balance speed vs response size.",
+    "ageGateProbed": "no age-gate markup in homepage HTML; no DOB form; no cookie-set redirect",
+    "captchaProbed": "no reCAPTCHA/hCaptcha/Turnstile script tags in homepage HTML",
+    "discoveredApiEndpoints": [],
+    "bcStoreId": "1003335859",
+    "fieldConfidence": {
+      "platform": "high — cdn11.bigcommerce.com/s-bhxpar2unf, x-bc-store-id:1003335859, stencil/ asset paths, BC-Ray header",
+      "hasWaf": "high — R2 live probe: SQLi/XSS/no-UA/python-requests-UA all return 200 cleanly; only __cf_bm cookie + cf-cache-status indicate Cloudflare-passive",
+      "expectedProductCount": "high — R2 live sitemap fetch: 8186 <loc> entries in single file (968KB); ?page=2 returns 404 confirming single-file sitemap. Drift vs walked-in-stock (5569) is the expected BC Stencil OOS-hidden quirk.",
+      "catalogUrls": "high — R2 verified pagination on /firearms/ (6 full pages of 100 + 26 = 626 in-stock); 14-cat union dominates /shop-all/ (5569) by ~110 products",
+      "sortParam": "high — R2 3-outcome counter-control: ?sort=newest = default sort: both yield product IDs 9080,9079,9026,9016,9013 (descending); ?sort=alphaasc yields 544,545,941 (different order)",
+      "paginationPattern": "high — R2: zero overlap p1 vs p2 on /firearms/ (verified); zero overlap p1/p2/p3 on /shop-all/?limit=2500 (verified)",
+      "perPage": "high — page-1 returns exactly 100 product cards (theme categorypage_products_per_page:100); verified ?limit=2500 honored",
+      "watermarkMethod": "high — default sort is newest + product IDs monotonic auto-increment (9080 > 9079 > 9026 ...) — classic navigate-from-watermark fit",
+      "productCountMethod": "high — sitemap method is the only runtime-valid choice for BC Stencil. DB's bare-string 'category-walk-dedupe' is NOT in VALID_METHOD_NAMES (product-count-probe.ts:110-122) -> validateMethod throws (line 132) -> coverage gate silently disabled."
+    },
+    "stageNotes": [
+      "Stage 1: apex returns 200 cleanly; www 301-redirects to apex. Canonical = https://wolverinesupplies.com (apex).",
+      "Stage 2: Heavy probe + R2 live verification — all real-path responses 200; __cf_bm cookie + server:cloudflare on every response; SQLi/XSS payloads return 200; no-UA/bot-UA return 200; /.env returns 403 (origin denies, not WAF). hasWaf=false; wafType=cloudflare-passive (informational).",
+      "Stage 3: cdn11.bigcommerce.com/s-bhxpar2unf + x-bc-store-id:1003335859 + stencil/ paths + BC-Ray header => platform=bigcommerce-stencil. adapterType=generic-retail.",
+      "Stage 4: 14 top-level catalog URLs verified. R2 union walk via /shop-all/?limit=2500 across 3 pages = 5569 unique in-stock product IDs (validates DB's 5739 within drift tolerance).",
+      "Stage 4g: Live extraction sample: product card 9080 -> /used-black-rain-ordnance-bro-22-sportsman.../ slug-based URL. selectorSet [data-product-id] (generic-retail.ts:942) extracts cleanly.",
+      "Stage 5: R2 pagination verification on /firearms/?sort=newest: pages 1-6 each return 100 IDs, page 7 returns 26, zero p1<->p2 overlap. perPage=100 confirmed.",
+      "Stage 6: R2 3-outcome sort verification: default=?sort=newest both yield 9080,9079,9026,9016,9013 (descending IDs); ?sort=alphaasc yields 544,545,941 (different order). Default IS newest; sortParam=?sort=newest defensive-explicit.",
+      "Stage 7: navigate-from-watermark — sort verified + monotonic auto-increment IDs.",
+      "Stage 8: R2 live fetch /xmlsitemap.php?type=products&page=1 = 8186 <loc> entries in 968KB single file; page=2 = 404. productCountMethod={method:'sitemap',url:'/xmlsitemap.php?type=products&page=1'} matches runtime VALID_METHOD_NAMES."
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "runId": "B5R2-2026-05-22",
+  "site": "durhamoutdoors.ca",
+  "method": "live-investigation-per-divergence",
+  "wallTimeMin": 18,
+  "verdicts": [
+    {
+      "field": "wafType",
+      "r1": "cloudflare-active",
+      "db": "cloudflare-passive",
+      "verdict": "DB wins",
+      "evidence": "B9 sustained 30-page walk (Chrome120/Safari17/Firefox121/Edge120 rotating, 800ms delay): ALL 30 pages returned HTTP 200 with full ~60KB product-listing bodies. No challenge body, no escalation, no _cf_chl_opt token. Rapid-burst clean (R1 also confirmed). Honeypot/SQLi/XSS 403s are rule-selective surfaces NOT touched by catalog crawl. Per Skill rule, operationally meaningful classification is cloudflare-passive (active rules exist but DO NOT challenge the catalog path). DB judgment is operationally correct."
+    },
+    {
+      "field": "userAgentOverride",
+      "r1": "<iPhone Safari 17>",
+      "db": "(not stored)",
+      "verdict": "DB wins",
+      "evidence": "All 4 production desktop UAs (Chrome120/Safari17/Firefox121/Edge120) passed the 30-page sustained walk with zero escalation. iPhone override is unnecessary and adds drift risk (mobile UA may serve a different layout). Omit."
+    },
+    {
+      "field": "needsPlaywright",
+      "r1": "false",
+      "db": "true",
+      "verdict": "R1 wins",
+      "evidence": "30/30 production-UA fetches returned full product-listing HTML with extractable product cards (60KB bodies, ~12 products each, _p_NNN.html link pattern present). Plain HTTP works for catalog crawl. DB's true is defensive over-call. Runtime crawler does NOT need a headless browser."
+    },
+    {
+      "field": "expectedProductCount",
+      "r1": "389",
+      "db": "388",
+      "verdict": "R1 wins",
+      "evidence": "Re-derived live 2026-05-22: walked union of all 9 catalogUrls = exactly 389 unique product IDs (Accessories 63 + Shotgun 103 + NON-RESTRICTED 281 + Rifles 218 + Pistols 1 + Optics 2 + Used-Consignment 1 + RESTRICTED 0 + Surplus 1; union dedupe = 389; per-cat sum with overlap = 670). DB 388 is from 2026-04-06 (47 days stale) — +1 SKU added in interim is plausible normal drift."
+    },
+    {
+      "field": "productCountMethod",
+      "r1": "{method:html-pagination, selector:.paging a:not(.category-viewall):last-of-type, perPage:12}",
+      "db": "{method:stream-page-count}",
+      "verdict": "both valid (operator-policy)",
+      "evidence": "Both names are in product-count-probe.ts VALID_METHOD_NAMES (lines 110-122). stream-page-count reads from DB streamState (operator-workflow); html-pagination re-derives live. R1's html-pagination is the re-derivable probe form; DB's stream-page-count is the operator-policy form once streams are bootstrapped. Skill rule says always re-derive, so R1 is correct for the candidate JSON shape, but DB's stream-page-count is a valid post-bootstrap state."
+    },
+    {
+      "field": "paginationPattern.template",
+      "r1": "{slug}-{N}.html",
+      "db": "-{N}.html",
+      "verdict": "DB wins",
+      "evidence": "generic-retail.ts:97 docstring + line 129 default both confirm template form is '-{N}.html' (the REPLACEMENT only, not the full URL). Runtime code at suffix-replace branch (line 127-129) reads `pattern.template || '-{N}.html'` and substitutes via match-replace, not template-format. R1's '{slug}-{N}.html' is a hand-typed full-URL form that does NOT match the runtime contract. R1 form is wrong; DB form is correct."
+    },
+    {
+      "field": "searchUrl",
+      "r1": "/search.asp?keyword={keyword}",
+      "db": "/search?q={keyword}",
+      "verdict": "BOTH wrong - omit",
+      "evidence": "Live-probed BOTH with multiple keywords (glock, rifle, 22lr, ammo, chiappa, test, mossberg). DB /search?q=glock returns 404. B5R1 /search.asp?keyword=* returns 403 with Cloudflare 'Attention Required!' body (4550B, cf-ray header) on ALL keywords - Cloudflare WAF has a rule on search.asp that blocks non-browser fingerprints (tested even WITH __cf_bm cookie + Referer header from a prior homepage visit; still 403). The homepage form action IS search.asp?keyword=* (verified directly) but the path is unreachable via plain axios in runtime. Per Skill B4 rule 'Omit the field entirely - don't ship an unverified URL', searchUrl should be NULL/omitted. R1 fabricated by reading the form action without live-probe."
+    },
+    {
+      "field": "platform",
+      "r1": "shift4shop-3dcart",
+      "db": "custom",
+      "verdict": "R1 wins (with caveat)",
+      "evidence": "SKILL.md platform table (lines 293-314) does NOT list Shift4Shop/3dcart - but fingerprints are unambiguous: assets/templates/common-html5/, vcart=26.19.0 JS var, _3d_cart JS var, 3dcartGoogleAnalytics template comment, .asp URL pattern. R1 'shift4shop-3dcart' is a valid new platform tag (canonical hyphen separator per SKILL.md:408). DB 'custom' loses platform-family routing. Caveat: tag not yet in SKILL.md table, so this is a candidate for table-addition in next skill revision."
+    },
+    {
+      "field": "wafWorkaround",
+      "r1": "null",
+      "db": "{method:none-required, notes:...}",
+      "verdict": "both valid",
+      "evidence": "Functionally equivalent - no workaround required. R1 emits null per Skill rule (clear stale workaround on re-audit divergence); DB stores method=none-required as audit-trail marker. Semantic disagreement only."
+    },
+    {
+      "field": "catalogUrls count",
+      "r1": "9 (includes /RESTRICTED_c_21.html with 0 products today)",
+      "db": "8 (drops RESTRICTED)",
+      "verdict": "R1 wins",
+      "evidence": "RESTRICTED returns 200 with 0 products. Per Skill Rule C (empty != dead - preserve until 404 or category-removal). Walked all 9 cats - RESTRICTED definitely returns 200, not 404. Keep all 9; future stocking may add products without re-audit."
+    }
+  ],
+  "verdictCounts": {
+    "R1 wins": 4,
+    "DB wins": 3,
+    "Both wrong": 1,
+    "Both valid": 2
+  },
+  "investigationsRun": [
+    "B9 30-page sustained walk with 4 rotating production UAs (Chrome120/Safari17/Firefox121/Edge120) at 800ms delay - all 200, ~60KB bodies each, 26.7s wall",
+    "Live-probe /search.asp?keyword=* with 9 different param variants and 6 different keywords - all 403 with Cloudflare 'Attention Required' page (4550B identical body)",
+    "Live-probe DB /search?q=glock - 404",
+    "Try /search.asp with __cf_bm cookie from homepage + Referer header - STILL 403",
+    "Re-derive expectedProductCount: walked union of all 9 categories = 389 (matches R1 exactly)",
+    "Verify runtime template form: generic-retail.ts:97/127-129 expects '-{N}.html' (DB form), NOT '{slug}-{N}.html' (R1 form)",
+    "Verify product-count-probe.ts VALID_METHOD_NAMES - both 'html-pagination' (R1) and 'stream-page-count' (DB) are valid"
+  ],
+  "blockers": [],
+  "topSurprises": [
+    "B5R1's searchUrl is ALSO broken (403 from CF WAF). R1 read the form action but skipped live-probe. Lesson: skill B4 rule (mandatory live-probe of substituted URL) was violated by R1. Both DB and R1 should be set to null/omitted on the next siteProfile update.",
+    "Cloudflare is rule-selective: catalog HTML pages pass cleanly (30/30) but /search.asp?keyword=* is blocked at the WAF (even with __cf_bm cookie). This is the literal 'cloudflare-passive + rule-selective' configuration the DB notes describe.",
+    "R1's paginationPattern.template uses the wrong shape - '{slug}-{N}.html' is hand-formatted; the runtime expects just the suffix replacement '-{N}.html'. Bug in R1, not DB."
+  ]
+}

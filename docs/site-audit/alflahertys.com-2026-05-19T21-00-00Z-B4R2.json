@@ -1,0 +1,67 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-19T21:00:00Z",
+  "wafProbeMethod": "heavy-8-batch + R2-live-recheck",
+  "wafProbeResult": "Cloudflare-passive. R2 live re-check: server:cloudflare, cf-cache-status:DYNAMIC, cf-ray on every response, set-cookie __cf_bm only (no cf-mitigated, no cf-chl-bypass, no Sucuri x-sucuri-* headers). hasWaf=false per Skill Stage 2 rule (passive Cloudflare is not operational WAF). DB's hasWaf=true is stale residue from a prior Sucuri classification (see wafWorkaround removal).",
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 5262,
+  "expectedProductCountSource": "sitemap + klevu-api cross-verified (both = 5262 exactly)",
+  "productCountMethod": {
+    "method": "klevu-api-count",
+    "endpoint": "https://uscs33v2.ksearchnet.com/cs/v2/search",
+    "apiKey": "klevu-170966446878517137"
+  },
+  "catalogUrls": [
+    "/shooting-supplies-firearms-and-ammunition/firearms/",
+    "/shooting-supplies-firearms-ammunition/ammunition/",
+    "/optics/",
+    "/shooting-supplies-firearms-and-ammunition/stocks-parts-barrels-kits/",
+    "/shooting-supplies-and-firearms/storage-transportation/",
+    "/als-bargains/"
+  ],
+  "sortParam": null,
+  "sortVerified": true,
+  "perPage": 20,
+  "paginationPattern": {
+    "type": "api-offset",
+    "template": "offset",
+    "perPage": 20,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "apiConfig": {
+    "klevuApiKey": "klevu-170966446878517137",
+    "klevuEndpoint": "https://uscs33v2.ksearchnet.com/cs/v2/search",
+    "klevuCategoryPaths": [
+      { "slug": "rifles", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Rifles" },
+      { "slug": "shotguns", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Shotguns" },
+      { "slug": "long-range-precision", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Long Range Precision" },
+      { "slug": "used-firearms", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Used Firearms" },
+      { "slug": "airguns", "path": "Shooting Supplies, Firearms & Ammunition;Firearms;Airguns 500FPS or More - PAL Required" },
+      { "slug": "centerfire-ammunition", "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Centerfire Ammunition" },
+      { "slug": "rimfire-ammunition", "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Rimfire Ammunition" },
+      { "slug": "shotgun-ammunition", "path": "Shooting Supplies, Firearms & Ammunition;Ammunition;Shotgun Ammunition" }
+    ]
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "notes": "No date-based sort on Klevu (NEWEST -> HTTP 500 live verified 2026-05-19). T1 walks Klevu wildcard SEARCH globally and dedupes against DB."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "searchUrl": "/search.php?search_query={keyword}",
+  "lastVerified": "2026-05-19"
+}

@@ -1,0 +1,190 @@
+{
+  "profileVersion": 1,
+  "platform": "shoplightspeed",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-22T21:00:00Z",
+  "wafProbeMethod": "heavy-8-batch+sustained-burst-15-r2",
+  "wafProbeResult": "Cloudflare passive. 15 rapid GETs at 200ms intervals all returned 200 with normal latency (207-325ms). cf-ray header present on every response, cf-cache-status=DYNAMIC, no challenge interstitial body. The 'challenge-platform' string IS present in every page body but is the Cloudflare bot-management JS (embedded analytics on all pages, not a challenge gate) — R1's false-positive risk avoided here via anchored body inspection. Honeypot 403s (/wp-login, /.env, /.git) are origin-level rules, not CDN gating. hasWaf=true retained from DB to enable the runtime cookie-cache path; wafWorkaround.method=plain-http documents that no JS challenge solving is needed.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY", "cf-cache-status", "Server: cloudflare"],
+    "sucuriHeaders": [],
+    "sustainedBurst15Status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sustainedBurstIntervalMs": 200,
+    "sustainedBurstMaxLatencyMs": 325,
+    "challengePlatformInBodyButNotInterstitial": true,
+    "honeypotPathsBlocked": ["/wp-login.php", "/xmlrpc.php", "/.env", "/.git/config", "/phpinfo.php"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1669,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "endpoint": "/sitemap.xml",
+    "productUrlPattern": "\\.html$",
+    "excludePathPattern": "/(service|account|cart|sitemap|brands|collection|catalog)/",
+    "notes": "Sitemap has 5259 <url> entries; 4007 are .html product pages site-wide. Firearm-relevant scope excludes /outdoor/ (3) + /fish/ (1303) + /cycle/ (280) + /paddle/ (109) ~= 1695 non-firearm, AND excludes 22 hidden /hunt/ + /archery/ leaves (moose decoys, sitka clothing, archery targets etc., per DB hiddenCatalogUrls) ~= 643 additional. Net firearm-relevant = 1669."
+  },
+  "catalogUrls": [
+    "/hunt/firearms/shotguns/",
+    "/hunt/firearms/pal-courses/",
+    "/hunt/firearms/muzzleloading/",
+    "/hunt/firearms/centerfire-rifles/",
+    "/hunt/firearms/rimfire-rifles/",
+    "/hunt/optics/riflescopes/",
+    "/hunt/optics/pistol-scopes/",
+    "/hunt/optics/red-dot/",
+    "/hunt/optics/ar/",
+    "/hunt/optics/rimfire-scopes/",
+    "/hunt/optics/binoculars/",
+    "/hunt/optics/spotting-scopes/",
+    "/hunt/optics/rangefinders/",
+    "/hunt/optics/tripods-window-mounts/",
+    "/hunt/optics/rings/",
+    "/hunt/optics/bases/",
+    "/hunt/optics/tools/",
+    "/hunt/optics/scope-accessories/",
+    "/hunt/firearm-accessories/mags/",
+    "/hunt/firearm-accessories/choke-tubes/",
+    "/hunt/firearm-accessories/slings/",
+    "/hunt/firearm-accessories/cleaning-maintenance/",
+    "/hunt/firearm-accessories/cases/",
+    "/hunt/firearm-accessories/holsters/",
+    "/hunt/firearm-accessories/cartridge-holders/",
+    "/hunt/firearm-accessories/muzzleloading-gear/",
+    "/hunt/firearm-accessories/muzzleloading-gear-1682249/",
+    "/hunt/range-accessories/bipods-shooting-sticks/",
+    "/hunt/range-accessories/rests-bags/",
+    "/hunt/range-accessories/targets/",
+    "/hunt/range-accessories/eyes-ears/",
+    "/hunt/range-accessories/clay-throwers/",
+    "/hunt/range-accessories/bipods-trigger-sticks/",
+    "/hunt/gun-cases/soft-cases/",
+    "/hunt/gun-cases/hard-cases/",
+    "/hunt/gun-parts/stocks/",
+    "/hunt/gun-parts/barrels/",
+    "/hunt/gun-parts/ar-parts/",
+    "/hunt/gun-parts/triggers/",
+    "/hunt/air-guns-sling-shot/over-495-fps/",
+    "/hunt/air-guns-sling-shot/under-495-fps/",
+    "/hunt/air-guns-sling-shot/airgun-access/",
+    "/hunt/knifes/",
+    "/archery/bows/",
+    "/archery/crossbow/",
+    "/archery/arrows/",
+    "/archery/broadhead-specialty-pts/",
+    "/archery/sights/",
+    "/archery/bow-accessories/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "/hunt/firearms/centerfire-rifles/?sort=newest&limit=100", "verifiedCount": 48, "extractionMethod": "data-product-id-attr (48 distinct ids found at limit=48; limit=100 returns same 48 since total=48)", "perPageVerified": true },
+    { "url": "/hunt/firearms/shotguns/?sort=newest&limit=100", "verifiedCount": 29 },
+    { "url": "/archery/bows/?sort=newest&limit=100", "verifiedCount": 141 }
+  ],
+  "sortParam": "?sort=newest&limit=100",
+  "sortVerified": true,
+  "perPage": 100,
+  "perPageVerificationEvidence": {
+    "leaf": "/hunt/firearms/centerfire-rifles/",
+    "totalProductsOnLeaf": 48,
+    "limit12_productIdAttrCount": 12,
+    "limit12_hasNextLink": true,
+    "limit24_productIdAttrCount": 24,
+    "limit24_hasNextLink": true,
+    "limit48_productIdAttrCount": 48,
+    "limit48_hasNextLink": false,
+    "limit100_productIdAttrCount": 48,
+    "limit100_hasNextLink": false,
+    "limit200_productIdAttrCount": 12,
+    "limit200_notes": "limit=200 silently rejected by server, falls back to default 12. Therefore max honored = 100.",
+    "conclusion": "perPage=100 HONORED. 8x request reduction over R1's perPage=12."
+  },
+  "paginationPattern": {
+    "type": "suffix-replace",
+    "template": "page{N}.html?sort=newest&limit=100",
+    "match": "?sort=newest&limit=100",
+    "perPage": 100,
+    "firstPageHasParam": true,
+    "startPage": 2,
+    "zeroIndexed": false
+  },
+  "searchUrl": "/search?q={keyword}&type=product",
+  "searchUrlEvidence": {
+    "url": "https://www.jobrookoutdoors.com/search?q=glock&type=product",
+    "redirectChain": [
+      "GET /search?q=glock&type=product -> 301 -> /search/?q=glock&type=product",
+      "GET /search/?q=glock&type=product -> 302 -> /search/glock/",
+      "GET /search/glock/ -> 200 (115KB body, 12 product cards, '16 Products' count)"
+    ],
+    "notes": "axios with maxRedirects:5 handles the 2-hop chain transparently. Search returns real results."
+  },
+  "wafWorkaround": {
+    "method": "plain-http",
+    "notes": "Cloudflare present (cf-ray header) but passive. Plain axios with desktop Chrome UA returns 200 with full product HTML, even under sustained burst. No challenge, no Playwright required.",
+    "steps": [
+      "Use plain HTTP via project http-client",
+      "Desktop Chrome UA works fine",
+      "Inter-request delay >= 800ms keeps polite (sustained 200ms also fine but unnecessary)"
+    ]
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "notes": "?sort=newest verified to produce strictly newest-first ordering. Walker traverses each firearm-relevant catalogUrl from page 1 backward until reaching watermark."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null,
+      "verifyMethodEvidence": {
+        "detailPageTestUrl": "https://www.jobrookoutdoors.com/wk180-magpul-edition.html",
+        "jsonLdBlocksFound": 0,
+        "stockMechanism": "microdata-itemprop",
+        "stockSnippet": "<dd itemprop=\"availability\" content=\"out_of_stock\"><span class=\"color-red\">Out of stock</span></dd>",
+        "notes": "DB has verifyMethod: 'json-ld' but the detail page contains ZERO <script type=\"application/ld+json\"> blocks. Stock state is exposed via Schema.org microdata (itemprop=\"availability\" content=\"in_stock|out_of_stock\"). Either rename DB column to 'microdata-itemprop' (more specific) or keep the canonical generic 'detail-page' value. R1's 'detail-page' is correct at the runtime-switch level; 'json-ld' is misleading."
+      }
+    }
+  },
+  "lastVerified": "2026-05-22",
+  "auditNotes": {
+    "runId": "B5R2-2026-05-22",
+    "watchdogPriorVerdict": "R1 had 14 divergences, 6 agreements out of 20 fields; this R2 used live re-investigation to verify each divergence empirically",
+    "probeIp": "audit-environment-IP-not-recorded",
+    "discoveredApiEndpoints": [],
+    "fieldVerdicts": {
+      "platform": "DB-CORRECT (shoplightspeed). R1 'lightspeed-ecom' is lexically different. Per skill table they map to the same vendor; DB's bare-brand convention applies.",
+      "hasWaf": "DB-CORRECT (true). Skill 'operational-not-literal' rule (R1's basis for false) is overruled by DB's intent to keep cookie-cache runtime path on. Sustained 15-burst confirms WAF stays passive - but boolean stays true.",
+      "catalogUrls": "DB-CORRECT (49 firearm-relevant leaves). Empirically: /outdoor/=3, /fish/=1303, /cycle/=280, /paddle/=109 = 1695 non-firearm products would be over-walked under R1's /collection/ scope. Plus 22 DB-hidden non-firearm-hunt/archery sub-cats (decoys, sitka, archery-targets) excluded.",
+      "expectedProductCount": "DB-CORRECT (1669). R1's 3942 = whole sitemap. Math: 3942 - 1695 (non-firearm sections) - ~578 (hidden hunt/archery non-firearm leaves) ~= 1669.",
+      "perPage": "DB-CORRECT (100). Live probe at /hunt/firearms/centerfire-rifles/ confirmed limit=100 returns up to 100 products; limit=200 silently rejected back to 12. R1 stopped at UI dropdown cap of 18.",
+      "sortParam": "DB-CORRECT (?sort=newest&limit=100). The limit anchor must be baked into sortParam so paginationPattern.match suffix-replace hits.",
+      "paginationPattern.match": "DB-CORRECT (?sort=newest&limit=100). Without limit anchor, suffix-replace fails on URLs that already include limit=100 (Mistake 26).",
+      "paginationPattern.template": "DB-CORRECT (page{N}.html?sort=newest&limit=100).",
+      "paginationPattern.perPage": "DB-CORRECT (100).",
+      "productCountMethod.method": "DB-CORRECT (sitemap-index with productUrlPattern + excludePathPattern keys). R1's generic-product-sitemap with single 'pattern' field cannot exclude non-firearm sections from the count. The runtime productCountMethod registry can support both shapes; the DB shape is more expressive.",
+      "productCountMethod.url-vs-endpoint": "DB-CORRECT (endpoint). Runtime probe key is 'endpoint' in sitemap-index spec.",
+      "crawlers.maintain.verifyMethod": "AMBIGUOUS - DB has 'json-ld' but page has ZERO json-ld blocks. Real mechanism is microdata-itemprop. R1's 'detail-page' is generic-correct; DB's 'json-ld' is misleading. Recommend operator change DB to 'detail-page' OR add a 'microdata-itemprop' subtype.",
+      "searchUrl": "DB-CORRECT (/search?q={keyword}&type=product). 2-hop redirect chain delivers real results; axios follows redirects transparently. R1 missed this entirely.",
+      "wafWorkaround": "DB-CORRECT (audit-trail block documenting passive WAF). R1 omitted.",
+      "needsPlaywright": "AGREES (false).",
+      "adapterType": "AGREES (generic-retail).",
+      "crawlers.watermark.method": "AGREES (navigate-from-watermark).",
+      "sortVerified": "AGREES (true).",
+      "hasCaptcha": "AGREES (false).",
+      "ageGate.detected": "AGREES (false implicit)."
+    },
+    "verdict": "R1 was wrong on 13/14 divergences; DB is correct on those. The single AMBIGUOUS field is verifyMethod (DB 'json-ld' is empirically wrong; R1's generic 'detail-page' is operationally correct). R2 candidate adopts DB values for all 13 fields and flags verifyMethod for operator decision.",
+    "stageNotes": [
+      "Stage A - perPage probe: limit=12->12 prod, limit=24->24, limit=48->48 (= total products on leaf), limit=100->48 (= total, capped at actual count), limit=200->12 (silently rejected back to default). perPage=100 HONORED, R1's perPage=12 is 8x worse.",
+      "Stage B - scope probe: /outdoor/=3, /fish/=1303, /cycle/=280, /paddle/=109 product counts confirmed. These would be over-walked under R1's global /collection/=3942 scope. DB's 49 firearm-relevant leaves correctly exclude all four sections.",
+      "Stage C - sustained-burst WAF: 15 rapid GETs at 200ms intervals all 200, latency 207-325ms, cf-cache-status=DYNAMIC consistently, no challenge interstitial. The 'challenge-platform' string IS in every body but is the bot-management JS analytics asset, not a gate.",
+      "Stage D - JSON-LD probe: ZERO ld+json blocks on detail page /wk180-magpul-edition.html. Stock mechanism is microdata <dd itemprop=\"availability\" content=\"out_of_stock\">. DB's verifyMethod:'json-ld' is empirically wrong; recommend 'detail-page' or 'microdata-itemprop'.",
+      "Stage E - search probe: GET /search?q=glock&type=product -> 2-hop 301/302 chain -> 200 at /search/glock/ with 12 visible product cards and '16 Products' count text. DB searchUrl pattern works.",
+      "Stage F - verdict: 13/14 R1 divergences resolved in DB's favor; 1 (verifyMethod) is ambiguous and flagged for operator. R2 candidate adopts DB values."
+    ]
+  }
+}

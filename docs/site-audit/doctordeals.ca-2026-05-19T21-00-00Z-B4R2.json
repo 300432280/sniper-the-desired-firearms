@@ -1,0 +1,152 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "sgcaptcha",
+  "wafLastProbedAt": "2026-05-19T21-00-00Z",
+  "wafProbeMethod": "heavy-8-batch+R2-playwright",
+  "wafProbeResult": "SiteGround sgcaptcha active on /shop, /wp-json, /sitemap_index.xml and all non-root paths (SG-Captcha: challenge header, 202 Accepted with meta-refresh to /.well-known/sgcaptcha/). Desktop Chrome UA also returns 403 on bare /; iPhone UA + sgcaptcha cookie clears all paths. R2 verified via Playwright homepage warmup + iPhone UA: cookies issued (_I_, sbjs_*), all /product-category/* paths and /wp-json/wp/v2/* return 200 after warmup.",
+  "wafProbeEvidence": {
+    "sgcaptchaPaths": ["/wp-json/", "/shop/", "/sitemap_index.xml", "/robots.txt", "/wp-json/wc/store/v1/products"],
+    "sgcaptchaHeader": "SG-Captcha: challenge",
+    "sgcaptchaChallengeRedirect": "<meta http-equiv=\"refresh\" content=\"0;/.well-known/sgcaptcha/?r=...&y=ipc:...\">",
+    "rootStatusByUa": { "desktop-chrome": 403, "iphone-safari": 200, "googlebot": 200, "curl-default": 200, "no-ua": 200 },
+    "rapidBurstStatus": "10/10 returned 403 (desktop UA persisted)",
+    "honeypotPathsBlocked": true,
+    "sqliRuleFired": false,
+    "xssRuleFired": false
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 972,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://doctordeals.ca/product-category/firearms/",
+    "https://doctordeals.ca/product-category/parts/",
+    "https://doctordeals.ca/product-category/accessories/",
+    "https://doctordeals.ca/product-category/mags-barrels/",
+    "https://doctordeals.ca/product-category/clothing-gun-related/",
+    "https://doctordeals.ca/product-category/defense/"
+  ],
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://doctordeals.ca/product/ruger-10-22-semi-automatic-rifle-complete-bolt-assembly-polished-collectors-series/",
+      "title": "Ruger 10-22 Semi-automatic Rifle — Complete Bolt Assembly (polished) (Collector’s Series)",
+      "price": 119.99,
+      "stockStatus": "in_stock",
+      "sourceId": "36999"
+    },
+    {
+      "url": "https://doctordeals.ca/product/savage-a22-fv-sr-22-lr-semi-automatic-rifle-47241-parts-receiver-barrel-only/",
+      "title": "Savage A22 FV-SR .22 LR Semi-automatic Rifle (47241) — Parts (Receiver + Barrel Only)",
+      "price": null,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://doctordeals.ca/product/mossberg-500-hunting-all-purpose-field-20-gauge-pump-action-shotgun-50136/",
+      "title": "Mossberg 500 Hunting All-Purpose Field 20 Gauge Pump-Action Shotgun (50136)",
+      "price": null,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST core /wp/v2/product honors ?modified_after= (probe future=0, past=972). WC adapter at woocommerce.ts:337 hardcodes modified_after against /wp-json/wp/v2/product — matches verified surface."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "wp-rest-core-product_cat-parent-0",
+    "categories": [
+      { "id": 199, "slug": "accessories", "name": "Accessories", "count": 261, "parent": 0, "link": "https://doctordeals.ca/product-category/accessories/" },
+      { "id": 239, "slug": "parts", "name": "Parts", "count": 388, "parent": 0, "link": "https://doctordeals.ca/product-category/parts/" },
+      { "id": 60, "slug": "firearms", "name": "Firearms", "count": 107, "parent": 0, "link": "https://doctordeals.ca/product-category/firearms/" },
+      { "id": 6294, "slug": "mags-barrels", "name": "Mags & Barrels", "count": 109, "parent": 0, "link": "https://doctordeals.ca/product-category/mags-barrels/" },
+      { "id": 3680, "slug": "clothing-gun-related", "name": "Almost Free Clothing", "count": 44, "parent": 0, "link": "https://doctordeals.ca/product-category/clothing-gun-related/" },
+      { "id": 215, "slug": "defense", "name": "Defense", "count": 1, "parent": 0, "link": "https://doctordeals.ca/product-category/defense/" },
+      { "id": 1784, "slug": "uncategorized", "name": "Uncategorized", "count": 0, "parent": 0, "link": "https://doctordeals.ca/product-category/uncategorized/" }
+    ],
+    "totalsSumCheck": "Sum of 6 non-empty parent counts (910) vs WP REST product total (972). Delta = 62 products in uncategorized/OOS/drafts visible only via admin REST. Production T1 api-date-since-watermark sees all 972; catalogUrls are HTML-fallback spine only. Canonical link form uses NO gun-shop/ prefix (verified via product_cat.link)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R2-2026-05-19T21-00-00Z",
+    "round": 2,
+    "probeIp": "99.228.63.11",
+    "r2VerdictCounts": { "r1Wins": 5, "dbWins": 1, "bothWrong": 1, "notADivergence": 3, "inconclusive": 0 },
+    "r2LiveTests": {
+      "catalogUrlsParentSlug": "/product-category/gun-shop/ returns 404 — 'gun-shop' is NOT a real WP taxonomy term. WP REST product_cat?slug=gun-shop returns []. URLs WITH and WITHOUT gun-shop/ prefix both 200 (permalink rewrite resolves both). Canonical form per WP REST .link field has NO prefix.",
+      "paginationBoundary": "/product-category/firearms/page/9/ returns 11 products (8x12+11=107 = WP REST count for firearms term id 60). page/10/ returns 404. Confirms perPage=12 path-template /page/{N}/.",
+      "searchUrl": "/?s=ruger&post_type=product returns 12 results (first = ruger-10-22-...). /?s=ammo returns 2 (site has no ammo category — matches DB note). DB searchUrl verified live.",
+      "verifyMethodRouting": "worker.ts:381 tryStoreApiVerify only matches literal === 'store-api'. worker.ts:769-775 else-branch calls verifyProductsViaPlaywright unconditionally for any truthy verifyMethod. grep finds NO other literal-string branches on 'json-ld' / 'detail-page'. DB's json-ld and R1's detail-page are runtime-equivalent."
+    },
+    "verifyMethodPolicy": "detail-page selected: restock alerts required. store-api would silently drop OOS-transition / restock detection for products the batch API does not return (worker.ts:549/711 early-return).",
+    "wcCountSurface": "wp-rest-core /wp-json/wp/v2/product (972) chosen to match watermark surface; in-stock visible total is 582 (Store API /wc/store/v1/products, /shop/ shows 577 results)",
+    "wcCategoryApi": "WP REST core /wp/v2/product_cat preferred (non-recursive, returns parent=0 top-level set deterministically). WC Store API also available but recurses subcategories.",
+    "sgcaptchaPathScope": "All catalog/API paths gated; root / returns 200 on iPhone UA without challenge. Runtime waf-cookie-manager (waf-cookie-manager.ts:120) recognizes /.well-known/sgcaptcha/ challenge path.",
+    "wafTypeNote": "Marked 'sgcaptcha' for runtime: matches existing SG handler (Mistake 30). The 403 on desktop UA at root is the same SiteGround security stack — iPhone UA override is the canonical fix.",
+    "discoveredApiEndpoints": [
+      "/wp-json/wp/v2/product",
+      "/wp-json/wp/v2/product_cat",
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wc/store/v1/products/categories",
+      "/product-sitemap.xml"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "needsPlaywright": "high",
+      "userAgentOverride": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "perPage": "high",
+      "searchUrl": "high",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "medium-operator-policy"
+    },
+    "stageNotes": [
+      "R2 Stage 1 (canonical): apex returned 200 with iPhone UA after sgcaptcha homepage warmup. Cookies: _I_, sbjs_*.",
+      "R2 Stage 4 (catalog): corrected to 6-URL canonical spine. Live walk of /product-category/firearms/ shows 9 pages, 107 products (matches WP REST product_cat count for term id 60). DB's gun-shop/ prefix is a legacy WP permalink rewrite — both forms 200 but canonical form has no prefix per WP REST .link.",
+      "R2 Stage 5 (pagination): real lastPage boundary confirmed at page 9 (firearms category). page/10/ → 404. Path /page/{N}/ template valid.",
+      "R2 Stage 9 (searchUrl): /?s={keyword}&post_type=product verified — DB had this field correctly populated; R1 missed it. Added back."
+    ],
+    "r1CarryForward": [
+      "Stage 1 (canonical): apex returned 200 with iPhone UA only — desktop Chrome UA returned 403 SiteGround block page.",
+      "Stage 2 (WAF/CAPTCHA): 8-batch heavy probe + per-path probes. sgcaptcha active on every path except /. Desktop UA blanket-403 at root.",
+      "Stage 3 (platform): WooCommerce + Flatsome theme (wp-content/themes/flatsome). Meta generator AIOSEO.",
+      "Stage 6 (sort): <select class=\"orderby\"> has 4 options: popularity, date, price, price-desc. honored-default-is-newest. sortParam=?orderby=date, sortVerified=true.",
+      "Stage 7 (watermark): WP REST /wp/v2/product?modified_after honored. Method A api-date-since-watermark.",
+      "Stage 8 (count): WP REST core /wp/v2/product x-wp-total=972 (live R2 reconfirmed)."
+    ]
+  }
+}

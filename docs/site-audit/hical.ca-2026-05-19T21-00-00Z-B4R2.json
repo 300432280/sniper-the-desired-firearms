@@ -1,0 +1,241 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "imperva-incapsula",
+  "wafLastProbedAt": "2026-05-19T21:00:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "active-incapsula",
+  "wafProbeEvidence": {
+    "vendor": "imperva-incapsula",
+    "headers": [
+      "X-CDN: Imperva",
+      "X-Iinfo: present",
+      "Set-Cookie: visid_incap_3254206=...",
+      "Set-Cookie: incap_ses_1848_3254206=..."
+    ],
+    "cookies": [
+      "visid_incap_3254206",
+      "incap_ses_1848_3254206",
+      "nlbi_3254206",
+      "PHPSESSID"
+    ],
+    "challengeType": "js-challenge-loading-page",
+    "interstitialBodyMarker": "<script src=\"/_Incapsula_Resource?SWJIYLWA=...\">",
+    "playwrightCookieCount": 13,
+    "rapidBurstStatus": "all-200-after-cookie-bootstrap",
+    "sqliRuleFired": true,
+    "honeypotPathsBlocked": [".env (403)", ".git/config (403)"]
+  },
+  "wafWorkaround": {
+    "method": "cookie-cache",
+    "wafVendor": "imperva-incapsula",
+    "cookieNames": [
+      "visid_incap_3254206",
+      "incap_ses_1848_3254206",
+      "nlbi_3254206",
+      "PHPSESSID"
+    ],
+    "challengeType": "js-challenge-loading-page",
+    "storeApiAvailable": true,
+    "wcRestV3Available": false,
+    "wpRestV2Available": true,
+    "notes": "Incapsula JS challenge blocks curl/axios. Playwright solves challenge, gets 13 cookies. axios + cookies works for both API and HTML. iPhone UA required (see userAgentOverride)."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 1676,
+  "productCountDate": "2026-05-19",
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://hical.ca/product-category/firearm-accessories/",
+    "https://hical.ca/product-category/firearm-parts/",
+    "https://hical.ca/product-category/firearms-canada/",
+    "https://hical.ca/product-category/optics-mounts/",
+    "https://hical.ca/product-category/tactical-accessories/",
+    "https://hical.ca/product-category/cleaning-maintenance/",
+    "https://hical.ca/product-category/all-products/",
+    "https://hical.ca/product-category/uncategorized/",
+    "https://hical.ca/product-category/optics-2/",
+    "https://hical.ca/product-category/night-vision-accessories/",
+    "https://hical.ca/product-category/storage-cases-transport/",
+    "https://hical.ca/product-category/shooting-accessories-misc/",
+    "https://hical.ca/product-category/hunting-survival-gear/",
+    "https://hical.ca/product-category/handguards/",
+    "https://hical.ca/product-category/shotgun/",
+    "https://hical.ca/product-category/courses-training/",
+    "https://hical.ca/product-category/raffle/",
+    "https://hical.ca/product-category/clearance/",
+    "https://hical.ca/product-category/draws/",
+    "https://hical.ca/product-category/gun-smith-services/",
+    "https://hical.ca/product-category/new-arrivals/",
+    "https://hical.ca/product-category/scopes/",
+    "https://hical.ca/product-category/range-finder/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://hical.ca/product/beretta-1301-tactical-gen2-mod2-sj-custom-18-50-barrel-12-ga-od-green/",
+      "title": "Beretta 1301 Tactical Gen2 Mod2 (live page-2 firearms-canada link)",
+      "source": "Playwright fetch of /product-category/firearms-canada/page/2/?orderby=date (R2-T7)"
+    },
+    {
+      "url": "https://hical.ca/product/sbi-st-22-precision-16-22lr-rifle-canada/",
+      "title": "SBI ST-22 Precision 16 .22LR Rifle Canada | Non-Restricted",
+      "note": "R1 sample; extraction confirmed working (16 products on /firearms-canada/ page 1)."
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 16,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 16,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "api": "wp-rest-v2",
+      "orderBy": "modified",
+      "dateFilterField": "modified_after",
+      "notes": "WP REST v2 /wp/v2/product HONORS modified_after (R2-T1b: future date -> x-wp-total=0; R2-T1c: 7d window -> x-wp-total=12). Monotonicity verified R2-T1d/T1e: page1 oldest 2026-05-19T05:11:44 > page2 newest 2026-05-18T18:02:46. WC Store API /wc/store/v1/products?after=... ALSO honors filter (R2-T2b: 0 results for 2099 date). Adapter woocommerce.fetchCatalogPage (line 337/340) uses WP REST v2 with modified_after when dateAfter is set."
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    },
+    "catalog": {
+      "api": "wp-rest-v2",
+      "method": "api-date-range",
+      "notes": "Tiers use date ranges: T2=7d, T3=8-21d, T4=22+d via modified_after/modified_before on /wp/v2/product (operator audit-trail from DB profile 2026-04-12, retained R2)."
+    }
+  },
+  "topLevelCategories": {
+    "source": "wp-json/wp/v2/product_cat (live R2-T4 2026-05-19)",
+    "categories": [
+      { "slug": "firearm-accessories", "allOption": 804, "id": 171 },
+      { "slug": "firearm-parts", "allOption": 255, "id": 192 },
+      { "slug": "firearms-canada", "allOption": 226, "id": 143 },
+      { "slug": "optics-mounts", "allOption": 221, "id": 164 },
+      { "slug": "tactical-accessories", "allOption": 96, "id": 199 },
+      { "slug": "cleaning-maintenance", "allOption": 69, "id": 174 },
+      { "slug": "all-products", "allOption": 35, "id": 1867 },
+      { "slug": "uncategorized", "allOption": 26, "id": 15 },
+      { "slug": "optics-2", "allOption": 16, "id": 2073 },
+      { "slug": "night-vision-accessories", "allOption": 9, "id": 2093 },
+      { "slug": "storage-cases-transport", "allOption": 8, "id": 184 },
+      { "slug": "shooting-accessories-misc", "allOption": 6, "id": 207 },
+      { "slug": "hunting-survival-gear", "allOption": 5, "id": 211 },
+      { "slug": "handguards", "allOption": 4, "id": 1454 },
+      { "slug": "shotgun", "allOption": 3, "id": 149 },
+      { "slug": "courses-training", "allOption": 3, "id": 140 },
+      { "slug": "raffle", "allOption": 3, "id": 1431 },
+      { "slug": "clearance", "allOption": 2, "id": 217 },
+      { "slug": "draws", "allOption": 2, "id": 1895 },
+      { "slug": "gun-smith-services", "allOption": 2, "id": 443 },
+      { "slug": "new-arrivals", "allOption": 2, "id": 2037 },
+      { "slug": "scopes", "allOption": 2, "id": 1983 },
+      { "slug": "range-finder", "allOption": 1, "id": 1375 }
+    ],
+    "totalsSumCheck": "Sum of top-level firearm-relevant counts = 1799; global X-WP-Total = 1676 -> 7.3% overlap. Acceptable (union of these URLs covers 100% of firearm-relevant products)."
+  },
+  "overlapNotes": {
+    "all-products": "INCLUDED (R2-T5 reversed DB exclusion) - of the 50 most recent products in cat=1867, only 1 also appeared in firearms-canada (cat=143) and 0 in firearm-accessories (cat=171). 34/50 sampled were UNIQUE to all-products. DB note 'umbrella fully overlaps' was wrong as of 2026-05-19. Kept in catalogUrls.",
+    "optics-2": "INCLUDED - separate top-level cat from optics-mounts; 3 of 16 products (53247, 51766, 51736) unique per DB note 2026-04-12.",
+    "handguards": "INCLUDED - products also in firearm-accessories but separate top-level cat.",
+    "night-vision-accessories": "INCLUDED - products also in tactical-accessories but separate top-level cat."
+  },
+  "parentInclusivity": {
+    "firearms-canada": "INCLUSIVE - parent shows all child products (incl. surplus-firearms cat=1979, left-handed-firearms cat=162); R2-T3 status=200, 16 products on page 1.",
+    "optics-mounts": "INCLUSIVE - parent shows all child products, 14 pages",
+    "firearm-accessories": "INCLUSIVE - parent shows all child products, 51 pages"
+  },
+  "paginationVerification": {
+    "firearms-canada": "R2-T7: /firearms-canada/page/2/?orderby=date status=200, products extractable (beretta-1301-tactical-gen2 etc).",
+    "stocks": "DB note retained: maxPage=6, p1=16, p2=16, pLast=9, total~89 (verified 2026-04-12)",
+    "magazines": "DB note retained: maxPage=17, p1=16, p2=16, pLast=2, total~258 (verified 2026-04-12)",
+    "rifles-bolt-action": "DB note retained: maxPage=5, p1=16, p2=16, pLast=8, total~72 (verified 2026-04-12)"
+  },
+  "dateFilterMonotonicity": {
+    "verified": true,
+    "verifiedOn": "2026-05-19",
+    "evidence": "R2-T1d page1 desc IDs/modified: 4344@2026-05-19T22:58:44 | 2617@2026-05-19T18:26:59 | 57832@2026-05-19T05:11:44. R2-T1e page2 desc: 14204@2026-05-18T18:02:46 | 2556@2026-05-18T17:53:44 | 35215@2026-05-18T17:41:32. page1 oldest > page2 newest by modified - strictly decreasing."
+  },
+  "sortVerification": {
+    "method": "id-jump",
+    "result": "ALL 11 categories show different first products with ?orderby=date - sort works universally (DB-2026-04-12 evidence retained).",
+    "verifiedOn": "2026-04-12",
+    "verifiedCategories": [
+      "magazines (def=55774, sort=57927, DIFFERENT)",
+      "sks-parts (def=6689, sort=58017, DIFFERENT)",
+      "rifles-bolt-action (def=45355, sort=58158, DIFFERENT)",
+      "red-dot-holographic-sights (def=40667, sort=52322, DIFFERENT)",
+      "oils-solvents (def=15992, sort=51603, DIFFERENT)",
+      "tactical-accessories (def=52239, sort=57963, DIFFERENT)",
+      "cleaning-maintenance (def=15992, sort=52799, DIFFERENT)",
+      "uncategorized (def=4523, sort=58040, DIFFERENT)",
+      "storage-cases-transport (def=21601, sort=52786, DIFFERENT)",
+      "optics-2 (def=53247, sort=55872, DIFFERENT)",
+      "shooting-accessories-misc (def=5565, sort=52836, DIFFERENT)"
+    ]
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R2-hical-2026-05-19T21-00-00Z",
+    "round": 2,
+    "predecessorRunId": "B4R1-hical-2026-05-19T20-00-00Z",
+    "r1ReversedFields": [
+      "crawlers.watermark.method (R1 wrong: tested only Store API with `after`; R2-T1b/T1c/T1d/T1e proved /wp/v2/product?modified_after WORKS with monotonicity, AND R2-T2b proved Store API also honors `after=...`)",
+      "userAgentOverride (R1 null was less defensive than DB iPhone UA; DB has 37-day production track record)"
+    ],
+    "r1ConfirmedFields": [
+      "catalogUrls slug: /firearms/ in DB -> 404 (R2-T3); /firearms-canada/ -> 200 with 16 products. R1 was right; DB is stale.",
+      "productCountMethod shape: R1 object form is correct (R2 verified: bare string 'wp-rest-v2-x-wp-total' THROWS at validateMethod backend/src/services/product-count-probe.ts:132). R1's stated WHY was slightly wrong (claimed silent null via default branch; actual behavior is throw, caught by crawl-scheduler.ts:263 try/catch). R1 verdict still correct.",
+      "all-products inclusion: R2-T5 showed 34/50 sampled products UNIQUE to cat=1867 vs DB's 'fully overlaps' claim. R1 was right to include."
+    ],
+    "liveProbeEvidence": {
+      "globalCounts": "R2-T1a /wp/v2/product?per_page=1 -> x-wp-total=1676; R2-T2a /wc/store/v1/products?per_page=1 -> x-wp-total=1676 (matched).",
+      "dateFilterWpRest": "R2-T1b modified_after=2099-01-01 -> x-wp-total=0 (filter applied). R2-T1c modified_after=7d-ago -> x-wp-total=12.",
+      "dateFilterStoreApi": "R2-T2b after=2099-01-01 -> x-wp-total=0 (Store API ALSO honors filter, contra R1).",
+      "deadSlug": "R2-T3 /firearms/ status=404; /firearms-canada/ status=200 (16 products extracted).",
+      "umbrellaUniqueness": "R2-T5 cat=1867 (all-products) returned x-wp-total=35; of 50 most recent only 1 overlap with firearms-canada (cat=143) and 0 with firearm-accessories (cat=171). DB-2026-04-12 'umbrella fully overlaps' was wrong as of today.",
+      "imperveCookieCount": 13,
+      "imperveCookieAcquisitionTimeS": "~5 (Playwright load + 2s settle)"
+    },
+    "verifyMethodPolicy": "store-api selected (DB precedent); WC adapter standalone Store-API path applies. R2 retained R1 caveat: worker.ts:711 early-return for store-api path means OOS-transition restock detection may miss products whose stock changed between crawls - see fix branch fix/batch-3-runtime-bugs-2026-05-19.",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wp/v2/product",
+      "/wp-json/wp/v2/product_cat",
+      "/product-sitemap.xml",
+      "/product-sitemap2.xml"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "expectedProductCount": "high (X-WP-Total 1676 cross-checked on both REST surfaces R2)",
+      "catalogUrls": "high (slug live-verified; all-products inclusion uniqueness-verified)",
+      "sortParam": "high",
+      "paginationPattern": "high (R2-T7 confirmed)",
+      "crawlers.watermark.method": "high (R2-T1 proved WP REST modified_after honored + monotonicity)",
+      "crawlers.maintain.verifyMethod": "high"
+    },
+    "openLatentIssues": [
+      "productCountMethod in DB is currently bare string 'wp-rest-v2-x-wp-total'. validateMethod() at product-count-probe.ts:132 throws on non-canonical names. Crawl-scheduler.ts:263 catches the throw silently. The throw is dormant today because DB also has expectedProductCount=1677 (line 254 gate). If count is ever cleared OR verifyBootstrapCoverage is called with a null stored count, the probe will throw + return null. R2 candidate replaces with structured object."
+    ]
+  }
+}

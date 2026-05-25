@@ -1,0 +1,104 @@
+{
+  "round": "B6R2",
+  "site": "www.gobles.ca",
+  "runId": "B6R2-2026-05-23T19-00-00Z",
+  "persona": "testing-api-tester",
+  "probedAt": "2026-05-25T03:28:16Z",
+  "summary": {
+    "verdictsAgainstR1": {
+      "supported": ["hasWaf-false", "productCountMethod-generic-product-sitemap", "expectedProductCount-3770", "perPage-100", "wafType-cloudflare-passive", "sortParam-?sort=newest"],
+      "refined": ["catalogUrls", "searchUrl"],
+      "rejected": []
+    },
+    "verdictsAgainstDB": {
+      "supported": ["platform-lightspeed-ecom", "adapterType-generic-retail", "sortParam", "paginationPattern", "needsPlaywright-false"],
+      "refuted": ["hasWaf-true", "productCountMethod-category-page-walk", "catalogUrls-9-parent-spine", "perPage-24"]
+    }
+  },
+  "catalogUrls": {
+    "verdict": "USE_LEAVES_REFINED",
+    "evidence": {
+      "parentExtractionTest": "GET /firearms/ + /firearms/?sort=newest + /firearms/?limit=100 + /firearms/?sort=newest&limit=100 + /firearms/page1.html?sort=newest — ALL 5 variants returned 0 product cards via production SELECTORS (incl .product-element, .productborder, .product-thumb, .product-layout)",
+      "parentBytes": 136855,
+      "parentSelectorHits": { "_RAW_anchors_dotHtml": 0 },
+      "controlExtraction": "/ammunition/?limit=100 returned 100 products via .product-element (same selector); /firearms/winchester/ returned 17 via .product-element. Selector logic IS correct — parents are empty by site design.",
+      "siteStructure": "Three-tier hierarchy: /firearms/ (TILE-only, 0 products, 57 subcat tiles) → /firearms/{brand-or-type}/ → /firearms/{type}/{action}/. Where children exist as further sub-categories, the parent is tile-only.",
+      "r1ListAlsoHasZeroYieldMembers": ["/firearms/centerfire-rifles/", "/firearms/shotguns/", "/firearms/rimfire-rifles/", "/firearms/combination/ (inferred from pattern)", "/knives/leatherman/ (likely zero stock, not zero structure)"],
+      "refinedSpineRecommendation": "R1's 74-URL list minus 4 zero-yield non-leaf containers (centerfire-rifles, shotguns, rimfire-rifles, combination) PLUS their ~20 sub-action leaves (already partially in R1: lever-action present; bolt-action, break-action, pump-action, semi-auto, falling-block, revolver-action absent)."
+    },
+    "dbSpineCoverageRisk": "DB's 9-URL spine includes /firearms/ AND /knives/ — BOTH RETURN 0 PRODUCTS at runtime. The DB's categoryStats./firearms/.products: 452 number is stale or comes from a walker mechanism not represented by the URL endpoint itself. The current production crawler reading DB profile would silently miss ALL firearms (~452 products) and ALL knives (~144 products) = ~596 products / 16.7% of catalog.",
+    "r1ListGaps": "R1's 74-URL list has 4 confirmed zero-yield non-leaf containers but DOES include /firearms/lever-action/ (29 products) — partial leaf coverage. The 20 sub-action leaves (/firearms/centerfire-rifles/bolt-action/, etc.) are missing.",
+    "r2Recommendation": {
+      "catalogUrlsCount": 90,
+      "delta": "+20 leaves added, -4 zero-yield removed from R1's 74 = 90",
+      "leavesToAdd": [
+        "https://www.gobles.ca/firearms/centerfire-rifles/bolt-action/",
+        "https://www.gobles.ca/firearms/centerfire-rifles/break-action/",
+        "https://www.gobles.ca/firearms/centerfire-rifles/falling-block/",
+        "https://www.gobles.ca/firearms/centerfire-rifles/lever-action/",
+        "https://www.gobles.ca/firearms/centerfire-rifles/pump-action/",
+        "https://www.gobles.ca/firearms/centerfire-rifles/semi-auto/",
+        "https://www.gobles.ca/firearms/combination/centerfire-shotgun/",
+        "https://www.gobles.ca/firearms/combination/rimfire-shotgun/",
+        "https://www.gobles.ca/firearms/rimfire-rifles/bolt-action/",
+        "https://www.gobles.ca/firearms/rimfire-rifles/break-action/",
+        "https://www.gobles.ca/firearms/rimfire-rifles/lever-action/",
+        "https://www.gobles.ca/firearms/rimfire-rifles/pump-action/",
+        "https://www.gobles.ca/firearms/rimfire-rifles/revolver/",
+        "https://www.gobles.ca/firearms/rimfire-rifles/semi-auto/",
+        "https://www.gobles.ca/firearms/shotguns/bolt-action/",
+        "https://www.gobles.ca/firearms/shotguns/break-action/",
+        "https://www.gobles.ca/firearms/shotguns/lever-action/",
+        "https://www.gobles.ca/firearms/shotguns/pump-action/",
+        "https://www.gobles.ca/firearms/shotguns/revolver-action/",
+        "https://www.gobles.ca/firearms/shotguns/semi-auto/"
+      ],
+      "zeroYieldToRemove": [
+        "https://www.gobles.ca/firearms/centerfire-rifles/",
+        "https://www.gobles.ca/firearms/shotguns/",
+        "https://www.gobles.ca/firearms/rimfire-rifles/",
+        "https://www.gobles.ca/firearms/combination/"
+      ],
+      "note": "R3 must walk all 90 URLs and produce dedup union count vs sitemap 3770 to confirm coverage >= 95%."
+    }
+  },
+  "hasWaf": {
+    "verdict": "FALSE_OPERATIONAL",
+    "agreement": "R1 says false; DB says true — DB has the B10-invalid combination (hasWaf:true + wafType:*-passive).",
+    "evidence": {
+      "cfPassiveTimeline": "10-page sustained walk on /ammunition/ + 12 prior extract pages = 22 consecutive requests, ALL 200, all CF-RAY present, no challenges, no honeypot rule fired during walk",
+      "cfRayMonotonic": "a0117351b8d0abca through a011739088c8abca (10 walk rays sequential)",
+      "blockSeen": false
+    },
+    "dbColumnFlip": true,
+    "payloadValue": false
+  },
+  "productCountMethod": {
+    "verdict": "USE_GENERIC_PRODUCT_SITEMAP",
+    "agreement": "R1 correct; DB's category-page-walk is NOT in VALID_METHOD_NAMES (product-count-probe.ts:110-117) — validateMethod() at L140-170 would now THROW with the canonical-set list; before C2 validator was added, the switch at L247 default branch silently returned null (B6 violation confirmed).",
+    "evidence": {
+      "validRuntimeMethods": ["wp-rest-header", "json-api-count", "json-api-length", "html-pagination", "sitemap", "sitemap-index", "generic-product-sitemap", "ecwid-storefront-search", "shopify-products-walk", "bigcommerce-graphql-count", "woocommerce-store-api-count"],
+      "shapeForGobles": { "method": "generic-product-sitemap", "url": "/sitemap.xml", "pattern": "\\.html$" },
+      "matchesRuntimeSwitch": "product-count-probe.ts:313-335 — fetches /sitemap.xml, extracts <loc> entries, filters by regex (default \\.html?(?:$|[?#])), counts matches. Tested against local sitemap copy: 6383 total <loc>, 3770 matching .html — matches R1's expectedProductCount.",
+      "localSitemapCount": { "totalLocs": 6383, "htmlLocsMatching": 3770 }
+    }
+  },
+  "expectedProductCount": {
+    "verdict": "3770_SITEMAP",
+    "evidence": "Sitemap is authoritative; DB's 3577 from category-page-walk is stale (Apr 2026, +193/+5.4% drift); sitemap walk also matches productCountMethod runtime path. DB's own note acknowledges 1% delta from OOS/hidden — sitemap is the inclusive surface aligned with detail-page verifyMethod."
+  },
+  "perPage": {
+    "verdict": "100",
+    "evidence": "Confirmed ?limit=100 returns exactly 100 product cards on /ammunition/ and /optics/ and /reloading/ and /firearms/centerfire-rifles/bolt-action/ (page-1, sort=newest); /firearms/winchester/ returns only 17 because that's total inventory for that leaf. DB ships 24 (page-1 default) — operational waste = 4x requests for identical coverage."
+  },
+  "searchUrl": {
+    "verdict": "VALID_PATTERN_CONFIRMED",
+    "evidence": "B3 junk-keyword diff at /search?q=zzqqxxnonexistent12345 returned 0 products + noResultsCopy markers; /search?q=glock returned 6 products. Pattern works. CAVEAT: both responses match the broad 'no results / sorry' regex (template boilerplate) — production scraper must rely on product-card count, not copy detection.",
+    "payloadValue": "/search?q={keyword}"
+  },
+  "criticalFinding": {
+    "title": "DB's catalogUrls would silently lose ~596 products (16.7% of catalog)",
+    "magnitude": "DB ships /firearms/ + /knives/ as catalogUrls but both return 0 products at runtime via production extractor. Combined with DB's expectedProductCount=3577 and productCountMethod=category-page-walk (silently disabled), the bootstrap/maintain crawlers cannot detect the gap. Promotion of R2 spine + flips IS load-bearing for catalog completeness."
+  },
+  "blockers": "None for R3. R3 adversarial pass must (a) verify the 20 sub-action leaves actually exist and are non-empty via independent walk, (b) attack the assumption that sitemap 3770 includes all variant/OOS that detail-page verify reaches, (c) dedup R2's 90-URL spine and confirm union vs 3770."
+}

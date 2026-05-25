@@ -1,0 +1,112 @@
+{
+  "runId": "B5R2-2026-05-22T21-00-00Z",
+  "site": "store.prophetriver.com",
+  "method": "live-investigation",
+  "round": 2,
+  "delayMs": 800,
+  "verdicts": {
+    "productCountMethod_method": {
+      "dbValue": "sitemap-xml",
+      "candidateValue": "sitemap-index",
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "product-count-probe.ts:110-137 VALID_METHOD_NAMES allowlist does NOT include 'sitemap-xml'; validateMethod() throws on that string at line 186 before reaching the switch. Only 11 canonical names accepted. Canonical for BC xmlsitemap.php is 'sitemap-index' with top-level urls: string[] (lines 39-42, switch case at 240-252 iterates m.urls).",
+      "impact": "DB profile silently disables coverage gate - every probe attempt throws, caller returns null."
+    },
+    "productCountMethod_shape": {
+      "dbShape": "{ url, method:'sitemap-xml', pages:[{url,urls:number},...], overlapPct, lastMeasuredAt, walkedTotalEst }",
+      "candidateShape": "{ method:'sitemap-index', urls:['https://...page=1','https://...page=2'] }",
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "SitemapIndexMethod interface (product-count-probe.ts:39-42) requires `urls: string[]` (flat array of URLs). DB's nested {pages:[{url,urls}]} shape would not be iterable as strings - the for-loop at L243 would coerce objects to '[object Object]'. Shape gate (B6) requires exact runtime contract match."
+    },
+    "expectedProductCount": {
+      "dbValue": 13766,
+      "candidateValue": 13974,
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "Live sitemap walk 2026-05-22T21:00Z: /xmlsitemap.php?type=products&page=1 returned 10000 <loc>, page=2 returned 3974 <loc>, page=3 returned HTTP 404 (no page 3). Total = 13974 exact. cf-ray present on all 3 fetches. DB's 13766 dated 2026-04-08 (44 days ago) is +208 below live; natural inventory growth ~4.7 products/day.",
+      "live": { "page1Loc": 10000, "page2Loc": 3974, "page3Status": 404, "total": 13974 }
+    },
+    "hasWaf": {
+      "dbValue": true,
+      "candidateValue": false,
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "B10 rule: hasWaf column MUST flip with wafType reclassification. wafType='cloudflare-passive' = informational only. Live 10-request rapid burst (800ms spacing) on homepage: 10/10 HTTP 200, cf-ray present on every response, no challenges, no 403/503/429. DB's wafType already says passive but column was never flipped. Active blocking absent confirms candidate.",
+      "live": { "rapidBurst": "10/10 200", "cfRayAlwaysPresent": true, "challenges": 0 },
+      "downstreamCost": "DB's hasWaf=true forces perPage=20 (throttle floor) and triggers Playwright cookie path in product-count-probe.ts:172-180 - wasted overhead for no protection."
+    },
+    "perPage": {
+      "dbValue": 20,
+      "candidateValue": 100,
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "Live cap probe on /ammunition/: ?limit=50 -> 50 cards, ?limit=100 -> 100 cards, ?limit=250 -> 100 cards (silent cap at 100). Verifies hard cap = 100 (BC Stencil default). DB's 20 is the hasWaf=true throttle floor - vestigial once column flips.",
+      "live": [
+        { "limit": 50, "cards": 50 },
+        { "limit": 100, "cards": 100 },
+        { "limit": 250, "cards": 100 }
+      ]
+    },
+    "paginationPattern_fields": {
+      "dbValue": "{ type, template } only",
+      "candidateValue": "{ type, template, perPage:100, firstPageHasParam:false, startPage:1, zeroIndexed:false }",
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "Skill schema requires perPage/firstPageHasParam/startPage/zeroIndexed for query-form pagination. Bare /ammunition/ (no ?page=) returns page 1 with no redirect - verified firstPageHasParam=false. perPage cap proven 100 in this round."
+    },
+    "catalogUrls_case": {
+      "dbValue": "/rifles/, /shotguns/, lowercase",
+      "candidateValue": "/Rifles/, /Shotguns/, capitalised",
+      "verdict": "INCONCLUSIVE",
+      "confidence": "low",
+      "evidence": "Did not re-walk homepage HTML this round. Both lowercase and capitalised forms 200 per R1; canonical-per-HTML claim from R1 unverified by R2. Cosmetic only - runtime adapter is case-insensitive on BC."
+    },
+    "sortParam_default": {
+      "candidateClaim": "default sort == ?sort=newest",
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "Live 3-outcome test on /ammunition/: default first5 IDs=[67365,67354,67353,67348,67197] == ?sort=newest first5 IDs=[67365,67354,67353,67348,67197] (identical); ?sort=alphaasc first5=[34800,35736,36996,34806,33632] (different). navigate-from-watermark valid: IDs monotonically descending integers usable as sourceId."
+    },
+    "searchUrl": {
+      "dbValue": "/search?q={keyword}",
+      "candidateValue": "(omitted)",
+      "verdict": "DB-WRONG-BUT-FIXABLE",
+      "confidence": "high",
+      "evidence": "Live verification: /search?q=rifle returns HTTP 404 (DB's URL is broken). /search.php?search_query=rifle returns HTTP 200 (BC Stencil canonical). robots.txt Disallow:/search? = true (does not affect retailer crawling, only search-engine indexers). Recommend siteProfile.searchUrl = '/search.php?search_query={keyword}' on promotion.",
+      "live": { "searchQ404": true, "searchPhpOk": true, "robotsDisallowSearch": true }
+    },
+    "handguns_excluded": {
+      "candidateClaim": "/handguns/ excluded - 0 cards, landing-only",
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "Live /handguns/ -> HTTP 200, 0 product cards. Confirms landing-only exclusion."
+    },
+    "ops_fields_omitted": {
+      "fields": ["budget", "timeout", "t1IntervalMin", "hasRateLimit", "crawlPhase", "siteCategory", "siteType", "requiresAuth", "requiresSucuri", "name", "crawlers.maintain.cooldowns", "crawlers.maintain.tierShares", "crawlers.maintain.tierWindows", "crawlers.bootstrap.apiEndpoints", "crawlers.bootstrap.htmlFallback", "dataFlow"],
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "Per skill Output-target: pre-bootstrap deliverable is discovery+verification only. Ops/scheduler/operator-doc fields are MonitoredSite-create and operator-tier-policy concerns. Not pre-bootstrap output."
+    },
+    "wafWorkaround": {
+      "dbValue": "{ method:'direct-http', notes, steps }",
+      "candidateValue": null,
+      "verdict": "CANDIDATE-CORRECT",
+      "confidence": "high",
+      "evidence": "B10 rule: when re-audit reclassifies a site from active to passive WAF, emit explicit null to clear stale workaround on promotion. DB's 'direct-http' block is operationally inert (the default code path) but a maintenance trap if someone reads it as an instruction."
+    }
+  },
+  "summary": {
+    "candidateAgreedFields": 10,
+    "candidateDisagreedFields": 0,
+    "inconclusive": 1,
+    "blockers": [],
+    "promotionReady": true,
+    "requiredColumnFlips": ["column_hasWaf: true -> false"],
+    "alsoFixOnPromotion": [
+      "siteProfile.searchUrl: '/search?q={keyword}' -> '/search.php?search_query={keyword}'",
+      "siteProfile.productCountMethod: full shape replace (sitemap-xml -> sitemap-index, pages[] -> urls[])"
+    ]
+  }
+}

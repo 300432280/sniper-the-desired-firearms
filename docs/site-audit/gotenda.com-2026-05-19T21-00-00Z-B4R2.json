@@ -1,0 +1,141 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "sucuri",
+  "wafLastProbedAt": "2026-05-19T23:42:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Sucuri active JS-cookie challenge: every direct GET (apex + www, all UAs) returns 307 with sucuri_cloudproxy_js challenge body. Per-request cookie rotation observed. Playwright bypasses cleanly.",
+  "wafProbeEvidence": {
+    "sucuriHeaders": ["X-Sucuri-ID: 20017", "Server: Sucuri/Cloudproxy", "X-Sucuri-Cache: MISS"],
+    "challengeBody": "<html><title>You are being redirected...</title> sucuri_cloudproxy_js challenge",
+    "challengeCookieName": "sucuri_cloudproxy_uuid_5ae4f3ba0/1da2392f5 (rotates per probe)",
+    "redirectStatus": "307 on every direct curl probe (8/8 batches)",
+    "honeypotPathsBlocked": false,
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "rapidBurstStatus": "all 307 (challenge), no rate-limit"
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 16615,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://www.gotenda.com/shop/?orderby=date&order=desc"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.gotenda.com/product/consignment-adler-rf-224-22-lr-11-7-semi-auto-rifle-very-good-2/", "title": "Consignment - Adler RF 224 22 LR 11.7 Semi-Auto Rifle, VERY GOOD", "price": 350, "stockStatus": "in_stock" },
+    { "url": "https://www.gotenda.com/product/consignment-akdas-alcor-223-rem-18-5-semi-auto-rifle-very-good/", "title": "Consignment - Akdas Alcor 223 Rem 18.5 Semi-Auto Rifle, VERY GOOD", "price": 1100, "stockStatus": "in_stock" },
+    { "url": "https://www.gotenda.com/product/proof-research-elevation-tfde-6-5-creedmoor-24-bolt-action-rifle/", "title": "Proof Research Elevation TFDE 6.5 Creedmoor 24 Bolt Action Rifle", "price": 3499.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date&order=desc",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WC WP REST modified_after two-probe passed: future date 2099-01-01 returns x-wp-total=0; past date 1999-01-01 returns x-wp-total=16615 = global count."
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "wafWorkaround": {
+    "notes": "Store API works with cached Sucuri cookies. No Playwright needed per-request.",
+    "steps": [
+      "Solve Sucuri JS challenge via Playwright once",
+      "Cache cookies in Redis (key: waf-cookies:{domain})",
+      "Reuse cookies for all HTTP/API calls",
+      "Re-solve on 403 or cookie expiry"
+    ],
+    "method": "cookie-cache",
+    "cookieTtlMinutes": 30,
+    "storeApiAvailable": true
+  },
+  "topLevelCategories": {
+    "source": "html-shop-mega-menu",
+    "categories": [
+      { "slug": "/shop/?orderby=date&order=desc", "name": "All Products", "allOption": 16615 }
+    ],
+    "totalsSumCheck": "All gotenda product-category landing pages tested return lastPage=1 (curated landing pages, not walkable category indexes). Only /shop/ has real pagination (lastPage=693, perPage=24 = 16,632 ~ x-wp-total 16,615). Confirmed by walking 4 R1-discovered slugs + 4 DB-listed slugs: every category page is a single-page landing block. Single /shop/ catalogUrl covers 100% of products."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R2-2026-05-19T22-30-00Z",
+    "probeIp": "audit-run IP (operator must re-confirm Sucuri verdict from production crawler IP before promotion)",
+    "verifyMethodPolicy": "store-api accepted; gotenda is high-volume WooCommerce with 16,615 products. Restock alerts not guaranteed for products the Store API never returns. Operator may flip to detail-page for guaranteed OOS-transition detection at slower verify cost.",
+    "wcCategoryApi": "store-api responded but only returned 1 top-level category (accessories) - endpoint appears to filter on visibility/parent in a way that hides most top-level taxonomy. The R1 claim of 15 top-level taxonomy categories cannot be reproduced from /wp-json/wc/store/v1/products/categories. Net: live taxonomy is not the source of truth - /shop/ is.",
+    "wcCountSurface": "store-api (16,615) cross-confirmed by wp/v2/product (16,615) and sitemap-index walk (16,616, 1-product drift).",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "paginationPattern": "high",
+      "perPage": "high",
+      "catalogUrls": "high",
+      "watermarkMethod": "high",
+      "verifyMethod": "high"
+    },
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wp/v2/product",
+      "/wp-json/wp/v2/product_cat",
+      "/wp-json/wc/store/v1/products/categories"
+    ],
+    "stageNotes": [
+      "Stage 1: apex gotenda.com 307-redirects to https://www.gotenda.com/ inside Playwright; www is canonical.",
+      "Stage 2: Sucuri active JS-cookie challenge on every direct curl (8/8 batches return 307). Playwright solves once; cookies cached 30min via existing waf-cookie-manager flow. recaptcha-v3 script present site-wide but does NOT gate the catalog crawl path - hasCaptcha=false (operational rule). No age-gate.",
+      "Stage 3: WooCommerce confirmed - WordPress 6.7.1 generator meta + /wp-json/wc/store/v1 returns JSON. Both Store API and WP REST core agree on count.",
+      "Stage 4: catalogUrl coverage RE-TESTED in R2. Every /product-category/ slug tested (DB list + R1 live-taxonomy list) returned lastPage=1 - they are curated WP landing pages, NOT walkable category indexes. The only walkable catalog is /shop/ (lastPage=693, perPage=24 = 16,632 ~ expected 16,615). DB slugs /firearms/, /ammunition/, /knives/ return HTTP 404. DB slug /optic/ returns 200 with canonical redirect to /product-category/gun-deals-promotions-canada/may-specials/optic/ (a promo sub-sub-category, not the firearm-optics top-level). Catalog URL collapsed to single /shop/.",
+      "Stage 5: zero-overlap test passed for BOTH ?paged=2 and /page/2/ - they return identical 24-slug sets with zero overlap to page 1. DB notes claim ?page=N is silently ignored - that is the WP single-post-pagination `?page=` collision, NOT the WC archive `?paged=` query var. Either form is valid; chose path-style /page/{N} per DB precedent (theme-override-safe).",
+      "Stage 6: 3-outcome sort test. Default == ?orderby=date == newest. Sort honored. Adopted DB explicit &order=desc for theme-override safety.",
+      "Stage 7: WC WP REST modified_after two-probe passed. api-date-since-watermark.",
+      "Stage 8: wp-rest-header via /wp-json/wc/store/v1/products?per_page=1 -> x-wp-total=16615. Cross-confirmed vs WP REST core 16615 and sitemap-index sum 16616. Skill priority: wp-rest-header (1 req) > sitemap-index (17 reqs, brittle to merchant adding/removing sitemap files).",
+      "Stage 9: perPage RE-TESTED. /shop/?per_page=100 returns same 24 li.product cards as /shop/?per_page=24 - WC's HTML catalog ignores per_page query param. perPage=24 is the runtime-correct value for HTML pagination (paginationPattern.perPage). DB's 100 was the API perPage (woocommerce.ts:293 caps API requests at min(opts.perPage ?? 100, 100)); for HTML walking 24 is correct."
+    ],
+    "r2DivergencesResolved": [
+      "expectedProductCount: R1 wins (16615 live vs DB 16440 stale 6 weeks).",
+      "productCountMethod: R1 wins (wp-rest-header 1 req vs DB sitemap-index 17 reqs; both agree on count).",
+      "perPage: R1 wins (HTML pagination is fixed at 24; ?per_page=100 ignored - verified by GET /shop/?per_page=100 returning 24 li.product).",
+      "catalogUrls: R1 wins (DB has 3x 404 slugs + 4x lastPage=1 landing pages; ONLY /shop/ is a walkable catalog with lastPage=693).",
+      "paginationPattern: inconclusive - both ?paged=2 (query/paged) and /page/2/ (path/page) return identical 24-slug sets. Chose DB path-style for theme-override safety.",
+      "sortParam: DB wins (explicit &order=desc safer; functionally equivalent).",
+      "hasCaptcha: R1 wins (recaptcha-v3 script-tag presence != operational gating; catalog path is reachable without solving).",
+      "wafWorkaround: DB wins (operator residue but production-needed cookie-cache flow; restored from DB).",
+      "searchUrl: DB wins (skill gap; uncontroversial WP default; restored from DB)."
+    ],
+    "incomplete": false,
+    "remainingForOperator": [
+      "Re-confirm Sucuri WAF verdict from production crawler IP.",
+      "Run profile-validator.ts against this JSON.",
+      "Operator-tuning fields (budget, tierShares, tierWindows, cooldowns, t1IntervalMin, enrichmentChunkSize, dataFlow) intentionally not emitted by skill - populated at promotion."
+    ]
+  }
+}

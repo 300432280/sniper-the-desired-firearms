@@ -2,6 +2,7 @@
  * Site Profile Validator — pure function that checks a siteProfile JSON
  * for completeness before it enters the bootstrap phase.
  */
+import { VALID_METHOD_NAMES } from './product-count-probe';
 
 export const CURRENT_PROFILE_VERSION = 1;
 
@@ -116,6 +117,66 @@ const checks: Check[] = [
       return 'sortVerified must be true or sortParam must be set (unless using full-catalog-sweep with reason)';
     },
   },
+  // ── C5 (2026-05-21): productCountMethod.method must be in the canonical
+  //   allowlist when productCountMethod is present. Absence is still tolerated
+  //   here and surfaced by the existing recommended-severity `productCountMethod`
+  //   check below. The intent is to catch drift cases like `category-walk-dedupe`
+  //   (wolverine) that pass validateSiteProfile but throw silently at runtime
+  //   inside `validateMethod` (product-count-probe.ts:132) and disable the
+  //   coverage gate by returning a null expectedCount that
+  //   `verifyBootstrapCoverage` treats as acceptable.
+  {
+    name: 'productCountMethod.method',
+    severity: 'required',
+    run: (p) => {
+      if (!p.productCountMethod) return null; // absence handled by recommended check
+      const name = p.productCountMethod.method;
+      if (typeof name !== 'string' || name.length === 0) {
+        return 'productCountMethod.method must be a non-empty string';
+      }
+      if (!(VALID_METHOD_NAMES as readonly string[]).includes(name)) {
+        return `productCountMethod.method "${name}" is not one of the canonical names: ${VALID_METHOD_NAMES.join(', ')}`;
+      }
+      return null;
+    },
+  },
+  // ── C6 (2026-05-21): crawlers.maintain.verifyMethod is required. Missing or
+  //   empty values cause `worker.ts:769-772` to log "MISSING verifyMethod" and
+  //   early-return, making restock detection a no-op for the site (wolverine
+  //   reproduced this live). Promote-time rejection is the right place — the
+  //   verify worker has no recovery path.
+  {
+    name: 'crawlers.maintain.verifyMethod',
+    severity: 'required',
+    run: (p) => {
+      const m = p.crawlers?.maintain?.verifyMethod;
+      return (typeof m === 'string' && m.length > 0)
+        ? null
+        : 'crawlers.maintain.verifyMethod must be a non-empty string (e.g. "store-api", "detail-page")';
+    },
+  },
+  // ── Batch-5 R4 C3 (2026-05-22): hasWaf:true + -passive wafType is invalid.
+  //   "Passive" wafTypes (cloudflare-passive, sucuri-passive, sgcaptcha-passive)
+  //   mean WAF tooling is present but does not interfere with crawls. Pairing
+  //   hasWaf:true with a -passive wafType activates defensive runtime behavior
+  //   (perPage 50→20 throttle + forced Playwright + WAF cookie path) for a site
+  //   that does not actually challenge the crawler. Confirmed on 6+ batch-5
+  //   sites (aagcanada, durhamoutdoors, frontierfirearms, jobrookoutdoors, rdsc,
+  //   store.prophetriver). Reject at promote time so this drift cannot land.
+  {
+    name: 'wafTypePassiveCoherence',
+    severity: 'required',
+    run: (p) => {
+      if (p.hasWaf !== true) return null;
+      const t = p.wafType;
+      if (typeof t === 'string' && /-passive$/.test(t)) {
+        return `hasWaf:true paired with wafType ending in "-passive" ("${t}") is invalid — ` +
+          `either flip hasWaf to false (site does not actively challenge crawls) ` +
+          `or change wafType to a non-passive variant.`;
+      }
+      return null;
+    },
+  },
 
   // ── Recommended ──
   {
@@ -140,6 +201,30 @@ const checks: Check[] = [
     severity: 'recommended',
     run: (p) => (!p.productCountMethod)
       ? 'productCountMethod should describe how expectedProductCount was obtained' : null,
+  },
+  // ── Batch-5 R4 C4 (2026-05-22): productCountMethod endpoint surface should
+  //   match crawlers.maintain.verifyMethod. SKILL.md B8 pair-rule: when
+  //   verifyMethod is 'store-api', count probing should also hit the Store API
+  //   surface (/wp-json/wc/store/v1/...) — NOT the WP REST surface
+  //   (/wp-json/wp/v2/...). Mismatched surfaces mean restock detection and
+  //   count verification read different sources and can diverge. Recommended,
+  //   not required — operators may have a reason. Detect-only; do not block.
+  {
+    name: 'productCountMethod.endpointPairsVerifyMethod',
+    severity: 'recommended',
+    run: (p) => {
+      const endpoint = p.productCountMethod?.endpoint;
+      const verifyMethod = p.crawlers?.maintain?.verifyMethod;
+      if (typeof endpoint !== 'string' || endpoint.length === 0) return null; // sitemap shapes have no endpoint
+      if (verifyMethod !== 'store-api') return null; // only flag the store-api pairing today
+      // verifyMethod=store-api expects /wp-json/wc/store/v1/... — flag /wp-json/wp/v2/...
+      if (/\/wp-json\/wp\/v2\//.test(endpoint)) {
+        return `productCountMethod.endpointPairsVerifyMethod: verifyMethod="store-api" but ` +
+          `productCountMethod.endpoint="${endpoint}" is a WP REST surface (/wp-json/wp/v2/...). ` +
+          `Expected a Store API surface (/wp-json/wc/store/v1/products) — see SKILL.md B8 pair-rule.`;
+      }
+      return null;
+    },
   },
   {
     name: 'lastVerified',

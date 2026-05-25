@@ -99,6 +99,7 @@ export class GenericAdapter extends AbstractAdapter {
       '[class*="ad-card"]',
       '[class*="item_card"]',          // TownPost classifieds (.category_item_card)
       '[class*="newest-ads"]',         // TownPost newest ads
+      'a[href*="/marketplace/"]',      // TownPost classifieds (Next.js SPA, anchor-wrapped cards)
       '[class*="lot"]', '[class*="auction"]',
     ];
 
@@ -120,8 +121,22 @@ export class GenericAdapter extends AbstractAdapter {
         const inStock = this.isInStock(element);
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
+        // Source ID extraction — same patterns as generic-retail.ts:1020-1032.
+        // Pattern 1: slug-embedded ID (e.g. /shop/slug-28443)
+        // Pattern 2: trailing path segment ID (e.g. TownPost /marketplace/.../1171321)
+        let sourceId = element.attr('data-product-id')
+          || element.attr('data-product_id')
+          || element.closest('[data-product-id]').attr('data-product-id')
+          || element.closest('[data-product_id]').attr('data-product_id')
+          || undefined;
+        if (!sourceId && url) {
+          const urlIdMatch = url.match(/-(\d{4,})(?:[?#]|$)/) || url.match(/\/(\d{5,})(?:[?#]|$)/);
+          if (urlIdMatch) sourceId = urlIdMatch[1];
+        }
+
         products.push({
           url,
+          sourceId,
           title,
           price,
           stockStatus: inStock ? 'in_stock' : 'out_of_stock',

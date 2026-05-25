@@ -1,0 +1,130 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "sucuri",
+  "wafLastProbedAt": "2026-05-19T23:42:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Sucuri active JS-cookie challenge: every direct GET (apex + www, all UAs) returns 307 with sucuri_cloudproxy_js challenge body. Per-request cookie rotation observed. Playwright bypasses cleanly.",
+  "wafProbeEvidence": {
+    "sucuriHeaders": ["X-Sucuri-ID: 20017", "Server: Sucuri/Cloudproxy", "X-Sucuri-Cache: MISS"],
+    "challengeBody": "<html><title>You are being redirected...</title> sucuri_cloudproxy_js challenge",
+    "challengeCookieName": "sucuri_cloudproxy_uuid_5ae4f3ba0/1da2392f5 (rotates per probe)",
+    "redirectStatus": "307 on every direct curl probe (8/8 batches)",
+    "honeypotPathsBlocked": false,
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "rapidBurstStatus": "all 307 (challenge), no rate-limit"
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 16615,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://www.gotenda.com/shop/?orderby=date"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.gotenda.com/product/consignment-adler-rf-224-22-lr-11-7-semi-auto-rifle-very-good-2/", "title": "Consignment - Adler RF 224 22 LR 11.7 Semi-Auto Rifle, VERY GOOD", "price": 350, "stockStatus": "in_stock" },
+    { "url": "https://www.gotenda.com/product/consignment-akdas-alcor-223-rem-18-5-semi-auto-rifle-very-good/", "title": "Consignment - Akdas Alcor 223 Rem 18.5 Semi-Auto Rifle, VERY GOOD", "price": 1100, "stockStatus": "in_stock" },
+    { "url": "https://www.gotenda.com/product/proof-research-elevation-tfde-6-5-creedmoor-24-bolt-action-rifle/", "title": "Proof Research Elevation TFDE 6.5 Creedmoor 24 Bolt Action Rifle", "price": 3499.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "query",
+    "template": "paged",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WC WP REST modified_after two-probe passed: future date 2099-01-01 returns x-wp-total=0; past date 1999-01-01 returns x-wp-total=16615 = global count."
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/firearms-canada/", "name": "FIREARMS", "allOption": 3997 },
+      { "slug": "/product-category/accessories/", "name": "ACCESSORIES", "allOption": 3344 },
+      { "slug": "/product-category/ammunition-for-sale-in-canada-tenda-canada/", "name": "AMMUNITION", "allOption": 2288 },
+      { "slug": "/product-category/gun-optics-canada/", "name": "OPTIC", "allOption": 2255 },
+      { "slug": "/product-category/knives-tools/", "name": "KNIVES & TOOLS", "allOption": 1529 },
+      { "slug": "/product-category/gun-deals-promotions-canada/", "name": "PROMOTIONS", "allOption": 1475 },
+      { "slug": "/product-category/reloading/", "name": "RELOADING", "allOption": 1426 },
+      { "slug": "/product-category/hunting-outdoor/", "name": "HUNTING & OUTDOOR", "allOption": 1075 },
+      { "slug": "/product-category/tenda-alpha/", "name": "TENDA ALPHA", "allOption": 596 },
+      { "slug": "/product-category/tenda-strike/", "name": "TENDA STRIKE", "allOption": 403 },
+      { "slug": "/product-category/gift-card/", "name": "Gift Card", "allOption": 6 },
+      { "slug": "/product-category/free-gift-350/", "name": "Free Gift 350", "allOption": 2 },
+      { "slug": "/product-category/free-gift-500/", "name": "Free Gift 500", "allOption": 0 },
+      { "slug": "/product-category/free-gift-700/", "name": "Free Gift 700", "allOption": 0 },
+      { "slug": "/product-category/free-gift-1000/", "name": "Free Gift 1000", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Sum of firearm-relevant top-level categories = 18,388 vs global WC count 16,615. Excess from PROMOTIONS (1,475) overlapping other categories. Net: gotenda is a pure firearms retailer; /shop/ covers 100% with single URL."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-19T21-00-00Z",
+    "probeIp": "audit-run IP (operator must re-confirm Sucuri verdict from production crawler IP before promotion)",
+    "verifyMethodPolicy": "store-api accepted; gotenda is high-volume WooCommerce with 16,615 products. Restock alerts not guaranteed for products the Store API never returns. Operator may flip to detail-page for guaranteed OOS-transition detection at slower verify cost.",
+    "wcCategoryApi": "store-api",
+    "wcCountSurface": "store-api (16,615 customer-visible). WP REST core /wp-json/wp/v2/product also returned x-wp-total=16,615 - two surfaces agree.",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "paginationPattern": "high",
+      "perPage": "medium",
+      "catalogUrls": "medium",
+      "watermarkMethod": "high",
+      "verifyMethod": "high"
+    },
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wp/v2/product",
+      "/wp-json/wp/v2/product_cat"
+    ],
+    "stageNotes": [
+      "Stage 1: apex gotenda.com 307-redirects to https://www.gotenda.com/ inside Playwright; www is canonical.",
+      "Stage 2: Sucuri active JS-cookie challenge on every direct curl (8/8 batches return 307). Cookie name rotates per probe. recaptcha-v3 script present site-wide but does not gate the catalog crawl path - hasCaptcha=false. No age-gate.",
+      "Stage 3: WooCommerce confirmed - WordPress 6.7.1 generator meta + /wp-json/wc/store/v1 returns JSON.",
+      "Stage 4: 15 top-level categories (10 firearm-relevant). Single /shop/?orderby=date covers all 16,615 products. Did NOT run full per-category walk-and-dedup due to 20-min budget. Extraction-quality spot-check (3 products) PASSED.",
+      "Stage 5: zero-overlap test passed. ?paged=2 returns 27 slugs vs page-1's 29 with only 5 overlap (featured-products repetition). /page/2/ returns identical set to ?paged=2.",
+      "Stage 6: 3-outcome. default == date (honored-default-is-newest), default != price. Sort honored. sortParam=?orderby=date.",
+      "Stage 7: WC WP REST modified_after two-probe passed. api-date-since-watermark.",
+      "Stage 8: wp-rest-header via /wp-json/wc/store/v1/products?per_page=1 -> x-wp-total=16615. Cross-confirmed vs WP REST core.",
+      "Stage 9: assembly + validator pending."
+    ],
+    "incomplete": false,
+    "remainingForOperator": [
+      "Full per-category walk-and-dedup to confirm /shop/ achieves 100% coverage of 16,615 (budget-skipped).",
+      "Re-confirm Sucuri WAF verdict from production crawler IP.",
+      "Run profile-validator.ts against this JSON."
+    ]
+  }
+}

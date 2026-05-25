@@ -1,0 +1,202 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-22T20:00:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches HTTP 200, no cf-ray on apex direct response, no Sucuri/sgcaptcha/Incapsula/MalCare/Wordfence body markers across batches 2-8, no 4xx/5xx on rapid burst or honeypot or SQLi/XSS payloads",
+  "wafProbeEvidence": {
+    "apexServerHeader": "Apache",
+    "wwwSeenAsCloudflareEdge": true,
+    "wwwBehavior": "301 redirect to apex (apex Apache origin only)",
+    "cfHeadersOnApex": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 returned 200",
+    "honeypotPathsBlocked": false,
+    "honeypotResponses": {
+      "/wp-admin/": "200 -> wp-login redirect",
+      "/wp-login.php": "200",
+      "/xmlrpc.php": "404",
+      "/.env": "404",
+      "/.git/config": "404",
+      "/phpinfo.php": "404"
+    },
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "rapidBurstTested": true,
+    "sustainedWalkPages": 0,
+    "untestedAttackSurfaces": [
+      "sustained 50-page walk per UA in production rotation pool (B9) — not run in R1 blind",
+      "auth/path-traversal/large-body-POST/shellshock probes — outside heavy-8-batch script scope"
+    ]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 206,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/product-category/specials/",
+    "/product-category/shotguns/",
+    "/product-category/shotgun-parts-accessories/",
+    "/product-category/rifle-parts-accessories/",
+    "/product-category/master-tools/",
+    "/product-category/optics/",
+    "/product-category/optic-mounts/",
+    "/product-category/merchandise/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://tacord.com/product/tacord-builders-choice-5/",
+      "title": "TACORD Builders Choice #5",
+      "price": 3595,
+      "stockStatus": "out_of_stock",
+      "sourceCategory": "shotguns",
+      "sourceApi": "wc-store-api"
+    },
+    {
+      "url": "https://tacord.com/product/tacord-builders-choice-4/",
+      "title": "TACORD Builders Choice #4",
+      "price": 3695,
+      "stockStatus": "out_of_stock",
+      "sourceCategory": "shotguns",
+      "sourceApi": "wc-store-api"
+    },
+    {
+      "url": "https://tacord.com/product/tacord-builders-choice-3/",
+      "title": "TACORD Builders Choice #3",
+      "price": 1995,
+      "stockStatus": "out_of_stock",
+      "sourceCategory": "shotguns",
+      "sourceApi": "wc-store-api"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after",
+      "reason": "WP REST core /wp-json/wp/v2/product?modified_after= verified honored via two-probe (2099 returns 0, 1999 returns 206); HTML ?orderby=date also verified honored as backup"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "wc-store-api-per-category",
+    "categories": [
+      {
+        "slug": "/product-category/specials/",
+        "categoryId": 186,
+        "allOption": 4
+      },
+      {
+        "slug": "/product-category/shotguns/",
+        "categoryId": 54,
+        "allOption": 10
+      },
+      {
+        "slug": "/product-category/shotgun-parts-accessories/",
+        "categoryId": 38,
+        "allOption": 165
+      },
+      {
+        "slug": "/product-category/rifle-parts-accessories/",
+        "categoryId": 62,
+        "allOption": 10
+      },
+      {
+        "slug": "/product-category/master-tools/",
+        "categoryId": 244,
+        "allOption": 1
+      },
+      {
+        "slug": "/product-category/optics/",
+        "categoryId": 213,
+        "allOption": 22
+      },
+      {
+        "slug": "/product-category/optic-mounts/",
+        "categoryId": 351,
+        "allOption": 24
+      },
+      {
+        "slug": "/product-category/merchandise/",
+        "categoryId": 74,
+        "allOption": 3
+      }
+    ],
+    "totalsSumCheck": "Sum of allOption across 8 kept top-levels = 239. Global x-wp-total = 206. Difference = 33 caused by cross-categorization. Union walk of 8 top-levels via WC Store API category=id = 206 unique IDs = global. Manufacturers (id=57, count=201) fully redundant per Rule C union test (Union without mfr also = 206) — dropped."
+  },
+  "lastVerified": "2026-05-22",
+  "auditNotes": {
+    "runId": "B5R1-tacord-2026-05-22",
+    "verifyMethodPolicy": "store-api accepted; restock alerts not guaranteed (worker.ts:549 short-circuits Playwright fallback for OOS-transitioning products via store-api path)",
+    "expectedCountSurface": "wc-store-api",
+    "wcCategoryApi": "store-api",
+    "wcCountSurface": "store-api customer-visible (X-WP-Total: 206 from /wp-json/wc/store/v1/products?per_page=1)",
+    "dbColumnFlips": {
+      "hasWaf": false,
+      "wafType": null,
+      "wafWorkaround": "clear"
+    },
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wc/store/v1/products/categories",
+      "/wp-json/wp/v2/product"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "expectedProductCount": "high",
+      "catalogUrls": "high (coverage proven via union walk == global x-wp-total)",
+      "paginationPattern": "high (page-1 vs page-2 post-id sets, 0 overlap of 12 each)",
+      "sortParam": "high (3-outcome counter-control honored)",
+      "watermark.method": "high (WP REST modified_after two-probe both passed)",
+      "maintain.verifyMethod": "high (Store API live, X-WP-Total returned)",
+      "searchUrl": "medium (200 + 12 product cards on /?s=stock&post_type=product; not verified keyword filters correctly)"
+    },
+    "stageNotes": [
+      "Stage 1: canonical = https://tacord.com (apex 200 Apache; www 301 -> apex through Cloudflare edge but apex itself is plain Apache origin)",
+      "Stage 2: heavy-8-batch all 200, no cf-ray on apex, no plugin-WAF body markers; rapid burst clean, honeypots all 404 except wp-admin/wp-login (200 standard), SQLi/XSS payloads echoed without rule fire",
+      "Stage 3: WooCommerce confirmed via wp-content/plugins/woocommerce + bridge theme + wc-blocks.css refs; no age-gate, no CAPTCHA",
+      "Stage 4: 9 top-levels via WC Store API categories endpoint. Walked each top-level via /products?category=id&per_page=100 — union of 8 (excl. manufacturers) = 206 = global. Manufacturers id=57 fully redundant. Extraction sample 3/3 fields populated.",
+      "Stage 5: /product-category/<slug>/page/2/ on shotgun-parts-accessories: 12 post-ids per page, 0 overlap. ?per_page= and ?count= HTML params silently ignored.",
+      "Stage 6: No <select name=orderby> in Bridge theme HTML, but ?orderby=date works: default first 5 = [3659,212,359,2416,2040]; ?orderby=date first 5 = [11747,11699,11689,11304,11190] (newest-first desc); ?orderby=title first 5 = [2427,3144,4264,5029,8955]. 3-outcome: honored.",
+      "Stage 7: WP REST /wp-json/wp/v2/product?modified_after= two-probe — future returns 0, 1999 returns 206 (== global). Field name matches runtime woocommerce.ts:337.",
+      "Stage 8: wp-rest-header against /wp-json/wc/store/v1/products?per_page=1 returns X-WP-Total: 206. Paired with maintain.verifyMethod=store-api per B8.",
+      "Stage 9: validator pre-check — required fields present; productCountMethod.method=wp-rest-header is in runtime switch; paginationPattern.template starts with /; B-template leading-slash rule satisfied."
+    ]
+  }
+}

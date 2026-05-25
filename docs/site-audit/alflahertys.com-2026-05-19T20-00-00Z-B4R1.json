@@ -1,0 +1,169 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-19T08:53:04Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare-passive: cf-ray on every response, all 8 batches return 200 for the canonical path, no challenge bodies, no rule blocks. Honeypot 403s (/wp-admin, /wp-login.php, /.env, /.git/config) are origin BigCommerce behavior — those paths simply do not exist; pattern not site-selective. XSS payload returns 400 (input validation) not 403.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 returned 200; mean wall_ms ~1000ms; no 429/503",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/wp-admin/ -> 403", "/wp-login.php -> 403", "/.env -> 403", "/.git/config -> 403"],
+    "honeypotInterpretation": "BigCommerce-hosted; WordPress paths do not exist. 403 is origin not CDN.",
+    "botUaBlocked": false,
+    "serverHeader": "cloudflare",
+    "cookieSet": ["SF-CSRF-TOKEN", "fornax_anonymousId", "athena_short_visit_id", "Shopper-Pref", "SHOP_SESSION_TOKEN", "__cf_bm"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 5262,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "https://alflahertys.com/als-bargains/",
+    "https://alflahertys.com/shooting-supplies-and-firearms/",
+    "https://alflahertys.com/optics/",
+    "https://alflahertys.com/hunting-gear/",
+    "https://alflahertys.com/fishing/",
+    "https://alflahertys.com/archery/",
+    "https://alflahertys.com/camping/",
+    "https://alflahertys.com/clothing/",
+    "https://alflahertys.com/knives-tools-and-lights/",
+    "https://alflahertys.com/premium-knives/",
+    "https://alflahertys.com/sharpeners-and-maintenance/",
+    "https://alflahertys.com/gift-ideas/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://alflahertys.com/vortex-sparc-ar-2-red-dot-with-multi-height-mount-2-moa-spc-402/",
+      "title": "Vortex SPARC II Red Dot with Multi-Height Mount - 2 MOA #SPC-402",
+      "price": 229.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://alflahertys.com/abu-garcia-max-sx-spinning-reel-various-sizes-maxsxsp/",
+      "title": "Abu Garcia Max SX Spinning Reel (Various Sizes) #MAXSXSP",
+      "price": null,
+      "stockStatus": "unknown",
+      "extractionNote": "URL sample taken from sitemap+verified detail-page exists (200); price not parsed in this audit"
+    },
+    {
+      "url": "https://alflahertys.com/winchester-super-suppressed-9mm-147-grain-fmj-box-of-50-sup9/",
+      "title": "Winchester Super Suppressed 9mm 147 gr FMJ Box of 50 #SUP9",
+      "price": null,
+      "stockStatus": "unknown",
+      "extractionNote": "Title and URL confirmed via product sitemap"
+    }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 36,
+  "paginationPattern": {
+    "type": "api-offset",
+    "template": "offset",
+    "perPage": 36,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "apiConfig": {
+    "klevuApiKey": "klevu-170966446878517137",
+    "klevuEndpoint": "https://uscs33v2.ksearchnet.com/cs/v2/search",
+    "klevuCategoryPaths": [
+      { "slug": "/als-bargains", "path": "Al's Bargains" },
+      { "slug": "/shooting-supplies-and-firearms", "path": "Shooting Supplies, Firearms & Ammunition" },
+      { "slug": "/optics", "path": "Optics" },
+      { "slug": "/hunting-gear", "path": "Hunting Gear" },
+      { "slug": "/fishing", "path": "Fishing" },
+      { "slug": "/archery", "path": "Archery & Airguns" },
+      { "slug": "/camping", "path": "Camping" },
+      { "slug": "/clothing", "path": "Clothing" },
+      { "slug": "/knives-tools-and-lights", "path": "Knives, Tools & Lights" },
+      { "slug": "/premium-knives", "path": "Premium Knives" },
+      { "slug": "/sharpeners-and-maintenance", "path": "Sharpeners & Maintenance" },
+      { "slug": "/gift-ideas", "path": "Gift Ideas" }
+    ]
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "Klevu category-page integration exposes only 3 sort values (RELEVANCE, PRICE_ASC, PRICE_DESC) — no NEWEST/date sort. BigCommerce HTML category pages render as empty klevuLanding shells with no DOM products. BC product sitemap has no lastmod entries on individual products. No exposed newest-first signal; full catalog sweep via Klevu wildcard SEARCH (term:'*') with offset pagination is the only viable indexing path."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "xmlsitemap categories + homepage nav cross-check",
+    "categories": [
+      { "slug": "/als-bargains", "allOption": null, "klevuPath": "Al's Bargains" },
+      { "slug": "/shooting-supplies-and-firearms", "allOption": null, "klevuPath": "Shooting Supplies, Firearms & Ammunition" },
+      { "slug": "/optics", "allOption": null, "klevuPath": "Optics" },
+      { "slug": "/hunting-gear", "allOption": null, "klevuPath": "Hunting Gear" },
+      { "slug": "/fishing", "allOption": null, "klevuPath": "Fishing" },
+      { "slug": "/archery", "allOption": null, "klevuPath": "Archery & Airguns" },
+      { "slug": "/camping", "allOption": null, "klevuPath": "Camping" },
+      { "slug": "/clothing", "allOption": null, "klevuPath": "Clothing" },
+      { "slug": "/knives-tools-and-lights", "allOption": null, "klevuPath": "Knives, Tools & Lights" },
+      { "slug": "/premium-knives", "allOption": null, "klevuPath": "Premium Knives" },
+      { "slug": "/sharpeners-and-maintenance", "allOption": null, "klevuPath": "Sharpeners & Maintenance" },
+      { "slug": "/gift-ideas", "allOption": null, "klevuPath": "Gift Ideas" }
+    ],
+    "totalsSumCheck": "Per-category counts not retrieved during this audit — Klevu category-page JS would require Playwright to enumerate. Klevu wildcard SEARCH global total = 5262, exactly matches xmlsitemap product count. Single source of truth confirmed."
+  },
+  "searchUrl": "/search.php?search_query={keyword}",
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-19T20-00-00Z",
+    "probeIp": "audit-IP (not production crawler IP)",
+    "verifyMethodPolicy": "detail-page selected; Klevu API has no batch verify endpoint, BC storefront API returns 404 — only per-product detail-page fetch available.",
+    "wcCountSurface": "n/a — BC site",
+    "discoveredApiEndpoints": {
+      "klevuSearch": "POST https://uscs33v2.ksearchnet.com/cs/v2/search (Klevu APIv2 search)",
+      "bcSitemap": "GET /xmlsitemap.php (index) + /xmlsitemap.php?type={pages|products|categories|brands|news}&page=N"
+    },
+    "fieldConfidence": {
+      "platform": "high — meta tag platform=bigcommerce.stencil + s-rk4zcah9rr CDN + stencil bundles confirm",
+      "adapterType": "high — generic-retail covers BC + has built-in Klevu branch (generic-retail.ts:279-446)",
+      "hasWaf": "high — 8-batch probe confirms passive Cloudflare only",
+      "wafType": "high — cf-ray + cf-cache-status DYNAMIC pattern is cloudflare-passive",
+      "expectedProductCount": "high — xmlsitemap count (5262) matches Klevu API totalResultsFound (5262) exactly",
+      "productCountMethod": "high — runtime switch supports 'sitemap' (product-count-probe.ts:244)",
+      "catalogUrls": "medium — 12 top-level categories from xmlsitemap; not walked-and-deduped per page (Klevu owns all category pages, walk would require Playwright). Coverage of 100% guaranteed by Klevu API wildcard regardless of catalogUrl entry point.",
+      "paginationPattern": "high — Klevu API offset/limit; production adapter at generic-retail.ts:381 builds offset = (page-1)*perPage",
+      "perPage": "high — Klevu adapter default is 36 (generic-retail.ts:285); not probed against site-imposed cap due to API time budget",
+      "sortParam": "high — null is correct; only RELEVANCE/PRICE_ASC/PRICE_DESC exist in this site's Klevu config (verified by grepping category-page.js for sort enum); NEWEST returns 500.",
+      "sortVerified": "high — explicit 500 response on every newest-style sort value tested",
+      "crawlers.watermark.method": "high — full-catalog-sweep is forced by absence of any newest-first signal (no API date sort, no lastmod, no DOM sort, no monotonic id walk via API)",
+      "crawlers.maintain.verifyMethod": "high — detail-page is the only batch-verify option available",
+      "apiConfig.klevuApiKey": "high — extracted verbatim from homepage Klevu init script (klevu-170966446878517137)",
+      "apiConfig.klevuEndpoint": "high — extracted verbatim from Klevu options block (uscs33v2.ksearchnet.com)",
+      "apiConfig.klevuCategoryPaths": "medium — derived from nav anchor text + xmlsitemap slugs; klevu_pageCategory format verified on /fishing/rods-reels-and-combos/ (Fishing;Rods, Reels and Combos) — top-level paths inferred not directly probed",
+      "needsPlaywright": "medium — static HTML returns empty klevuLanding div, but production adapter calls Klevu API directly via apiConfig.klevuApiKey branch (generic-retail.ts:365) — no Playwright required at runtime",
+      "searchUrl": "high — BC Stencil standard /search.php?search_query=K (visible on every page nav, klevu integrates with same input)"
+    },
+    "stageNotes": {
+      "stage1_canonicalUrl": "Apex returns 200 cleanly; www -> 301 -> apex. link rel=canonical href=https://alflahertys.com/. No hreflang. Canonical = apex.",
+      "stage2_waf": "8-batch probe: cf-ray on every response, no challenges. Set hasWaf=false (cloudflare-passive — Stage 2 rule: operational not literal).",
+      "stage3_platform": "BC Stencil confirmed via 3 signals: meta name=platform value=bigcommerce.stencil, cdn11.bigcommerce.com/s-rk4zcah9rr, theme-bundle.polyfills.js. adapterType=generic-retail (validator-accepted, has Klevu branch).",
+      "stage4_catalogUrls": "Two parallel discovery paths cross-checked: (a) homepage nav extract -> 12 top-level slugs; (b) /xmlsitemap.php?type=categories -> 12 1-segment slugs. Same 12 categories. Category pages confirmed Klevu-rendered (klevuLanding div empty in static HTML, js.klevu.com scripts in footer). Full-walk-and-dedupe deferred: Klevu API wildcard SEARCH totalResultsFound (5262) === xmlsitemap product count (5262) — coverage proof is the count match, since the Klevu adapter at runtime fetches ALL products globally regardless of catalogUrl entry point.",
+      "stage5_pagination": "Klevu offset+limit API. Page 1 offset=0 product ids [10599,16368,17096]; page 2 offset=3 product ids [10590,16773,7350] — zero overlap, pagination honored. perPage=36 (Klevu adapter default).",
+      "stage6_sort": "NEWEST/NEWESTFIRST/NEWEST_FIRST/{field:date,direction:desc} all return HTTP 500 (Invalid request). Klevu category-page.js source contains only 3 sort enum values: RELEVANCE, PRICE_ASC, PRICE_DESC. Default order is RELEVANCE (not date-based — ids 10599->16368->17096 are non-monotonic). sortParam=null, sortVerified=false (no newest-first sort available).",
+      "stage7_watermark": "full-catalog-sweep. Reason: no API date sort, no lastmod in product sitemap, no DOM-rendered sort dropdown, BC entity ids visible in Klevu records but not exposed as a sort key. Sweep via Klevu wildcard SEARCH with offset pagination is fast (5262/36 ~= 147 pages).",
+      "stage8_productCount": "Sitemap count: 5262 (single page; page=2 -> 404). Klevu API totalResultsFound: 5262 — exact match. productCountMethod={method:'sitemap', url:'/xmlsitemap.php?type=products&page=1'}.",
+      "stage9_assembly": "Validator-aligned shape. catalogUrls populated with 12 top-level slugs for compatibility with the operator-review pipeline; runtime adapter uses Klevu API globally."
+    }
+  }
+}

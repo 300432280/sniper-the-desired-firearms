@@ -1,0 +1,154 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-19T08:52:55Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every response, __cf_bm cookie set). All 8 probe batches returned 200 cleanly: multi-UA, rapid burst (10 sequential), honeypot paths (wp-admin/wp-login/.env/.git returned 403 = BC origin no-such-file, not WAF challenge), SQLi/XSS payloads (200 except XSS=400 which is BC request-validation), bot UA, no UA. No challenge body anywhere. Cloudflare is in passive caching/edge mode — hasWaf=false to avoid the runtime perPage=20 throttle and WAF cookie manager.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: 9fe1de59bc99e5b3-YYZ", "Set-Cookie: __cf_bm=..."],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["wp-admin (403 - BC origin not WAF)", "wp-login.php (403)", ".env (403)", ".git/config (403)"],
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "verdict": "cloudflare-passive (no active challenge; site serves all requests cleanly)"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 4719,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": [
+      "https://nordicmarksman.com/xmlsitemap.php?type=products&page=1",
+      "https://nordicmarksman.com/xmlsitemap.php?type=products&page=2"
+    ]
+  },
+  "catalogUrls": [
+    "https://nordicmarksman.com/accessories/",
+    "https://nordicmarksman.com/ammunition/",
+    "https://nordicmarksman.com/apparel-and-gear/",
+    "https://nordicmarksman.com/archery/",
+    "https://nordicmarksman.com/biathlon/",
+    "https://nordicmarksman.com/cleaning/",
+    "https://nordicmarksman.com/firearms-and-stocks/",
+    "https://nordicmarksman.com/hunting-essentials/",
+    "https://nordicmarksman.com/optics-lights/",
+    "https://nordicmarksman.com/reloading/",
+    "https://nordicmarksman.com/shotguns/",
+    "https://nordicmarksman.com/spare-parts/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://nordicmarksman.com/fiocchi-vip-heavy-28ga-2-3-4-3-4-oz-8-1300fps/",
+      "title": "Fiocchi VIP Heavy - 28ga | 2-3/4\" | 3/4 oz | #8 | 1300fps",
+      "price": 24.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://nordicmarksman.com/1-34-fixed-ring-satin/",
+      "title": "1\" Fixed Ring - SATIN",
+      "price": 99.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://nordicmarksman.com/30mm-lrw-rings/",
+      "title": "30mm LRW Rings",
+      "price": 81.95,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 2500,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 2500,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "homepage-nav + categories sitemap (xmlsitemap.php?type=categories)",
+    "categories": [
+      { "slug": "/accessories/", "allOption": 1439 },
+      { "slug": "/ammunition/", "allOption": 556 },
+      { "slug": "/apparel-and-gear/", "allOption": 271 },
+      { "slug": "/archery/", "allOption": 19 },
+      { "slug": "/biathlon/", "allOption": 81 },
+      { "slug": "/cleaning/", "allOption": 474 },
+      { "slug": "/firearms-and-stocks/", "allOption": 441 },
+      { "slug": "/hunting-essentials/", "allOption": 34 },
+      { "slug": "/optics-lights/", "allOption": 498 },
+      { "slug": "/reloading/", "allOption": 119 },
+      { "slug": "/shotguns/", "allOption": 151 },
+      { "slug": "/spare-parts/", "allOption": 793 }
+    ],
+    "totalsSumCheck": "Sum of 12 parent-category allOption counts = 4876. Walked-union of 12 cats = 4485 unique slugs. Adding /manufacturer/ aggregator (4570 slugs at limit=5000) brings union to 4607/4719 sitemap (97.6% coverage). 112 sitemap entries are split: 57 .html-suffix slugs are 404 (stale Blueprint-era URLs) and 55 clean slugs are live products tagged only to leaf subcategories (e.g. /optics-lights/rings-bases/) not reached by parent walks. BC Stencil parents do NOT recurse into subcategories — see auditNotes.bcParentCategoryRecursion. Operator may add leaf subcategory URLs to catalogUrls if 2-3% coverage gap matters; for runtime catalog refresh, current 12 parents reach 4485 unique products."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-19T20-00-00Z",
+    "probeIp": "audit IP (operator-verified-from-production-IP before promotion)",
+    "verifyMethodPolicy": "detail-page selected because BigCommerce Storefront API requires GraphQL token (not exposed in HTML on this site) and per-product detail-page is the safe path for OOS/restock detection. Slower than batch API but catches OOS transitions correctly.",
+    "bcParentCategoryRecursion": "BC Stencil parent categories on this site do NOT include products from subcategories — confirmed via /optics-lights/ returning 498 products but /optics-lights/rings-bases/ alone has 105 (and /1-34-fixed-ring-satin/ appears in rings-bases but NOT in /optics-lights/ parent walk at limit=2500). Coverage gap: ~55 live products are tagged only to leaf subcats and unreachable from the 12 top-level parent catalogUrls. Operator decision needed: (a) accept 2-3% gap, (b) add 614 leaf subcat URLs from /xmlsitemap.php?type=categories, or (c) use /manufacturer/?limit=5000 as a single aggregator URL (covers 4570/4719 = 96.8%, still 3.2% gap from brand-untagged products).",
+    "perPageVerified": "?limit=N honored up to at least 2500 in single response (accessories at limit=5000 returned 1439 — full category; ammunition at limit=2500 returned 556; manufacturer at limit=5000 returned 4570). Pagination ?page=N also honored with ?limit=N persisting (verified zero overlap between page=1 and page=2 at limit=100). Shipping limit=2500 per Stage 5 rule 'ship the verified max' — single-shot for any category <=2500 products.",
+    "sortVerification": "3-outcome counter-control: default (no sort) first 3 slugs == explicit ?sort=newest first 3 slugs (identical) != ?sort=alphaasc first 3 slugs (different). Default IS newest-sorted (matches <option value='newest' selected>). Verdict: honored-default-is-newest.",
+    "discoveredApiEndpoints": [
+      "/xmlsitemap.php (sitemap index)",
+      "/xmlsitemap.php?type=products&page=N (product sitemaps)",
+      "/xmlsitemap.php?type=categories&page=1 (category taxonomy - 614 entries)"
+    ],
+    "fieldConfidence": {
+      "platform": "high - meta name='platform' content='bigcommerce.stencil' + cdn11.bigcommerce.com + x-bc-store-id 1000321469 + stencil theme path",
+      "adapterType": "high - bigcommerce-stencil -> generic-retail per Stage 3 mapping",
+      "hasWaf": "high - 8/8 batches 200, cf-ray present (Cloudflare passive only)",
+      "wafType": "high - cloudflare-passive (informational; runtime ignores)",
+      "hasCaptcha": "high - no recaptcha/hcaptcha/turnstile/cf-turnstile script tags",
+      "ageGate": "high - no age-verification markup",
+      "needsPlaywright": "high - plain HTTP returns 20 product cards on /ammunition/ page 1",
+      "expectedProductCount": "high - sitemap-index sum = 3023 + 1696 = 4719; ~2.4% are stale 404 entries but runtime probe will count all <loc> entries",
+      "productCountMethod": "high - sitemap-index in runtime switch at product-count-probe.ts:252",
+      "catalogUrls": "medium - 12 top-level firearm-relevant parent categories reach 4485/4719 unique slugs (95.0%); 55 live products in subcategories-only and 57 dead 404 URLs make up the gap. Per Rule C, NEVER drop a URL by name; kept all 12. Operator may opt to expand to leaf subcats for 100% coverage.",
+      "sortParam": "high - 3-outcome test passed; default IS newest",
+      "sortVerified": "high",
+      "perPage": "high - limit=2500 verified on multiple categories",
+      "paginationPattern": "high - page=2&limit=100 zero-overlap with page=1&limit=100",
+      "crawlers.watermark.method": "high - newest-first sort verified; navigate-from-watermark appropriate",
+      "crawlers.maintain.verifyMethod": "medium - detail-page chosen because BC Storefront GraphQL token not exposed in HTML; operator may prefer store-api if GraphQL token discoverable via /api/storefront flow"
+    },
+    "stageNotes": [
+      "Stage 1: Canonical = apex (nordicmarksman.com); www returns 301 to apex. No hreflang multilingual signals.",
+      "Stage 2: Cloudflare-passive only. 8-batch heavy probe = 100% 200 status. Honeypot 403s are BC-origin 'no such file' (not WordPress, not WAF). hasWaf=false intentionally to avoid runtime perPage=20 throttle. No CAPTCHA, no age-gate.",
+      "Stage 3: <meta name='platform' content='bigcommerce.stencil' /> in 404 page (also CDN + theme path confirm). adapterType=generic-retail per Stage 3 platform table. needsPlaywright=false (plain HTTP returns products).",
+      "Stage 4: 13 top-level paths discovered; /manufacturer/ excluded from catalogUrls (brand-aggregator overlap with other categories; not firearm-specific structure). 12 firearm-relevant parents kept. Walked-union = 4485. Coverage gap = 234/4719 (5.0%) at 12-parent set; reduced to 112/4719 (2.4%) if /manufacturer/ aggregator added; root cause = BC parents do not recurse into subcats AND 57 sitemap entries are 404 dead URLs.",
+      "Stage 4g: extraction spot-check on 3 products (Fiocchi VIP Heavy ammo, 1\" Fixed Ring optics, 30mm LRW Rings optics) - all 200, all titles present, all prices parseable from data-product-price-without-tax. extractionTested=true.",
+      "Stage 5: ?page=N query form. perPage=2500 verified (limit=2500 honored cleanly on multiple categories including 556-product ammunition and 1439-product accessories). page=2&limit=100 zero overlap with page=1 confirms pagination correctness.",
+      "Stage 6: <select name='sort' id='sort'> with <option value='newest' selected>. 3-outcome test: default == ?sort=newest != ?sort=alphaasc. Verdict honored-default-is-newest. sortParam=?sort=newest, sortVerified=true.",
+      "Stage 7: navigate-from-watermark - newest-first sort verified; BigCommerce has no public API date filter (Storefront GraphQL requires token not exposed in HTML).",
+      "Stage 8: sitemap-index method. /xmlsitemap.php returns 5 sub-sitemaps; type=products has 2 pages (3023 + 1696 = 4719 <loc> entries). ~2.4% of entries are stale 404s (legacy Blueprint .html-suffix URLs)."
+    ]
+  }
+}

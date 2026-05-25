@@ -1,0 +1,141 @@
+{
+  "profileVersion": 1,
+  "platform": "shopify",
+  "adapterType": "shopify",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-23T03:05:10Z",
+  "wafProbeMethod": "heavy-8-batch + sustained-walk-verification",
+  "wafProbeResult": "Cloudflare passive (cf-ray + server: cloudflare on every response). 4 sustained /collections/all/products.json walks at 800-1900ms delay all 200. Catalog HTML /collections/all?sort_by=created-descending = 200, cf-cache-status DYNAMIC. Bot UA (curl-no-spoof) 503; no-UA 403; standard browser UAs 200. No active blocking against legitimate crawlers.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status: DYNAMIC", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 = 200 (R1) + 4/4 sustained walk = 200 (R2)",
+    "rapidBurstTested": true,
+    "sustainedWalkVerified": true,
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": true,
+    "noUaBlocked": true,
+    "untestedAttackSurfaces": ["auth-attempt", "path-traversal", "large-body-POST", "shellshock-UA"]
+  },
+  "hasCaptcha": false,
+  "captchaType": "hcaptcha",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 565,
+  "productCountMethod": {
+    "method": "shopify-products-walk",
+    "endpoint": "/products.json",
+    "perPage": 250
+  },
+  "catalogUrls": ["/collections/all"],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://aagcanada.ca/products/replica-boots-1",
+      "title": "Great Escape Boots USN WWII Reproduction Boots Film Prop",
+      "price": 399,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://aagcanada.ca/products/combloc-akm-type-i-bayonet-w-scabbard",
+      "title": "Combloc AKM Type I Bayonet w/ Scabbard",
+      "price": 169,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://aagcanada.ca/products/italian-carcano-m1891-long-rifle-terni-1894-early-production-infantry-rifle",
+      "title": "Italian Carcano M1891 Long Rifle Terni 1894 Early Production Infantry Rifle",
+      "price": 1099,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort_by=created-descending",
+  "sortVerified": true,
+  "searchUrl": "/search?q={keyword}&type=product",
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "shopify-collections-json + R2 live verification",
+    "categories": [
+      { "slug": "/collections/antique-blank",        "allOption": 22,  "title": "Antique/Airgun/Blank",        "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/bayonet",              "allOption": 21,  "title": "Bayonet",                     "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/boutique-display-sold","allOption": 117, "title": "Boutique Display Sold",       "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/deactivated",          "allOption": 12,  "title": "Deactivated",                 "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/firearms",             "allOption": 197, "title": "Firearms",                    "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/fun-stuff",            "allOption": 164, "title": "Fun Stuff (mixed)",           "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/garment",              "allOption": 79,  "title": "Garment (military)",          "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/magazine-clips",       "allOption": 18,  "title": "Magazine/Clips/Parts",        "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/scope-sights",         "allOption": 12,  "title": "Scope and Sights",            "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/tactical-gear",        "allOption": 72,  "title": "Tactical Gear",               "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/frontpage",            "allOption": 32,  "title": "Home page (aggregator)",      "firearmRelevant": false, "containedInAll": true },
+      { "slug": "/collections/popular-items",        "allOption": 12,  "title": "Popular Items (aggregator)",  "firearmRelevant": false, "containedInAll": true },
+      { "slug": "/collections/new-arrival",          "allOption": 59,  "title": "New Arrival (aggregator)",    "firearmRelevant": false, "containedInAll": true },
+      { "slug": "/collections/sale",                 "allOption": 24,  "title": "Sale (aggregator)",           "firearmRelevant": false, "containedInAll": true },
+      { "slug": "/collections/public-notice",        "allOption": 2,   "title": "Public Notice",               "firearmRelevant": false, "containedInAll": true }
+    ],
+    "totalsSumCheck": "R2 live re-walk: /collections/all p1=250, p2=250, p3=65, p4=0 -> 565 unique IDs. Sitemap ?from=7803662499951&to=15015141802095 -> 565 product entries. /collections/firearms walk -> 74 products, 0 missing from /collections/all (subset confirmed). Three independent counts (sitemap, /products.json, /collections/all walk) all = 565."
+  },
+  "lastVerified": "2026-05-22",
+  "auditNotes": {
+    "runId": "B5R2-2026-05-22T21-00-00Z",
+    "probeIp": "audit-environment-residential",
+    "wcCategoryApi": "n/a-shopify",
+    "r2InvestigationSummary": "All 6 R1 semantic divergences re-tested with live methods different from R1. R1 verdicts confirmed on all 6. Stage-3 searchUrl gap closed (live-tested /search?q=glock&type=product -> 200, returns product cards).",
+    "verifyMethodPolicy": "detail-page selected (Shopify default per Stage 3 platform->verify table).",
+    "expectedCountSurface": "shopify-products-walk against /products.json (customer-visible storefront).",
+    "dbColumnFlips": {
+      "wafWorkaround": "clear"
+    },
+    "discoveredApiEndpoints": [
+      "/collections.json?limit=250",
+      "/collections/all/products.json?limit=250&page=N",
+      "/collections/<handle>/products.json?limit=250&page=N",
+      "/products.json?limit=250&page=N",
+      "/sitemap_products_1.xml?from=<lo>&to=<hi>",
+      "/search?q={keyword}&type=product"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "paginationPattern": "high",
+      "perPage": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "searchUrl": "high",
+      "watermarkMethod": "high",
+      "verifyMethod": "high"
+    }
+  }
+}

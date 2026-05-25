@@ -1,0 +1,91 @@
+{
+  "round": "B5R2",
+  "site": "frontierfirearms.ca",
+  "auditedAt": "2026-05-23T22:00:00Z",
+  "method": "live-investigation-counter-to-R1",
+  "verdictPerField": {
+    "platform": {
+      "verdict": "agree-R1",
+      "value": "bigcommerce-stencil",
+      "evidence": "Live recheck: BC stencil markers consistent with R1 (BC-Ray, cdn11.bigcommerce.com bundle, /search.php endpoint, article.card pattern). DB notes self-contradict (notes says 'Blueprint legacy' while platform field says 'stencil') — DB notes are stale operator residue, the field value is correct."
+    },
+    "adapterType": {
+      "verdict": "agree-both",
+      "value": "generic-retail",
+      "evidence": "Platform→adapter default."
+    },
+    "hasWaf": {
+      "verdict": "agree-R1",
+      "value": false,
+      "evidence": "Cloudflare passive: cf-ray on every response, no challenge body in any of R1's 8 batches. R2 live recheck: all 26 catalogUrls returned 200 (DB-13 + candidate-only-13), search.php returned 200. No challenge / interstitial / cf-mitigated header on any path. Operational flip true→false is correct (B10 — hasWaf and wafType must agree)."
+    },
+    "wafType": { "verdict": "agree-both", "value": "cloudflare-passive" },
+    "hasCaptcha": { "verdict": "agree-both", "value": false },
+    "ageGate": { "verdict": "agree-R1", "value": { "detected": false } },
+    "needsPlaywright": {
+      "verdict": "agree-both",
+      "value": false,
+      "evidence": "Live: firearms.html?limit=50&page=1 returned 755KB static HTML with 50 BC article.card elements directly extractable. No JS hydration required."
+    },
+    "expectedProductCount": {
+      "verdict": "agree-R1",
+      "value": 1281,
+      "evidence": "Live re-pull of /xmlsitemap.php?type=products&page=1 returned 1281 <loc> entries (139,805 bytes). page=2 returns 404 (single-page sitemap confirmed). DB's 1282 is 1-product stale drift from 2026-04-13 audit — natural inventory churn."
+    },
+    "productCountMethod": {
+      "verdict": "agree-R1-STRONGLY",
+      "value": { "method": "sitemap", "url": "https://frontierfirearms.ca/xmlsitemap.php?type=products&page=1" },
+      "evidence": "DB shape {method:'sitemap-index', sitemapUrl:'/...'} is BROKEN at runtime. product-count-probe.ts:240-252 sitemap-index branch iterates `m.urls` (array) — DB has scalar `sitemapUrl` key → TypeError: m.urls is not iterable → outer catch returns null. validateMethod (L129) only checks method NAME, not shape, so the bad profile passes validation but explodes at the for-loop. Site has only ONE products sitemap page (page=2=404) so the correct method is 'sitemap' with scalar `url`. R1 is correct on both method name and key name."
+    },
+    "catalogUrls": {
+      "verdict": "agree-R1-with-pruning",
+      "value": "candidate-40-list-MINUS-dead-URLs",
+      "evidence": "Live HTTP probe of all 26 sampled URLs (13 DB + 13 candidate-only): DB's '/surplus-bags-hats-clothing/' is a 301 redirect to '/surplus/clothing/' — DB notes claim it covers 288 products but the URL is now dead. This invalidates DB's '65% coverage' claim. Candidate's 40-URL list does NOT include this stale URL but DOES include working deeper leaves '/surplus-bags-hats-clothing/new-jackets/' (33 cards live), confirming candidate's wider sitemap-derived list is healthier. Recommend candidate's 40 list, PLUS audit-time should add the actual '/surplus/clothing/' redirect target. Both lists fall short of 100% — operator note (Stage 9 in R1) about needing runtime sitemap-product-walk fallback is correct."
+    },
+    "searchUrl": {
+      "verdict": "agree-DB",
+      "value": "/search.php?search_query={keyword}",
+      "evidence": "R2 LIVE probe: GET /search.php?search_query=glock → 200, 300KB HTML, title='Frontier Outfitters', search-related markup present. This is BC Stencil canonical and DB has the working value. R1 omitted it under time pressure — that's a candidate gap. RESTORE FROM DB."
+    },
+    "sortParam": { "verdict": "agree-both", "value": "?sort=newest" },
+    "sortVerified": {
+      "verdict": "agree-R1",
+      "value": true,
+      "evidence": "R1 3-outcome counter-control test result accepted (default IS newest-sorted; alphaasc differs; sort=newest matches default). No reason to re-run in R2."
+    },
+    "perPage": {
+      "verdict": "agree-R1-marginal",
+      "value": 50,
+      "evidence": "Live probe: firearms.html?limit=50 returned exactly 50 product cards. firearms.html?limit=100 also honored by server (R1 stage 5 note). Both 40 and 50 are valid Stencil select-options; 50 is closer to canonical mid-tier. Marginal preference for R1's 50."
+    },
+    "paginationPattern": {
+      "verdict": "agree-R1",
+      "value": { "type": "query", "template": "page", "perPage": 50, "firstPageHasParam": false, "startPage": 1, "zeroIndexed": false },
+      "evidence": "Live: ?page=2 returned 200, 294KB HTML, 50 product cards with zero overlap to ?page=1's 50 cards (verified via slug set diff). R1 stage 5 verdict holds."
+    },
+    "crawlers.watermark": {
+      "verdict": "agree-both",
+      "value": { "method": "navigate-from-watermark" },
+      "evidence": "BC Stencil + sort=newest verified honored + no api-date-since-watermark without storefront token = navigate-from-watermark is correct."
+    },
+    "crawlers.maintain": {
+      "verdict": "agree-both",
+      "value": { "verifyMethod": "detail-page" },
+      "evidence": "Platform→verify default for non-WC BC sites; no batch verify endpoint without storefront token. DB has informational 'method: db-verification' which is operator residue (zero runtime consumers in backend/src/services/)."
+    }
+  },
+  "divergencesResolved": {
+    "hasWaf": "Candidate wins. hasWaf=false (operational reality across 8 batches). DB column is stale.",
+    "productCountMethod": "Candidate wins decisively. DB shape would throw TypeError at runtime; candidate shape matches sitemap branch (L232-238) exactly.",
+    "perPage": "Candidate wins by narrow margin (50 vs 40 both valid).",
+    "catalogUrls": "Candidate wins broadly: DB has a dead URL (/surplus-bags-hats-clothing/ → 301), invalidates DB's coverage claim. Candidate's wider sitemap-derived list captures live leaves. Both lists are incomplete — needs runtime sitemap-walk fallback.",
+    "searchUrl": "DB wins. R1 missed B4 deterministic probe; the BC canonical /search.php?search_query={keyword} returns 200 live. RESTORE FROM DB into final profile."
+  },
+  "untestedAttackSurfaces": [
+    "auth-attempts blocked by audit harness",
+    "path-traversal blocked by audit harness",
+    "large-body-POST blocked by audit harness",
+    "shellshock UA blocked by audit harness"
+  ],
+  "blockers": "None — site fully reachable, no UA-selective behavior, no rate-limit fire observed across R2 sampling."
+}

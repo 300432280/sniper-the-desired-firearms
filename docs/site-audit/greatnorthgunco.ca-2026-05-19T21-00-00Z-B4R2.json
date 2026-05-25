@@ -1,0 +1,162 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-19T08:52:58Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200; no cf-ray/x-sucuri/incapsula/akamai/server-cloudflare headers. Honeypot /.env and /.git/config return 403 (origin LiteSpeed/.htaccess path-selective, not CDN WAF). SQLi/XSS payloads return 200. Rapid burst 10x: all 200. UA-absent: 200. Origin server: LiteSpeed.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "incapsulaCookies": [],
+    "akamaiHeaders": [],
+    "serverHeader": "LiteSpeed",
+    "rapidBurstStatus": "all-200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": [".env (403)", ".git/config (403)"],
+    "honeypotIsOriginNotWaf": "true: no cf-ray/x-sucuri etc on these responses; origin LiteSpeed/.htaccess",
+    "botUaBlocked": false,
+    "captchaScriptsInBody": ["recaptcha/api.js?render=6LfquLsUAAAAACKKuR6lKeeA-VwoLnOITAL2RVle"],
+    "wpRestOpen": true,
+    "storeApiOpen": true
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 4306,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://greatnorthgunco.ca/product-category/used-firearms/",
+    "https://greatnorthgunco.ca/product-category/new-knives/",
+    "https://greatnorthgunco.ca/product-category/accessories-parts/",
+    "https://greatnorthgunco.ca/product-category/new-scopes/",
+    "https://greatnorthgunco.ca/product-category/lee-enfield-parts/",
+    "https://greatnorthgunco.ca/product-category/surplus/",
+    "https://greatnorthgunco.ca/product-category/bayonets/",
+    "https://greatnorthgunco.ca/product-category/uncategorized/",
+    "https://greatnorthgunco.ca/product-category/new-firearms/",
+    "https://greatnorthgunco.ca/product-category/used-scopes/",
+    "https://greatnorthgunco.ca/product-category/mauser-parts/",
+    "https://greatnorthgunco.ca/product-category/several-available-surplus/",
+    "https://greatnorthgunco.ca/product-category/ljungman-parts/",
+    "https://greatnorthgunco.ca/product-category/new-shotguns/",
+    "https://greatnorthgunco.ca/product-category/several-available/"
+  ],
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://greatnorthgunco.ca/product/husqvarna-640-bolt-action-in-8x57/",
+      "title": "Husqvarna 640 in 8x57",
+      "price": 495.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://greatnorthgunco.ca/product/jamart-co-liege-belgium-sxs-in-12ga-3/",
+      "title": "Jamart Co (Liege, Belgium) SXS in 12ga",
+      "price": 259.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://greatnorthgunco.ca/product/feg-hungaria-100s-sxs-in-12-gauge/",
+      "title": "FEG Hungaria 100S SxS in 12 gauge",
+      "price": 299.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST core /wp-json/wp/v2/product?modified_after=... two-probe HONORED: future-date returns x-wp-total:0; past-date returns x-wp-total:4306 (= global total). WC adapter at woocommerce.ts uses modified_after on this endpoint."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyBehavior": {
+        "notes": "Operator-recorded override (2026-04-03 incident): 3691 products wrongly deactivated when verifyMethod was store-api because this site keeps ~3778 catalog_visibility=hidden archive items that Store API filters out. R2 reproduced: slug query /wp-json/wc/store/v1/products?slug=swiss-30-cal-cleaning-kit returns [] (HTTP 200) while /product/swiss-30-cal-cleaning-kit/ returns HTTP 200 with full HTML — product is published but Store-API-hidden. With worker.ts L544 fix on branch fix/batch-3-runtime-bugs-2026-05-19, Store-API misses correctly fall through to Playwright, but detail-page is the conservative belt-and-suspenders choice until that fix lands on main.",
+        "onFound": "update-all-fields",
+        "canDetectDeletion": true
+      }
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "id": 19, "slug": "/product-category/used-firearms/", "allOption": 307, "wpRestCount": 2244 },
+      { "id": 2188, "slug": "/product-category/new-knives/", "allOption": 66, "wpRestCount": 90 },
+      { "id": 2195, "slug": "/product-category/accessories-parts/", "allOption": 29, "wpRestCount": 106 },
+      { "id": 2190, "slug": "/product-category/new-scopes/", "allOption": 26, "wpRestCount": 48 },
+      { "id": 2192, "slug": "/product-category/lee-enfield-parts/", "allOption": 19, "wpRestCount": 21 },
+      { "id": 17, "slug": "/product-category/surplus/", "allOption": 19, "wpRestCount": 1001 },
+      { "id": 2189, "slug": "/product-category/bayonets/", "allOption": 17, "wpRestCount": 29 },
+      { "id": 380, "slug": "/product-category/uncategorized/", "allOption": 16, "wpRestCount": 473 },
+      { "id": 184, "slug": "/product-category/new-firearms/", "allOption": 10, "wpRestCount": 225 },
+      { "id": 2191, "slug": "/product-category/used-scopes/", "allOption": 9, "wpRestCount": 12 },
+      { "id": 2193, "slug": "/product-category/mauser-parts/", "allOption": 4, "wpRestCount": 7 },
+      { "id": 2131, "slug": "/product-category/several-available-surplus/", "allOption": 3, "wpRestCount": 15 },
+      { "id": 2194, "slug": "/product-category/ljungman-parts/", "allOption": 1, "wpRestCount": 1 },
+      { "id": 2132, "slug": "/product-category/new-shotguns/", "allOption": 1, "wpRestCount": 17 },
+      { "id": 2130, "slug": "/product-category/several-available/", "allOption": 1, "wpRestCount": 13 }
+    ],
+    "totalsSumCheck": "Sum of allOption (catalog-visible) = 528, matches Store API x-wp-total exactly (528). Sum of wpRestCount = 4302 (within rounding of WP REST core x-wp-total: 4306; product-sitemap multi-file sum = 4306). The 528 vs 4306 divergence is catalog_visibility filter: Store API filters to visible only; WP REST core returns ALL published products including catalog_visibility=hidden (sold-archive listings kept for SEO permalinks)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R2-greatnorthgunco-2026-05-19",
+    "round": "R2",
+    "r1Divergences": {
+      "verifyMethod": "R1 said store-api; DB said detail-page. R2 verdict: DB wins. Reproduced the Store-API-hidden pattern: 4 of 4 sampled WP-REST-only product IDs returned empty arrays from /wp-json/wc/store/v1/products?slug=<x> while /product/<x>/ returned HTTP 200 with full HTML. With the worker.ts L544 fix on this branch, store-api would now fall through to Playwright on misses, but detail-page is the safer documented operator choice for this site.",
+      "catalogUrls": "R1 wins on structure. DB typo /product-category/accessoriesparts/ returns HTTP 404 (confirmed); WP REST taxonomy lists 15 productive cats and R1 has all 15; the 3 small cats DB was missing (uncategorized, several-available-surplus, several-available) all return HTTP 200 with live products. Cat count sum 528 = Store API total 528 (perfect match).",
+      "expectedProductCount": "Both R1 (4299) and DB (4201) are stale. Current x-wp-total = 4306 (verified 2026-05-19). product-sitemap multi-file sum 1001+1000+1000+1000+306-1stylesheet = 4306. Use 4306.",
+      "searchUrl": "DB wins. R1 missed it. Live test /?s=husqvarna&post_type=product returns HTTP 200, title 'You searched for husqvarna - Surplus GNG', 74 product-card markers in body.",
+      "paginationTemplate": "R1 wins. /shop/page/2 (no slash) returns 200 but Location-redirects to /shop/page/2/ (with slash). Canonical form has trailing slash.",
+      "wafType": "Both equivalent. null (R1) and 'none' (DB) are operationally identical — production crawler routes on hasWaf boolean only."
+    },
+    "verifyMethodPolicy": "detail-page is the operator-recorded override based on 2026-04-03 incident (3691 products wrongly deactivated). Reproduced in R2 by sampling hidden products. The worker.ts L544 fix on this branch makes store-api safe again (misses fall through to Playwright), but detail-page is the conservative belt-and-suspenders choice until the fix is on main.",
+    "wcCategoryApi": "wp-rest-core (WP REST /wp-json/wp/v2/product?product_cat=N; does NOT recurse; flat taxonomy here so non-issue)",
+    "wcCountSurface": "wp-rest-core / wp/v2/product (admin-visible; matches watermark walk). Store API visible-only = 528.",
+    "catalogVsWatermarkDivergence": "HTML catalog crawler via /product-category/<slug>/ pages sees only the 528 catalog-visible products. WP REST watermark crawler indexes up to 4306 historical products (modified_after walk). Operator awareness: catalog backfill via HTML walks will not reach the ~3778 hidden/archive items.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "captchaType": "high",
+      "ageGate.detected": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high (live-verified 2026-05-19 via WP REST x-wp-total = 4306 + sitemap sum cross-check)",
+      "productCountMethod": "high",
+      "catalogUrls": "high (15 WC categories from WP taxonomy API; typo /accessoriesparts/ confirmed HTTP 404; 3 small cats DB was missing confirmed HTTP 200)",
+      "paginationPattern": "high",
+      "perPage": "high",
+      "sortParam": "high (live HTML extraction of /shop/?orderby=date confirms descending product IDs 44216,44061,44201,43878,44377)",
+      "sortVerified": "high",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "high (operator override reproduced in R2)"
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "profileVersion": 1,
+  "platform": "lightspeed-ecom",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-22T20:00:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare-passive (cf-ray present, all main GETs 200). Origin returns 403 on honeypot/admin paths (wp-login, .env, .git, phpinfo, UNION SELECT query) but 200 on normal browsing and SQLi single-quote, XSS payloads. No challenge interstitial. Multi-UA + rapid-burst + no-UA all clean 200. Cloudflare in front but does not actively block — runtime cost of hasWaf=true would slow crawler with no benefit.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY", "cf-cache-status", "Server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+    "rapidBurstTested": true,
+    "honeypotPathsBlocked": ["/wp-login.php", "/xmlrpc.php", "/.env", "/.git/config", "/phpinfo.php"],
+    "sqliRuleFired": true,
+    "xssRuleFired": false,
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "untestedAttackSurfaces": ["sustained-50-page-walk-per-UA", "auth-attempt", "path-traversal", "large-body-POST", "shellshock-UA"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3942,
+  "productCountMethod": {
+    "method": "generic-product-sitemap",
+    "url": "https://www.jobrookoutdoors.com/sitemap.xml",
+    "pattern": "\\.html$"
+  },
+  "catalogUrls": [
+    "https://www.jobrookoutdoors.com/collection/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.jobrookoutdoors.com/wk180-magpul-edition.html", "title": "Kodiak Defense WK180 Magpul edition", "price": null, "stockStatus": "unknown", "priceVisible": false },
+    { "url": "https://www.jobrookoutdoors.com/17-wsm-xpert-ns.html", "title": "(extracted from collection page 1)", "price": null, "stockStatus": "unknown" },
+    { "url": "https://www.jobrookoutdoors.com/10-22-walnut.html", "title": "(extracted from collection page 1)", "price": null, "stockStatus": "unknown" }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "suffix-replace",
+    "template": "page{N}.html?sort=newest",
+    "match": "?sort=newest",
+    "perPage": 12,
+    "firstPageHasParam": true,
+    "startPage": 2,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-05-22",
+  "auditNotes": {
+    "runId": "B5R1-2026-05-22",
+    "watchdogPriorVerdict": null,
+    "probeIp": "audit-environment-IP-not-recorded",
+    "discoveredApiEndpoints": [],
+    "verifyMethodPolicy": "detail-page selected; Lightspeed eCom has no public Store API for batch verification - runtime uses Playwright/HTML detail-page checks to catch OOS transitions and restock detection",
+    "fieldConfidence": {
+      "platform": "high - cdn.shoplightspeed.com refs + Lightspeed Netherlands BV copyright + x-shop-id: 606469 header",
+      "adapterType": "high - per skill table, lightspeed-ecom maps to generic-retail",
+      "hasWaf": "high - 8-batch probe all 200; honeypot 403 is origin-level not CDN",
+      "catalogUrls": "medium - /collection/ is global catalog spine (329 pages, 3948 products); Lightspeed parent categories /hunt/ /archery/ render subcategory tiles only (Mistake 26 family). Operator may want firearm-specific scope override via /hunt/firearms/* + /archery/* leaf cats",
+      "sortVerified": "high - 3-outcome counter-control test passed: default vs sort=newest vs sort=lowest all produce distinct first-3 slugs",
+      "paginationPattern": "high - Lightspeed pageN.html suffix-replace verified, sort baked in template per Mistake 26",
+      "expectedProductCount": "high - sitemap filtered to .html = 3942, matches /collection/ last-page math (329 * 12 ~ 3948)",
+      "perPage": "medium - 12 is the platform default; UI dropdown caps at 18; could probe higher limits at risk of being silently capped"
+    },
+    "scopeOverride": "catalogUrls uses /collection/ (full catalog) because Lightspeed parent categories /hunt/ /archery/ are tile-only landing pages with no products. Crawl walks all 3942 products including fish/cycle/paddle (non-firearm); downstream firearm-relevance filtering applies. Alternative narrower scope would require enumerating ~35 leaf subcategories under /hunt/ + /archery/",
+    "stageNotes": [
+      "Stage 1: apex jobrookoutdoors.com 301-redirects to www.jobrookoutdoors.com; canonical = www",
+      "Stage 2: heavy-8-batch probe - cf-ray present, all main GETs return 200, honeypots 403 (origin-rule), no challenge body. cloudflare-passive (informational). hasCaptcha:false, no script tags for recaptcha/hcaptcha/turnstile.",
+      "Stage 3: Platform = lightspeed-ecom (cdn.shoplightspeed.com everywhere + Lightspeed Netherlands BV copyright + x-shop-id: 606469). adapterType: generic-retail per skill mapping table. No age-gate detected on homepage GET. needsPlaywright: false (plain HTTP returns full product HTML on /collection/).",
+      "Stage 4: Top-level nav = archery, hunt, outdoor, fish, cycle, paddle. /hunt/ and /archery/ are tile-only parent pages (no product cards) - same for /hunt/firearms/. Leaf subcategories (e.g. /hunt/firearms/centerfire-rifles/) render products. /collection/ = global catalog spine, 329 pages of 12 products = 3948 products. Chose /collection/ as single catalogUrl for minimum URL count + 100% coverage.",
+      "Stage 5: pagination type = suffix-replace (Lightspeed Mistake 26); template = page{N}.html?sort=newest; perPage = 12 (default + UI cap at 18). Page1 vs Page2 product set zero-overlap verified. Page2 with ?sort=newest returns different products than Page2 default - pagination + sort combine correctly.",
+      "Stage 6: sort=newest verified via 3-outcome counter-control test. default first-3 = 10-22-walnut, 12-ga-3-honcho-pump, 17-wsm-xpert. sort=newest first-3 = 22lr-subsonic, 65-cm-129gr-interlock, all-weather-bow-case. sort=lowest first-3 = beiter-hunter-nock, beiter-nock-heavy-yellow, bonus-dot-3spot. Three distinct orderings - sort honored. sortParam: ?sort=newest baked into pagination template per Lightspeed convention.",
+      "Stage 7: watermark = navigate-from-watermark. Sort=newest verified upstream; Lightspeed has no public REST date filter (so api-date-since-watermark unavailable); full-catalog-sweep unnecessary. Walker traverses /collection/ + pageN.html?sort=newest from page 1 (newest) backward until reaching watermark.",
+      "Stage 8: count = 3942 via generic-product-sitemap with pattern .html$ filter applied to /sitemap.xml (raw <url> = 5259 incl. category/brand/service pages). Cross-checked vs /collection/ last-page math: 329 pages * 12 = 3948 (0.15% drift, well within 5% gate). productCountMethod = generic-product-sitemap.",
+      "Stage 9: validator gate - productCountMethod.method = generic-product-sitemap (one of 11 canonical). Shape = {method, url, pattern}. paginationPattern.type=suffix-replace, template = page{N}.html?sort=newest. hasWaf:false consistent with cloudflare-passive."
+    ]
+  }
+}

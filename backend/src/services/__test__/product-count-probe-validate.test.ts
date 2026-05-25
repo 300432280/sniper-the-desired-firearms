@@ -43,3 +43,82 @@ describe('validateMethod (Fix 4)', () => {
     ]);
   });
 });
+
+// ── Batch-5 R4 C1: sitemap.url and sitemap-index.urls[] MUST be path-only ──
+//
+// product-count-probe.ts:233 prepends `${origin}${m.url}`. When `m.url` is
+// absolute (e.g. "https://frontierfirearms.ca/sitemap.xml"), the result is
+// "https://frontierfirearms.cahttps://frontierfirearms.ca/sitemap.xml" —
+// fetch fails, expectedCount becomes null, the coverage gate silently passes.
+// Live caught on frontierfirearms.ca R3 (2026-05-22). Reject at validateMethod
+// so the failure is loud at promote time, not silent at runtime.
+describe('validateMethod — sitemap path-only URL (C1, batch-5 R4)', () => {
+  it('throws on sitemap with absolute http URL', () => {
+    expect(() =>
+      validateMethod({ method: 'sitemap', url: 'http://example.com/sitemap.xml' } as any)
+    ).toThrow(/path-only|start with \//i);
+  });
+
+  it('throws on sitemap with absolute https URL', () => {
+    expect(() =>
+      validateMethod({ method: 'sitemap', url: 'https://frontierfirearms.ca/sitemap.xml' } as any)
+    ).toThrow(/path-only|start with \//i);
+  });
+
+  it('accepts sitemap with path-only URL', () => {
+    expect(() =>
+      validateMethod({ method: 'sitemap', url: '/sitemap_products.xml' } as any)
+    ).not.toThrow();
+  });
+
+  it('throws on sitemap-index when ANY entry in urls[] is absolute', () => {
+    expect(() =>
+      validateMethod({
+        method: 'sitemap-index',
+        urls: [
+          '/media/sitemaps/sitemap_product_001.xml',
+          'https://store.example.com/sitemap_product_002.xml',
+        ],
+      } as any)
+    ).toThrow(/path-only|start with \//i);
+  });
+
+  it('accepts sitemap-index when ALL entries are path-only', () => {
+    expect(() =>
+      validateMethod({
+        method: 'sitemap-index',
+        urls: [
+          '/media/sitemaps/sitemap_product_001.xml',
+          '/media/sitemaps/sitemap_product_002.xml',
+        ],
+      } as any)
+    ).not.toThrow();
+  });
+});
+
+// ── Batch-5 R4 C2: close-match suggestion in error message ──────────────────
+//
+// Operators keep writing `wc-store-api-header` (DB on thegundealer.ca, audit
+// history). It is NOT in VALID_METHOD_NAMES — `wp-rest-header` is the canonical
+// name and Store API ≠ WP REST surfaces, so the alias decision is REJECT.
+// Improve the error message with a "did you mean wp-rest-header?" suggestion
+// so the operator fixes the profile without diving into source.
+describe('validateMethod — close-match suggestion (C2, batch-5 R4)', () => {
+  it('rejects wc-store-api-header with a "did you mean wp-rest-header?" hint', () => {
+    expect(() =>
+      validateMethod({ method: 'wc-store-api-header' } as any)
+    ).toThrow(/did you mean.*wp-rest-header/i);
+  });
+
+  it('rejects wp_rest_header (underscores) with a "did you mean wp-rest-header?" hint', () => {
+    expect(() =>
+      validateMethod({ method: 'wp_rest_header' } as any)
+    ).toThrow(/did you mean.*wp-rest-header/i);
+  });
+
+  it('still throws unknown-method on a wildly different name (no spurious suggestion)', () => {
+    expect(() =>
+      validateMethod({ method: 'totally-fake-method' } as any)
+    ).toThrow(/unknown product-count method/i);
+  });
+});

@@ -1,0 +1,166 @@
+{
+  "profileVersion": 1,
+  "platform": "nextjs-custom-classifieds",
+  "adapterType": "classifieds-gunpost",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-25T03:02:44Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200; no cf-ray / sucuri / sgcaptcha / incapsula / malcare / wordfence markers; rapid burst clean (no 429/503); SQLi/XSS payloads 200; honeypots 404 (not 403); no-UA 200. Server: nginx/1.24.0 (Ubuntu).",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all 200, wall_ms 473-505",
+    "rapidBurstTested": true,
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotStatuses": "wp-admin=404 wp-login=404 xmlrpc=404 dotenv=404 dotgit=404 phpinfo=404",
+    "botUaBlocked": false,
+    "noUaStatus": 200,
+    "perUaStatusTimeline": {
+      "chrome-120-desktop": "200 (205563B, 1.0s)",
+      "mobile": "200 (205628B, 0.27s)",
+      "googlebot": "200 (205517B, 0.27s)",
+      "curl-default": "200 (205505B, 0.29s)"
+    },
+    "serverHeader": "nginx/1.24.0 (Ubuntu)",
+    "untestedAttackSurfaces": ["auth-attempt", "path-traversal", "large-body-POST", "shellshock-UA"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 8889,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": "pagination-walk:lastPage=424,perPage=21,lastPagePartial=6",
+    "perPage": 21
+  },
+  "catalogUrls": [
+    "https://townpost.ca/category/guns"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://townpost.ca/marketplace/calgary/guns/1873-winchester-3220/1171321",
+      "title": "1873 Winchester 32-20",
+      "price": null,
+      "stockStatus": "unknown",
+      "priceVisible": false,
+      "id": 1171321
+    },
+    {
+      "url": "https://townpost.ca/marketplace/calgary/guns/ruger-american-3006/1171322",
+      "title": "Ruger American 30-06",
+      "price": null,
+      "stockStatus": "unknown",
+      "priceVisible": false,
+      "id": 1171322
+    },
+    {
+      "url": "https://townpost.ca/marketplace/wlinak/guns/browning-auto-5-12-ga-3/1171323",
+      "title": "Browning Auto 5 12 GA",
+      "price": null,
+      "stockStatus": "unknown",
+      "priceVisible": false,
+      "id": 1171323
+    }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 21,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 21,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Default listing order on /category/guns is monotonically descending by numeric sourceId (page 1 max=1171323, page 100 max=1169468, page 421 max=945865) - newest-first verified by ID descent across 421 pages. Pagination ?page=N honored with zero-overlap (p1 cap p2 = 0). No explicit sort param exists in SSR'd HTML (sort widget is client-side Radix combobox), but default-newest order is independently verified, so navigate-from-watermark is viable without sortParam."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "classifiedRules": {
+    "soldDetection": [
+      "Sold ~",
+      "<title>Sold ",
+      "<h1 class=\"text-xl font-semibold tracking-tighter sm:text-2xl md:text-3xl\">Sold "
+    ]
+  },
+  "productUrlSchemes": {
+    "canonical": "/marketplace/<city>/<urlCategory>/<slug>/<numericId>",
+    "joinOn": "numeric-id-suffix"
+  },
+  "topLevelCategories": {
+    "source": "homepage-nav + /categories",
+    "categories": [
+      { "slug": "/category/guns", "allOption": 8889, "notes": "423 full pages x 21 + 6 partial last page = 8889; main firearm-relevant catalog spine" }
+    ],
+    "totalsSumCheck": "guns=8889 verified via pagination walk to p424. Other firearm-relevant categories may exist (sporting-goods=12447 in marketplace sitemap but mixed-relevance; bows, hunting-knives, optics - defer to R2 for confirmation). For R1 conservative scope: ONLY /category/guns is firearm-relevant baseline. R2 should probe /category/sporting-goods, /category/bows, /category/other and dedupe by numeric ID."
+  },
+  "lastVerified": "2026-05-25",
+  "auditNotes": {
+    "runId": "townpost.ca-2026-05-23T18-00-00Z-B6R1",
+    "probeIp": "audit-host (Windows)",
+    "probeDate": "2026-05-25",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "medium",
+      "hasWaf": "high",
+      "catalogUrls": "medium",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "paginationPattern": "high",
+      "sortParam": "medium",
+      "sortVerified": "low",
+      "watermarkMethod": "medium",
+      "classifiedRules": "low"
+    },
+    "dbColumnFlips": {
+      "hasWaf": false,
+      "wafType": null
+    },
+    "discoveredApiEndpoints": [
+      "/api/og (image generation only)"
+    ],
+    "stageNotes": {
+      "1-canonical": "Both apex and www return 200 cleanly under production UA. www does NOT canonicalize (canonical = apex). HTTP server: nginx/1.24.0 (Ubuntu) - bare origin, no CDN.",
+      "2-waf": "No WAF detected (hasWaf=false). All 8 probe batches 200 across 4 UAs. Honeypot paths return 404 (not 403 - server-level path-mapping, not WAF filtering). Sustained-walk test of pagination through page 424 stayed 200 (extended Mistake 23 + B9 confirmation).",
+      "3-platform": "Next.js custom classifieds app. Detected via /_next/image, /_next/static/chunks, link rel=preload patterns. NOT WordPress/Shopify/Drupal/Magento. No reCAPTCHA/hCaptcha/Turnstile in homepage HTML. No age-gate (no DOB form, no 18+ button, no agegate cookie). adapterType=classifieds-gunpost chosen because it's the closest existing adapter family (Canadian firearms classifieds); a generic-classifieds adapter would also work. Crawl path serves products in SSR'd HTML - needsPlaywright=false.",
+      "4-catalog": "Stage 4 conservative scope: catalogUrls=['/category/guns'] only. The /category/guns URL aggregates products from MANY URL patterns (/marketplace/<city>/guns/*, /marketplace/<city>/sporting-goods/* when tagged guns category, etc.) and reaches the full firearms classifieds inventory via pagination. Per-province URLs (/buysell/<province>/guns) 308-redirect (unstable). Sub-facets exist (/category/guns?type=firearms, ?type=ammunition, ?type=optics, ?type=parts, ?type=storage, ?action=automatic|bolt|double-barreled|...) but ALL are subsets of /category/guns. Walked-unique guns count 8889 matches Stage 8 count exactly (same source).",
+      "5-pagination": "?page=N honored: page 1 -> page 2 zero overlap (0 intersection between 21+21 product sets). Last page = 424 (21 IDs); page 425+ silently wraps to page 1 (newest). perPage=21 is HARD CODED (no <select name=limit>, no ?limit param accepted - confirmed by inspection; the page is server-rendered with fixed grid). firstPageHasParam=false (page 1 reached via bare /category/guns).",
+      "6-sort": "No explicit ?sort= or ?orderBy= query param honored. Sort UI is a Radix combobox (role=combobox, aria-controls=radix-_R_...) - fully client-side, not in URL. Counter-control: tried ?sort=newest, ?sort=date, ?orderBy=date - all returned default order. HOWEVER: default order IS newest-first (independently verified by monotonic descent of numeric IDs across pages 1->424: max ID descends 1171326->945865). sortParam=null but watermark crawler relies on default-newest ordering. sortVerified=false because there is no explicit sort param; rely on DOM order proof for navigate-from-watermark.",
+      "7-watermark": "navigate-from-watermark: Page 1 is newest (monotonic ID descent independently verified across 421 pages). Walks backward from newest to find watermark, then indexes forward. Numeric sourceId is exposed in product URL (extractable from /marketplace/.../<id>) - usable as monotonic watermark cursor.",
+      "8-count": "html-pagination walk: lastPage=424 (binary-search confirmed), perPage=21, lastPagePartial=6 -> total = 423*21 + 6 = 8889 firearm-relevant listings. Sitemap-based count rejected because /sitemap.xml is mixed (events/businesses/users) and marketplace/sitemap.xml is INCOMPLETE (only 28968 URLs site-wide for all categories; the buysell + category sitemaps contain category-filter URLs, not products).",
+      "9-assembly": "Stage 9: all 9 required fields populated. classifiedRules.soldDetection populated (sold listings have 'Sold ~' or 'Sold' prefix in user-edited title - there is NO platform-level sold class or status badge). productUrlSchemes records the /marketplace/<city>/<cat>/<slug>/<id> canonical pattern. searchUrl omitted because the site uses /search (a search PAGE, not a URL template); R2 should drive Playwright to confirm whether the search box maps to a URL template."
+    },
+    "verifyMethodPolicy": "detail-page selected; restock alerts required for classifieds (sold-detection relies on full HTML scan of detail page since there is no platform sold marker - store-api fast-path is not applicable on this custom Next.js platform)",
+    "wcCountSurface": "not-applicable",
+    "wcCategoryApi": "not-applicable",
+    "expectedCountSurface": "pagination-walk",
+    "watchdogPriorVerdict": null,
+    "lastPage": 424,
+    "lastPageProductCount": 6,
+    "wrapBehavior": "page>=425 silently returns page 1 contents (newest IDs) - crawler must stop walking at the configured lastPage or detect via wrap-to-newest signature",
+    "openQuestionsForR2": [
+      "R2 should drive Playwright to capture the actual sort dropdown options (Radix combobox is client-side; my static analysis could not see option list). If sort options like 'newest', 'oldest', 'price-low-to-high', 'price-high-to-low' exist client-side, they may set URL hash fragments - capture via page.on('request') intercept.",
+      "R2 should check whether /buysell/<province>/guns redirects to a different URL or 404. Status 308 suggests redirect; chase to final URL and decide.",
+      "R2 should verify if firearm-adjacent categories (/category/sporting-goods, /category/bows, /category/other) contain unique firearm-relevant products NOT in /category/guns. ID-dedup across category walks.",
+      "R2 should verify if the search box at /search submits a URL template (e.g. /search?query=glock) usable as searchUrl, plus B3 junk-keyword diff test.",
+      "R2 should verify whether the platform exposes an undocumented JSON API (e.g. /api/listings, /api/marketplace?cat=guns&page=N) by intercepting XHRs during page navigation."
+    ]
+  }
+}

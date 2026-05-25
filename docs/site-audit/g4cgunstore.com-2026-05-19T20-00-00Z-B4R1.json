@@ -1,0 +1,137 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-05-19T08:53:55Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare active: bot UA/curl UA -> 403; rapid burst -> 403; honeypot/SQLi/XSS -> 403; iPhone Safari UA + desktop Chrome UA pass on homepage but /shop/ only via iPhone Safari; '_cf_chl_opt' + 'Just a moment...' challenge body observed",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "server: cloudflare", "cf-cache-status"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": [403, 403, 403, 403, 403, 403, 403, 403, 403, 403],
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": ["/wp-admin/", "/wp-login.php", "/.env", "/.git/config", "/phpinfo.php"],
+    "botUaBlocked": true,
+    "noUaPassed": true,
+    "challengeBodyMarkers": ["_cf_chl_opt", "Just a moment...", "Attention Required! | Cloudflare"]
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v2",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 5846,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://g4cgunstore.com/shop/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://g4cgunstore.com/product/fiocchi-cowboy-action-32-sw-long-100gr-lwc-50rds/",
+      "title": "Fiocchi Classic Line .32 S&W Long 100gr. LWC 50rds",
+      "price": 59.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://g4cgunstore.com/product/savage-a22-22lr-21-black-non-restricted/",
+      "title": "Savage A22 .22LR 21\" Black Non-Restricted",
+      "price": 499.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://g4cgunstore.com/product/swiss-wf-bern-1933-production-k11-7-5x55-swiss-23-wood-very-good-condition/",
+      "title": "Swiss W+F Bern 1933 K11 7.5x55 Swiss",
+      "price": 999.00,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WC WP REST core /wp-json/wp/v2/product?modified_after= two-probe passes: future-date returns x-wp-total=0, past-date returns x-wp-total=5846 matching global count"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "wp-rest-product_cat",
+    "categories": [
+      { "slug": "/product-category/firearms/", "allOption": 2095 },
+      { "slug": "/product-category/ammunition/", "allOption": 1926 },
+      { "slug": "/product-category/accessories/", "allOption": 1231 },
+      { "slug": "/product-category/promotions/", "allOption": 1148 },
+      { "slug": "/product-category/high-value-optics/", "allOption": 286 },
+      { "slug": "/product-category/oversize/", "allOption": 182 },
+      { "slug": "/product-category/new-arrivals/", "allOption": 150 },
+      { "slug": "/product-category/iron-sights/", "allOption": 35 },
+      { "slug": "/product-category/online-only/", "allOption": 20 }
+    ],
+    "totalsSumCheck": "Sum of top-level product_cat counts = 7477 with heavy overlap (brand cats like cadex/hornady/ruger-*/remington-* are subsets of firearms+ammunition+accessories; promotions/new-arrivals/online-only are cross-cat curated lists). Real global product count = 5846 from WP REST core x-wp-total. /shop/ adopted as single spine (covers 100% by default for WooCommerce, smallest URL set per Rule C)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R1-2026-05-19",
+    "probeIp": "audit-IP (residential; production crawler IP must re-confirm WAF behavior)",
+    "verifyMethodPolicy": "detail-page selected because WC Store API (/wp-json/wc/store/v1/products) returns 403 Cloudflare; restock detection requires Playwright per-product verification. Operator should confirm tradeoff.",
+    "wcCategoryApi": "wp-rest-core",
+    "wcCountSurface": "admin-rest (wp/v2/product) -- includes drafts; matches modified_after past-date probe count",
+    "perPageCeiling": "?per_page=500 honored on /shop/ (returned 500 unique products); ?per_page=600/750/1000 falls back to 24. perPage shipped as 24 because path-pagination template cannot structurally compose with sort+per_page query params on baseUrl (catalog-crawler.ts:121-125 strips trailing slash then concatenates template). Operator can bake sort+per_page into paginationPattern.template (e.g. '/page/{N}/?orderby=date&per_page=500') and accept page-1 default if a 20x request reduction is desired.",
+    "discoveredApiEndpoints": [
+      "/wp-json/wp/v2/product (200, x-wp-total=5846)",
+      "/wp-json/wp/v2/product_cat (200, 100 cats)",
+      "/wp-json/wc/store/v1/products (403 Cloudflare)"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "medium",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "paginationPattern": "high",
+      "perPage": "medium",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex https://g4cgunstore.com returns 200; www variant returns 403; canonical tag <link rel='canonical' href='https://g4cgunstore.com/'> confirms apex",
+      "Stage 2: Cloudflare active (cf-ray + 8-batch evidence: bot/curl UA blocked, rapid burst 403, SQLi/XSS rules fire, honeypot paths blocked); CAPTCHA = reCAPTCHA v2 on /wp-login.php but NOT gating crawl",
+      "Stage 3: WooCommerce + Woodmart theme + WPBakery confirmed via generator meta + wp-content/plugins/woocommerce + product-grid-item classes; iPhone Safari UA bypasses CF challenge",
+      "Stage 4: WP REST product_cat (200, 100 cats) gives top-level structure; /shop/ adopted as single spine for 100% coverage (Rule C smallest URL set); per-category listing documented in topLevelCategories",
+      "Stage 4g extraction: 3 random products from /shop/?orderby=date page 1 all yielded title, url (200), price, stockStatus = in_stock",
+      "Stage 5: /shop/page/2/ returns 24 unique products with zero overlap to /shop/ page 1; ?page=2 query is silent NOOP (returns same 500 as page 1); path-style is the only working pattern",
+      "Stage 6: 3-outcome counter-control: default menu_order (230791,230797,233934) vs orderby=date (285841,285843,285744 -- descending IDs newest-first) vs orderby=price (30909,15187 -- totally different); sort honored",
+      "Stage 7: WP REST core /wp-json/wp/v2/product?modified_after= two-probe pass (future=0, past=5846); api-date-since-watermark selected",
+      "Stage 8: wp-rest-header on /wp-json/wp/v2/product header x-wp-total = 5846 (admin total; includes drafts; matches modified_after past-date probe). WC Store API CF-blocked, not viable for count probe",
+      "Stage 9: extractionTested=true; runtime path: hasWaf=true -> catalog-crawler uses Playwright for /shop/ walk; perPage=24 acceptable since watermark uses api-date-since-watermark (REST), full-sweep is rare"
+    ]
+  }
+}

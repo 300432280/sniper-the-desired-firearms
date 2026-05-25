@@ -17,6 +17,14 @@ Onboard a NEW site by producing a candidate `siteProfile` JSON that an operator 
 
 This skill can also be run on an EXISTING site as a **calibration run**: produce a candidate, diff against the DB siteProfile (the answer key), find gaps in the harness, fix them. Calibration output goes to the same `docs/site-audit/` folder; the operator does NOT promote calibration output to DB.
 
+### Calibration mode — adversarial validation rules
+
+When calibration is run as a multi-round adversarial audit (R1 blind → R2 live → R3 adversarial-counter → R4 synthesis), the auditor playing the R3 role MUST follow these rules. They exist because R2 reasoning from a too-small sample is the single highest-value attack surface (validated across multiple batches: 7/7 successful R3 counters in one batch came from sample-broadening alone).
+
+- **Broaden every R2 numerical claim by at least 3× before agreeing.** More pages (≥page 2 of any list/taxonomy), more user-agents (every UA in the consuming application's production rotation pool), more time-of-day spread (≥60s sustained, not single-shot). Examples of failures this prevents: an R2 reading "lastPage=1" from only the page-1 hero block (skipping page 2 where the real pagination begins); an R2 setting `expectedProductCount` from one count surface (WP REST counts hidden+drafts) without cross-checking the other (Store API customer-facing). Sample broadening is the lever.
+- **Mark probes blocked by the harness/sandbox classifier as `untested-by-harness` in the counter report. Do NOT classify as "couldn't disprove."** When an adversarial probe (e.g. auth-attempt, path-traversal, large-body POST, shellshock UA) is denied by the subagent harness, the report must visually distinguish "harness blocked the probe" from "probe ran and found nothing." Conflating the two hides untested attack surface from the R4 synthesis step.
+- **Re-test the most recent merged fix against the live site as a standing R3 task.** Check `git log --oneline -5 origin/main` for the most recent fix branch (`fix/...`) merged since the last batch. Pick one cited code line from the merge commit and trace it end-to-end on a live site whose siteProfile exercises that code path. Promote `verified-post-merge` rather than `assumed-fixed`. Without this meta-pass, a fix's actual production effectiveness is assumed not verified — and meta-bugs that the original fix missed never surface.
+
 ## Architecture (post-2026-04-27 pivot)
 
 **AI is the operator.** You drive discovery interactively — fetch a page, read it, decide what to fetch next, build the answer field by field.
@@ -38,7 +46,7 @@ If discovery uses helper scripts that emit intermediate JSON (e.g. `docs/pre-boo
 ### Rule B — Audit-trail residue is NOT a target field
 
 A profile contains TWO kinds of fields:
-- **Runtime fields** the consuming application reads at execution time: `platform`, `adapterType`, `hasWaf`, `wafType`, `userAgentOverride`, `needsPlaywright`, `expectedProductCount`, `productCountMethod`, `catalogUrls`, `paginationPattern`, `perPage`, `sortParam`, `sortVerified`, `crawlers.watermark.method`, `crawlers.maintain.verifyMethod`, `crawlers.maintain.verifyEndpoint`, `lastVerified`, `profileVersion`. (`crawlers.bootstrap.apiEndpoints` is NOT in this list — see "Output target" note: zero runtime consumers; operator documentation only.)
+- **Runtime fields** the consuming application reads at execution time: `platform`, `adapterType`, `hasWaf`, `wafType`, `userAgentOverride`, `needsPlaywright`, `expectedProductCount`, `productCountMethod`, `catalogUrls`, `paginationPattern`, `perPage`, `sortParam`, `sortVerified`, `crawlers.watermark.method`, `crawlers.maintain.verifyMethod` (B7: MUST be present and non-empty — `worker.ts:769-772` early-returns when the `crawlers.maintain` block is missing, producing a silent verify no-op), `crawlers.maintain.verifyEndpoint`, `lastVerified`, `profileVersion`. (`crawlers.bootstrap.apiEndpoints` is NOT in this list — see "Output target" note: zero runtime consumers; operator documentation only.)
 - **Operator audit-trail residue** — documentation of how a human operator validated, NOT consumed at runtime: `walkProof`, `paginationVerified`, `sortIdJumpVerified`, `wafProbeEvidence` (long-form), `coverageNotes`, freeform `notes` strings, anything `<field>Verified` or `<field>Evidence` blocks.
 
 This skill **only** produces runtime fields (plus a small `wafProbeEvidence` summary and optional `auditNotes`). Don't produce `walkProof` etc. — those are operator-added during review of this skill's output, not part of the skill's own deliverable.
@@ -72,6 +80,7 @@ This skill **only** produces runtime fields (plus a small `wafProbeEvidence` sum
 - **Only drop a URL when proven redundant.** Proof = walk it, walk the rest, compare product-ID sets, confirm 100% of its products appear in the union of the others. "Shares page-1 with another" or "looks aggregator-ish" is NOT proof — most overlap classes only appear past page 1.
 - **A 404 URL is dead, not empty.** Remove dead URLs from `catalogUrls`. (A URL that returns 200 with 0 products today is empty, not dead — keep it.)
 - **NEVER drop a URL by name pattern** (`/on-sale`, `/clearance`, `/all`, `/collections/all`, etc.). Sometimes the aggregator IS the only 100%-coverage path — see Shopify dept-feed soft-cap in Stage 4.
+- **B4 — `/sale/`, `/clearance/`, `/promotions/` URLs can hold MANY UNIQUE products (not cross-listings).** Batch-5 R3-gagnonsports finding: `/sale/.../new-used-guns/` contained 31 products, of which 25/31 (81%) were UNIQUE — only 6/31 overlapped with `/firearms/used-rifles` or `/firearms/used-shotguns`. R2 had hand-waved this as "promo overlap, drop it" — wrong. **Never drop a promo-shaped URL on overlap-assumption; live-walk + ID-dedup it against the rest of the candidate set per 4d, then decide.** The rule "only drop when proven redundant" applies to promo URLs the same as any other.
 - Verify coverage before declaring success: walked-unique total of firearm-relevant products must equal the firearm-relevant subset of Stage 8's count (or be within the 5% drift gate).
 
 ### Rule D — Validate every stage's output against live evidence
@@ -163,7 +172,14 @@ Order matters — later stages depend on earlier outputs. Each stage produces 1+
 - Both challenge → record as `hasWaf: true` and continue (Stage 2 will classify).
 - Both fail with no body → site dead; abort with FAILURE artifact.
 
+**B2 — MANDATORY: probe BOTH apex AND www-prefixed hosts before declaring canonical, using a PRODUCTION UA (not curl default).** Batch-5 R3-gagnonsports BLOCKING catch: apex `gagnonsports.com` returned openresty 403/404 across all 4 production UAs; canonical was `www.gagnonsports.com` (Cloudflare 200 for every UA at 50/50 burst). Both R1 and R2 ran against apex only and missed this — every crawl would have hit 403/404. The skill MUST:
+1. Fetch BOTH `https://<apex>/` and `https://www.<apex>/` (whichever is the input host, also fetch the other variant) with a production-pool UA (Chrome 120 from [`http-client.ts:9-14`](../../../backend/src/services/scraper/http-client.ts)).
+2. If apex returns 403/404/5xx AND www returns 200, **canonical = www** (reject the failing host outright, even if it's the user's input).
+3. If only one variant returns 200 and the other 4xx/5xx, the working host is canonical. Do not "preserve user's input intent" when the input host returns 403/404 to the production UA — that ships a profile where every crawl fails.
+
 **Record:** `canonicalOrigin = "<protocol>//<host>"` (no trailing slash).
+
+**B14 — Read `robots.txt` `Sitemap:` directive literally; never guess `/sitemap.xml`.** Once `canonicalOrigin` is resolved, fetch `<canonicalOrigin>/robots.txt` and parse every `Sitemap:` line. Store the literal sitemap URL(s) for use in Stage 8 (`productCountMethod.url`) — do NOT default-guess `/sitemap.xml` or `/sitemap_index.xml`. Batch-6 basspro.ca trap: investigator stopped at the default `/sitemap.xml` guess (404) and missed the WebSphere-specific path `/webapp/wcs/stores/servlet/sitemap_10151.xml.gz` declared in `robots.txt` line 8. The Sitemap directive is the authoritative path; guessing is a regression source. Record discovered paths in scratch evidence for downstream stages.
 
 **Multilingual site canonical signal — `hreflang="x-default"`.** Bilingual sites (Canadian retailers in EN + FR, multilingual EU sites in DE/FR/IT, etc.) emit `<link rel="alternate" hreflang="x-default" href="...">` plus one `<link rel="alternate" hreflang="<locale>" href="...">` per locale. **`hreflang="x-default"` is the authoritative canonical signal** for the site overall — that URL is what the site declares as the "no locale chosen yet" landing. Use it (preferring it over `<link rel="canonical">` if they disagree). Other locale alternates (e.g. `hreflang="fr-CA"`) are NOT canonical — they are translation variants of the same content. Default the candidate to the x-default origin; document an operator override path in `auditNotes.canonicalLocaleOverride` if the operator wants the crawler to walk a specific locale (e.g. some shops have larger inventory on the FR side; operator chooses).
 
@@ -231,12 +247,47 @@ To verify operationally: fetch the crawl paths (homepage, category page, product
 - `wafProbeMethod: 'heavy-8-batch'`, `wafProbeResult` = one-line summary.
 - `wafProbeEvidence` = small subset (cfHeaders array, sucuriHeaders array, rapidBurstStatus, sqliRuleFired, xssRuleFired, honeypotPathsBlocked, botUaBlocked) — NOT the full 30KB body.
 
+**B10 — `hasWaf` column MUST flip together with `wafType`; stale `wafWorkaround` MUST be removed.** Hit 4-5 of 10 batch-4 sites: DB column and `wafType` disagreed silently. Alflahertys DB: `hasWaf: true` + `wafType: cloudflare-passive` + stale `wafWorkaround: sucuri-cookie-cache` — operator flipped wafType from Sucuri to cloudflare-passive without flipping the column or removing the workaround. The Sucuri solver is body-detection-driven (not profile-flag-driven), so the stale workaround block is operationally inert today, but it's a maintenance trap. **Skill emits BOTH fields together AND clears stale workarounds:**
+1. When the new probe verdict is `wafType: cloudflare-passive` (or any non-blocking WAF), `hasWaf` MUST also be `false`. Operator flips the column on promotion.
+2. When the new `wafType` is different from a prior `wafType` (re-audit detected a change), the candidate MUST explicitly emit `wafWorkaround: null` (NOT omit the field — explicitly null) to signal "clear any stale workaround block on promotion".
+3. Document the column-flip requirement in `auditNotes.dbColumnFlips: {hasWaf?: <new>, wafType?: <new>, wafWorkaround?: "clear"}` so the operator's promotion script knows what to update.
+
+Runtime cost of false `hasWaf: true`: perPage drops 50→20 ([`catalog-crawler.ts`](../../../backend/src/services/catalog-crawler.ts) throttle path when `profile.perPage` is null), Playwright fallback always engaged, WAF cookie cache used. False `true` = silently slower crawler with no benefit; the column flip on promotion is mandatory.
+
 **Anti-patterns:**
 - Don't rely on a single GET — Cloudflare-passive looks identical to no-WAF on one request. The 8-batch probe is mandatory (Mistake 23).
 - Don't trust stored `wafType` from prior audits — re-classify every time (Mistake 35).
 - Don't conflate CAPTCHA with WAF. A site can be `hasWaf: false` AND `hasCaptcha: true` (login forms gated by reCAPTCHA on otherwise-open catalog pages) or vice versa.
 
+**B8 — WAF migration freshness check (MANDATORY).** DB-recorded `wafType` can be 40+ days stale and silently wrong. Batch-5 R3-thegundealer: DB had `wafType: sgcaptcha` from 43+ days ago; live 86-page sustained walk + 5-UA matrix proved the site is now Cloudflare-passive (zero `sgcaptcha` residue anywhere, `cf-ray` headers everywhere, all 200s). Operating on stale `sgcaptcha` would force `userAgentOverride: <iPhone Safari>` + `needsPlaywright: true` + the sgcaptcha cookie-wait path for no reason. **Skill rule: always heavy-probe fresh; trust LIVE results over DB `wafType` unconditionally.** When live verdict differs from DB, emit `auditNotes.wafMigrationDetected: {from:<dbWafType>, to:<liveWafType>, evidence:"<one-line>"}` so the operator confirms the migration before promoting. See B10 below for the column-flip rule that pairs with this.
+
+**B10 — `hasWaf: true` + `wafType: <anything>-passive` is an INVALID combination; reject at Stage 2 promotion.** Confirmed on 6+ batch-5 sites (aagcanada, durhamoutdoors, frontierfirearms, jobrookoutdoors, rdsc, store.prophetriver, irunguns) — DOMINANT bug pattern. The pair makes no sense semantically (passive = WAF present but not blocking) yet ships runtime cost: perPage drops 50→20, Playwright forced, WAF cookie cache used. The skill MUST FAIL Stage 2 assembly when:
+- `hasWaf === true` AND `wafType` matches `/-passive$/i` (e.g. `cloudflare-passive`, `sucuri-passive`).
+
+Fix: flip `hasWaf` to `false` and keep `wafType` as informational. Document the column-flip in `auditNotes.dbColumnFlips.hasWaf = false`. No automated linter catches this today — the skill IS the linter.
+
+**B9 (cross-ref) — Sample broadening 3× rule applies to WAF detection.** The R3 calibration directive ("broaden every R2 numerical claim by at least 3× before agreeing", see Calibration mode section above) is the primary defense against single-snapshot WAF misclassification. The sustained-pattern test + multi-UA matrix below is the operational instantiation of that rule.
+
+**B11 — Use the PRODUCTION UA rotation pool, not curl default, for the heavy-probe UA matrix.** The 5-UA array at [`backend/src/services/scraper/http-client.ts:9-14`](../../../backend/src/services/scraper/http-client.ts) (Chrome 120, Firefox 121, Safari 17, Edge 120, iPhone Safari) is what the production crawler rotates through. Audit-IP-with-curl-default tells you nothing about how production traffic looks to the WAF — CF and Sucuri maintain per-(IP, UA) reputation that differs from generic curl traffic. Batch-4 g4cgunstore + batch-5 aagcanada both had R1 overcalling WAF severity because the audit's single curl-default UA hit rate-limits that the production rotating pool doesn't trigger. **The 8-batch probe MUST iterate every UA in the production pool, NOT just `curl`'s default.** Emit per-UA results in `wafProbeEvidence.perUaStatusTimeline`.
+
+**B13 — Akamai Bot Manager blockade (TLS/JA3 fingerprint tier, MANDATORY production-IP re-probe).** A site fronted by Akamai Bot Manager can pass single-GET fingerprint probes from any IP/UA but block paginated/parameterized URLs (`/category?page=2`, `/search?...`) from non-production IPs across the entire production UA pool AND headless Playwright AND the batch-4 D2 `--sustained` flag. Batch-6 basspro.ca: pages 2..N returned Akamai challenge across all 5 UAs and headless Playwright; page 1 always passed. Markers:
+- `X-Akam-SW-Version` response header
+- `_abck=`, `bm_sz=`, `bm_sv=`, `ak_bmsc=`, `akavpau_<id>=` Set-Cookie names
+- `akam-sw.js` or `_bm/_data` body refs (behavioral challenge)
+- `Server: AkamaiGHost` header (cross-ref Akamai entry above)
+
+**Detection rule:** if BATCH 1 passes 200 but BATCH 4 (rapid burst) OR a paginated test URL (`/category?page=2` or `/category/page/2/`) returns Akamai-marked 403/challenge, this is the TLS/JA3 tier — neither UA rotation nor headless Playwright defeats it from a non-production IP. **Skill behavior:** mark `hasWaf: true`, `wafType: 'akamai-bot-manager'`, AND emit `auditNotes.akamaiBlockade: {paginatedUrlsBlocked: true, productionIpReprobeRequired: true, evidence: "<one-line>"}`. Stages 4-8 that depend on walking page-2+ become **untested-by-harness** (per the calibration `untested-by-harness` rule above) — do NOT classify as "couldn't disprove." Operator must re-probe from production IP (or via real-browser Playwright with TLS-matching) before promotion. The audit-IP candidate ships with `perPage` / `paginationPattern` / `sortParam` / `catalogUrls` walk fields marked unverified.
+
 **WAF results are IP-dependent.** Cloudflare and other CDNs maintain per-IP reputation lists. The same probe from two different IPs can return wildly different verdicts: one IP gets blanket 403s ("Sorry, you have been blocked"), another walks the site cleanly. Record the audit IP in `auditNotes.probeIp` (or note it as scratch evidence) and treat the probe result as "from THIS IP". Before the operator promotes the candidate to DB, the WAF section MUST be re-confirmed from the production crawler's IP — otherwise `hasWaf: false` from an unblocked audit IP can wrongly disable WAF handling for a production crawler that IS blocked. When unsure, set `hasWaf: true` defensively and let the operator downgrade after live confirmation.
+
+**B9 — WAF severity is BOTH IP-dependent AND UA-dependent; sustained-pattern test MANDATORY with production UA pool.** Single-moment matrix snapshots miss CF UA-reputation escalation that kicks in after ~60s of crawl-like traffic. G4cgunstore R3: deterministic Chrome 120 UA (md5 idx 0 via `pickUserAgent` from `http-client.ts:9-14`) flipped from 200 to **403** across `/shop/`, `/wp-json/wp/v2/product`, `/wp-json/wp/v2/product_cat`, `/product-category/firearms/`, `/feed/` within ~60 seconds of moderate probing. Edge 120 also 403. Safari 17 + Firefox 121 stayed 200 in the same window. R2 logged `wafProbeEvidence.rapidBurstTested:false` — that was the load-bearing gap. **The heavy-WAF-probe MUST:**
+1. Use the actual production UA rotation pool (the 5-UA array at `http-client.ts:9-14`: Chrome 120, Firefox 121, Safari 17, Edge 120, iPhone Safari), NOT just `curl/default` or a single test UA.
+2. Run a **sustained walk** of `/shop/page/N/` (or platform equivalent) for at least 50 pages with each UA in the pool, honoring the 800ms inter-request delay.
+3. Record per-UA the status-code timeline (first-403 page number, sustained-403 vs intermittent).
+4. If ANY production UA escalates to 403 within the walk → `userAgentOverride = <one of the UAs that stayed 200>` and re-run the sustained walk with the override to confirm it survives. Emit `wafProbeEvidence.rapidBurstTested: true` and `wafProbeEvidence.sustainedWalkPages: <int>` and `wafProbeEvidence.perUaStatusTimeline: {...}`.
+5. Mark untested attack surfaces (auth/path-traversal/large-body-POST/shellshock probes blocked by harness policy) explicitly as `wafProbeEvidence.untestedAttackSurfaces: [...]` so the operator knows the verdict is "passive evidence only, no active attack probes attempted".
+
+Without the sustained-pattern test, a clean snapshot is "looking 200, not being 200" — the production crawler will hit the steady-state 403 wall and the skill will have shipped a wrong UA override.
 
 **`wafType` runtime vs operator-UI usage.** `wafType` is **cosmetic for the crawler runtime** — the only non-`null` runtime read is the presence check at [`profile-validator.ts:122-125`](../../../backend/src/services/profile-validator.ts) ("wafType should be set when hasWaf is true"). The crawler routes on `hasWaf` (boolean) alone, not on `wafType`. **But `wafType` IS consumed by the operator triage UI** at [`frontend/src/app/dashboard/admin/profiles/page.tsx`](../../../frontend/src/app/dashboard/admin/profiles/page.tsx) in 5 places (lines 13, 48, 356, 461, 496) — sort key, column display, sticky-key, diff key. The skill MUST still emit a correct `wafType` value even though runtime ignores it; operator triage depends on it to filter sites by WAF family. Setting it to `null` or wrong (e.g. `"cloudflare"` instead of `"cloudflare-passive"` vs `"cloudflare-active"`) clutters operator workflow.
 
@@ -286,6 +337,8 @@ If detected, record `ageGate: { detected: true, type: '...', bypassCookie: 'name
 | `odoo` | `<meta name="generator" content="Odoo ...">`, `web.assets_common` |
 | `hikashop-joomla` | `option=com_hikashop`, Joomla framework markers |
 | `celerant-coldfusion` | `Server: Null` header, `CFID` + `CFTOKEN` cookies, `.cfm` URLs, celerant CDN refs |
+| `ibm-websphere-commerce` | `wcParamJs.storeId=<int>` JS var in HTML, `catalogId=<int>` JS var, `/webapp/wcs/stores/servlet/` URL paths, product detail URLs of shape `/p/<slug>/<sku>`. Sitemap at `/webapp/wcs/stores/servlet/sitemap_<storeId>.xml.gz` (gzipped, storeId-stamped — read `robots.txt` `Sitemap:` line literally; never guess `/sitemap.xml`). adapterType=`generic-retail`. Batch-6 basspro.ca: WebSphere fronted by Akamai Bot Manager — see Stage 2 "Akamai blockade" note. |
+| `shift4shop-3dcart` | `vcart=26.19.0` (or similar `vcart=` version string) in HTML, `_3d_cart` JS var, `.asp` URLs (durhamoutdoors.ca batch-5). Pagination via **suffix-replace `{slug}-{N}.html`** per [`catalog-crawler.ts:127-135`](../../../backend/src/services/catalog-crawler.ts), NOT `?page=N`. `searchUrl` candidate `/search.asp?keyword={keyword}` — verify with B3 junk-keyword diff test (durhamoutdoors silently ignored the keyword). |
 | `forum-xenforo` | `<meta name="application-name" content="XenForo">`, `data-xf-` attrs |
 | `forum-vbulletin` | `vBulletin` markers |
 
@@ -301,6 +354,8 @@ Then map platform → `adapterType`:
 | forum-vbulletin | `forum-vbulletin` |
 | auction-hibid / icollector / auction-* | matching adapter |
 | Anything else (incl. celerant, magento, opencart, etc.) | `generic-retail` |
+
+**B12 — Operator override path: `auditNotes.adapterTypeOverride=true` when platform→adapter mapping differs.** The table above is the DEFAULT mapping. The operator MAY intentionally route a WC site to `generic-retail` for extraction-pipeline reasons (g4cgunstore.com — both adapters consume `catalogUrls`, but the operator chose generic-retail for stable HTML extraction). The runtime adapter-registry-mismatch warning at [`adapter-registry-mismatch.ts:19-30`](../../../backend/src/services/scraper/adapter-registry-mismatch.ts) only fires on `crawlers.catalog.method != adapterType` mismatch — NOT on `platform != adapterType` mismatch. **Rule:** when the candidate's `adapterType` differs from the table default for the detected `platform`, emit `auditNotes.adapterTypeOverride: true` AND `auditNotes.adapterTypeOverrideReason: "<one-line operator reason>"`. Without this flag, future auditors will treat the mismatch as a bug and try to "fix" it back to the default. With the flag, the override is recorded as intentional and immune to drift.
 
 **Record:** `platform`, `adapterType`. Decide `needsPlaywright` per-site based on whether plain HTTP returns products at runtime:
 - Plain HTTP fetch (axios / Node fetch) returns products on the crawl path → `needsPlaywright: false`.
@@ -323,6 +378,12 @@ Then map platform → `adapterType`:
 ```
 
 Why set this here: the maintain phase's [worker.ts:tryStoreApiVerify](../../../backend/src/services/worker.ts) reads `siteProfile.crawlers.maintain.verifyMethod` to decide between batch API verification (fast, ~1 req per 10 products) and per-product Playwright (slow). Without this field, the worker logs an error and skips verification entirely.
+
+**B7 — `crawlers.maintain` block MUST exist with a non-empty `verifyMethod`, even if everything else nulls out.** Batch-5 R3-thegundealer + jobrookoutdoors finding: when the `crawlers.maintain` block is missing entirely, [`worker.ts:769-772`](../../../backend/src/services/worker.ts) early-returns BEFORE the Playwright fallback fires — silent verify no-op for every product. The skill MUST emit at minimum:
+```jsonc
+"crawlers": { "maintain": { "verifyMethod": "<store-api|detail-page>", "verifyEndpoint": "<path or null>" } }
+```
+Never omit `crawlers.maintain` even when watermark is `full-catalog-sweep` or maintain inference is uncertain — `verifyMethod: "detail-page"` + `verifyEndpoint: null` is the safe fallback. Stage 9 validator must reject any candidate where `crawlers.maintain.verifyMethod` is missing, empty string, or not in `["store-api", "detail-page"]`.
 
 **Operator-policy tradeoff (REQUIRED — not a silent default):** the choice between `store-api` and any non-`store-api` value has real cost. The skill MUST NOT silently default to `store-api` for WC sites; the operator picks per-site based on whether silent OOS-restock misses are acceptable.
 
@@ -359,6 +420,19 @@ Skill output MUST surface this choice in `auditNotes.verifyMethodPolicy` (e.g. `
 
 - **If the site has a keyword-search URL** (used by the user-search workflow, NOT the catalog crawler): output `searchUrl` as a template containing the placeholder `{keyword}` (e.g. `/all-products/browse/keyword/{keyword}`). Discovery: open the site's search box, type a known keyword, copy the resulting URL, replace the keyword token with `{keyword}`. **Runtime contract:** any caller substituting `{keyword}` MUST validate the substituted value is non-empty and non-whitespace before issuing the request. Reason: on Celerant (bullseyenorth.com), passing an empty string returns the ENTIRE catalog as "results", which would generate thousands of false-positive notifications. If the site has no public search URL, omit the field entirely — don't invent one.
 
+**B4 — Deterministic `searchUrl` probe (MANDATORY).** 5 of 10 batch-4 sites (canadasgunstore, doctordeals, nordicmarksman, greatnorthgunco, canadafirstammo) had a working `searchUrl` that R1 missed; canadasgunstore's DB value (`/search?q=`) was itself 404. Don't skip this — always run the cascade in order, stopping at the first 200 + ≥1 product result for a known firearm keyword (e.g. `glock` or `9mm`):
+1. **Read the homepage `<form>` action.** Look for `<form action="...">` whose `<input name="...">` is `s`, `q`, `search`, `searchfor`, `query`, or `keyword`. Build `searchUrl` from the action + input name with `{keyword}` placeholder.
+2. **If no form found, try platform defaults:**
+   - WordPress / WooCommerce: `/?s={keyword}&post_type=product`
+   - BC Stencil: `/search.php?search_query={keyword}`
+   - Shopify: `/search?q={keyword}&type=product`
+   - Magento 2: `/catalogsearch/result/?q={keyword}`
+   - Klevu-on-anything: `/?q={keyword}` (the SPA intercepts client-side)
+   - Activant Inet (canadasgunstore): `/inet/storefront/store.php?mode=searchstore&search[searchfor]={keyword}` (square brackets survive `new URL()` round-trip)
+3. **Validate with a live probe**: substitute a known firearm keyword, fetch the URL, assert HTTP 200 AND ≥1 product card in the response. A 200 with the homepage body (no product results) = FAIL; fall to the next candidate.
+4. **B3 — JUNK-KEYWORD DIFF TEST (MANDATORY, non-skippable).** Fire a second probe with a known-nonsense keyword (e.g. `xyz789nonsense`, `qqzzznomatch`). Compare the response BODY BYTE-LENGTH and the extracted product-card count vs the firearm-keyword probe. **If the bodies are byte-identical OR the product set is identical, the keyword is being silently ignored** — the URL is NOT a real search endpoint. Mark `searchUrl: null`. Batch-5 R3-durhamoutdoors trap: `?s=glock` and `?s=xyz789nonsense` both returned IDENTICAL 68,366-byte bodies (CF 403 challenge page) — "200 means valid" heuristic failed. R3-irunguns same family: all 5 keywords including `xyznomatch` returned the same 104-row catalog because no server-side filter exists. The diff test is the only way to catch the silent-ignore failure mode.
+5. Record the first passing template that survives BOTH the firearm-keyword probe AND the junk-keyword diff. Omit the field if all candidates fail — don't ship an unverified URL. **B12: this probe is non-skippable** (4 batch-4 + 4 batch-5 sites missed `searchUrl` by skipping it).
+
 - **If `platform = "bigcommerce-stencil"` AND the site exposes a Storefront GraphQL token** (`window.GraphQLToken` or a `__BCSF__` global, typically a JWT): record `tokenCacheTtlMs` derived from the JWT's actual claims, NOT a 1h default. Decode the JWT (base64-decode the middle segment), read `eat` (expires-at) and `iat` (issued-at); set `tokenCacheTtlMs = (eat - iat) × 1000` (or `(eat - now) × 1000` if you want safety margin). Observed: oleysarmoury.com ships a 48-hour token (`eat - iat = 172800` → `tokenCacheTtlMs: 172_800_000`); defaulting to 1h means refetching the token 47 times unnecessarily per period. Record under `bigcommerce: { storefrontToken: "<jwt>", tokenCacheTtlMs: <int> }` or similar adapter-specific block.
 
 **URL normalization rule for endpoint fields (apiEndpoint, verifyEndpoint, any `/wp-json/...` path):** strip locale prefixes (`/en/`, `/fr/`, `/en-CA/`, `/fr-CA/`, etc.) from URLs before storing in the candidate JSON. Runtime callers build their endpoint URL via `` `${origin}${endpointPath}` `` where `origin` comes from `new URL(siteUrl).origin` per WHATWG (host + protocol ONLY; pathname is dropped). Example: `https://example.com/en/wp-json/wc/store/v1/products` must be stored as `/wp-json/wc/store/v1/products` — the runtime concatenates `https://example.com` + the stored path, so a stored `/en/wp-json/...` becomes `https://example.com/en/wp-json/...` only by accident (and breaks on any site whose locale prefix isn't `/en/`). Strip the prefix; document the locale in `auditNotes.locale` if relevant.
@@ -391,6 +465,12 @@ Try the platform's taxonomy API:
 - BigCommerce GraphQL: typically locked behind auth; sitemap is the better source for BC sites.
 
 **For WooCommerce specifically:** parent categories may or may not include their child products (theme-dependent — Minimog themes show subcategory tiles instead of products). Walk-test: page 1 of parent vs page 1 of one child. If child has products NOT in parent, include BOTH parent and child.
+
+**B3 — Paginate the taxonomy API to `x-wp-totalpages` (MANDATORY).** WP REST core and WC Store API both default to `per_page=10` on taxonomy endpoints (`/wp-json/wp/v2/product_cat`, `/wp-json/wc/store/v1/products/categories`). Reading only page 1 silently misses categories. Gotenda R2 read page 1 of `/wp-json/wc/store/v1/products/categories` (172 entries across 2 pages), concluded "1 top-level category", and recommended a single `/shop/`; R3 walked page 2 and found 8 real top-level cats summing to 15,913 products. **Always:**
+1. Issue `GET /wp-json/.../categories?per_page=100&hide_empty=false` (or `per_page=250` for sites that honor it).
+2. Read the `x-wp-totalpages` response header. If `> 1`, walk pages 2..N.
+3. Concatenate the full set of category objects across all pages before any tree-building / filter decision.
+The same rule applies to ANY taxonomy/category index endpoint (Shopify `/collections.json?limit=250`, BC GraphQL `categoryTree`, etc.) — check the pagination metadata before assuming page 1 is complete.
 
 **WC API category-recursion warning (mandatory operator choice):** the two WC REST surfaces treat `category=N` differently and you MUST document which one your candidate's coverage proof used.
 - **WC Store API** (`/wp-json/wc/store/v1/products?category=N`) **recurses into subcategories** — `category=N` returns products in N plus every descendant category. One probe covers the whole subtree.
@@ -427,6 +507,19 @@ Three outcomes:
 - **≥3 products** → productive candidate, keep.
 - **0 products + page is full HTML** → tile/landing page (common for Celerant `/firearms`, BC Stencil parent categories). Try platform-specific listing-suffix retries before giving up.
 - **0 products + page is small/empty** → not a catalog URL.
+
+**B1 — Live-URL gate (MANDATORY before promoting any catalogUrl).** Status 200 alone is insufficient: 3 batch-4 sites (gotenda, hical, greatnorth) had DB slugs that 200'd but were soft-404 templates. Hical's `/firearms/` under iPhone UA returns HTTP 200 + `<title>Page not found - High Caliber Services Corp</title>` + WC "No products were found" marker (useless soft-200). Before emitting any URL into `catalogUrls`, assert ALL of:
+- HTTP status 200 (not 3xx, not 4xx, not 5xx).
+- `<title>` does NOT match `/page not found|404|not found/i`.
+- Body does NOT contain WC empty-state markers: `No products were found matching your selection`, `No products found`, `woocommerce-info` empty-state div.
+- Body does NOT contain a Shopify/BC empty-state equivalent.
+- Product extraction returns ≥1 card OR the URL is a confirmed empty-today category (verified via taxonomy API `count > 0` history).
+
+Failing any of these → drop the URL from `catalogUrls` candidates and re-discover via taxonomy API or sitemap. Soft-200 templates silently disable a slug for weeks (gotenda's renamed slugs hid a 99.7% coverage collapse).
+
+**B15 — Parent-page-yields-zero via PRODUCTION selectors (LightSpeed / Shoplightspeed / parent-tile platforms; MANDATORY).** A candidate URL is only valid for `catalogUrls` if it yields ≥1 product when extracted via the **SAME selectors the runtime adapter uses**. The DB's `categoryStats` or any per-category count from a different surface (taxonomy API, sitemap, search-result count) is NOT authoritative — those surfaces can report N products for a parent category even when the rendered HTML carries ZERO product cards (parents render subcategory tiles instead). Batch-6 gobles.ca trap: 9 DB-spine parent URLs reported non-zero `categoryStats` but returned 0 products via the LightSpeed `.product-element` selector across all 4 UAs at 3 time-of-days — promotion would have lost ~16% of catalog. **Rule:** for every candidate catalogUrl, run extraction using the exact selector chain the production adapter applies (e.g. `generic-retail.ts:extractCatalogProducts` for LightSpeed → `.product-element`). If extraction returns 0 cards, the URL is parent-tile-only — replace with the leaf-category URLs whose extraction returns ≥1 card. Other-surface counts are evidence of intent, not extraction.
+
+**B2 — Force `/page/2/` probe before declaring `lastPage=1`.** Many WC themes render hero / featured treatment on page 1 (large product cards in 2-3 columns + a curated landing band); page 2 onward switches to the standard grid. Sampling only page 1 produces a false "this category has ~6 products" read when reality is 600+. Gotenda R2 made this mistake across 8 renamed slugs. **Always fetch `<catalogUrl>/page/2/` (or the platform's page-2 equivalent: `?paged=2` for WP, `?page=2` query-form, `/page/2` path-form, etc.) AND verify the product set is non-empty AND ID-disjoint from page 1, before concluding the category is small.** If page 2 is empty / 404 / identical to page 1, then `lastPage=1` is real. If page 2 has products, keep walking until exhaustion (Stage 4d full-walk).
 
 **Listing-suffix retries by platform:**
 | Platform | Suffix to retry |
@@ -485,6 +578,8 @@ If under-covering, ALSO probe 2-segment subcategory paths (children of the top-l
 
 The `topLevelCategories.categories[]` is an OPTIONAL but recommended documentation block — operators use it to confirm the catalog URL list is correct. Even if you collapse `catalogUrls` to a single mega-URL for runtime efficiency on a Celerant-style site, document the per-category catalog URLs here.
 
+**B11 — `topLevelCategories.allOption` MUST come from the SAME surface as `expectedProductCount` (consistency rule).** Canadafirstammo DB shipped allOption counts (firearms 203, ammunition 440, accessories 248, reloading 9, clearance 138, training 3, shop-all 925) derived from WP REST core (admin total, includes catalog-hidden + drafts) — 3-13× the customer-visible numbers (16, 33, 48, 3, 68, 2, 111 respectively). The operator triage UI sums allOption across categories to validate `expectedProductCount`; if the two surfaces disagree, the validator reports a phantom coverage gap and the operator chases a non-bug. **Rule:** the per-category counts in `topLevelCategories.categories[].allOption` MUST be derived from the SAME API surface used by `productCountMethod`. Record the surface explicitly in `topLevelCategories.source` (e.g. `"wc-store-api-per-category"` or `"wp-rest-core-per-category"` — NOT the generic `"taxonomy-api"`). If the runtime crawler walks customer-visible (Store API), the allOption per-category numbers MUST be from Store API per-category (e.g. `GET /wp-json/wc/store/v1/products?category=<id>&per_page=1` → read `x-wp-total`). The `totalsSumCheck` arithmetic then becomes auditable end-to-end against `expectedProductCount`.
+
 #### 4g — Extraction-quality spot-check
 
 Before declaring Stage 4 done, prove the products extracted are *real* products with *useful data*, not noise that happens to look like product cards. Pick **3 random products** from page 1 of one productive catalog URL and verify all four fields populate via the platform's adapter logic:
@@ -523,6 +618,8 @@ These quirks have bitten audits before. If your site matches a platform below, a
 - **Ecwid `sortBy` body parameter and its quirks.** Sort lives in the POST body, not the URL. Verified values today: `addedTimeDesc` (newest-first; only date sort that works), `priceAsc`, `priceDesc`, `nameAsc`, `nameDesc`. **`addedTimeAsc` returns HTTP 400** (invalid value). **Empty `sortBy` also now returns 400** — the prior "We recommend" merchant-default no longer holds. Drive Playwright UI per Mistake 31 to capture the real POST body — don't guess from public REST docs.
 - **Lightspeed eCom catalog URLs can 404 silently.** A category URL that worked yesterday may return 404 today as merchants reorganize. Always confirm each candidate catalogUrl returns 200 + non-empty product markup during 4c probe. Dead URLs (404) get removed; empty URLs (200 + 0 products) get kept.
 - **Volusion product slugs are SKU-strings, not digits.** Volusion product URLs are `_p/<SKU>.htm` where `<SKU>` can be alphanumeric (e.g. `_p/dirtnap-22cm-80eldm.htm`, `_p/consign-cafft300wmblk.htm`) — NOT just numeric IDs. Any product-extraction regex MUST accept `_p/[A-Za-z0-9_-]+\.htm` (or broader `_p/[^/]+\.htm`), NOT `_p/\d+\.htm`. A numeric-only regex silently misses every SKU-style product and can falsely conclude "0 novel products" when walking secondary catalog URLs. Same risk on other platforms whose product URLs are slug-based (Shoplightspeed, Magento, Shopify) — always confirm the regex matches a real sample product URL during 4g extraction-quality check.
+
+- **B5 — Klevu `klevu_pageCategory` scrape per category (mandatory for Klevu sites).** Nav-derived shallow paths lose firearm-relevance granularity. Klevu's deep category paths live in a JS variable rendered SSR'd on each category page (e.g. `var klevu_pageCategory = "Firearms;Firearms/Rifles;Firearms/Rifles/Bolt Action";`). Alflahertys batch-4 had 8 deep DB paths matching the SSR'd JS var verbatim — nav crawl found only the shallow top-level slugs. **Discovery method:** for each top-level category URL, fetch the page (with the canonical UA + age-gate bypass cookie), regex-extract `klevu_pageCategory\s*=\s*"([^"]*)"`, split on `;`, record each path under `klevuCategoryPaths` in the candidate. **Operator-awareness:** flag in `auditNotes.klevuRuntimeStatus` whether the field is currently live-consumed (today: `_resolveKlevuCategoryPath` at `generic-retail.ts:288` is declared but never invoked — `klevuCategoryPaths` is documentation-only until the resolver is wired in). Emit the field regardless so the data is captured when the runtime catches up.
 
 #### Anti-patterns (this session's lessons)
 
@@ -564,7 +661,7 @@ Pick the first passing pattern.
 
 **For path-style pagination on Drupal classifieds:** `0-indexed`, last page has partial items, `firstPageHasParam: false`.
 
-**For LightSpeed (Mistake 26):** `?page=N` is silently ignored. Use `suffix-replace` with the sort baked into both `match` and `template`.
+**For LightSpeed eCom (Mistake 26 + batch-5 B5 reinforcement):** `?page=N` is silently ignored. Pagination is **path-segment `pageN.html`**, NOT a query param. Use `suffix-replace` with the sort baked into both `match` and `template` (e.g. `match: '.html', template: 'page{N}.html'` or with sort: `match: '?sort=newest', template: 'page{N}.html?sort=newest'`). **The page has ONLY `<link rel="next">` — no `rel="last"`, no page-list, no "X of Y" text.** Don't try `html-pagination` with a last-page selector — it'll return null silently. Use `sitemap` / `sitemap-index` / `shopify-products-walk`-style methods for `productCountMethod` instead (R3-gagnonsports caught R2's shape-valid-but-broken `html-pagination`).
 
 **For Wix (Mistake 27):** `?page=N` on subcategory leaks back to global `/shop`. Use ONLY `/shop` as catalogUrl with `?page=N`.
 
@@ -656,9 +753,16 @@ Append `&_=<random>` (or `&t=<timestamp>`) to each URL to defeat CDN / page cach
 "sortVerified": <bool — true if any of the three "honored" outcomes>
 ```
 
+**Classifieds-specific sort verification (bump-date vs creation-date trap).**
+
+**B16 — When testing default-newest-first on a classifieds site, verify WITHIN-PAGE ID descent on a single page; max-per-page descent across pages is necessary but NOT sufficient.** Classifieds platforms often sort the default listing by **bump/activity date** rather than **creation date** — a user "bumping" a 6-month-old ad pushes it to the front, producing a listing where max-per-page IDs descend across pages but within-page IDs are mixed (e.g. page 1: `[83992, 12044, 83871, 7782, 83502, ...]`). Batch-6 townpost.ca falsified its own R1 "monotonic ID descent" hypothesis on this exact pattern. **Test:** read the first 5 product IDs **from a single page** of the default listing; they MUST descend monotonically (`id[0] > id[1] > id[2] > id[3] > id[4]`) for creation-date sort. If mixed, the sort is bump-date (or activity-date) and the `sortParam` value claiming "newest by creation" is wrong — set `sortParam: null` and document `auditNotes.classifiedsSortBasis: "bump-date"` (or whatever the site actually uses).
+
+**B17 — Pinned-ad detection: walk 10+ pages and find IDs present in 8+ of them (NOT a single "Top Ad" badge).** A sitewide "Top Ad" / "Featured" / "Sticky" badge on one listing is NOT proof of pinning — many classifieds render a badge for paid-promo decoration without altering position across pages. Batch-6 townpost.ca: 1 sitewide "Top Ad" badge, but a 10-page walk found ZERO IDs repeated in ≥8 pages → `pinnedAds: 0` was correct, R1's "pinnedAds=4" inferred from the badge was wrong. **Test:** walk pages 1..10 with the production UA + 800ms inter-request delay; collect each page's deduped ID set; find IDs present in ≥8 of 10 pages (or compute the full N-way intersection across pages 1..N). Only those repeats are true pinned ads. A single-page badge survey is insufficient.
+
 **Anti-patterns:**
 - Don't claim "no sort possible" because no `<select>` exists (Mistake 18). Cross-reference DOM order against an independent newest-first signal (sitemap lastmod, RSS, recent-product slug).
 - Don't apply a query-form sort param to a URL whose path already specifies sort — the query is ignored (this session's Mistake 36 manifestation).
+- Don't conclude "monotonic ID descent confirmed" on classifieds from max-per-page descent across pages alone — per B16, run the within-page descent check first; bump-date sort fails the within-page test even when max-per-page descends cleanly.
 
 **Helper:** [`backend/scripts/probe/navigation/sort-detect.ts`](../../../backend/scripts/probe/navigation/sort-detect.ts) — has both query-form and path-form (Celerant) detection paths.
 
@@ -680,6 +784,18 @@ Probes:
 - **WC Store API**: similar two-probe on `/wp-json/wc/store/v1/products?modified_after=...` (same param-name rule as above).
 
 If filter honored → `method: 'api-date-since-watermark'`. Done.
+
+**B7 — Record `dateFilterField` PAIRED with `dateFilterApi` (per-surface convention).** WP REST and Store API have DIFFERENT date-filter parameter names — and Store API silently ignores the wrong one (returns full result set, no error). Hical R3 verified live: WP REST `/wp/v2/product?modified_after=2099-01-01` honored (x-wp-total=0); Store API `/wc/store/v1/products?modified_after=...` IGNORED (returns full set). Both surfaces accept `?after=` BUT it answers a different question (`created_at` vs `modified_at`). Use this table:
+
+| API surface | Date filter param | Semantics |
+|---|---|---|
+| WP REST core `/wp-json/wp/v2/product` | `?modified_after=<ISO>` | last-modified timestamp (catches restocks + price changes) |
+| WP REST core `/wp-json/wp/v2/product` | `?after=<ISO>` | `date` (post creation) — NEW products only, misses restocks |
+| WC Store API `/wp-json/wc/store/v1/products` | `?after=<ISO>` | created-at; ONLY supported date filter |
+| WC Store API `/wp-json/wc/store/v1/products` | `?modified_after=<ISO>` | **silently ignored** — returns the full set |
+| Shopify `/products.json` | `?updated_at_min=<ISO>` (Admin) / use `published_at` from response (storefront) | Storefront walk: filter client-side by `published_at` |
+
+Record both `dateFilterApi` (which surface the watermark crawler walks) AND `dateFilterField` (the param NAME) in `crawlers.watermark`. The runtime adapter at `woocommerce.ts:337` hardcodes `modified_after` against WP REST core — documenting the wrong field name in the candidate causes the probe to test one param while the runtime walks another (the hical R3 narrative bug).
 
 #### Method B — `navigate-from-watermark`
 
@@ -717,9 +833,9 @@ Required: `reason` field explaining WHY (e.g. "No API date filter; <select> show
 | 2 | `json-api-count` | `{method, endpoint, field}` | Generic JSON: `GET <endpoint>` → drill into `<field>` (dot-path) for the count. Use for Searchspring `pagination.totalResults`, Shopify Admin `/products/count.json` (`count`), and similar. |
 | 3 | `json-api-length` | `{method, endpoint, field, perPage}` | Single-page array count + page math. Use only when the API returns total via array length × pages, not a total field. |
 | 4 | `html-pagination` | `{method, selector, perPage}` | HTML scrape: CSS selector for last-page link, multiply by perPage. Use for Magento toolbar (`<p class="toolbar-amount">`), Celerant `<select id="perpage">` last-option, BC pagination links. |
-| 5 | `sitemap` | `{method, url}` | Count `<loc>` entries in one sitemap. Includes OOS / hidden — that's a feature for full-inventory tracking. |
-| 6 | `sitemap-index` | `{method, urls: [...]}` | Multi-file sitemap (Magento, BigCommerce). Sum `<loc>` counts across files. |
-| 7 | `generic-product-sitemap` | `{method, url, pattern?}` | Sitemap with regex filter on `<loc>` URLs — excludes category/non-product entries. Default pattern: `\.html?(?:$|[?#])`. Use for Magento 1 / Lightspeed eCom where one sitemap mixes URL types. |
+| 5 | `sitemap` | `{method, url}` | Count `<loc>` entries in one sitemap. `url` MUST be **path-only with leading slash** (e.g. `/sitemap.xml`) — runtime at [`product-count-probe.ts:233`](../../../backend/src/services/product-count-probe.ts) prepends `${origin}`. Includes OOS / hidden. |
+| 6 | `sitemap-index` | `{method, urls: [...]}` | Multi-file sitemap (Magento, BigCommerce). Each entry in `urls` MUST be **path-only with leading slash** — runtime at [`product-count-probe.ts:244`](../../../backend/src/services/product-count-probe.ts) prepends `${origin}` for non-`http`-prefixed entries. Sum `<loc>` counts across files. |
+| 7 | `generic-product-sitemap` | `{method, url, pattern?}` | Sitemap with regex filter on `<loc>` URLs — excludes category/non-product entries. `url` MUST be **path-only with leading slash**. Default pattern: `\.html?(?:$|[?#])`. Use for Magento 1 / Lightspeed eCom. **Gzipped sitemaps (`.xml.gz`) supported** — axios decompresses transparently via `Content-Encoding: gzip`; store the literal `.xml.gz` path. WebSphere Commerce example (basspro.ca): `{method:"generic-product-sitemap", url:"/webapp/wcs/stores/servlet/sitemap_10151.xml.gz", pattern:"/p/"}` — pattern keys on the `/p/` product-detail URL marker. Pattern regex uses case-INSENSITIVE flag (runtime at `product-count-probe.ts:323`); when reproducing the count by hand, use `grep -i` not `grep` — case-sensitive grep can undercount uppercase-slug products (batch-6 basspro: 17 products missed via case-sensitive manual grep). |
 | 8 | `shopify-products-walk` | `{method, endpoint?, perPage?, maxPages?}` | Walk `/products.json?limit=250&page=N` until empty; dedup by product `id`; return Set size. Most accurate for Shopify (use this, not `shopify-count-json` which usually 401s). |
 | 9 | `ecwid-storefront-search` | `{method, endpoint, field?, lang?}` | Ecwid: `POST <endpoint>` body `{lang:'en', pagination:{offset:0,limit:1}}` → read `<field>` (default `totalProductsCount`). Use for ecwid-on-wordpress. |
 | 10 | `klevu-api-count` | `{method, endpoint, apiKey}` | Klevu site-search API total. Rare. |
@@ -751,6 +867,36 @@ Required: `reason` field explaining WHY (e.g. "No API date filter; <select> show
 - Don't write a method name not in the table above. The `default:` arm silently disables the probe — drift is invisible at runtime.
 - **Before claiming any `productCountMethod` value, verify the `method` name exists in the runtime probe code's switch statement** ([`product-count-probe.ts`](../../../backend/src/services/product-count-probe.ts)). The documentation table and the implementation can diverge; the implementation is the source of truth. A method that's in this skill's table but missing from the switch falls through to `default: return null` and silently disables the count probe.
 - **Validator gate (MANDATORY before writing Stage 9 output):** reject any `productCountMethod.method` value not in the runtime switch's 11 canonical cases ([`backend/src/services/product-count-probe.ts:148-451`](../../../backend/src/services/product-count-probe.ts)): `wp-rest-header`, `json-api-count`, `json-api-length`, `html-pagination`, `sitemap`, `sitemap-index`, `generic-product-sitemap`, `ecwid-storefront-search`, `shopify-products-walk`, `klevu-api-count`, `stream-page-count`. Any other string lands on `default: return null` (line 446-451) — count probe disabled silently. If your candidate's `productCountMethod.method` is not exactly one of these 11 strings, STOP and fix before Stage 9 assembly.
+
+- **B6 — Shape gate (each method has REQUIRED fields the runtime switch reads).** Nordic / wolverine / hical all shipped broken shapes that the runtime caught silently — `sitemap` reads scalar `m.url` (wolverine DB `{method:"sitemap", sitemapUrls:[...]}` produces `axios.get(${origin}undefined)`); `sitemap-index` iterates `m.urls`. Mixing them silently breaks. **B1 (batch-5 R3-frontierfirearms): `url` / `urls` entries MUST be path-only with leading slash.** Runtime at `product-count-probe.ts:233` does `${origin}${m.url}`; an absolute URL like `https://site.com/sitemap.xml` produces a double-prefix `https://site.comhttps://site.com/sitemap.xml` → fetch fails → silent null. Before Stage 9, assert the object shape matches EXACTLY this table:
+
+| `method` name | Required keys |
+|---|---|
+| `wp-rest-header` | `{method, endpoint, header}` |
+| `json-api-count` | `{method, endpoint, field}` |
+| `json-api-length` | `{method, endpoint, field, perPage}` |
+| `html-pagination` | `{method, selector, perPage}` |
+| `sitemap` | `{method, url}` — scalar `url`, **path-only with leading slash**, NOT absolute |
+| `sitemap-index` | `{method, urls: [...]}` — array `urls`, each entry **path-only with leading slash** |
+| `generic-product-sitemap` | `{method, url, pattern?}` (pattern optional) — `url` **path-only with leading slash** |
+| `shopify-products-walk` | `{method, endpoint?, perPage?, maxPages?}` (all optional) |
+| `ecwid-storefront-search` | `{method, endpoint, field?, lang?}` (endpoint required) |
+| `klevu-api-count` | `{method, endpoint, apiKey}` |
+| `stream-page-count` | `{method}` (no config) |
+
+Validator pseudocode (run before writing the candidate JSON):
+```
+if (method.name === 'sitemap' && !method.url) FAIL  // most common shape bug
+if (method.name === 'sitemap' && method.url.startsWith('http')) FAIL  // B1: must be path-only
+if (method.name === 'sitemap' && !method.url.startsWith('/')) FAIL    // B1: leading slash required
+if (method.name === 'sitemap-index' && !Array.isArray(method.urls)) FAIL
+if (method.name === 'sitemap-index' && method.urls.some(u => u.startsWith('http'))) FAIL  // B1
+if (method.name === 'generic-product-sitemap' && (!method.url || method.url.startsWith('http'))) FAIL  // B1
+if (method.name === 'wp-rest-header' && (!method.endpoint || !method.header)) FAIL
+if (method.name === 'html-pagination' && (!method.selector || !method.perPage)) FAIL
+// ... and so on
+```
+A bare-string `productCountMethod: "category-walk-dedupe"` (wolverine DB today) is NOT in `VALID_METHOD_NAMES` → `validateMethod` throws at `product-count-probe.ts:132` → caught silently → `verifyBootstrapCoverage` computes `ratio=null → isAcceptable=true` (L525) → coverage gate disabled end-to-end. Never ship that shape.
 - Don't use raw `<loc>` count from sitemap (Mistake 1) when the sitemap mixes product and non-product URLs. Use `generic-product-sitemap` with a filter pattern instead.
 - For Celerant: don't use `/perpage/9999` raw dump as canonical — the `<option>All</option>` value is the correct source. The dump includes special-order items the storefront hides.
 - **Don't downrank a higher-priority method just because the count is higher than your walked count.** Sitemap-based methods include OOS / hidden / non-rendered products by design — that's a feature (back-in-stock alerts, full inventory tracking), not noise. If `sitemap = 16,000` but your category walk only saw 7,000, the sitemap is correct (BC Stencil hides OOS on category pages). Use the sitemap value.
@@ -763,6 +909,16 @@ Required: `reason` field explaining WHY (e.g. "No API date filter; <select> show
 - If `crawlers.watermark.method = "api-date-since-watermark"` AND the watermark walk uses WP REST core `/wp-json/wp/v2/product`, use the **admin total** as `expectedProductCount` (probe via `wp-rest-header` against `/wp-json/wp/v2/product`).
 - If `siteProfile.storeApiOnly = true` (the WC adapter standalone Store API path at [`woocommerce.ts:347-349`](../../../backend/src/services/scraper/adapters/woocommerce.ts) fires when WP REST is 401-gated), use the **customer-visible total** (probe via `wp-rest-header` against `/wp-json/wc/store/v1/products`).
 - The two totals can diverge 2.5×–10× on shops with significant draft / private / out-of-stock-hidden inventory. Pick to match the runtime surface; document the choice in `auditNotes.wcCountSurface`.
+
+**B8 — `expectedProductCount` surface MUST match `crawlers.maintain.verifyMethod` (pair-rule, mandatory).** Canadafirstammo R3: DB shipped `expectedProductCount: 962` (WP REST core total, includes catalog-hidden + draft products) while verify was effectively `store-api` (counts only customer-visible in-stock). Live WP REST `/wp/v2/product` = 962; live Store API `/wc/store/v1/products` = 132 (X-WP-Total); HTML "Showing 12 of 111"; taxonomy-sum 172. Ratio `dbCount / 962 = 13.7%` would keep `verifyBootstrapCoverage` (at `product-count-probe.ts:521-525`) reporting `isAcceptable=false` forever — **bootstrap stuck forever, silent**. Greatnorth R3 same family: 4306 (WP REST) vs 528 (Store API) = 8× divergence. Same product corpus, two surfaces, different questions. The pairing rule:
+
+| `verifyMethod` (Stage 3) | `expectedProductCount` source MUST be | Reason |
+|---|---|---|
+| `store-api` (WC fast-path at `worker.ts:397`) | WC Store API `wp-rest-header` against `/wp-json/wc/store/v1/products` | Customer-visible / in-stock; matches what the verifier sees |
+| `detail-page` on WC (`worker.ts:765` else branch routes to Playwright) | WP REST core `wp-rest-header` against `/wp-json/wp/v2/product` | Full corpus including hidden / OOS; matches detail-page reach |
+| `detail-page` on non-WC platforms | Whatever surface produces the catalog-visible total (sitemap, taxonomy sum, html-pagination) | Same set the Playwright detail-page check walks |
+
+Validator gate: if `crawlers.maintain.verifyMethod` is `"store-api"`, assert `productCountMethod.endpoint` points at `/wc/store/v1/products` (NOT `/wp/v2/product`). Mismatch = STOP, fix before Stage 9. Document the chosen surface in `auditNotes.expectedCountSurface` so operator can confirm pairing.
 
 **Helper:** [`backend/scripts/probe/geography-count/global-count.ts`](../../../backend/scripts/probe/geography-count/global-count.ts) — implements all 12 methods.
 

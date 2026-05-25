@@ -1,0 +1,146 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-19T08:53:41Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches return 200; cf-ray header present on every response; no challenges, no 403/503 on honeypot/SQLi/XSS/no-UA/rapid-burst. Cloudflare in front but passive — does not actively gate the crawler.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY", "cf-cache-status"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all 200 (10/10)",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "bodyMarkers": []
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 962,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://canadafirstammo.ca/product-category/firearms/",
+    "https://canadafirstammo.ca/product-category/ammunition/",
+    "https://canadafirstammo.ca/product-category/accessories/",
+    "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+    "https://canadafirstammo.ca/product-category/reloading/",
+    "https://canadafirstammo.ca/product-category/clearance/",
+    "https://canadafirstammo.ca/product-category/apparel/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/",
+    "https://canadafirstammo.ca/product-category/training/",
+    "https://canadafirstammo.ca/product-category/shop-all/",
+    "https://canadafirstammo.ca/product-category/gunsmithing/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://canadafirstammo.ca/product/used-tag-fde-plate-carrier-l-xl/",
+      "title": "Used- TAG FDE Plate carrier L/XL",
+      "price": 220.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://canadafirstammo.ca/product/gsci-ti-gear-lrs-long-range-thermal-sight/",
+      "title": "GSCI TI-GEAR-LRS Long-Range Thermal Sight",
+      "price": 6955.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://canadafirstammo.ca/product/federal-power-shok-6-5-creedmoor/",
+      "title": "Federal Power-Shok 6.5 Creedmoor",
+      "price": null,
+      "stockStatus": "out_of_stock",
+      "priceVisible": false
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": null
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/firearms/", "allOption": 203 },
+      { "slug": "/product-category/ammunition/", "allOption": 440 },
+      { "slug": "/product-category/accessories/", "allOption": 248 },
+      { "slug": "/product-category/accessoriesoptics/", "allOption": 70 },
+      { "slug": "/product-category/reloading/", "allOption": 9 },
+      { "slug": "/product-category/clearance/", "allOption": 138 },
+      { "slug": "/product-category/apparel/", "allOption": 2 },
+      { "slug": "/product-category/plates-apparel/", "allOption": 14 },
+      { "slug": "/product-category/training/", "allOption": 3 },
+      { "slug": "/product-category/shop-all/", "allOption": 925 },
+      { "slug": "/product-category/gunsmithing/", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Per-category OOS-inclusive sum (excl shop-all) = 1127; with shop-all aggregator = 2052 (heavy overlap by design). Walked union of all 11 categories = 959 unique product IDs. Global WP REST count = 962. Drift = 0.3%, within 5% gate. Without shop-all the union covers only 955 of 962 (4 products live ONLY in shop-all - cannot drop it)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R1-canadafirstammo.ca-2026-05-19T20-00-00Z",
+    "probeIp": "audit-machine (Windows)",
+    "wcCategoryApi": "store-api",
+    "wcCountSurface": "wp-rest-core (matches watermark walk surface; admin total includes OOS, aligns with Store API bracketed-stock_status total of 962)",
+    "verifyMethodPolicy": "store-api accepted; restock alerts not guaranteed for products the batch API never saw (worker.ts:711 early-return). Operator should review if OOS-restock detection is critical given ~830 of 962 products are currently OOS.",
+    "themeNote": "Minimog theme. Mistake-12 risk: parent categories may render subcategory tiles instead of products. Walk-test passed: ammunition parent returned 36 product permalinks (11 unique products + 3-link-per-card duplicates).",
+    "discoveredApiEndpoints": {
+      "wpRestCore": "/wp-json/wp/v2/product",
+      "wcStoreApi": "/wp-json/wc/store/v1/products",
+      "productCat": "/wp-json/wp/v2/product_cat"
+    },
+    "stockStatusSurfaceDivergence": "WC Store API default returns ONLY in-stock (132). WP REST core returns 962 (includes OOS-hidden). Bracketed-array stock_status returns 962 too. 830 products currently OOS - a significant share; operator should confirm the runtime walks include OOS via the bracketed form.",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "catalogUrls": "high (full walk + ID-dedup completed)",
+      "perPage": "high",
+      "paginationPattern": "high",
+      "sortParam": "high (3-outcome counter-control verified)",
+      "expectedProductCount": "high",
+      "watermarkMethod": "high (modified_after two-probe verified)",
+      "verifyMethod": "medium (store-api default; OOS-transition loss-of-signal risk per worker.ts:549 lesson)"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200, www 301 -> apex. Canonical = https://canadafirstammo.ca",
+      "Stage 2: heavy 8-batch probe, all 200, cf-ray present, no challenges. hasWaf=false, wafType=cloudflare-passive. No CAPTCHA, no age-gate.",
+      "Stage 3: Minimog WooCommerce theme. adapterType=woocommerce. Store API works (no 401), needsPlaywright=false.",
+      "Stage 4: 11 top-level cats via WP REST product_cat. Walked all via WC Store API with bracketed stock_status. Union = 959. shop-all has 4 unique products not in any other top-level -> shop-all retained. gunsmithing returns 200 with 0 products today, retained per empty != dead rule.",
+      "Stage 5: ammunition /page/2/ and ?paged=2 both return distinct products from page 1. Use path /page/{N}/. perPage = 12 (Minimog default, no ?per_page override honored).",
+      "Stage 6: <select name='orderby'> options include 'date'. 3-outcome test (default vs ?orderby=date vs ?orderby=price) returns three distinct product orderings -> sort honored. sortParam=?orderby=date.",
+      "Stage 7: modified_after future date returns X-WP-Total=0; past date returns 962 on both WP REST core and Store API surfaces. Method A api-date-since-watermark verified.",
+      "Stage 8: expectedProductCount=962 from wp-rest-header against /wp-json/wp/v2/product. Walked = 959 (0.3% drift, within 5% gate).",
+      "Stage 9: Validator shape check passed by inspection (9 required + 7 recommended populated). No promotion to DB."
+    ]
+  }
+}

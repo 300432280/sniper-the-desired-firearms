@@ -1,0 +1,160 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-05-19T08:52:58Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "All 8 batches 200; no cf-ray/x-sucuri/incapsula/akamai/server-cloudflare headers. Honeypot /.env and /.git/config return 403 (origin LiteSpeed/.htaccess path-selective, not CDN WAF). SQLi/XSS payloads return 200 (no rule WAF). Rapid burst 10x: all 200, no rate-limit. UA-absent: 200. Origin server: LiteSpeed.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "incapsulaCookies": [],
+    "akamaiHeaders": [],
+    "serverHeader": "LiteSpeed",
+    "rapidBurstStatus": "all-200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": [".env (403)", ".git/config (403)"],
+    "honeypotIsOriginNotWaf": "true: no cf-ray/x-sucuri etc on these responses; origin LiteSpeed/.htaccess",
+    "botUaBlocked": false,
+    "captchaScriptsInBody": ["recaptcha/api.js?render=6LfquLsUAAAAACKKuR6lKeeA-VwoLnOITAL2RVle"],
+    "wpRestOpen": true,
+    "storeApiOpen": true
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 4299,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://greatnorthgunco.ca/product-category/used-firearms/",
+    "https://greatnorthgunco.ca/product-category/new-knives/",
+    "https://greatnorthgunco.ca/product-category/accessories-parts/",
+    "https://greatnorthgunco.ca/product-category/new-scopes/",
+    "https://greatnorthgunco.ca/product-category/lee-enfield-parts/",
+    "https://greatnorthgunco.ca/product-category/surplus/",
+    "https://greatnorthgunco.ca/product-category/bayonets/",
+    "https://greatnorthgunco.ca/product-category/uncategorized/",
+    "https://greatnorthgunco.ca/product-category/new-firearms/",
+    "https://greatnorthgunco.ca/product-category/used-scopes/",
+    "https://greatnorthgunco.ca/product-category/mauser-parts/",
+    "https://greatnorthgunco.ca/product-category/several-available-surplus/",
+    "https://greatnorthgunco.ca/product-category/ljungman-parts/",
+    "https://greatnorthgunco.ca/product-category/new-shotguns/",
+    "https://greatnorthgunco.ca/product-category/several-available/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://greatnorthgunco.ca/product/husqvarna-640-bolt-action-in-8x57/",
+      "title": "Husqvarna 640 in 8x57",
+      "price": 495.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://greatnorthgunco.ca/product/jamart-co-liege-belgium-sxs-in-12ga-3/",
+      "title": "Jamart Co (Liege, Belgium) SXS in 12ga",
+      "price": 259.95,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://greatnorthgunco.ca/product/feg-hungaria-100s-sxs-in-12-gauge/",
+      "title": "FEG Hungaria 100S SxS in 12 gauge",
+      "price": 299.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WP REST core /wp-json/wp/v2/product?modified_after=... two-probe HONORED: future-date returns x-wp-total:0; past-date returns x-wp-total:4299 (= global total). WC adapter at woocommerce.ts:337 uses modified_after on this endpoint."
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "id": 19, "slug": "/product-category/used-firearms/", "allOption": 300, "wpRestCount": 2237 },
+      { "id": 2188, "slug": "/product-category/new-knives/", "allOption": 66, "wpRestCount": 90 },
+      { "id": 2195, "slug": "/product-category/accessories-parts/", "allOption": 29, "wpRestCount": 106 },
+      { "id": 2190, "slug": "/product-category/new-scopes/", "allOption": 26, "wpRestCount": 48 },
+      { "id": 2192, "slug": "/product-category/lee-enfield-parts/", "allOption": 19, "wpRestCount": 21 },
+      { "id": 17, "slug": "/product-category/surplus/", "allOption": 19, "wpRestCount": 1001 },
+      { "id": 2189, "slug": "/product-category/bayonets/", "allOption": 17, "wpRestCount": 29 },
+      { "id": 380, "slug": "/product-category/uncategorized/", "allOption": 16, "wpRestCount": 473 },
+      { "id": 184, "slug": "/product-category/new-firearms/", "allOption": 10, "wpRestCount": 225 },
+      { "id": 2191, "slug": "/product-category/used-scopes/", "allOption": 9, "wpRestCount": 12 },
+      { "id": 2193, "slug": "/product-category/mauser-parts/", "allOption": 4, "wpRestCount": 7 },
+      { "id": 2131, "slug": "/product-category/several-available-surplus/", "allOption": 3, "wpRestCount": 15 },
+      { "id": 2194, "slug": "/product-category/ljungman-parts/", "allOption": 1, "wpRestCount": 1 },
+      { "id": 2132, "slug": "/product-category/new-shotguns/", "allOption": 1, "wpRestCount": 17 },
+      { "id": 2130, "slug": "/product-category/several-available/", "allOption": 1, "wpRestCount": 13 }
+    ],
+    "totalsSumCheck": "Sum of allOption (catalog-visible) = 521, matches Store API x-wp-total exactly. Sum of wpRestCount = 4295 (within rounding of WP REST core x-wp-total: 4299; product-sitemap.xml sum = 4299). The 521 vs 4299 divergence is catalog_visibility filter: WC Store API filters to visible only; WP REST core returns ALL published products including catalog_visibility=hidden (sold-archive listings kept for SEO permalinks). expectedProductCount set to 4299 to match watermark surface (WP REST modified_after walk)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R1-greatnorthgunco-2026-05-19",
+    "probeIp": "audit-machine (not production crawler)",
+    "verifyMethodPolicy": "store-api accepted; restock alerts NOT guaranteed for products that transition OOS between crawls due to worker.ts:549 unconditional handledProductIds.push. Operator decision: use detail-page if restock detection on hidden/archive items is required.",
+    "wcCategoryApi": "wp-rest-core (WP REST /wp-json/wp/v2/product?product_cat=N; does NOT recurse; flat taxonomy here so non-issue)",
+    "wcCountSurface": "wp-rest-core / wp/v2/product (admin-visible; matches watermark walk). Store API visible-only would be 521.",
+    "catalogVsWatermarkDivergence": "HTML catalog crawler via /product-category/<slug>/ pages will see only the 521 catalog-visible products. WP REST watermark crawler will index up to 4299 historical products (modified_after walk). Operator should be aware: catalog backfill via HTML walks will not reach the 3778 hidden/archive items.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high (no CDN headers in any of 8 batches)",
+      "hasCaptcha": "high (reCAPTCHA v3 site-wide via CF7 plugin, does not gate catalog/REST endpoints)",
+      "captchaType": "high",
+      "ageGate.detected": "high",
+      "needsPlaywright": "high (HTML extraction returned 24 products on /shop and /product-category/used-firearms/ via plain fetch)",
+      "expectedProductCount": "high for WP REST surface (4299) - confirmed via x-wp-total AND product-sitemap.xml multi-file sum (1001+1000+1000+1000+299=4300, minus 1 stylesheet loc=4299). Visible-storefront count is 521.",
+      "productCountMethod": "high (wp-rest-header on /wp-json/wp/v2/product is canonical and present in the 11-method switch)",
+      "catalogUrls": "high (15 firearm-relevant top-level WC categories from WP taxonomy API; no aggregator URL needed since /shop/ is equivalent union of visible-521)",
+      "paginationPattern": "high (page/2 vs page/1 zero overlap, 24 products/page, last page 22 has 17; 21*24+17=521)",
+      "perPage": "high (HTML fixed at 24; ?count, ?products-per-page, ?show all ignored)",
+      "sortParam": "high (3-outcome counter-control: default==date, default!=price -> honored-default-is-newest)",
+      "sortVerified": "high",
+      "crawlers.watermark.method": "high (api-date-since-watermark on WP REST core; two-probe both pass)",
+      "crawlers.maintain.verifyMethod": "high (store-api standard WC mapping)"
+    },
+    "stageNotes": [
+      "Stage 1 (canonical): apex https://greatnorthgunco.ca/ returns 200; www redirects to apex (final_url=https://greatnorthgunco.ca/). <link rel=canonical> agrees apex. canonicalOrigin = https://greatnorthgunco.ca.",
+      "Stage 2 (WAF/CAPTCHA): hasWaf=false. Server: LiteSpeed origin. No cf-ray, x-sucuri, akamai, incapsula across all 8 batches. Honeypot .env/.git -> 403 from origin LiteSpeed (path-selective at .htaccess, not CDN WAF). SQLi/XSS -> 200. Rapid burst 10x -> all 200, no rate-limit. reCAPTCHA v3 script present in homepage HTML (CF7 plugin, doesn't gate catalog/REST) -> hasCaptcha=false operationally.",
+      "Stage 3 (platform): WooCommerce 10.7.0 on WordPress 6.9.4 (generator meta + wp-content + woocommerce-* classes throughout). adapterType=woocommerce. No age-gate. needsPlaywright=false (HTML catalog pages return product cards via plain HTTP). Maintain config derived: verifyMethod=store-api, verifyEndpoint=/wp-json/wc/store/v1/products.",
+      "Stage 4 (catalog): WP REST taxonomy /wp-json/wp/v2/product_cat?per_page=100&hide_empty=false returned 17 categories, 15 productive (count>0), all top-level (parent=0), all firearm-relevant. Sum of `count` field = 521 (catalog-visible). 15 category URLs picked as catalogUrls. /shop/ aggregator gives same union but per-category is canonical for operator clarity. Extraction quality: 3 sample products from /product-category/used-firearms/ page 1 all have title/url/price/stockStatus populated.",
+      "Stage 5 (pagination): Path-style /page/{N}/. Page 2 of /shop/ returned 24 NEW products (zero overlap with page 1). perPage=24 fixed by theme (no ?count/?show/?products-per-page override). Last page = page 22 with 17 products. 21*24+17=521 (matches Store API count). firstPageHasParam=false, startPage=1, zeroIndexed=false.",
+      "Stage 6 (sort): <select name=orderby> options: popularity, date (selected default), price, price-desc. 3-outcome test with cache-bust: default first-3 == sorted(date) first-3 ('husqvarna-640', 'anschutz-left-hand', 'winchester-model-1903'); counter(price) first-3 ('enfield-no1-safety-screw', 'enfield-no1-safety-spring-screw', 'enfield-no1-safety-washer'). Verdict: honored-default-is-newest. sortParam=?orderby=date, sortVerified=true.",
+      "Stage 7 (watermark): api-date-since-watermark. WP REST core two-probe both HONORED: ?modified_after=2099-01-01 returns x-wp-total:0; ?modified_after=1999-01-01 returns x-wp-total:4299 (matches global). NOTE: WC Store API does NOT honor modified_after (both probes return 521). Runtime WC adapter at woocommerce.ts:337 hardcodes modified_after on WP REST core - correct.",
+      "Stage 8 (count): 4299 via wp-rest-header on /wp-json/wp/v2/product. Cross-check: product-sitemap.xml * 5 files = 1001+1000+1000+1000+299 = 4300 -> 4299 minus stylesheet loc. Diverges from Store API 521 (= visible catalog only) and from sum of category count field (also 521). The 3778-product gap is catalog_visibility=hidden (sold-archive listings retained for SEO).",
+      "Stage 9 (assembly): All 9 required validator fields present. Stage 7 reason populated. expectedProductCount set to match watermark surface (4299) per skill 'Pick count source to match the watermark surface'. Operator awareness: HTML catalog crawler will see only 521 visible products; watermark crawler will index up to 4299."
+    ]
+  }
+}

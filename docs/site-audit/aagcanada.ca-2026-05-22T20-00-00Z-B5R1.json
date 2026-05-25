@@ -1,0 +1,149 @@
+{
+  "profileVersion": 1,
+  "platform": "shopify",
+  "adapterType": "shopify",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-23T02:45:33Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare passive (cf-ray on every BATCH 1 request, server: cloudflare). All standard-browser UAs return 200; bot UA (curl) returns 503 and no-UA returns 403 (Cloudflare default UA-reputation gate). Burst test 10x200 OK, SQLi/XSS payloads 200, honeypot paths 404 (Shopify default). No active blocking against legitimate crawlers using a real browser UA.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status: DYNAMIC", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 = 200",
+    "rapidBurstTested": true,
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": true,
+    "noUaBlocked": true,
+    "untestedAttackSurfaces": ["auth-attempt", "path-traversal", "large-body-POST", "shellshock-UA", "sustained-50-page-walk-per-UA"]
+  },
+  "hasCaptcha": false,
+  "captchaType": "hcaptcha",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 565,
+  "productCountMethod": {
+    "method": "shopify-products-walk",
+    "endpoint": "/products.json",
+    "perPage": 250
+  },
+  "catalogUrls": ["/collections/all"],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://aagcanada.ca/products/replica-boots-1",
+      "title": "Great Escape Boots USN WWII Reproduction Boots Film Prop",
+      "price": 399,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://aagcanada.ca/products/combloc-akm-type-i-bayonet-w-scabbard",
+      "title": "Combloc AKM Type I Bayonet w/ Scabbard",
+      "price": 169,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://aagcanada.ca/products/italian-carcano-m1891-long-rifle-terni-1894-early-production-infantry-rifle",
+      "title": "Italian Carcano M1891 Long Rifle Terni 1894 Early Production Infantry Rifle",
+      "price": 1099,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?sort_by=created-descending",
+  "sortVerified": true,
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "topLevelCategories": {
+    "source": "shopify-collections-json",
+    "categories": [
+      { "slug": "/collections/antique-blank",        "allOption": 22,  "title": "Antique/Airgun/Blank",        "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/bayonet",              "allOption": 21,  "title": "Bayonet",                     "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/boutique-display-sold","allOption": 117, "title": "Boutique Display Sold",       "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/deactivated",          "allOption": 12,  "title": "Deactivated",                 "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/firearms",             "allOption": 197, "title": "Firearms",                    "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/fun-stuff",            "allOption": 164, "title": "Fun Stuff (mixed)",           "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/garment",              "allOption": 79,  "title": "Garment (military)",          "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/magazine-clips",       "allOption": 18,  "title": "Magazine/Clips/Parts",        "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/scope-sights",         "allOption": 12,  "title": "Scope and Sights",            "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/tactical-gear",        "allOption": 72,  "title": "Tactical Gear",               "firearmRelevant": true,  "containedInAll": true },
+      { "slug": "/collections/frontpage",            "allOption": 32,  "title": "Home page (aggregator)",      "firearmRelevant": false, "containedInAll": true },
+      { "slug": "/collections/popular-items",        "allOption": 12,  "title": "Popular Items (aggregator)",  "firearmRelevant": false, "containedInAll": true },
+      { "slug": "/collections/new-arrival",          "allOption": 59,  "title": "New Arrival (aggregator)",    "firearmRelevant": false, "containedInAll": true },
+      { "slug": "/collections/sale",                 "allOption": 24,  "title": "Sale (aggregator)",           "firearmRelevant": false, "containedInAll": true },
+      { "slug": "/collections/public-notice",        "allOption": 2,   "title": "Public Notice",               "firearmRelevant": false, "containedInAll": true }
+    ],
+    "totalsSumCheck": "collections.json count metadata sums to 843 across 15 collections (admin total including OOS/hidden/draft variants). Customer-visible walk of /collections/all returned 565 unique product IDs across 3 pages (limit=250). Cross-checked 7 firearm-relevant dept feeds vs /collections/all: 0 IDs missing in any case — /collections/all is provably the 100% coverage spine."
+  },
+  "lastVerified": "2026-05-22",
+  "auditNotes": {
+    "runId": "B5R1-2026-05-22T20-00-00Z",
+    "probeIp": "audit-environment-residential",
+    "wcCategoryApi": "n/a-shopify",
+    "verifyMethodPolicy": "detail-page selected (Shopify default per Stage 3 table) — Shopify maintain uses Playwright detail-page; Admin API requires auth tokens not exposed publicly. Restock alerts via per-product detail-page verification.",
+    "expectedCountSurface": "shopify-products-walk against /products.json (customer-visible storefront; matches sitemap_products_1.xml count of 565)",
+    "shopifyDeptFeedSoftCap": "Not triggered at this catalog scale. Firearms collection has 197 admin count but only 74 customer-visible. /collections/firearms HTML page count + /products.json walk both = 74. /collections/all walk = 565 unique IDs matches /products.json global walk = matches sitemap product count (565). Coverage verified end-to-end.",
+    "dbColumnFlips": {
+      "wafWorkaround": "clear"
+    },
+    "discoveredApiEndpoints": [
+      "/collections.json?limit=250",
+      "/collections/all/products.json?limit=250&page=N",
+      "/collections/<handle>/products.json?limit=250&page=N",
+      "/products.json?limit=250&page=N",
+      "/sitemap_products_1.xml"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "catalogUrls": "high",
+      "paginationPattern": "high",
+      "perPage": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "watermarkMethod": "high",
+      "verifyMethod": "high"
+    },
+    "stageNotes": {
+      "stage1": "Apex https://aagcanada.ca returns 200 with <link rel=canonical href=https://aagcanada.ca/> and <link rel=alternate hreflang=x-default href=https://aagcanada.ca/>. www-fallback also returns 200 with same body. Canonical = apex. Multi-locale alternates exist for /fr/ and /zh/ (sister catalogs, not additional products).",
+      "stage2": "Heavy 8-batch probe: BATCH 1 headers show cf-ray + server: cloudflare on every request. Burst test 10x200. SQLi/XSS payloads 200. Honeypot paths 404 (Shopify default 404, not WAF block). Bot UA (curl) -> 503; no-UA -> 403 (Cloudflare passive UA-reputation gate). All standard browser UAs return 200. wafType: cloudflare-passive but hasWaf: false (operational — does not block real-browser UAs). hCaptcha + reCAPTCHA scripts present site-wide (Shopify storefront form gating); catalog pages return 200 with product markup -> hasCaptcha: false (not gating crawler).",
+      "stage3": "Shopify.shop = mh2ua1-6g.myshopify.com + cdn.shopify.com + _shopify_essential cookies. 13 fingerprint markers. adapterType = shopify. needsPlaywright: false (HTML returns full product cards on static fetch; JSON walk also works). verifyMethod: detail-page (per Stage 3 platform->verify table for Shopify; Admin API requires auth).",
+      "stage4": "Discovery via /collections.json -> 15 collections. 10 firearm-relevant + 5 aggregators. Per-collection JSON walks (firearms, boutique-display-sold, fun-stuff, garment, tactical-gear, bayonet, antique-blank) all return product subsets fully contained in /collections/all (0 missing IDs in cross-check). /collections/all walked at limit=250 across 3 pages = 565 unique IDs. catalogUrls = [/collections/all] (single URL, 100% firearm-relevant coverage proved, minimum URL count).",
+      "stage4g": "Extraction spot-check on 3 random products (positions 0, 125, 249 of /collections/all p1): 3/3 produced title (>5 chars), URL (absolute, distinct), price (numeric >0), stockStatus (in_stock or out_of_stock). extractionTested: true.",
+      "stage5": "paginationPattern.type = query, template = 'page' (param name per Mistake 14). perPage = 250 (Shopify hard cap — tested limit=500 returned 250). firstPageHasParam: false. zeroIndexed: false. JSON walk verified p1=250, p2=250, p3=65, p4=0 (proves pagination honors page param with zero-overlap).",
+      "stage6": "SortBy <select> on /collections/firearms HTML: values = manual, most-relevant, best-selling, title-ascending, title-descending, price-ascending, price-descending, created-ascending, created-descending. 3-outcome test on /collections/all: default first 3 = [replica-boots-1, replica-boots-1, mauser-k98], created-descending = [sako-s20, akdas-alcor, ...], price-descending = [beretta-694, beretta-694, charles-lancaster]. Sorted != default AND price-desc != default -> honored. sortParam = '?sort_by=created-descending', sortVerified: true.",
+      "stage7": "navigate-from-watermark per Method B: Stage 6 sort verified honored AND each product carries published_at field (e.g. 2025-06-12T16:41:32-04:00 on /products.json). Runtime catalog crawler walks /collections/all?sort_by=created-descending&page=N newest-first and stops at watermark.",
+      "stage8": "Three independent counts agree: (a) /collections/all walk = 565 unique IDs, (b) /products.json global walk = 565 unique IDs, (c) /sitemap_products_1.xml <loc> count = 565. expectedProductCount = 565. productCountMethod = {method: shopify-products-walk, endpoint: /products.json, perPage: 250} per Stage 8 canonical method table.",
+      "stage9": "Validator gate inputs: 9 required fields present, productCountMethod.method = shopify-products-walk (in VALID_METHOD_NAMES allowlist), paginationPattern.type = query, crawlers.watermark.method = navigate-from-watermark, sortVerified: true. Expected validator: pass."
+    }
+  }
+}

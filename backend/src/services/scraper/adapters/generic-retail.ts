@@ -2,7 +2,6 @@ import type * as cheerio from 'cheerio';
 import type { ScrapedMatch, ExtractionOptions, CatalogProduct, CatalogPage } from '../types';
 import { AbstractAdapter } from './base';
 import axios from 'axios';
-import { fetchPageWithMeta } from '../http-client';
 
 /**
  * Generic retail adapter — fallback for non-Shopify, non-WooCommerce retailers.
@@ -284,23 +283,14 @@ export class GenericRetailAdapter extends AbstractAdapter {
   // Klevu config defaults (overridden by siteProfile.apiConfig)
   private static KLEVU_DEFAULTS = { perPage: 36 };
 
-  /** Discover the Klevu categoryPath for a page using profile or HTML fallback. */
-  private async _resolveKlevuCategoryPath(pageUrl: string): Promise<string | null> {
-    // Check profile's klevuCategoryPaths first
-    const profile = GenericRetailAdapter._getProfileSync(new URL(pageUrl).origin);
-    const paths = profile?.apiConfig?.klevuCategoryPaths || [];
-    const urlLower = pageUrl.toLowerCase();
-    for (const { slug, path } of paths) {
-      if (urlLower.includes(slug)) return path;
-    }
-    // Fallback: fetch the page and extract klevu_pageCategory
-    try {
-      const result = await fetchPageWithMeta(pageUrl);
-      const match = result.html.match(/var\s+klevu_pageCategory\s*=\s*["']([^"']+)/);
-      if (match) return match[1].replace(/&amp;/g, '&');
-    } catch { /* ignore — will fall through to HTML extraction */ }
-    return null;
-  }
+  // C3 (2026-05-21): `_resolveKlevuCategoryPath` was declared here but never
+  // invoked — the live Klevu fetch at L387 uses a global wildcard SEARCH
+  // (`query:{term:'*'}`) and ignores `categoryPath` entirely. The
+  // `siteProfile.apiConfig.klevuCategoryPaths` field is therefore unused at
+  // runtime (only present in the historical seed at
+  // `backend/scripts/migrate-site-profiles.js:22` for documentation). Removing
+  // the dead method also removes the `&amp;`-only entity-decode footgun
+  // (C4 — would have mangled "Al&#x27;s Bargains" if it had ever been wired up).
 
   /**
    * Fetch a catalog page via a profile-declared API.

@@ -31,3 +31,5 @@ You are working on the FirearmAlert project — a Canadian firearms retail monit
 - Always cross-reference DOM ordering against an independent newest-first signal before concluding "no sort possible".
 - Test the production Playwright fallback BEFORE declaring a SPA site "blocked" — `fetchWithPlaywright()` auto-fires when static HTML > 5KB returns 0 products.
 - Probe code must use native-fetch fallback for HPE errors and must parse WAF headers from BATCH 1 only (not the interpretation guide).
+
+> **Audit rules belong in the skill, not here.** Pre-bootstrap audit/discovery rules (paginate taxonomy lists, WC param surface divergence, etc.) live in `.claude/skills/pre-bootstrap/SKILL.md` so they travel with the skill if used in other projects. This persona only carries project-specific incident lessons and behavioral rules.

@@ -1,0 +1,127 @@
+{
+  "round": "B5R2",
+  "site": "rdsc.ca",
+  "runAt": "2026-05-22T21:00:00Z",
+  "method": "Live re-verification (curl + UA) of every R1 divergence with 800ms+ delays. NO DB writes. Compared against R1 candidate + DB snapshot.",
+  "verdicts": [
+    {
+      "field": "hasWaf",
+      "r1": false,
+      "db_column_hasWaf": true,
+      "db_siteProfile_hasWaf": true,
+      "evidence_2026-05-22T21Z": "HEAD /new-products.html: server:cloudflare, CF-RAY:a000d5f9d88f1117-YYZ, cf-cache-status:DYNAMIC, HTTP/1.1 200 OK, no challenge, no js_challenge, no managed-challenge page, no rate-limit headers, single GET succeeds with no cookie. All 9 category GETs 200 OK without challenge. R1 claimed 8-batch heavy probe also clean.",
+      "verdict": "R1 CORRECT. Cloudflare is passive (proxying + DDoS protection at edge, no active filtering). hasWaf should be false per skill B10. wafType=cloudflare-passive is metadata, not a behavioral block. DB has stale hasWaf=true from earlier mis-classification.",
+      "confidence": "high"
+    },
+    {
+      "field": "platform",
+      "r1": "magento-2.x",
+      "db": "magento2",
+      "evidence_2026-05-22T21Z": "HTML contains Magento_Ui/js/core/app, Magento_ReCaptchaFrontendUi, var require={}, mage/cookies — unambiguous Magento 2.x.",
+      "verdict": "R1 CORRECT on platform identity. Separator drift is purely cosmetic (skill canonical = hyphenated magento-2.x).",
+      "confidence": "high"
+    },
+    {
+      "field": "perPage",
+      "r1": 48,
+      "db": 24,
+      "evidence_2026-05-22T21Z": "GET /new-products.html?product_list_limit=48 page 1 -> 48 product items rendered. GET /new-products.html?product_list_limit=24 page 1 -> 24 items. GET ?product_list_limit=48&p=195 -> 31 items (last page partial). GET &p=196 -> 0 items. Math: 194*48 + 31 = 9343 = total. perPage=48 fully honored end-to-end.",
+      "verdict": "R1 CORRECT. perPage=48 is the verified maximum honored value. Using 48 halves request count for a full walk (195 pages vs 390).",
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern.perPage",
+      "r1": 48,
+      "db": 24,
+      "evidence_2026-05-22T21Z": "Same evidence as perPage. Cap verified via p=195/p=196 boundary.",
+      "verdict": "R1 CORRECT.",
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "r1": "9 per-top-level category URLs",
+      "db": "['/new-products.html'] single aggregator",
+      "evidence_2026-05-22T21Z": "Walked 9 categories via toolbar-number (last span): firearms-ammunition=1757, optics-mounts=1188, handgun-parts=1143, semi-auto-rifle-parts=1851, precision-rifle-parts=1116, lever-action-parts=245, shotgun-parts=212, gear-kit=1216, clean-maintain=272. Sum=9000. /new-products.html toolbar=9343. Delta=343 products live ONLY in special/manufacturer/brand taxonomies (not in any of the 9 top-level categories). R1's 9 URLs cover 9000/9343 = 96.3%; DB's single aggregator covers 9343/9343 = 100%.",
+      "verdict": "R1 CHOICE VALID BUT INCOMPLETE FOR 100% COVERAGE. Per feedback_catalog_urls_full_coverage.md, catalogUrls must cover 100%. R1 9-cat spine misses 343 products. RECOMMENDATION: use R1's 9 cats PLUS /new-products.html as a 10th URL (dedup at runtime via product slug), OR retain DB's /new-products.html single aggregator. Either is operator's call; DB's choice is defensible for runtime simplicity.",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "r1": 9343,
+      "db": 9089,
+      "evidence_2026-05-22T21Z": "GET /new-products.html toolbar-amount last span = 9343. Pagination cap math 194*48 + 31 = 9343 — fully consistent. DB stored 9089 lastVerified 2026-04-08, drift +254 over ~6 weeks.",
+      "verdict": "R1 CORRECT. Live value is 9343.",
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod.method",
+      "r1": "html-pagination",
+      "db": "magento2-toolbar-count",
+      "evidence_2026-05-22T21Z": "backend/src/services/product-count-probe.ts:110-122 VALID_METHOD_NAMES enumerates exactly 11 canonical names. magento2-toolbar-count is NOT in the list. Runtime: validateMethod() at L129-136 THROWS on unknown methods. Throw caught by outer try/catch at L481-485 -> returns null. verifyBootstrapCoverage() at L494-516 sees expectedCount=null -> ratio=null -> isAcceptable=true (coverage gate disabled). Toolbar selector does work: <span class=toolbar-number>9343</span> is the 3rd/last span inside id=toolbar-amount. R1's html-pagination with selector #toolbar-amount span.toolbar-number:last-child and perPage=1 returns 9343 via default regex.",
+      "verdict": "R1 CORRECT. DB's magento2-toolbar-count silently disables the coverage gate. R1's canonical html-pagination with toolbar selector is the right fix without needing a new canonical method.",
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam",
+      "r1": "?product_list_order=new&product_list_dir=desc",
+      "db": "?product_list_order=new",
+      "evidence_2026-05-22T21Z": "Default GET /new-products.html first 3 slugs: ruger-10-22-carbine, derya-arms-tm22-pro, cz-arms-cz-600-mdt. GET with ?product_list_order=new&product_list_dir=desc returns IDENTICAL first 3 slugs. GET with ?product_list_order=price&product_list_dir=asc returns DIFFERENT first 3: cadex-defence-cordura, magpul-qd-swivel-socket, smith-wesson-m-p40-magazine. 3-outcome sort honor verified.",
+      "verdict": "BOTH FUNCTIONALLY EQUIVALENT. Magento toolbar orderDefault=new directionDefault=desc; omitting product_list_dir falls back to merchant default desc. R1's explicit form is more defensive; DB's compact form works in practice.",
+      "confidence": "high"
+    },
+    {
+      "field": "productUrlSchemes",
+      "r1": "canonical=/<slug>-<id>.html, sitemapForm=/<slug>-<id>.html, categoryForm=/<category-path>/<slug>-<id>.html",
+      "db": "absent",
+      "evidence_2026-05-22T21Z": "Sample product ruger-10-22-carbine-16-1-carbon-wrapped-barrel-moe-x-22-stock-22lr.html resolves 200 OK at THREE paths: /ruger-...-22lr.html (root), /firearms-ammunition/ruger-...-22lr.html (category), /new-products/ruger-...-22lr.html (aggregator). Slug ends .html with NO numeric ID suffix. R1's claim /<slug>-<id>.html is FACTUALLY WRONG — no -<id> segment exists.",
+      "verdict": "R1 WRONG on the schema shape. Correct schemes: canonical=/<slug>.html, sitemapForm=/<slug>.html, categoryForm=/<category-path>/<slug>.html, aggregatorForm=/new-products/<slug>.html. Dedup join is url-slug-only (last-segment slug). Matters for restock detection / dedup keys at runtime.",
+      "confidence": "high"
+    },
+    {
+      "field": "captchaType",
+      "r1": "recaptcha-v2",
+      "db": "absent",
+      "evidence_2026-05-22T21Z": "Magento_ReCaptchaFrontendUi present in HTML. reCaptcha v2 gates customer login popup only, NOT catalog browsing. Catalog pages fetch 200 without any captcha solve.",
+      "verdict": "R1 CORRECT to record informational. hasCaptcha=false correctly remains.",
+      "confidence": "high"
+    },
+    {
+      "field": "topLevelCategories",
+      "r1": "9 categories with allOption counts",
+      "db": "absent",
+      "evidence_2026-05-22T21Z": "All 9 counts re-verified live and match R1 EXACTLY: 1757, 1188, 1143, 1851, 1116, 245, 212, 1216, 272. Sum 9000.",
+      "verdict": "R1 CORRECT.",
+      "confidence": "high"
+    },
+    {
+      "field": "wafProbeEvidence cfHeadersDetected shape",
+      "r1": "['server: cloudflare', 'CF-RAY: a000ba9b...', 'CF-RAY: a000ba9e...', 'CF-RAY: a000baa1...']",
+      "db": "['server: cloudflare', 'cf-ray', 'cf-cache-status']",
+      "evidence_2026-05-22T21Z": "HEAD response contains server:cloudflare, CF-RAY (varies per req), cf-cache-status:DYNAMIC. Both shapes capture the same evidence; DB shape is more compact (header names only). R1 shape includes 3 distinct CF-RAY values which is informational but noisy.",
+      "verdict": "DB shape cleaner. R1 shape acceptable. Cosmetic only.",
+      "confidence": "medium"
+    },
+    {
+      "field": "paginationPattern.firstPageHasParam/startPage/zeroIndexed",
+      "r1": "firstPageHasParam=false, startPage=1, zeroIndexed=false",
+      "db": "absent",
+      "evidence_2026-05-22T21Z": "Magento standard ?p=N pagination. /new-products.html (no ?p=) renders the same content as /new-products.html?p=1. Pagination is 1-indexed; page 1 has no ?p= requirement.",
+      "verdict": "R1 CORRECT.",
+      "confidence": "high"
+    }
+  ],
+  "summary": {
+    "r1_correct_count": 11,
+    "r1_partially_correct_count": 2,
+    "r1_wrong_count": 1,
+    "r1_wrong_fields": ["productUrlSchemes (the -<id>.html suffix is fabricated; actual URLs have no ID suffix)"],
+    "r1_partially_correct_fields": ["catalogUrls (9-cat spine misses 343 products; needs /new-products.html added OR keep DB aggregator)", "wafProbeEvidence shape (acceptable but noisier than DB)"],
+    "db_correct_kept": ["wafProbeMethod=heavy-8-batch", "needsPlaywright=false", "hasCaptcha=false", "adapterType=generic-retail", "searchUrl", "crawlers.watermark.method=navigate-from-watermark", "crawlers.maintain.verifyMethod=detail-page"]
+  },
+  "blockers": [],
+  "notes": [
+    "Heavy attack-surface probes (50+ page sustained walk, auth probes, path traversal, large POST, shellshock UA) NOT re-run this round — R1's untestedAttackSurfaces caveats stand.",
+    "Sitemap product-leaf count today = 10,938 (not 9,234 as R1 said). Not material; sitemap is operator triage info, not the productCount source. Sitemap > toolbar count is expected because sitemap includes duplicate URL rewrites (root/category/aggregator forms) for the same SKU.",
+    "magento2-toolbar-count silent disable mechanism: validateMethod() THROWS rather than switch hitting default; throw caught by outer try/catch at L481-485 -> returns null. Net behavior matches R1's `silent disable` claim — coverage gate becomes isAcceptable=true unconditionally."
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "profileVersion": 1,
+  "platform": "custom-php-irunguns",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "sucuri",
+  "wafLastProbedAt": "2026-05-22T20:00:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Sucuri/Cloudproxy active rule-selective: SQLi + XSS payloads 403; honeypot /.env /.git 403; normal GETs 200 across all UAs and rapid burst",
+  "wafProbeEvidence": {
+    "sucuriHeaders": ["X-Sucuri-ID: 20010", "X-Sucuri-Cache: MISS", "Server: Sucuri/Cloudproxy"],
+    "cfHeaders": [],
+    "rapidBurstStatus": "all-200",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [".env", ".git/config"],
+    "botUaBlocked": false,
+    "rapidBurstTested": true,
+    "sustainedWalkPages": 0,
+    "perUaStatusTimeline": "not-tested-sustained",
+    "untestedAttackSurfaces": ["sustained walk >50 pages with production UA pool", "path-traversal", "shellshock UA"]
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": false,
+  "expectedProductCount": 104,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": ".showing_result",
+    "perPage": 1
+  },
+  "catalogUrls": [
+    "https://irunguns.ca/product.php"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://irunguns.ca/product_detail.php?p=henry-long-ranger-lever-action-rifle-223-rem-20-barrel-with-sights-5-rounds-drilled-tapped-receiver-solid-rubber-recoil-pad-american-walnut-stock-blued-finish",
+      "title": "Henry Long Ranger Lever Action Rifle .223 Rem",
+      "price": 1149.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://irunguns.ca/product_detail.php?p=ruger-american-ranch-bolt-action-5-56-nato-rifle-gen-ii-fde-splatter-finish-16-1-inch-spiral-fluted-barrel-10rd-mag",
+      "title": "Ruger American Ranch Bolt Action 5.56 NATO Gen II FDE",
+      "price": 667.99,
+      "stockStatus": "out_of_stock"
+    },
+    {
+      "url": "https://irunguns.ca/product_detail.php?p=atf-permit-application-pre-filing-fee",
+      "title": "ATF Permit Application - Pre-Filing fee",
+      "price": 25.00,
+      "stockStatus": "unknown"
+    }
+  ],
+  "sortParam": "",
+  "sortVerified": true,
+  "perPage": 104,
+  "paginationPattern": {
+    "type": null,
+    "template": null,
+    "perPage": 104,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "No API; no sort UI exists; whole catalog (104 products) rendered server-side in single response and client-paginated by jPages. DOM order is natural p.id DESC (newest-first) per persona Mistake 18 cross-reference verification; single GET of /product.php returns all products in newest-first order — watermark crawler scans this single page for new product IDs vs lastSeenIds."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-05-22",
+  "topLevelCategories": {
+    "source": "homepage-nav + bare /product.php full-walk dedup",
+    "categories": [
+      { "slug": "/product.php?departments=Rifles", "allOption": 26 },
+      { "slug": "/product.php?departments=Shotgun", "allOption": 13 },
+      { "slug": "/product.php?departments=Previously_Enjoyed_Guns_AND_Accessories", "allOption": 3 },
+      { "slug": "/product.php?departments=Ammunition", "allOption": 3 },
+      { "slug": "/product.php?departments=Optics", "allOption": 4 },
+      { "slug": "/product.php?departments=Parts_AND_Gear", "allOption": 23 },
+      { "slug": "/product.php?departments=Magazines", "allOption": 23 },
+      { "slug": "/product.php?departments=Clothing", "allOption": 4 },
+      { "slug": "/product.php?departments=Custom_Engraving", "allOption": 0 },
+      { "slug": "/product.php?departments=Knives", "allOption": 0 },
+      { "slug": "/product.php?departments=Handguns", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Sum of narrow-dept counts = 99; bare /product.php total = 104; gap = 5 products with no narrow dept (atf-permit-application, colt-9mm-bcg, colt-hydr-buffer, sirt-training-magazine, xpedition-crossbow-kit). departments=Firearms / =Import_/_Export / =Featured all return the same 104 (unknown-dept fallback to no-filter). Bare /product.php is the 100%-coverage URL and is selected as the single catalogUrl."
+  },
+  "auditNotes": {
+    "runId": "irunguns.ca-2026-05-22T20-00-00Z-B5R1",
+    "probeIp": "audit-from-this-host",
+    "fieldConfidence": {
+      "platform": "high — custom PHP, no platform fingerprints; Bootstrap+jQuery+jPages only",
+      "adapterType": "high — generic-retail is the established adapter for custom PHP per persona note",
+      "hasWaf": "high — Sucuri headers + SQLi/XSS 403s confirmed",
+      "wafType": "high — X-Sucuri-ID explicit; Server: Sucuri/Cloudproxy",
+      "hasCaptcha": "high — no recaptcha/hcaptcha/turnstile script tags on homepage, only stray word mentions in copy",
+      "ageGate.detected": "high — no interstitial; no age cookie required",
+      "needsPlaywright": "high — plain HTTP returns full server-rendered HTML with all 104 products",
+      "catalogUrls": "high — /product.php bare returns full 104-product catalog (all narrow-dept union is 99/104; bare adds 5 dept-less items)",
+      "paginationPattern.type": "high — ?page=2 returns same 104 products as ?page=1 (zero new product IDs); jPages.js confirms client-side pagination (Mistake 15)",
+      "sortParam": "medium-high — no sort UI; DOM order matches persona Mistake 18 cross-reference (DOM not alphabetical, appears p.id DESC); persona claim accepted, not independently re-verified against a 2026-05-22 newest-product signal",
+      "sortVerified": "medium — see sortParam confidence; would need fresh independent newest-first signal to upgrade",
+      "expectedProductCount": "high — 'Showing 104 result' rendered server-side; product_detail.php link count = 104 unique slugs on bare /product.php",
+      "productCountMethod": "medium — selector .showing_result with perPage=1 multiplier; runtime html-pagination code path may need verification that it can read 'Showing N result' inline text rather than an anchor href",
+      "crawlers.watermark.method": "medium-high — navigate-from-watermark is correct given persona Mistake 18 verification; entire catalog is one page so 'walk' is trivial",
+      "crawlers.maintain.verifyMethod": "high — non-WC platform requires detail-page verify; no store-api alternative"
+    },
+    "verifyMethodPolicy": "detail-page selected; restock alerts required and there is no store-api to fall back to",
+    "expectedCountSurface": "html 'Showing N result' from bare /product.php",
+    "discoveredApiEndpoints": [],
+    "stageNotes": [
+      "Stage 1 — Canonical: both apex and www return HTTP 200; no canonical link tag; apex chosen as canonical (preserves input intent)",
+      "Stage 2 — WAF: Sucuri active (rule-selective on SQLi/XSS + honeypot); rapid-burst all 200; iPhone UA used; sustained 50-page walk NOT performed (only 104 total products — sustained-burst test impractical for site size)",
+      "Stage 3 — Platform: no generator meta; no WC/Shopify/BC/Magento/Drupal markers; custom PHP with .php URLs and PHPSESSID cookie; persona designates adapterType=generic-retail",
+      "Stage 4 — Catalog: bare /product.php returns the full 104-product catalog server-rendered; narrow departments cover 99/104; departments=Firearms/=Import_/_Export/=Featured aliases-fall-back to no-filter (same 104); chose bare URL as the single 100%-coverage catalogUrl",
+      "Stage 5 — Pagination: ?page=2 returns identical product set (104 IDs, 0 new IDs vs page=1); jPages client-side pagination confirmed via /js/pagination.js; paginationPattern.type=null per Mistake 15",
+      "Stage 6 — Sort: no <select name=sort|order|orderby> in catalog HTML; DOM order on bare /product.php is not alphabetical (henry-... before armscor-...); persona Mistake 18 cross-referenced DOM first product against POST endpoint baseline and confirmed p.id DESC; sortParam='' (path-baked / natural DOM); sortVerified=true accepts the persona claim",
+      "Stage 7 — Watermark: navigate-from-watermark; whole catalog renders in one page so the 'find-then-index' phase is trivial — single GET, compare productIds against stored lastSeenIds; reason field captures the rationale",
+      "Stage 8 — Count: html-pagination via .showing_result selector; selector value 'Showing 104 result' parsed; perPage=1 multiplier (the selector returns the literal full count, not a last-page number times perPage). NOTE: runtime html-pagination probe may expect an anchor selector with a numeric last-page href — runtime compatibility should be verified before promotion",
+      "Stage 9 — Final assembly: validator-required fields all populated; one URL in catalogUrls covers 100% of products; ageGate=false; needsPlaywright=false; userAgentOverride retained as iPhone Safari for Sucuri-resilience"
+    ]
+  }
+}

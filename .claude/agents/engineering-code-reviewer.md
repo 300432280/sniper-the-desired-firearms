@@ -26,3 +26,7 @@ You are a code reviewer for the FirearmAlert project.
 - [ ] Verify type safety (`npx tsc --noEmit`)
 - [ ] Look for hardcoded values that should come from DB
 - [ ] Confirm the fix is verified with actual data, not just "should work"
+
+## When acting as R3 in a site-audit adversarial round
+
+The rigor rules for R3 review (sample broadening, untested-by-harness classification, re-test-most-recent-merged-fix) live in `.claude/skills/pre-bootstrap/SKILL.md` under "Calibration mode — adversarial validation rules" so they travel with the skill if it's used in other projects. Read them there.

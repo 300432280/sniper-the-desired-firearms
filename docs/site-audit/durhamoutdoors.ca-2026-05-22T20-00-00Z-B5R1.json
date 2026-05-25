@@ -1,0 +1,118 @@
+{
+  "profileVersion": 1,
+  "platform": "shift4shop-3dcart",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-05-22T20:46:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare active: bot-UA, honeypot paths (/wp-login.php, /xmlrpc.php, /.env, /.git/config, /phpinfo.php), SQLi union & XSS payloads all return 403. Rapid burst of 10 GETs and 5 normal-UA probes returned 200 cleanly. No active challenge body (no _cf_chl_opt, no Just-a-moment).",
+  "wafProbeEvidence": {
+    "cfHeaders": ["server: cloudflare", "CF-RAY: a000b956698ba214-YYZ", "set-cookie: __cf_bm=..."],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all 200 (10 sequential cache-busted requests)",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": ["/wp-login.php", "/xmlrpc.php", "/.env", "/.git/config", "/phpinfo.php"],
+    "botUaBlocked": true,
+    "rapidBurstTested": true,
+    "sustainedWalkPages": 0,
+    "untestedAttackSurfaces": ["sustained 50-page walk per UA", "auth", "path-traversal", "large-body POST"],
+    "probeIp": "audit-host"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": false,
+  "expectedProductCount": 389,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": ".paging a:not(.category-viewall):last-of-type",
+    "perPage": 12
+  },
+  "catalogUrls": [
+    "/Accessories_c_11.html",
+    "/Shotgun_c_14.html",
+    "/NON-RESTRICTED_c_16.html",
+    "/Rifles_c_17.html",
+    "/Pistols_c_18.html",
+    "/Optics_c_19.html",
+    "/Used-Consignment_c_20.html",
+    "/RESTRICTED_c_21.html",
+    "/Surplus-and-collection_c_33.html"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://durhamoutdoors.ca/CHIAPPA-17HMR-LITTLE-BADGER-RIFLE-17HMR-165-non-restricted_p_117.html", "title": "CHIAPPA 17HMR LITTLE BADGER RIFLE .17HMR, 16,5'' non restricted", "price": 259.00, "stockStatus": "out_of_stock" },
+    { "url": "https://durhamoutdoors.ca/Chiappa-1892-Carbine-12-D-c44-MAG-920371_p_124.html", "title": "Chiappa 1892 Carbine 12\" \"D\" c.44 MAG 920.371", "price": 1159.00, "stockStatus": "out_of_stock" },
+    { "url": "https://durhamoutdoors.ca/Chiappa-22LR-Little-Badger-single-shot_p_132.html", "title": "Chiappa 22LR Little Badger single shot", "price": 219.00, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?sortby=4",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "suffix-replace",
+    "template": "{slug}-{N}.html",
+    "match": ".html",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Sort verified (sortby=4 reorders first-3 IDs 117,120,121 -> 3593,3592,3591 monotonic-DESC). Default order is product_id ASC (oldest-first); use sortby=4 to get newest. No API; product_id serves as monotonic sourceId."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "searchUrl": "/search.asp?keyword={keyword}",
+  "topLevelCategories": {
+    "source": "category-index-asp+sitemap",
+    "categories": [
+      { "slug": "/Accessories_c_11.html", "allOption": 63 },
+      { "slug": "/Shotgun_c_14.html", "allOption": 103 },
+      { "slug": "/NON-RESTRICTED_c_16.html", "allOption": 281 },
+      { "slug": "/Rifles_c_17.html", "allOption": 218 },
+      { "slug": "/Pistols_c_18.html", "allOption": 1 },
+      { "slug": "/Optics_c_19.html", "allOption": 2 },
+      { "slug": "/Used-Consignment_c_20.html", "allOption": 1 },
+      { "slug": "/RESTRICTED_c_21.html", "allOption": 0 },
+      { "slug": "/Surplus-and-collection_c_33.html", "allOption": 1 }
+    ],
+    "totalsSumCheck": "Walked union of all 9 categories = 389 unique product IDs. NON-RESTRICTED is a Canadian legal-classification cross-cut that shares 194 IDs with Rifles and 82 with Shotgun, but contributes 5 unique products not in any product-type category - must keep. RESTRICTED returns 200 with 0 products today (empty, not dead - keep per Rule C). Sum of product-type cats (no NON-R) = 63+103+218+1+2+1+1 = 389 = walked union exactly."
+  },
+  "lastVerified": "2026-05-22",
+  "wafWorkaround": null,
+  "auditNotes": {
+    "runId": "B5R1-2026-05-22",
+    "dbColumnFlips": { "hasWaf": true, "wafType": "cloudflare-active", "wafWorkaround": "clear" },
+    "verifyMethodPolicy": "detail-page selected; 3dcart has no Store API equivalent. Restock + OOS detection via Playwright per-product is the only safe path.",
+    "expectedCountSurface": "per-category-html-Total-Items-sum (walked union confirmed = 389)",
+    "discoveredApiEndpoints": [],
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "medium (active rules present, but homepage and rapid-burst stayed 200 on desktop UA; sustained 50-page walk not run)",
+      "catalogUrls": "high (sitemap + category_index.asp confirm 9 cats, walked all 9, ID union = 389)",
+      "paginationPattern": "high (page-1 vs page-2 zero-overlap verified for Rifles)",
+      "sortParam": "high (3-outcome counter-control passed: default->117,120,121; sortby=4->3593,3592,3591; sortby=3->3504,3506,3490)",
+      "expectedProductCount": "high (walked union 389 = sum of per-cat 'Total Items')",
+      "watermarkMethod": "high (sort verified + monotonic product_id)"
+    },
+    "stageNotes": [
+      "Stage 1: apex returns 200 with <link rel='canonical' href='https://durhamoutdoors.ca'>. Canonical = apex.",
+      "Stage 2: heavy 8-batch probe. CF-RAY header + __cf_bm cookie = Cloudflare. Bot-UA (batch 2c), SQLi-union (batch 6b), XSS (batch 7a), 5 honeypot paths (batch 4b-4f) all -> 403. Rapid burst of 10 requests stayed 200. No active challenge body. Classified as cloudflare-active with iPhone UA override.",
+      "Stage 3: Platform = Shift4Shop/3dcart. Strong fingerprints: assets/templates/common-html5/, vcart=26.19.0, _3d_cart JS var, 3dcartGoogleAnalytics template comment, .asp URLs. No age gate, no CAPTCHA.",
+      "Stage 4: 9 categories from sitemap.xml + category_index.asp. Walked all 9 (45 page fetches). NON-RESTRICTED is a legal-classification cross-cut with 194/281 overlap with Rifles, 82/281 with Shotgun, but 5 unique products -> kept. RESTRICTED 200/empty -> kept. Extraction quality: 3/3 sample products gave title, price, stockStatus.",
+      "Stage 5: Pagination = suffix-replace ({slug}.html -> {slug}-{N}.html). page 1 IDs disjoint from page 2 IDs (0 overlap). perPage=12 verified. ?viewall=1 returns full set in one page but ship 12 for runtime safety.",
+      "Stage 6: 3-outcome counter-control. default -> 117,120,121 (oldest-first product_id ASC). sortby=4 -> 3593,3592,3591 (newest-first DESC, monotonic). sortby=3 -> 3504,3506,3490 (alpha, distinct). sortParam = '?sortby=4', sortVerified=true.",
+      "Stage 7: navigate-from-watermark. No REST API. product_id is monotonic and serves as sourceId. Use sortby=4 for newest-first walk.",
+      "Stage 8: expectedProductCount = 389 (walked union of all 9 categories). productCountMethod = html-pagination (per-category .paging selector x perPage 12) - runtime probe will not exactly reproduce 389 (rounds up to multiples of 12); the canonical truth is the walked union documented in topLevelCategories.totalsSumCheck.",
+      "Stage 9: validated against profile-validator shape. searchUrl /search.asp?keyword={keyword} discovered from homepage <form action='search.asp'>."
+    ]
+  }
+}

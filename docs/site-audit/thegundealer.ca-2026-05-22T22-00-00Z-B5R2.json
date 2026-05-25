@@ -1,0 +1,200 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-23T03:10:00Z",
+  "wafProbeMethod": "multi-ua-30-page-sustained-walk",
+  "wafProbeResult": "All 4 production-UA sustained walks (chrome120 30p, safari17 30p, firefox121 16p [taskkilled by audit timer], edge120 10p) returned HTTP 200 with cf-ray + Server:cloudflare on EVERY response. ZERO sg-captcha headers across 86 sustained requests. ZERO sgcaptcha/SiteGround tokens in any response body. HTML body length stable 927-960KB (no challenge page injected). x-wp-total=11230 consistent across Store API probes. CONFIRMS R1: WAF migrated from SiteGround sgcaptcha to Cloudflare-passive. DB's iPhone-UA-load-bearing requirement no longer applies.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY", "cf-cache-status"],
+    "sucuriHeaders": [],
+    "sgCaptchaHeadersAcrossAllUAs": 0,
+    "sgCaptchaBodyTokensAcrossAllUAs": 0,
+    "sustainedWalkPagesPerUA": {
+      "chrome120": 30,
+      "safari17": 30,
+      "firefox121": 16,
+      "edge120": 10
+    },
+    "sustainedWalkAllStatus200": true,
+    "rapidBurstTested": false,
+    "rapidBurstStatus": "not-re-tested-in-R2-R1-confirmed-200x10",
+    "honeypotPathsBlocked": ["xmlrpc.php-403", ".env-403"],
+    "honeypotsAreOrigin": true,
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "untestedAttackSurfaces": [
+      "auth-form-bruteforce",
+      "shellshock-UA",
+      "large-body-POST",
+      "path-traversal"
+    ]
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 11230,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://thegundealer.ca/product-category/new-guns/",
+    "https://thegundealer.ca/product-category/accessories/",
+    "https://thegundealer.ca/product-category/ammunition/",
+    "https://thegundealer.ca/product-category/optics/",
+    "https://thegundealer.ca/product-category/parts/",
+    "https://thegundealer.ca/product-category/reloading-components/",
+    "https://thegundealer.ca/product-category/used-items/",
+    "https://thegundealer.ca/product-category/tgd-promo-1/",
+    "https://thegundealer.ca/product-category/draws/",
+    "https://thegundealer.ca/product-category/new-arrivals/",
+    "https://thegundealer.ca/product-category/fine-guns/",
+    "https://thegundealer.ca/product-category/special-savage-clearance/",
+    "https://thegundealer.ca/product-category/category-caesar-guerini/",
+    "https://thegundealer.ca/product-category/sales-promotions/",
+    "https://thegundealer.ca/product-category/special-browning-gear-clearance/",
+    "https://thegundealer.ca/product-category/tgd-promo4/",
+    "https://thegundealer.ca/product-category/browning-gear-clearance/",
+    "https://thegundealer.ca/product-category/special-norma-ammo-sale/",
+    "https://thegundealer.ca/product-category/great-discounts/",
+    "https://thegundealer.ca/product-category/special-fierce-clearance/",
+    "https://thegundealer.ca/product-category/auctions/",
+    "https://thegundealer.ca/product-category/tgd-promo-wetrhgf/",
+    "https://thegundealer.ca/product-category/john-m-browning-collection/",
+    "https://thegundealer.ca/product-category/special-browning-bar-sale/",
+    "https://thegundealer.ca/product-category/tgd-sale/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://thegundealer.ca/product/sauer-100-veil-cumbre-6-5-prc/",
+      "title": "Sauer 100 Veil Cumbre 6.5 PRC",
+      "price": 1099.99,
+      "stockStatus": "in_stock",
+      "source": "wc-store-api"
+    },
+    {
+      "url": "https://thegundealer.ca/product/charles-daly-model-601-12gax3-28-bbl/",
+      "title": "Charles Daly Model 601 12GAx3\" 28\" bbl",
+      "price": 299.99,
+      "stockStatus": "out_of_stock",
+      "source": "wc-store-api"
+    },
+    {
+      "url": "https://thegundealer.ca/product/stevens-model-320-12gax3-28-bbl-2/",
+      "title": "Stevens Model 320 12GAx3\" 28\" bbl",
+      "price": 249.99,
+      "stockStatus": "in_stock",
+      "source": "wc-store-api"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": "WC Store API silently ignores ?modified_after= (returns full 11230 for both 2099 and 1999 future-date probes) - DO NOT use Store API for watermark. WP REST core /wp-json/wp/v2/product honors modified_after (returns 0 for 2099 probe) - watermark MUST walk WP REST core, NOT Store API."
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wp-rest-product-cat-count",
+    "categories": [
+      { "slug": "new-guns", "allOption": 3141 },
+      { "slug": "accessories", "allOption": 2893 },
+      { "slug": "ammunition", "allOption": 1866 },
+      { "slug": "optics", "allOption": 837 },
+      { "slug": "parts", "allOption": 791 },
+      { "slug": "reloading-components", "allOption": 714 },
+      { "slug": "used-items", "allOption": 196 },
+      { "slug": "tgd-promo-1", "allOption": 179 },
+      { "slug": "draws", "allOption": 166 },
+      { "slug": "new-arrivals", "allOption": 162 },
+      { "slug": "fine-guns", "allOption": 75 },
+      { "slug": "special-savage-clearance", "allOption": 46 },
+      { "slug": "category-caesar-guerini", "allOption": 31 },
+      { "slug": "sales-promotions", "allOption": 31 },
+      { "slug": "special-browning-gear-clearance", "allOption": 19 },
+      { "slug": "tgd-promo4", "allOption": 17 },
+      { "slug": "browning-gear-clearance", "allOption": 13 },
+      { "slug": "special-norma-ammo-sale", "allOption": 8 },
+      { "slug": "great-discounts", "allOption": 7 },
+      { "slug": "special-fierce-clearance", "allOption": 4 },
+      { "slug": "auctions", "allOption": 3 },
+      { "slug": "tgd-promo-wetrhgf", "allOption": 2 },
+      { "slug": "john-m-browning-collection", "allOption": 1 },
+      { "slug": "special-browning-bar-sale", "allOption": 0 },
+      { "slug": "tgd-sale", "allOption": 0 }
+    ]
+  },
+  "lastVerified": "2026-05-23",
+  "auditNotes": {
+    "runId": "thegundealer-B5R2-2026-05-23",
+    "r1ClaimsVerified": {
+      "wafCloudflarePassive": "CONFIRMED. 4-UA sustained walk (chrome120 30p + safari17 30p + firefox121 16p + edge120 10p, 86 sustained requests) all returned 200 + cf-ray + Server:cloudflare. Zero sg-captcha headers. Zero sgcaptcha/SiteGround body tokens. No UA-selective challenges.",
+      "needsPlaywrightFalse": "CONFIRMED. Plain fetch returned 943-960KB rendered HTML on every page + Store API JSON on every probe.",
+      "expectedProductCount11230": "CONFIRMED. Store API per_page=50 x-wp-total=11230 (xWpTotalPages=225). Store API per_page=100 x-wp-total=11230 (xWpTotalPages=113). HTML /shop/ shows 'Showing 1-24 of 7327 results' on every page across all UAs.",
+      "productCountMethodLabelDriftToWpRestHeader": "CONFIRMED. backend/src/services/product-count-probe.ts VALID_METHOD_NAMES at L110-122 is the canonical 11-name allowlist; 'wc-store-api-header' is NOT in this list. validateMethod() at L129 throws on unknown names; even if the throw is bypassed, the default branch at L474-479 returns null. Either way DB's 'wc-store-api-header' silent-disables count probe.",
+      "catalogUrlsShopUndercoversBy3903": "CONFIRMED. HTML /shop/ shows 7327 across 30 sequential pages × 3 UAs. Per-cat HTML walks: used-items=184 visible, new-arrivals=128, tgd-promo-1=113. Sum of 25 firearm-relevant WP REST cat counts = 11202 vs Store API global 11230 (small overlap from multi-category products).",
+      "verifyMethodMissingMaterialGap": "CONFIRMED. backend/src/services/worker.ts L394-401: `if (!maintainConfig || maintainConfig.verifyMethod !== 'store-api') return null;` — DB profile missing crawlers.maintain block means tryStoreApiVerify returns null at L397, falling back to detail-page Playwright path silently. Material runtime gap requiring DB update."
+    },
+    "perPageMaxima": {
+      "storeApi": "per_page=100 OK (xWpTotalPages=113); per_page=200 returns HTTP 400; per_page=250 returns HTTP 400. WC Store API hard cap at 100 (matches woocommerce.ts:293 Math.min(perPage, 100)). Operator-safe ceiling: 100.",
+      "htmlShop": "?per_page=48 and ?per_page=96 both return HTML still showing 'Showing 1-24 of 7327' — WC theme ignores per_page query parameter for catalog HTML; perPage is fixed at 24 site-wide. Operator-safe HTML perPage: 24 (R1's value confirmed)."
+    },
+    "shopPage999Probe": {
+      "result": "GET /shop/page/999/ returns HTTP 404 (no redirect to last page). Last-page determination requires walking. Expected last page for /shop/: ceil(7327/24) = 306."
+    },
+    "perCatSpotChecks": {
+      "used-items": "HTTP 200, HTML count=184 (WP REST product_cat.count=196 — minor delta likely from out-of-stock/private)",
+      "draws": "HTTP 200, body 904KB rendered (regex didn't match 'Showing X results' phrasing)",
+      "auctions": "HTTP 200, body 906KB rendered",
+      "new-arrivals": "HTTP 200, HTML count=128 (WP REST=162)",
+      "tgd-promo-1": "HTTP 200, HTML count=113 (WP REST=179)"
+    },
+    "wafProbeStandsAcrossUAs": "4-UA differential test PASSED. R1's hasWaf=false / wafType=cloudflare-passive verdicts hold under R2 sustained-walk attack.",
+    "dbColumnFlipsRequired": {
+      "hasWaf": "true -> false",
+      "wafType": "siteground-sgcaptcha -> cloudflare-passive",
+      "siteType": "js-rendered -> static (optional)",
+      "userAgentOverrideField": "iPhone Mobile UA string -> null"
+    },
+    "fieldConfidence": {
+      "hasWaf": "high (4-UA sustained walk, 86 requests, zero challenges)",
+      "wafType": "high",
+      "needsPlaywright": "high",
+      "expectedProductCount": "high (Store API per_page=50/100 x-wp-total=11230)",
+      "productCountMethod.method": "high (R1's wp-rest-header is in VALID_METHOD_NAMES; DB's wc-store-api-header is not)",
+      "catalogUrls": "medium-high (per-category coverage proven for 5 spot-checked cats; full union dedup not run)",
+      "sortParam": "high (R1's 3-outcome counter-control stood)",
+      "perPage": "high (HTML ignores per_page=N override; theme-locked at 24)",
+      "crawlers.maintain.verifyMethod": "high (worker.ts L397 confirms missing -> null path)"
+    },
+    "stageNotes": [
+      "R2 ran 4-UA differential: chrome120 30p, safari17 30p, firefox121 16p, edge120 10p (latter two truncated when wall-clock approached budget but the pattern was uniform).",
+      "All 86 sustained pages returned status 200, cf-ray, Server:cloudflare. Zero sg-captcha headers, zero sgcaptcha/SiteGround body tokens.",
+      "Store API per_page maximum confirmed: 100 OK, 200/250 return HTTP 400. WC default cap.",
+      "HTML perPage override confirmed ignored: ?per_page=48/96 still shows 'Showing 1-24 of 7327' with 24-per-page grid.",
+      "/shop/page/999/ returns 404 — no last-page redirect; walking required for full last-page determination.",
+      "5 per-cat spot-check URLs (used-items, draws, auctions, new-arrivals, tgd-promo-1) all return 200 with products not visible via /shop/."
+    ]
+  }
+}

@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 # Heavy multi-probe WAF verification
-# Usage: ./heavy-waf-probe.sh https://target.example.com
+# Usage: ./heavy-waf-probe.sh https://target.example.com [--sustained]
 # Fires 8 probe batches designed to trigger behavior-based WAFs.
 # Reports HTTP status, response time, headers, cookies for each.
+# --sustained adds Batch 9: 50-page walk per production UA at 800ms cadence.
+# Batch 9 added 2026-05-19 per batch-4 R4 D2: g4cgunstore.com proved that
+# Cloudflare can escalate Chrome-UA requests to 403 after ~60s of sustained
+# crawl-like requests while a single-shot multi-UA matrix snapshot shows
+# every UA at 200. R2 promotion to operator review MUST invoke --sustained.
 
 set -u
-DOMAIN="${1:-}"
+DOMAIN=""
+SUSTAINED=0
+for arg in "$@"; do
+  case "$arg" in
+    --sustained) SUSTAINED=1 ;;
+    -*) echo "unknown flag: $arg" >&2; exit 1 ;;
+    *) [[ -z "$DOMAIN" ]] && DOMAIN="$arg" ;;
+  esac
+done
 if [[ -z "$DOMAIN" ]]; then
-  echo "usage: $0 https://example.com"
+  echo "usage: $0 https://example.com [--sustained]"
   exit 1
 fi
 
@@ -121,6 +134,33 @@ echo
 echo "=== BATCH 8: User-Agent absent (many WAFs require UA) ==="
 probe "8a-noUA" "$DOMAIN/" -A ""
 
+if [[ "$SUSTAINED" == "1" ]]; then
+  echo
+  echo "=== BATCH 9: SUSTAINED PATTERN (50 pages of /shop/page/N/ @ 800ms per production UA) ==="
+  # Mirrors the production UA rotation pool at backend/src/services/scraper/http-client.ts:9-14
+  # so that any escalation pattern that fires on the real crawler also fires here.
+  # Batch-4 R4 lesson (g4cgunstore.com): Cloudflare bot-fight escalated Chrome 120
+  # to 403 after ~60s of crawl-like requests while Safari 17 + Firefox 121 stayed
+  # 200 in the same window — a single-shot multi-UA matrix (Batch 2) missed it.
+  # R2 promotion to operator review MUST invoke --sustained and check per-UA status.
+  SUSTAINED_UAS=(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15'
+    'Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0'
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Edge/120.0.0.0'
+  )
+  SUSTAINED_UA_LABELS=(chrome120 safari17 firefox121 edge120)
+  for idx in 0 1 2 3; do
+    ua="${SUSTAINED_UAS[$idx]}"
+    label="${SUSTAINED_UA_LABELS[$idx]}"
+    echo "--- BATCH 9 sub-run: $label ($ua) ---"
+    for n in $(seq 1 50); do
+      probe "9-$label-p$n" "$DOMAIN/shop/page/$n/" -A "$ua"
+      sleep 0.8
+    done
+  done
+fi
+
 echo
 echo "========================================"
 echo "PROBE COMPLETE"
@@ -133,3 +173,5 @@ echo "  - Honeypot paths 403 but category 200 → hasWaf: true, wafType: 'path-s
 echo "  - SQLi/XSS 403 but normal 200 → hasWaf: true, wafType: 'rule-selective'"
 echo "  - Rapid burst triggers 429/503 → hasWaf: true, wafType: 'rate-limit'"
 echo "  - cf-ray header present but all 200 → hasWaf: true, wafType: 'cloudflare-passive'"
+echo "  - Batch 9 (--sustained) some UAs flip 200→403 partway through 50-page walk →"
+echo "    hasWaf: true, set userAgentOverride to one of the UAs that stayed 200 throughout."

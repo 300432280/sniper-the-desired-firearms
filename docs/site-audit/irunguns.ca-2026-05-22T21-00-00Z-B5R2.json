@@ -1,0 +1,114 @@
+{
+  "profileVersion": 1,
+  "platform": "custom-php",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "sucuri-passive",
+  "wafLastProbedAt": "2026-05-22T21:00:00Z",
+  "wafProbeMethod": "sustained-rapid-burst-10x-no-delay + heavy-8-batch-from-R1",
+  "wafProbeResult": "Sucuri Cloudproxy in passive/rule-selective mode. 10 consecutive no-delay GETs of /product.php all returned 200. SQLi/XSS/honeypot payloads trigger 403 (rule-selective, not crawl-path-blocking). No challenge interstitial; no captcha; no UA-block. Per Rule B10, hasWaf=false because the WAF does not block normal crawl traffic.",
+  "wafProbeEvidence": {
+    "sucuriHeaders": ["X-Sucuri-ID: 20010", "X-Sucuri-Cache: MISS", "Server: Sucuri/Cloudproxy"],
+    "cfHeaders": [],
+    "rapidBurstStatus": "10/10 = 200",
+    "sustainedNoDelayBurstTested": true,
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": [".env", ".git/config"],
+    "botUaBlocked": false
+  },
+  "wafWorkaround": {
+    "method": "none-required",
+    "notes": "Sucuri Cloudproxy is rule-selective only (SQLi/XSS/honeypot). Plain axios with default desktop UA returns 200 on all catalog GETs."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 104,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": ".showing_result",
+    "perPage": 1
+  },
+  "catalogUrls": [
+    "/product.php"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://irunguns.ca/product_detail.php?p=henry-long-ranger-lever-action-rifle-223-rem-20-barrel-with-sights-5-rounds-drilled-tapped-receiver-solid-rubber-recoil-pad-american-walnut-stock-blued-finish",
+      "title": "Henry Long Ranger Lever Action Rifle .223 Rem"
+    }
+  ],
+  "searchUrl": null,
+  "sortParam": null,
+  "perPage": 100,
+  "paginationPattern": null,
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page"
+    }
+  },
+  "lastVerified": "2026-05-22",
+  "topLevelCategories": {
+    "source": "live B2 per-dept walk + B3 coverage diff vs bare /product.php (2026-05-22)",
+    "categories": [
+      { "slug": "/product.php?departments=Rifles", "allOption": 26 },
+      { "slug": "/product.php?departments=Shotgun", "allOption": 13 },
+      { "slug": "/product.php?departments=Previously_Enjoyed_Guns_AND_Accessories", "allOption": 3 },
+      { "slug": "/product.php?departments=Ammunition", "allOption": 3 },
+      { "slug": "/product.php?departments=Optics", "allOption": 4 },
+      { "slug": "/product.php?departments=Parts_AND_Gear", "allOption": 23 },
+      { "slug": "/product.php?departments=Magazines", "allOption": 23 },
+      { "slug": "/product.php?departments=Clothing", "allOption": 4 },
+      { "slug": "/product.php?departments=Custom_Engraving", "allOption": 0 },
+      { "slug": "/product.php?departments=Knives", "allOption": 0 },
+      { "slug": "/product.php?departments=Handguns", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Sum of narrow-dept counts = 99; bare /product.php total = 104; gap = 5 dept-less products. Per Rule C the single bare URL (1 entry, 104 coverage) beats the 11-URL per-dept set (11 entries, 99 coverage)."
+  },
+  "auditNotes": {
+    "runId": "irunguns.ca-2026-05-22T21-00-00Z-B5R2",
+    "method": "live re-walk of every divergent field; runtime-code cross-reference against backend/src/services/product-count-probe.ts:110-122 (VALID_METHOD_NAMES); searchUrl filtering test with multiple param variants",
+    "verdicts": {
+      "catalogUrls": "R1 WINS — bare /product.php covers 104/104; 11-dept union covers 99/104; Rule C smallest-URL-set decides. DB needs update.",
+      "expectedProductCount": "R1 WINS — live 104; DB-stale at 84 (last verified 2026-04-07).",
+      "productCountMethod": "R1 WINS — html-pagination with selector .showing_result + perPage:1 + default regex (\\d+) parses 'Showing 104 result' -> 104x1=104 (verified live B5). DB's 'sum-showing-result-markers' is NOT in VALID_METHOD_NAMES (product-count-probe.ts:110-122) -> validateMethod() throws -> silent null at runtime. DB method is broken.",
+      "hasWaf": "DB WINS on wafType (sucuri-passive); R2 FLIPS hasWaf to false per Rule B10 (passive rule-selective WAF does not block crawl path; 10/10 no-delay GETs returned 200).",
+      "wafType": "DB WINS — sucuri-passive is the precise classification (not bare 'sucuri').",
+      "searchUrl": "BOTH WRONG — DB's /product.php?product_name={keyword} does NOT filter (R2 B7 + extended probe: ?product_name=henry, =glock, =zzz_no_match all return identical 104-product set). R1 correctly omitted searchUrl. R2 sets searchUrl=null. Search on irunguns.ca is client-side only; no server-side keyword filter exists.",
+      "platform": "DB WINS — platform=custom-php (no platform-family qualifier; matches DB convention).",
+      "sortParam": "DB WINS — sortParam=null (no URL form exists at all). R1's empty string '' confuses 'no URL form' with 'empty path-baked param'.",
+      "paginationPattern": "DB WINS — top-level null. R1's filled-object-with-type:null is shape drift.",
+      "userAgentOverride": "DB WINS — absent / null. R1 over-applied iPhone UA defensively; live B1-B7 confirm default desktop UA returns 200 throughout.",
+      "perPage": "DB WINS — perPage=100 is the standard runtime ceiling; R1 set 104=live-catalog-size which is irrelevant when paginationPattern=null.",
+      "crawlers.watermark.reason": "DB WINS — reason omitted per skill (REQUIRED only for full-catalog-sweep); navigate-from-watermark needs no reason.",
+      "crawlers.maintain.method": "DB-internal db-verification is operator-doc residue, not a runtime field; R2 omits per skill spec.",
+      "crawlers.bootstrap": "Omitted per current skill guidance (zero runtime consumers)."
+    },
+    "liveProbeEvidence": {
+      "bareCatalogProductCount": 104,
+      "depUnionProductCount": 99,
+      "depOrphans": [
+        "nextlevel-training-sirt-training-magazine-weighted-plastic-black-finish",
+        "atf-permit-application-pre-filing-fee",
+        "colt-9mm-bcg-new-3738",
+        "colt-hydr-buffer-w-buffer-spring",
+        "xpedition-crossbow-kit-viking-x-380-rt-edge-380fps"
+      ],
+      "rapidBurst10xStatuses": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
+      "page2EqualsPage1": true,
+      "searchProductNameDoesNotFilter": true,
+      "validMethodNameCheck": "html-pagination IN VALID_METHOD_NAMES; sum-showing-result-markers NOT IN VALID_METHOD_NAMES"
+    }
+  }
+}

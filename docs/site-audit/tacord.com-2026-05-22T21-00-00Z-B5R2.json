@@ -1,0 +1,68 @@
+{
+  "runId": "B5R2-tacord-2026-05-22",
+  "auditedAt": "2026-05-22T21:00:00Z",
+  "auditor": "B5R2 (testing-api-tester live re-investigation)",
+  "method": "Direct curl probes against tacord.com production with 800ms+ inter-request delays; no DB writes",
+  "scope": "3 R1-vs-DB divergences (D1 count drift, D2 watermark.method, D3 productCountMethod.endpoint)",
+  "verdictsPerDivergence": {
+    "D1_expectedProductCount": {
+      "candidateB5R1": 206,
+      "db": 203,
+      "r2Verdict": 206,
+      "r2Confidence": "high",
+      "evidence": [
+        "GET /wp-json/wp/v2/product?per_page=1 -> 200, X-WP-Total: 206 (anonymous, default UA)",
+        "GET /wp-json/wp/v2/product?per_page=1&context=view -> 200, X-WP-Total: 206 (anonymous, context=view honored)",
+        "GET /wp-json/wc/store/v1/products?per_page=1 -> 200, X-WP-Total: 206 (anonymous, default UA)",
+        "Reconfirm with distinct UA TACORD-AUDIT-RECONFIRM/1.0 after delay -> both still 206",
+        "DB value 203 stamped 2026-04-12; today 2026-05-22 (40 days delta). +3 net products is plausible normal merchant churn."
+      ],
+      "siteForR3": "R1 candidate value stands. DB stale-by-cycle, not wrong."
+    },
+    "D2_watermark_method": {
+      "candidateB5R1": "api-date-since-watermark",
+      "db": "navigate-from-watermark",
+      "r2Verdict": "api-date-since-watermark",
+      "r2Confidence": "high",
+      "evidence": [
+        "DB notes 2026-04-12 documented WP REST wp/v2/product returning 401. TODAY 2026-05-22 it returns HTTP 200 anonymous: confirmed twice (default UA and context=view) and once with a fresh UA after 1s delay. NOT 401-gated today.",
+        "Two-probe modified_after honored: ?modified_after=2099-01-01T00:00:00&per_page=1 -> X-WP-Total: 0; ?modified_after=1999-01-01T00:00:00&per_page=1 -> X-WP-Total: 206. Future returns 0, past returns global = honored filter (not silently ignored).",
+        "Runtime adapter woocommerce.ts:337 wires options.dateAfter -> params.modified_after against /wp-json/wp/v2/product (L340). Matches today's working surface byte-for-byte.",
+        "supportsDateFilter = true at woocommerce.ts:22 — adapter advertises capability and the API today honors it."
+      ],
+      "siteForR3": "R1 upgrade back to api-date-since-watermark is correct. The 401 either was temporary (Wordfence rule lifted, plugin reconfigured, security plugin uninstalled) or the 2026-04-12 audit misclassified another failure (rate-limit, CDN error, header parser) as 401. Either way, today the field is open. R3 standing task: search docs/site-audit/ for prior tacord audit or any reference confirming the 401 origin."
+    },
+    "D3_productCountMethod_endpoint": {
+      "candidateB5R1": "/wp-json/wc/store/v1/products",
+      "db": "/wp-json/wp/v2/product",
+      "r2Verdict": "/wp-json/wc/store/v1/products",
+      "r2Confidence": "high",
+      "evidence": [
+        "B8 pair-rule (SKILL.md:872): if crawlers.maintain.verifyMethod = 'store-api', productCountMethod.endpoint MUST be /wc/store/v1/products. DB has verifyMethod=store-api but endpoint=/wp/v2/product — explicit pair-rule violation.",
+        "Both surfaces return X-WP-Total: 206 today so mechanical divergence is invisible, BUT pair-rule prevents future silent gap: WP REST core counts can include drafts/hidden that Store API customer-visible filter excludes (greatnorth ratio 8x cited in skill notes).",
+        "Runtime catalog-crawler/maintain reads productCountMethod via probeExpectedProductCount; the count surface should match the verification surface to avoid measuring against a number the maintenance crawler can never see.",
+        "Candidate change is the operator-residue fix the DB has been carrying since 2026-04-12."
+      ],
+      "siteForR3": "R1 candidate stands. R3 may verify nothing further; this is a cleanup-on-promotion."
+    }
+  },
+  "nonDivergenceObservations": {
+    "wpRest401History": {
+      "investigation": "git log --grep=tacord -i returned only fda6e31 (Phase 0 bulk commit) — no per-site WP REST 401 fix commit. The 401 status is only documented in DB notes; no test artifact or commit message reproduces it.",
+      "implication": "Cannot fully reconstruct the 2026-04-12 401. Could have been: (a) Wordfence rule for /wp-json/wp/v2/* later removed; (b) merchant temporarily restricted; (c) 2026-04-12 auditor misread a 401 from a different endpoint (worker.ts auth path); (d) HPE header parse error misread as 401. R3 advised to grep _audit_tmp/ and docs/site-audit/ history."
+    },
+    "catalogUrls": "Identical to DB (8 URLs). No further attack surface in B5R2.",
+    "searchUrl": "Identical to DB. Confidence medium per R1; R3 advised to test with cold keyword (e.g. 'tacord') vs hot 'stock' to confirm keyword filter actually narrows."
+  },
+  "r2RemainingForR3": [
+    "Sustained 50-page walk per UA (B9) — not executed in R2; R3 standing task carried forward from R1.",
+    "Sitemap/category-count cross-check (B11) — R1 reported sum 239 vs global 206 (delta 33 = cross-cat overlap). R2 did not re-walk; R3 advised to spot-check 2-3 categories via WC Store API ?category=ID&per_page=1.",
+    "WP REST 401 historical reconstruction — git log shows no per-site commit; R3 advised to grep docs/site-audit/ and _audit_tmp/ history for prior tacord audit notes."
+  ],
+  "finalCandidateAcceptanceForR3": {
+    "expectedProductCount": 206,
+    "watermark.method": "api-date-since-watermark",
+    "productCountMethod.endpoint": "/wp-json/wc/store/v1/products",
+    "allOtherFields": "match DB and R1 — no further changes proposed"
+  }
+}

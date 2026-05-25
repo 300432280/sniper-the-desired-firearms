@@ -1,0 +1,129 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-19T23:50:00Z",
+  "wafProbeMethod": "live-curl-multi-UA",
+  "wafProbeResult": "Cloudflare PASSIVE for any real-browser UA (Chrome desktop, iPhone Safari, no-UA empty) -> 200 on homepage, /shop/, /shop/page/N/, /wp-json/wp/v2/product. ACTIVE only for explicit bot tokens (curl/* default UA, Googlebot UA) -> 403. R1 claim of 'active CF' was an artifact of bot-UA + parallel curl, not WAF severity for production traffic. Production crawler USER_AGENTS pool (Chrome 120, Safari 17.2, Firefox 121, Edge 120 — http-client.ts:9-14) all pass.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "chromeUaShop": 200,
+    "chromeUaShopPage244": 200,
+    "iphoneUaShop": 200,
+    "emptyUaShop": 200,
+    "curlDefaultUaShop": 403,
+    "googlebotUaShop": 403,
+    "wpRestChromeUa": 200,
+    "storeApiChromeUa": 403,
+    "rapidBurstTested": false,
+    "rapidBurstNote": "skipped per 800ms inter-request rule; R1 burst-403 result was an artifact of bot-UA + parallel curl, not WAF severity"
+  },
+  "hasCaptcha": false,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "needsPlaywright": false,
+  "expectedProductCount": 5851,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total",
+    "notes": "Verified 2026-05-19: x-wp-total=5851 with Chrome desktop UA, no special headers. DB's 5741 (2026-04-07) and R1's 5846 are stale; site grew."
+  },
+  "catalogUrls": [
+    "/product-category/firearms/",
+    "/product-category/ammunition/",
+    "/product-category/accessories/",
+    "/product-category/sights-optics/",
+    "/product-category/high-value-optics/",
+    "/product-category/iron-sights/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://g4cgunstore.com/product/fiocchi-cowboy-action-32-sw-long-100gr-lwc-50rds/",
+      "title": "Fiocchi Classic Line .32 S&W Long 100gr. LWC 50rds",
+      "price": 59.99,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date&order=desc",
+  "sortVerified": true,
+  "sortVerifiedNote": "Verified 2026-05-19: /shop/?orderby=date returns descending post IDs (286176, 286178, 286181, 285841 — newest first). WC default order for orderby=date IS desc, so ?orderby=date alone is functionally equivalent, but explicit &order=desc is safer against future WC version changes (DB chose explicit form, B4R2 keeps it).",
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false,
+    "notes": "DB drops trailing slash; runtime tolerant per catalog-crawler.ts:121-125. /shop/page/244/ exists; /shop/page/245/ = 404. 5851/24 = 244 pages, math consistent."
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "endpoint": "/wp-json/wp/v2/product",
+      "dateParam": "after",
+      "orderParam": "order=desc&orderby=date",
+      "reason": "WP REST core /wp-json/wp/v2/product?modified_after=DATE works with Chrome UA, returns x-wp-total filtered by date."
+    },
+    "maintain": {
+      "verifyMethod": "wp-rest",
+      "verifyEndpoint": "/wp-json/wp/v2/product",
+      "verifyBehavior": {
+        "notes": "WP REST returns title/slug/thumbnail but NOT price/stock (Store API is CF-blocked, 403). Price/stock enrichment must come from HTML scrape of /product/{slug}/.",
+        "onFound": "update-title-thumbnail",
+        "onNotFound": "skip-leave-for-playwright",
+        "canDetectDeletion": false
+      }
+    }
+  },
+  "topLevelCategories": {
+    "source": "wp-rest-product_cat",
+    "categories": [
+      { "slug": "/product-category/firearms/", "id": 158, "count": 2097, "parent": 0 },
+      { "slug": "/product-category/ammunition/", "id": 171, "count": 1928, "parent": 0 },
+      { "slug": "/product-category/accessories/", "id": 40, "count": 1232, "parent": 0 },
+      { "slug": "/product-category/sights-optics/", "id": 165, "count": 595, "parent": 0 },
+      { "slug": "/product-category/high-value-optics/", "id": 16854, "count": 286, "parent": 0 },
+      { "slug": "/product-category/iron-sights/", "id": 449, "count": 35, "parent": 0 },
+      { "slug": "/product-category/promotions/", "id": 611, "count": 1148, "parent": 0, "excluded": "overlay/curated subset" },
+      { "slug": "/product-category/new-arrivals/", "id": 16971, "count": 150, "parent": 0, "excluded": "overlay/curated subset" },
+      { "slug": "/product-category/oversize/", "id": 17136, "count": 182, "parent": 0, "excluded": "overlay/curated subset" }
+    ],
+    "totalsSumCheck": "Sum of 6 chosen top-level product_cat counts = 6173. Global product count = 5851 (x-wp-total). Excess of 322 = product overlap: high-value-optics products are ALSO tagged with sights-optics (verified: holosun-he507c product_cat=[16854,391,165]). iron-sights products are tagged with accessories+iron-sights (verified: troy-m4-front-sight product_cat=[40,396,449,16962,16880]). R1's claim that sights-optics is parent of high-value-optics+iron-sights is FALSE: all three have parent=0 (verified via /wp-json/wp/v2/product_cat?slug=... query). Uncategorized gap ~2 products. DB's 6 catalogUrls choice = ~260 pages (firearms 88 + ammunition 81 + accessories 52 + sights-optics 25 + high-value-optics 12 + iron-sights 2) vs single /shop/ = 244 pages; per-category costs 16 extra pages but enables independent token allocation per catalog-crawler.ts:378."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R2-2026-05-19",
+    "probeMethod": "Adversarial R2: each R1 divergence re-tested with a method different from R1's WHY hypothesis. Verdict counts below.",
+    "r2VerdictCounts": {
+      "R1-wins": 0,
+      "DB-wins": 5,
+      "both-wrong": 1,
+      "equivalent-DB-form-preferred": 2
+    },
+    "r2Verdicts": {
+      "adapterType": "DB wins (generic-retail). adapter-registry.ts:118 is sole routing key. dataFlow.steps[] is unconsumed metadata — verified via grep over backend/src/: no consumer exists. DB's intentional override (WC-platform-routed-via-generic-retail) stands. Candidate followed skill-table verbatim.",
+      "wafType": "DB wins (cloudflare-passive). R1's 'active' verdict was an artifact of bot-UA / curl-default-UA + parallel-burst probes. Re-tested live with full UA matrix: Chrome desktop, iPhone Safari, no-UA, all = 200 on /shop/ and /wp-json/wp/v2/product. Bot UAs (curl/X.Y.Z, Googlebot) get 403, but that's Bot Fight Mode (orthogonal to WAF severity for real-browser traffic). Production USER_AGENTS pool (http-client.ts:9-14) all pass.",
+      "needsPlaywright": "DB wins (false). Follows from wafType=passive. Verified plain axios with production-default UA returns 200 on all crawl-critical paths (/shop/, /shop/page/244/, /wp-json/wp/v2/product, /product-category/firearms/). No Playwright needed for routine crawl.",
+      "userAgentOverride": "DB wins (null/absent). R1 added iPhone Safari override based on (incorrect) active-CF verdict. With production UAs passing, no override is needed.",
+      "expectedProductCount": "Both wrong; B4R2 = 5851 (live x-wp-total 2026-05-19). DB's 5741 stale by 42 days, R1's 5846 stale by ~hours (site grew 5 in the interim).",
+      "catalogUrls": "DB wins (6 per-category URLs). Both candidate's ['/shop/'] and DB's 6 per-cat URLs are consumed at runtime (generic-retail.ts:198 reads profile.catalogUrls). Operator chose 6 to enable independent token-budget allocation per URL at catalog-crawler.ts:378 (one rate-limited category doesn't block others). Single /shop/ = 244 pages (simpler) vs 6 per-cat = ~260 pages (16-page overhead, but scheduling fairness). DB's choice is more production-aware. R1 also misread hierarchy: sights-optics, high-value-optics, iron-sights are SIBLINGS (all parent=0), not parent-child as R1 implied.",
+      "crawlers.maintain.verifyMethod": "DB wins (wp-rest). Custom verifyBehavior split: WP REST for title/slug/thumbnail identity + HTML /product/{slug}/ for price/stock enrichment. More efficient than full per-product detail-page Playwright fetch. R1 fell back to detail-page because Store API is CF-blocked, but missed that WP REST core is open.",
+      "sortParam": "Equivalent; DB explicit form preferred (?orderby=date&order=desc). WC default for orderby=date is desc, but DB's explicit form is safer against future WC version changes.",
+      "paginationPattern.template": "Equivalent; DB form preferred (/page/{N} no trailing slash). Runtime tolerant per catalog-crawler.ts:121-125."
+    },
+    "discoveredApiEndpoints": [
+      "/wp-json/wp/v2/product (200 with Chrome UA, x-wp-total=5851)",
+      "/wp-json/wp/v2/product_cat (200 with Chrome UA, returns slug/id/count/parent — verified sights-optics/high-value-optics/iron-sights all parent=0)",
+      "/wp-json/wc/store/v1/products (403 Cloudflare — confirmed blocked)"
+    ]
+  }
+}

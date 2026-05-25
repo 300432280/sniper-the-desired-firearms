@@ -1,0 +1,145 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-19T23:45:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "R2 re-verified 2026-05-19: rapid-burst 5x SQLi probe = 5/5 status 301 (clean redirect); empty UA -> 200; honeypot /wp-admin/ -> 302 (login redirect, no WAF challenge); cf-ray on every response; no x-sucuri-*; no 403/503. Cloudflare passive only.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY", "cf-cache-status", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "5/5 status 301 on SQLi-encoded URL",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "bodyMarkers": []
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 962,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://canadafirstammo.ca/product-category/firearms/",
+    "https://canadafirstammo.ca/product-category/ammunition/",
+    "https://canadafirstammo.ca/product-category/accessories/",
+    "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+    "https://canadafirstammo.ca/product-category/reloading/",
+    "https://canadafirstammo.ca/product-category/clearance/",
+    "https://canadafirstammo.ca/product-category/apparel/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/",
+    "https://canadafirstammo.ca/product-category/training/",
+    "https://canadafirstammo.ca/product-category/shop-all/",
+    "https://canadafirstammo.ca/product-category/gunsmithing/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://canadafirstammo.ca/product/used-tag-fde-plate-carrier-l-xl/",
+      "title": "Used- TAG FDE Plate carrier L/XL",
+      "price": 220.00,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://canadafirstammo.ca/product/gsci-ti-gear-lrs-long-range-thermal-sight/",
+      "title": "GSCI TI-GEAR-LRS Long-Range Thermal Sight",
+      "price": 6955.99,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://canadafirstammo.ca/product/federal-power-shok-6-5-creedmoor/",
+      "title": "Federal Power-Shok 6.5 Creedmoor",
+      "price": null,
+      "stockStatus": "out_of_stock",
+      "priceVisible": false
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "reason": null
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "taxonomy-api",
+    "categories": [
+      { "slug": "/product-category/firearms/", "allOption": 203 },
+      { "slug": "/product-category/ammunition/", "allOption": 440 },
+      { "slug": "/product-category/accessories/", "allOption": 248 },
+      { "slug": "/product-category/accessoriesoptics/", "allOption": 70 },
+      { "slug": "/product-category/reloading/", "allOption": 9 },
+      { "slug": "/product-category/clearance/", "allOption": 138 },
+      { "slug": "/product-category/apparel/", "allOption": 2 },
+      { "slug": "/product-category/plates-apparel/", "allOption": 14 },
+      { "slug": "/product-category/training/", "allOption": 3 },
+      { "slug": "/product-category/shop-all/", "allOption": 925 },
+      { "slug": "/product-category/gunsmithing/", "allOption": 0 }
+    ],
+    "totalsSumCheck": "R2 re-verified 2026-05-19: WP REST /wp-json/wp/v2/product X-WP-Total=962. Gunsmithing (id=4822) Store API returns X-WP-Total=0 across bracketed stock_status[]=instock,outofstock - empty but URL serves HTTP 200 and category is registered (Mistake 12: empty != dead, keep)."
+  },
+  "lastVerified": "2026-05-19",
+  "auditNotes": {
+    "runId": "B4R2-canadafirstammo.ca-2026-05-19T21-00-00Z",
+    "round": 2,
+    "method": "live re-test of every R1 divergence via DIFFERENT method than R1's WHY hypothesis",
+    "r1DivergenceVerdicts": {
+      "hasWaf": "R1 wins - re-ran heavy probe with rapid SQLi burst 5/5 = 301 (no rate limit, no WAF challenge), no-UA -> 200, honeypot /wp-admin/ -> 302 WP login redirect (no WAF). Cloudflare passive. Setting hasWaf=true downgrades crawler perPage from 50 to 20 (catalog-crawler.ts:290, 696) without benefit - confirmed operator-forgot-to-flip pattern.",
+      "catalogUrls_gunsmithing": "R1 wins - gunsmithing URL HEAD = 200, category id=4822 exists in product_cat taxonomy, count=0 today across all stock statuses. Per Mistake 12 'empty != dead, keep (200 != 404)'.",
+      "catalogUrls_form": "Cosmetic; absolute URLs (R1) and path-only (DB) both work at runtime. Keep R1 form for self-contained profile (no resolution ambiguity).",
+      "sortVerified_shape": "R1 wins on shape - profile-validator.ts:115 strict-equals '=== true'. DB's {method, results, verifiedAt} object is FALSY for that branch (but DB sortParam set, so validator still passes via '|| p.sortParam'). The object is audit-trail residue per Rule B. No runtime consumer in backend/src/services or frontend/src reads sortVerified for branching beyond the validator itself.",
+      "searchUrl_missing_in_R1": "DB wins - /?s={keyword}&post_type=product re-verified: 302 redirects then resolves to product. R2 adds this back. Note: runtime keyword search uses MonitoredSite.searchUrlPattern (column), not siteProfile.searchUrl - but Output target spec recommends it, so emit.",
+      "lastVerified": "R1 wins - refresh stamp to today's R2 audit."
+    },
+    "runtimeHasWafEffects": [
+      "catalog-crawler.ts:290 - perPage 20 instead of 50 (-60% pagination efficiency)",
+      "catalog-crawler.ts:306-313 - adds consecutiveEmptyApi safety counter (benign)",
+      "catalog-crawler.ts:447 - html.length > 2000 threshold instead of 5000 (more aggressive Playwright fallback)",
+      "catalog-crawler.ts:459 - uses fetchWithPlaywright (cookie cache) for HTML fallback",
+      "watermark-crawler.ts - same downsizing + Playwright path",
+      "Conclusion: hasWaf=true triples the request volume and route-shifts to Playwright with NO benefit on a cloudflare-passive site."
+    ],
+    "discoveredApiEndpoints": {
+      "wpRestCore": "/wp-json/wp/v2/product",
+      "wcStoreApi": "/wp-json/wc/store/v1/products",
+      "productCat": "/wp-json/wp/v2/product_cat"
+    },
+    "fieldConfidence": {
+      "hasWaf": "high (R2 live re-verified)",
+      "catalogUrls": "high (gunsmithing live-walked 200 + count=0)",
+      "sortParam": "high (R2 newest = id=30620 used-tag-fde-plate-carrier-l-xl, matches extractionSample)",
+      "expectedProductCount": "high (R2 x-wp-total=962)",
+      "searchUrl": "high (R2 redirect-resolves to product page)"
+    },
+    "blockers": "none"
+  }
+}
