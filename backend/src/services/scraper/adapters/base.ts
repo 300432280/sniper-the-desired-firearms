@@ -115,13 +115,34 @@ export abstract class AbstractAdapter implements SiteAdapter {
 
   /** Standard link extraction from an element */
   protected extractLink(element: cheerio.Cheerio<any>, baseUrl: string): string {
-    const linkEl = element.is('a')
-      ? element
-      : (element.closest('a').length ? element.closest('a') : element.find('a[href]').first());
-    const href = linkEl.attr('href') || '';
-    // Reject non-HTTP links (javascript:, mailto:, tel:, data:, #)
-    if (/^(javascript:|mailto:|tel:|data:|#)/i.test(href.trim())) return '';
-    return resolveUrl(href, baseUrl);
+    // Prefer the first <a> whose href looks like a product page (not an image).
+    // Common WC themes wrap image-zoom <a href="image.jpg"> ABOVE the
+    // product-link <a href="/product/slug">; taking the first link blindly
+    // pulls the image URL as the "product URL" (Corwin-Arms repro 2026-05-27).
+    const IMAGE_EXT = /\.(jpe?g|png|gif|webp|svg|bmp|avif)(\?|#|$)/i;
+    const isProductHref = (h: string | undefined) => {
+      if (!h) return false;
+      const t = h.trim();
+      if (/^(javascript:|mailto:|tel:|data:|#)/i.test(t)) return false;
+      if (IMAGE_EXT.test(t)) return false;
+      return true;
+    };
+
+    if (element.is('a')) {
+      const href = element.attr('href') || '';
+      if (isProductHref(href)) return resolveUrl(href, baseUrl);
+      return '';
+    }
+    const closest = element.closest('a').attr('href');
+    if (isProductHref(closest)) return resolveUrl(closest!, baseUrl);
+    let chosen = '';
+    element.find('a[href]').each((_, el) => {
+      if (chosen) return;
+      const href = (el.attribs?.href || '').trim();
+      if (isProductHref(href)) chosen = href;
+    });
+    if (chosen) return resolveUrl(chosen, baseUrl);
+    return '';
   }
 
   /** Extract both sale and regular prices from an element */
@@ -199,6 +220,19 @@ export abstract class AbstractAdapter implements SiteAdapter {
       }
     }
 
+    // 2b. title="$X" attribute (TownPost listing cards use <span title="$195.00">).
+    // Structured attribute, unambiguous currency — accept any positive value.
+    // Picks the LOWEST (likely current/sale) when multiple are present.
+    const titlePrices: number[] = [];
+    element.find('[title^="$"], [title^="C$"], [title^="CAD"]').each((_, el) => {
+      const t = element.find(el).attr('title') || '';
+      const p = extractPrice(t);
+      if (p) titlePrices.push(p);
+    });
+    if (titlePrices.length) {
+      return { price: Math.min(...titlePrices), regularPrice };
+    }
+
     // 3. Try all price-like elements, but skip struck-through / "was" / "regular" prices
     // Note: class matching is case-sensitive in Cheerio, so we need both cases
     // (e.g. bullseyenorth uses "listPrice" / "salePrice" with capital P)
@@ -249,6 +283,11 @@ export abstract class AbstractAdapter implements SiteAdapter {
   protected isNavUrl(url: string): boolean {
     if (/\/(product-category|categorie-produit|category|categories|collections|brands|tags|subcategory|shop\/?\?|manufacturer)\b/i.test(url)) return true;
     if (/\/(wishlist|cart|checkout|account|login|register|registration|giftcert|contact|about|faq|privacy|terms|shipping|returns|blog|news|content\.php|pages?\/)/i.test(url)) return true;
+    // TownPost classifieds: /buysell, /buysell/<province>, /sellers, /forsale are
+    // province/section landing pages, not ad detail pages. Real ads are under
+    // /marketplace/<city>/<category>/<slug>/<numericId>. Anchored to standalone
+    // path segments to avoid false matches inside product slugs.
+    if (/\/(buysell|sellers|forsale)(\/|$|\?)/i.test(url)) return true;
     // Volusion/3dcart utility pages
     if (/\/(shoppingcart|myaccount|default)\.(asp|php|htm)/i.test(url)) return true;
     // BigCommerce/generic: search pages, gift certificate pages

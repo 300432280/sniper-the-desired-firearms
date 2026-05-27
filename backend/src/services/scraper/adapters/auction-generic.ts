@@ -41,7 +41,7 @@ export class GenericAuctionAdapter extends AbstractAdapter {
       $(selector).each((_, el) => {
         const element = $(el);
         const text = element.text();
-        if (!text.toLowerCase().includes(keywordLower)) return;
+        if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
         let titleEl = element.find('[class*="lot-title"], [class*="lot-name"], [class*="lotTitle"]').first();
         if (!titleEl.length) titleEl = element.find('h3, h4, h2').first();

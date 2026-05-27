@@ -53,11 +53,26 @@ export async function scrapeWithAdapter(
     } catch { /* ignore — non-critical */ }
   }
 
+  // Compute the "site base URL" -- origin, plus a LOCALE path prefix only
+  // when the configured URL path is exactly a known locale code. Example:
+  // groupepronature.ca's configured URL is `https://groupepronature.ca/en`;
+  // without /en, Shopify's /search/suggest.json returns French product titles
+  // even though the operator picked the English version.
+  //
+  // The locale-code allowlist matters: westernmetal.ca's configured URL is
+  // `https://westernmetal.ca/shooting/` (a SUBSITE path, not a locale).
+  // Treating /shooting/ as a locale prefix breaks the search URL. So we only
+  // append the path when it matches a recognized 2-letter locale code.
+  const __u = new URL(websiteUrl);
+  const __localeRe = /^\/(en|fr|de|es|it|pt|nl|ja|zh|ko)(\/.*)?$/i;
+  const siteBase = __localeRe.test(__u.pathname)
+    ? __u.origin + __u.pathname.replace(/\/$/, '').replace(/\/.+/, m => m.match(__localeRe) ? '/' + m.split('/')[1] : '')
+    : __u.origin;
+
   // Step 1: Try API-based search if adapter supports it
   if (adapter.searchViaApi) {
     try {
-      const origin = new URL(websiteUrl).origin;
-      const apiMatches = await adapter.searchViaApi(origin, keyword, options);
+      const apiMatches = await adapter.searchViaApi(siteBase, keyword, options);
       // Only use API results if they include prices; otherwise fall back to HTML for richer data
       const hasPrices = apiMatches.some(m => m.price != null);
       if (apiMatches.length > 0 && hasPrices) {
@@ -76,16 +91,19 @@ export async function scrapeWithAdapter(
 
   // Step 2: If API didn't find anything, fetch HTML and use adapter extraction
   let fetchMeta: ScrapeResult['fetchMeta'];
+  let scrapedFromSearchUrl = false; // true when we built a search URL via the adapter -- post-filter must be skipped
   if (matches.length === 0) {
     // Determine which URL to scrape
     let scrapeUrl = websiteUrl;
-    if (isBareDomain(websiteUrl)) {
-      const origin = new URL(websiteUrl).origin;
+    if (isBareDomain(websiteUrl) || siteBase !== __u.origin) {
+      // Use siteBase (origin + locale prefix), not bare origin, so the search
+      // URL hits the configured locale's endpoint (e.g. /en/search on bilingual sites).
       if (searchUrlPattern) {
-        scrapeUrl = `${origin}${searchUrlPattern.replace('{keyword}', encodeURIComponent(keyword))}`;
+        scrapeUrl = `${siteBase}${searchUrlPattern.replace('{keyword}', encodeURIComponent(keyword))}`;
       } else {
-        scrapeUrl = adapter.getSearchUrl(origin, keyword);
+        scrapeUrl = adapter.getSearchUrl(siteBase, keyword);
       }
+      scrapedFromSearchUrl = true;
     }
     let html = '';
 
@@ -147,6 +165,7 @@ export async function scrapeWithAdapter(
           const extractionOptions: ExtractionOptions = {
             inStockOnly: options.inStockOnly,
             maxPrice: options.maxPrice,
+            isSearchPage: true,
           };
           matches = adapter.extractMatches($, keyword, scrapeUrl, extractionOptions);
 
@@ -258,6 +277,11 @@ export async function scrapeWithAdapter(
     }
   }
 
+  // Drop matches with empty/missing URLs (extractLink rejects image-extension
+  // hrefs, so a match here with an empty url was a non-product element the
+  // selectors matched only by mistake).
+  matches = matches.filter(m => m.url && m.url.length > 0);
+
   // Deduplicate
   if (matches.length > 1) {
     const seen = new Set<string>();
@@ -271,9 +295,11 @@ export async function scrapeWithAdapter(
 
   // Post-extraction keyword relevance filter:
   // Ensure the keyword appears in the match title or URL slug as a word/token.
-  // Skip for API-sourced results — the search API already matched against full
-  // product content (title + description), so trust its relevance.
-  if (matches.length > 0 && keyword.length >= 2 && !usedApiSearch) {
+  // Skip for API-sourced results AND when we scraped a search-results URL --
+  // both cases the upstream search already matched. Re-filtering by literal
+  // keyword silently drops foreign-language hits ("Carabine" vs "rifle") and
+  // synonym/model-name hits ("Aridus Remington 870" -> "rifle").
+  if (matches.length > 0 && keyword.length >= 2 && !usedApiSearch && !scrapedFromSearchUrl) {
     const kw = keyword.toLowerCase();
     const beforeCount = matches.length;
     matches = matches.filter(m => {

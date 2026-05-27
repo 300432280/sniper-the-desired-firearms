@@ -34,8 +34,8 @@ Goal: index all products with complete data as fast as possible.
 - All catalog tokens go to one crawler. Self-queues next batch immediately.
 - T1 watermark crawl runs concurrently to catch new listings.
 - Must achieve near-100% product/price/stock coverage before admin approves transition.
-- Transition command: `node scripts/verify-maintain-ready.js --transition`
-- Readiness check: product count >= 80%, price coverage >= 95%, stock coverage >= 95%.
+- Transition: admin UI at `/dashboard/admin/bootstrap` (or `POST /api/admin/sites/:id/transition-to-maintain`).
+- Readiness check: product count >= 95%, price/stock above category threshold (retailer 95%, classified 70%, forum/auction 50%), plus a maintain-path verify dry-run that must confirm 3/3 in-stock products.
 
 ### Phase 2: Maintain
 
@@ -105,7 +105,7 @@ Generic adapters read from profiles for all site-specific behavior. New sites ar
 | `maintain-cooldown.ts` | Shared cooldown tracking between scheduler and worker |
 | `waf-cookie-manager.ts` | Sucuri/WAF cookie solving with Playwright |
 | `investigate-site.js` | 18-probe site investigation including C6 User Simulation Test |
-| `verify-maintain-ready.js` | Checks coverage >= 80%, price >= 95%, stock >= 95%; runs transition |
+| `maintain-readiness.ts` (service) | Bootstrap-to-maintain readiness checks (mechanical + deep-light + deep-verify). Used by `/dashboard/admin/bootstrap` and `POST /api/admin/sites/:id/transition-to-maintain`. |
 
 **Store API enrichment:** 3x retry with fresh cookies, 800ms delay between chunks.
 
@@ -406,14 +406,13 @@ node scripts/investigate-site.js <domain> --json     # JSON output
 | Simulation | C4: Duplicate Detection | Products sharing same sourceId (should be 0) |
 | Simulation | C6: User Simulation | End-to-end user journey test |
 
-### verify-maintain-ready.js
+### Bootstrap → Maintain transition
 
-```bash
-node scripts/verify-maintain-ready.js <domain>                # check readiness
-node scripts/verify-maintain-ready.js <domain> --transition    # approve transition to maintain
-```
+The readiness check now lives in the admin UI rather than a CLI:
 
-Checks: product count >= 80% of live catalog, price coverage >= 95%, stock coverage >= 95%.
+- UI: `/dashboard/admin/bootstrap` — every bootstrap-phase site listed with a Refresh + Transition button per row.
+- API: `POST /api/admin/sites/:id/refresh-readiness` (returns mechanical readiness + deep-light + deep-verify), `POST /api/admin/sites/:id/transition-to-maintain` (body: `{ force?: boolean }`).
+- Logic: `backend/src/services/maintain-readiness.ts`. Same DB coverage / watermark / tier-completion / data-quality checks as the prior CLI, plus a maintain-path verify dry-run that must positively confirm 3/3 in-stock products before the row goes green.
 
 ### verify-site.js (data quality)
 

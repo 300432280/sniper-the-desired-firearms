@@ -7,6 +7,12 @@ import { Prisma } from '@prisma/client';
 import { invalidateAdapterCache } from '../services/scraper/adapter-registry';
 import { computeCrawlPriority } from '../services/priority-engine';
 import { resolveTuning, TUNING_DEFAULTS } from '../services/crawl-tuning';
+import {
+  listBootstrapSitesWithReadiness,
+  transitionSiteToMaintain,
+  checkMaintainReadiness,
+  refreshFullReadiness,
+} from '../services/maintain-readiness';
 
 const router = Router();
 
@@ -194,6 +200,61 @@ router.patch('/sites/:id', async (req: Request, res: Response) => {
   }
 });
 
+// ─── Bootstrap → Maintain Transition ──────────────────────────────────────────
+
+// GET /api/admin/bootstrap-sites — list every site currently in bootstrap
+// phase with a readiness report (DB coverage vs expected, watermark presence,
+// stream/tier completion, price/stock data quality). The UI uses this to show
+// which sites are ready to transition.
+router.get('/bootstrap-sites', async (_req: Request, res: Response) => {
+  try {
+    const sites = await listBootstrapSitesWithReadiness();
+    return res.json({ sites });
+  } catch (err) {
+    console.error('[Admin] List bootstrap sites error:', err);
+    return res.status(500).json({ error: 'Failed to list bootstrap sites' });
+  }
+});
+
+// POST /api/admin/sites/:id/transition-to-maintain — flip the switch.
+// Body: { force?: boolean } — when true, skips the readiness check (operator
+// override). Returns the readiness report alongside transitioned:true/false.
+router.post('/sites/:id/transition-to-maintain', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const force = Boolean(req.body?.force);
+    const result = await transitionSiteToMaintain(id, { skipReadinessCheck: force });
+    invalidateAdapterCache();
+    return res.json(result);
+  } catch (err: any) {
+    if (err?.message?.startsWith('Site not found')) {
+      return res.status(404).json({ error: err.message });
+    }
+    if (err?.message?.includes('not in bootstrap phase')) {
+      return res.status(409).json({ error: err.message });
+    }
+    console.error('[Admin] Transition to maintain error:', err);
+    return res.status(500).json({ error: 'Failed to transition site' });
+  }
+});
+
+// POST /api/admin/sites/:id/refresh-readiness — re-run the full check on a
+// single site (mechanical readiness + deep-light spot-check + deep-verify
+// dry-run). Returns the three reports together so the UI row updates all
+// indicators in one click.
+router.post('/sites/:id/refresh-readiness', async (req: Request, res: Response) => {
+  try {
+    const result = await refreshFullReadiness(req.params.id);
+    return res.json(result);
+  } catch (err: any) {
+    if (err?.message?.startsWith('Site not found')) {
+      return res.status(404).json({ error: err.message });
+    }
+    console.error('[Admin] Refresh readiness error:', err);
+    return res.status(500).json({ error: 'Failed to refresh readiness' });
+  }
+});
+
 // DELETE /api/admin/sites/:id — remove a monitored site
 router.delete('/sites/:id', async (req: Request, res: Response) => {
   try {
@@ -214,18 +275,20 @@ router.delete('/sites/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/sites/:id/test — test scrape a single site
+// POST /api/admin/sites/:id/test — test scrape a single site.
+// Optional ?limit=N query param controls how many matches are returned (default
+// 10 for dashboard preview; audits / parity checks pass a larger value).
 router.post('/sites/:id/test', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { keyword } = req.body;
+    const limit = Math.max(1, Math.min(500, parseInt(req.query.limit as string) || 10));
 
     const site = await prisma.monitoredSite.findUnique({ where: { id } });
     if (!site) return res.status(404).json({ error: 'Site not found' });
 
     const testKeyword = keyword || 'rifle';
 
-    // Use the adapter-based scraper
     const { scrapeWithAdapter } = await import('../services/scraper/index');
     const result = await scrapeWithAdapter(site.url, testKeyword, { fast: true });
 
@@ -234,7 +297,7 @@ router.post('/sites/:id/test', async (req: Request, res: Response) => {
       keyword: testKeyword,
       adapterUsed: result.adapterUsed,
       matchCount: result.matches.length,
-      matches: result.matches.slice(0, 10), // Return first 10 for preview
+      matches: result.matches.slice(0, limit),
       loginRequired: result.loginRequired,
       errors: result.errors,
     });

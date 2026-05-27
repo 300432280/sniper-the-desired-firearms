@@ -140,6 +140,84 @@ const checks: Check[] = [
       return null;
     },
   },
+  // ── C7 (2026-05-25, batch-5 R3 frontierfirearms + adversarial-round-1
+  //   2026-05-25): URL/endpoint fields that the runtime concatenates with
+  //   `${origin}` MUST be path-only with a leading slash. Otherwise the fetch
+  //   becomes `${origin}${absoluteUrl}` -> double-prefix -> silent null ->
+  //   coverage gate disabled.
+  //   Methods covered:
+  //     - sitemap / generic-product-sitemap: `m.url`           (product-count-probe.ts:292, 317)
+  //     - sitemap-index:                      `m.urls[]`       (product-count-probe.ts:302)
+  //     - wp-rest-header:                     `m.endpoint`     (product-count-probe.ts:249)
+  //     - json-api-count:                     `m.endpoint`     (product-count-probe.ts:256)
+  //     - json-api-length:                    `m.endpoint`     (product-count-probe.ts:268)
+  //     - html-pagination:                    `m.url` (opt)    (product-count-probe.ts:282)
+  //     - shopify-products-walk:              `m.endpoint`(opt)(product-count-probe.ts:362,369)
+  //   Methods INTENTIONALLY excluded (use full absolute URL by design):
+  //     - ecwid-storefront-search:            `m.endpoint`     (product-count-probe.ts:345, posted directly)
+  //     - klevu-api-count:                    `m.endpoint`     (per-platform absolute)
+  //     - stream-page-count:                  no URL
+  {
+    name: 'productCountMethod.urlShape',
+    severity: 'required',
+    run: (p) => {
+      const m = p.productCountMethod;
+      if (!m || typeof m !== 'object') return null;
+      const isPathOnly = (u: unknown): u is string =>
+        typeof u === 'string' && u.length > 0 && u.startsWith('/') && !u.startsWith('//');
+      const failUrl = (field: string, value: unknown) =>
+        `productCountMethod.${field} must be path-only with a leading slash (got ${JSON.stringify(value)}); the runtime probe prepends \${origin} and absolute URLs produce a double-prefix fetch.`;
+      switch (m.method) {
+        case 'sitemap':
+        case 'generic-product-sitemap':
+          if (!isPathOnly(m.url)) return failUrl('url', m.url);
+          return null;
+        case 'sitemap-index':
+          if (!Array.isArray(m.urls) || m.urls.length === 0) {
+            return 'productCountMethod.urls must be a non-empty array for method=sitemap-index';
+          }
+          for (const u of m.urls) {
+            if (!isPathOnly(u)) return failUrl('urls[]', u);
+          }
+          return null;
+        case 'wp-rest-header':
+        case 'json-api-count':
+        case 'json-api-length':
+          if (!isPathOnly(m.endpoint)) return failUrl('endpoint', m.endpoint);
+          return null;
+        case 'html-pagination':
+          // m.url is optional for html-pagination (probe falls back to origin)
+          if (m.url !== undefined && m.url !== null && !isPathOnly(m.url)) {
+            return failUrl('url', m.url);
+          }
+          return null;
+        case 'shopify-products-walk':
+          // m.endpoint is optional; defaults to '/products.json'
+          if (m.endpoint !== undefined && m.endpoint !== null && !isPathOnly(m.endpoint)) {
+            return failUrl('endpoint', m.endpoint);
+          }
+          return null;
+        // Mirror image: methods that POST/GET the endpoint AS-IS (no origin
+        // concat) require an ABSOLUTE URL. A path-only endpoint would make
+        // axios throw "URL is not valid", get caught by the outer try/catch
+        // in product-count-probe.ts:454-462, and silently return null --
+        // disabling the coverage gate. Verified against:
+        //   - ecwid-storefront-search: product-count-probe.ts:345 axios.post(m.endpoint, ...)
+        //   - klevu-api-count:         product-count-probe.ts:401 (per-platform absolute)
+        case 'ecwid-storefront-search':
+        case 'klevu-api-count': {
+          const ep = m.endpoint;
+          if (typeof ep !== 'string' || ep.length === 0 ||
+              !(ep.startsWith('http://') || ep.startsWith('https://'))) {
+            return `productCountMethod.endpoint must be an absolute URL (got ${JSON.stringify(ep)}); ${m.method} posts the endpoint directly without origin concatenation, so a path-only value throws at runtime and silently disables the coverage gate.`;
+          }
+          return null;
+        }
+        default:
+          return null;
+      }
+    },
+  },
   // ── C6 (2026-05-21): crawlers.maintain.verifyMethod is required. Missing or
   //   empty values cause `worker.ts:769-772` to log "MISSING verifyMethod" and
   //   early-return, making restock detection a no-op for the site (wolverine
@@ -173,6 +251,46 @@ const checks: Check[] = [
         return `hasWaf:true paired with wafType ending in "-passive" ("${t}") is invalid — ` +
           `either flip hasWaf to false (site does not actively challenge crawls) ` +
           `or change wafType to a non-passive variant.`;
+      }
+      return null;
+    },
+  },
+
+  // ── C8 (2026-05-25, adv-round-3 tommyenterprises.com catch): for path-style
+  //   pagination, `paginationPattern.template` MUST NOT start with any
+  //   catalogUrl's pathname. The runtime URL builder at
+  //   catalog-crawler.ts:118-125 strips the catalogUrl's trailing slash and
+  //   concatenates the template raw:
+  //     `${baseUrl.replace(/\/$/, '')}${template.replace('{N}', N)}`
+  //   So catalogUrl=/shop/ + template=/shop/page/{N}/ produces
+  //   /shop/shop/page/2/ -- a 404 in practice. Other WC profiles correctly
+  //   use template=/page/{N}/ regardless of catalogUrl. This check rejects
+  //   the duplicate-segment shape at promote time.
+  {
+    name: 'paginationPattern.templateRedundantCatalogPrefix',
+    severity: 'required',
+    run: (p) => {
+      const pat = p.paginationPattern;
+      if (!pat || pat.type !== 'path') return null;
+      const tpl: unknown = pat.template;
+      if (typeof tpl !== 'string' || tpl.length === 0) return null;
+      const urls: unknown = p.catalogUrls;
+      if (!Array.isArray(urls)) return null;
+      for (const cu of urls) {
+        if (typeof cu !== 'string' || cu.length === 0) continue;
+        let cuPath: string;
+        try {
+          cuPath = new URL(cu, 'https://example.com').pathname;
+        } catch {
+          continue;
+        }
+        // Skip root-only catalogUrls -- every path template starts with '/'
+        // and the runtime concat correctly produces /page/{N}/ for them.
+        if (cuPath === '/' || cuPath === '') continue;
+        const stripped = cuPath.endsWith('/') ? cuPath.slice(0, -1) : cuPath;
+        if (tpl === stripped || tpl.startsWith(stripped + '/')) {
+          return `paginationPattern.template "${tpl}" starts with the catalogUrl path "${stripped}/" -- the runtime URL builder at catalog-crawler.ts:118-125 will produce duplicate-segment URLs like "${stripped}${tpl}". Drop the catalog prefix from the template (e.g. use "/page/{N}/" not "${stripped}/page/{N}/").`;
+        }
       }
       return null;
     },

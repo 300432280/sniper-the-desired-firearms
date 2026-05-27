@@ -88,7 +88,10 @@ export class WooCommerceAdapter extends AbstractAdapter {
 
     for (const p of products) {
       const name = this.decodeHtml(p.name || '');
-      if (!name.toLowerCase().includes(kw)) continue;
+      if (!name) continue;
+      // Don't re-filter by name.includes(keyword) -- Store API ?search= already
+      // matched server-side; re-filtering drops foreign-language and
+      // synonym/model-name hits ("Aridus Remington 870" lacks the word "rifle").
 
       // Store API prices are in minor units (cents)
       const rawPrice = p.prices?.price || p.prices?.regular_price;
@@ -124,7 +127,10 @@ export class WooCommerceAdapter extends AbstractAdapter {
 
     for (const p of products) {
       const name = this.decodeHtml(p.title?.rendered || p.name || '');
-      if (!name.toLowerCase().includes(kw)) continue;
+      if (!name) continue;
+      // Don't re-filter by name.includes(keyword) -- WP REST ?search= already
+      // matched server-side; re-filtering drops foreign-language hits and
+      // synonym/model-name hits.
 
       const url = p.link || `${origin}/?p=${p.id}`;
 
@@ -189,7 +195,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
       $(selector).each((_, el) => {
         const element = $(el);
         const text = element.text();
-        if (!text.toLowerCase().includes(keywordLower)) return;
+        if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
         // WooCommerce title structure
         let titleEl = element.find('.woocommerce-loop-product__title, h2.wc-block-grid__product-title').first();
@@ -654,6 +660,7 @@ export class WooCommerceAdapter extends AbstractAdapter {
       '.wd-product',
       '.product-small',                // Flatsome theme (doctordeals, etc.)
       'div[class*="product"][class*="type-product"]', // Generic div-based WooCommerce products
+      'article[class*="type-product"]', // dt-the7 theme (kodiakdefence) and other <article>-wrapped WC themes
     ];
 
     for (const selector of SELECTORS) {

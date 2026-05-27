@@ -42,7 +42,7 @@ export class HiBidAdapter extends AbstractAdapter {
       $(selector).each((_, el) => {
         const element = $(el);
         const text = element.text();
-        if (!text.toLowerCase().includes(keywordLower)) return;
+        if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
         const rawTitle = this.extractHiBidTitle(element);
         if (!rawTitle || rawTitle.length < 3) return;

@@ -182,6 +182,9 @@ export default function DashboardPage() {
           <Link href="/dashboard/admin/sites" className="text-xs text-orange-300 hover:underline">
             Site Monitor
           </Link>
+          <Link href="/dashboard/admin/bootstrap" className="text-xs text-orange-300 hover:underline">
+            Bootstrap &rarr; Maintain
+          </Link>
         </div>
       )}
 

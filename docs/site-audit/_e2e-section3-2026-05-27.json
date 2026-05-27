@@ -1,0 +1,356 @@
+{
+  "generatedAt": "2026-05-27T15:26:31.661Z",
+  "sites": [
+    {
+      "domain": "aagcanada.ca",
+      "keywords": [
+        {
+          "type": "broad",
+          "keyword": "rifle",
+          "faCount": 147,
+          "liveCount": 10,
+          "overlap": 10,
+          "faOnly": [
+            "https://aagcanada.ca/products/1-point-tactical-rifle-sling-available-in-black-tan-and-camo",
+            "https://aagcanada.ca/products/177-cal-single-shot-break-action-pellet-rifle-under-500-fps",
+            "https://aagcanada.ca/products/1863-enfield-snider-conversion-rifle-577-caliber",
+            "https://aagcanada.ca/products/1902-siamese-type-46-mauser-r-s-121-royal-crest-rifle-8-52r",
+            "https://aagcanada.ca/products/1932-tula-arsenal-mosin-nagant-m91-30-hex-receiver-bolt-action-rifle"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "specific",
+          "keyword": "Spanish Side-by-Side",
+          "faCount": 1,
+          "liveCount": 1,
+          "overlap": 1,
+          "faOnly": [],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "accessory",
+          "keyword": "magazine",
+          "faCount": 32,
+          "liveCount": 10,
+          "overlap": 10,
+          "faOnly": [
+            "https://aagcanada.ca/products/ar-style-magwell-cover-grip-sleeve-kit-skull-design-polymer-fits-most-ar-platform-magwells-airsoft-rifle-compatible",
+            "https://aagcanada.ca/products/british-lee-enfield-no-1-mk-iii-303-british-10-round-rifle-magazine-broad-arrow-marked",
+            "https://aagcanada.ca/products/british-lee-enfield-no-4-303-british-10-round-rifle-magazine-original-military-surplus",
+            "https://aagcanada.ca/products/bsa-martini-cadet-custom-in-357-magnum",
+            "https://aagcanada.ca/products/carcano-6-round-en-bloc-clip"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        }
+      ]
+    },
+    {
+      "domain": "corwin-arms.com",
+      "keywords": [
+        {
+          "type": "broad",
+          "keyword": "pistol",
+          "faCount": 0,
+          "liveCount": 0,
+          "overlap": 0,
+          "faOnly": [],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "specific",
+          "keyword": "Mosin Rifle",
+          "faCount": 9,
+          "liveCount": 1,
+          "overlap": 1,
+          "faOnly": [
+            "https://www.corwin-arms.com/product/ex-finn-mosin-91-30-hex-receiver-tula-1934",
+            "https://www.corwin-arms.com/product/finnish-captured-soviet-mosin-1891-30-7-62x54r",
+            "https://www.corwin-arms.com/product/finnish-reworked-soviet-mosin-1891-30-2",
+            "https://www.corwin-arms.com/product/finnish-reworked-soviet-mosin-1891-30-3",
+            "https://www.corwin-arms.com/product/finnish-reworked-soviet-mosin-1891-30"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "accessory",
+          "keyword": "magazine",
+          "faCount": 0,
+          "liveCount": 0,
+          "overlap": 0,
+          "faOnly": [],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        }
+      ]
+    },
+    {
+      "domain": "groupepronature.ca",
+      "keywords": [
+        {
+          "type": "broad",
+          "keyword": "rifle",
+          "faCount": 87,
+          "liveCount": 10,
+          "overlap": 10,
+          "faOnly": [
+            "https://groupepronature.ca/products/base-de-montage-top-mount-pour-carabine-axis-top-mount-base-for-axis-rifle-chez-pronature",
+            "https://groupepronature.ca/products/carabine-a-air-comprime-camo-2840-177-avec-telescope-4x15mm-camo-2840-cal-177-air-rifle-with-4x15mm-scope",
+            "https://groupepronature.ca/products/carabine-a-air-comprime-outback-177-avec-telescope-4x32-outback-cal-177-air-rifle-with-4x32-scope",
+            "https://groupepronature.ca/products/carabine-a-air-comprime-outback-cal-177-avec-telescope-4x32-outback-cal-177-pneumatic-air-rifle",
+            "https://groupepronature.ca/products/carabine-a-air-comprime-prymex-cal-177-avec-telescope-490pi-s-prymex-cal-177-air-rifle-with-scope-490-fps"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "specific",
+          "keyword": "Carabine semi-atuomatique",
+          "faCount": 1,
+          "liveCount": 1,
+          "overlap": 1,
+          "faOnly": [],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "accessory",
+          "keyword": "magazine",
+          "faCount": 29,
+          "liveCount": 8,
+          "overlap": 8,
+          "faOnly": [
+            "https://groupepronature.ca/products/arbalete-mag-max-mag-max-crossbow-chez-pronature",
+            "https://groupepronature.ca/products/arbalete-micro-308-short-mag-banshee-micro-308-short-mag-banshee-crossbow-chez-pronature",
+            "https://groupepronature.ca/products/arbalete-micro-308-short-mag-micro-308-short-mag-crossbow-chez-pronature",
+            "https://groupepronature.ca/products/carabine-a-verrou-110-apex-hunter-avec-telescope-110-apex-hunter-bolt-action-rifle-with-scope-chez-pronature",
+            "https://groupepronature.ca/products/carabine-a-verrou-pour-gaucher-110-apex-hunter-avec-telescope-110-apex-hunter-bolt-action-left-handed-rifle-with-scope-chez-pronature"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        }
+      ]
+    },
+    {
+      "domain": "tacord.com",
+      "keywords": [
+        {
+          "type": "broad",
+          "keyword": "rifle",
+          "faCount": 8,
+          "liveCount": 10,
+          "overlap": 4,
+          "faOnly": [
+            "https://tacord.com/product/spearhead-barrel-tuner",
+            "https://tacord.com/product/spearhead-self-timing-muzzle-brake-3-port",
+            "https://tacord.com/product/spearhead-self-timing-muzzle-brake-4-port",
+            "https://tacord.com/product/spearhead-titanium-2-baffle-radial-muzzle-brake-840%e2%80%b3"
+          ],
+          "liveOnly": [
+            "https://tacord.com/product/tacord-smith-wesson-1854-co-witness-mini-mount-aimpoint-acro",
+            "https://tacord.com/product/tacord-smith-wesson-1854-co-witness-mini-mount-trijicon-rmr",
+            "https://tacord.com/product/holosun-hs507comp-gr-green-competition-reticle-system",
+            "https://tacord.com/product/holosun-hs507comp-red",
+            "https://tacord.com/product/magpul-qd-swivel-socket-kit-type-2"
+          ],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "specific",
+          "keyword": "Aridus Industries",
+          "faCount": 25,
+          "liveCount": 10,
+          "overlap": 10,
+          "faOnly": [
+            "https://tacord.com/product/aridus-1301-charging-handle-v2",
+            "https://tacord.com/product/aridus-bolt-release-for-beretta-a300-gen-2-1301",
+            "https://tacord.com/product/aridus-carrier-pouch-by-wilderness-tactical-products",
+            "https://tacord.com/product/aridus-industries-beretta-1301-handguard-assembly-black",
+            "https://tacord.com/product/aridus-industries-beretta-1301-handguard-assembly-flat-dark-earth"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "accessory",
+          "keyword": "magazine",
+          "faCount": 25,
+          "liveCount": 10,
+          "overlap": 10,
+          "faOnly": [
+            "https://tacord.com/product/22-magazine-spring-1-extension",
+            "https://tacord.com/product/kick-eez-magpul-sga-hunter-stock-recoil-pad-fighting-edition",
+            "https://tacord.com/product/kick-eez-magpul-sga-hunter-stock-recoil-pad-sentinel-concepts-edition",
+            "https://tacord.com/product/magpul-hunter-sga-high-cheek-riser-kit",
+            "https://tacord.com/product/magpul-m-lok-aluminum-rail-3-slots"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        }
+      ]
+    },
+    {
+      "domain": "tommyenterprises.com",
+      "keywords": [
+        {
+          "type": "broad",
+          "keyword": "rifle",
+          "faCount": 12,
+          "liveCount": 10,
+          "overlap": 10,
+          "faOnly": [
+            "https://tommyenterprises.com/product/mares-leg-grip-and-picatinny-stock-adapter-for-henry-straight-grip-lever-guns",
+            "https://tommyenterprises.com/product/mlok-handguard-for-henry-mares-leg"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "specific",
+          "keyword": "MLOK handguard",
+          "faCount": 12,
+          "liveCount": 10,
+          "overlap": 10,
+          "faOnly": [
+            "https://tommyenterprises.com/product/micro-handguard-for-derya-tm-22-mlok",
+            "https://tommyenterprises.com/product/mlok-handguard-for-short-barreled-derya-tm-22"
+          ],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "accessory",
+          "keyword": "magazine",
+          "faCount": 10,
+          "liveCount": 10,
+          "overlap": 9,
+          "faOnly": [
+            "https://tommyenterprises.com/product/henry-survival-ar-7-mag-coupler"
+          ],
+          "liveOnly": [
+            "https://tommyenterprises.com/product/tm22-speed-loader"
+          ],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        }
+      ]
+    },
+    {
+      "domain": "westernmetal.ca",
+      "keywords": [
+        {
+          "type": "broad",
+          "keyword": "rifle",
+          "faCount": 200,
+          "liveCount": 10,
+          "overlap": 5,
+          "faOnly": [
+            "https://westernmetal.ca/product/17-cal-rifle-bore-brush-a-ps-17r",
+            "https://westernmetal.ca/product/22-cal-5-56mm-223-cal-nylon-rifle-brush-a-ps-22nr",
+            "https://westernmetal.ca/product/22-cal-centerfire-rifle-brush-223-cal-5-56mm-a-ps-22cf",
+            "https://westernmetal.ca/product/22-cal-rimfire-rifle-brush-a-ps-22r",
+            "https://westernmetal.ca/product/25-cal-rifle-brush-a-ps-25r"
+          ],
+          "liveOnly": [
+            "https://westernmetal.ca/product/northernrim-rifle-co-22-lr-bolt-action-20-barrel-10rd-n-cb22a1bs",
+            "https://westernmetal.ca/product/heritage-c-22-lr-16-1%e2%80%b3-rough-rider-rancher-carbine-n-br226b16hs-ls",
+            "https://westernmetal.ca/product/xero-c2-chronograph-a-010-03953-00",
+            "https://westernmetal.ca/product/mossberg-patriot-6-5-creedmoor-22-dark-earth-cerakote-n-28049",
+            "https://westernmetal.ca/product/henry-lever-action-supreme-rifle-c-223-5-56-18%e2%80%b3-bbl-n-h023-223"
+          ],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "specific",
+          "keyword": "Heritage c.22",
+          "faCount": 1,
+          "liveCount": 1,
+          "overlap": 1,
+          "faOnly": [],
+          "liveOnly": [],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        },
+        {
+          "type": "accessory",
+          "keyword": "magazine",
+          "faCount": 200,
+          "liveCount": 10,
+          "overlap": 0,
+          "faOnly": [
+            "https://westernmetal.ca/product/1050-conv-41-magnum-dp-20478",
+            "https://westernmetal.ca/product/1050-conv-44-mag-dp-20479",
+            "https://westernmetal.ca/product/2-die-set-264-win-mag-lp-90774",
+            "https://westernmetal.ca/product/2-die-set-6-5-rem-mag-lp-90773",
+            "https://westernmetal.ca/product/257-weatherby-magnum-fired-brass-bags-of-20-western-munitions-br-257wbym-20"
+          ],
+          "liveOnly": [
+            "https://westernmetal.ca/product/northernrim-rifle-co-22-lr-bolt-action-20-barrel-10rd-n-cb22a1bs",
+            "https://westernmetal.ca/product/derya-dypa-16-c-9mm-12%e2%80%b3-pump-action-synthetic-n-dypa-12-blk-mp",
+            "https://westernmetal.ca/product/derya-dypa-16-c-9mm-16%e2%80%b3-pump-action-synthetic-n-dypa-16-blk-mp",
+            "https://westernmetal.ca/product/lee-precision-300-savage-micrometer-full-length-die-set-lp-92399",
+            "https://westernmetal.ca/product/7mm-160-gr-tipped-matchking-tmk-box-of-100-bs-7660-2"
+          ],
+          "errors": [],
+          "liveInFa": 1,
+          "liveOnlyNotIndexed": [],
+          "color": "GREEN"
+        }
+      ]
+    }
+  ]
+}

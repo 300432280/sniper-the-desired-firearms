@@ -1,0 +1,143 @@
+{
+  "generatedAt": "2026-05-27T07:15:03.898Z",
+  "cooldowns": {
+    "T1_default_min": 20,
+    "T2_h": 5,
+    "T3_h": 9,
+    "T4_h": 17
+  },
+  "sites": [
+    {
+      "domain": "aagcanada.ca",
+      "crawlIntervalMin": 24,
+      "consecutiveFailures": 0,
+      "lastCrawlAt": "2026-05-27T06:58:01.316Z",
+      "T1": {
+        "color": "GREEN",
+        "reason": "ran 17m ago (cooldown 24m)"
+      },
+      "T2": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 2.5h ago (cooldown 5h)"
+      },
+      "T3": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 2.5h ago (cooldown 9h)"
+      },
+      "T4": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 2.5h ago (cooldown 17h)"
+      }
+    },
+    {
+      "domain": "corwin-arms.com",
+      "crawlIntervalMin": 24,
+      "consecutiveFailures": 0,
+      "lastCrawlAt": "2026-05-27T07:02:03.510Z",
+      "T1": {
+        "color": "GREEN",
+        "reason": "ran 13m ago (cooldown 24m)"
+      },
+      "T2": {
+        "color": "RED",
+        "reason": "api: lastCycleCompletedAt unset"
+      },
+      "T3": {
+        "color": "RED",
+        "reason": "api: lastCycleCompletedAt unset"
+      },
+      "T4": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 2.4h ago (cooldown 17h)"
+      }
+    },
+    {
+      "domain": "groupepronature.ca",
+      "crawlIntervalMin": 24,
+      "consecutiveFailures": 0,
+      "lastCrawlAt": "2026-05-27T06:56:01.196Z",
+      "T1": {
+        "color": "GREEN",
+        "reason": "ran 19m ago (cooldown 24m)"
+      },
+      "T2": {
+        "color": "RED",
+        "reason": "api: lastCycleCompletedAt unset"
+      },
+      "T3": {
+        "color": "RED",
+        "reason": "api: lastCycleCompletedAt unset"
+      },
+      "T4": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 25.3h ago (cooldown 17h)"
+      }
+    },
+    {
+      "domain": "tacord.com",
+      "crawlIntervalMin": 24,
+      "consecutiveFailures": 0,
+      "lastCrawlAt": "2026-05-27T07:14:05.530Z",
+      "T1": {
+        "color": "GREEN",
+        "reason": "ran 1m ago (cooldown 24m)"
+      },
+      "T2": {
+        "color": "RED",
+        "reason": "api: lastCycleCompletedAt unset"
+      },
+      "T3": {
+        "color": "RED",
+        "reason": "api: lastCycleCompletedAt unset"
+      },
+      "T4": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 3.1h ago (cooldown 17h)"
+      }
+    },
+    {
+      "domain": "tommyenterprises.com",
+      "crawlIntervalMin": 24,
+      "consecutiveFailures": 0,
+      "lastCrawlAt": "2026-05-27T06:58:17.793Z",
+      "T1": {
+        "color": "GREEN",
+        "reason": "ran 17m ago (cooldown 24m)"
+      },
+      "T2": {
+        "color": "RED",
+        "reason": "api: lastCycleCompletedAt unset"
+      },
+      "T3": {
+        "color": "RED",
+        "reason": "api: lastCycleCompletedAt unset"
+      },
+      "T4": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 0.7h ago (cooldown 17h)"
+      }
+    },
+    {
+      "domain": "westernmetal.ca",
+      "crawlIntervalMin": 24,
+      "consecutiveFailures": 0,
+      "lastCrawlAt": "2026-05-27T07:02:03.756Z",
+      "T1": {
+        "color": "GREEN",
+        "reason": "ran 13m ago (cooldown 24m)"
+      },
+      "T2": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 3.6h ago (cooldown 5h)"
+      },
+      "T3": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 3.6h ago (cooldown 9h)"
+      },
+      "T4": {
+        "color": "GREEN",
+        "reason": "api: cycle completed 3.6h ago (cooldown 17h)"
+      }
+    }
+  ]
+}

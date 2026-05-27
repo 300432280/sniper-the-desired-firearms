@@ -414,9 +414,17 @@ export async function crawlCatalogTier(params: {
               break; // Fetch failed, try next URL
             }
 
-            // Playwright fallback if static HTML looks blocked/empty
+            // Playwright fallback if static HTML looks blocked/empty.
+            // Markers: Incapsula, generic 403, Cloudflare active challenge,
+            // Cloudflare "Just a moment" interstitial, and Imunify360
+            // "One moment, please" interstitial (added 2026-05-25 after
+            // kodiakdefence.com walked page 1 successfully via cached
+            // Playwright cookies but page 2 returned the Imunify360 challenge
+            // body, 4744 bytes -- above the 2000-byte threshold and contains
+            // none of the previously-listed markers, so the walker treated it
+            // as end-of-catalog instead of falling through to Playwright).
             const isBlocked = html.length < 2000 ||
-              /Incapsula|Access Denied|403 Forbidden|challenge-platform|Just a moment/i.test(html);
+              /Incapsula|Access Denied|403 Forbidden|challenge-platform|Just a moment|One moment, please/i.test(html);
             if (isBlocked && html.length > 0) {
               try {
                 const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
@@ -874,7 +882,19 @@ export async function crawlStreamTier(params: {
         allProducts.push(...products);
         productsFound += products.length;
 
-        const nextUrl: string | null = adapter.getNextPageUrl?.($, currentUrl) ?? null;
+        // Try the adapter's next-page selector first; fall back to the profile's
+        // paginationPattern if the selector misses (theme-specific markup).
+        // Without this fallback, themes like dt-the7 (kodiakdefence) -- which
+        // use custom pagination markup not matched by .woocommerce-pagination
+        // -- would have the walker stop after page 1, treating "selector
+        // returned null" as "end of catalog" when actually it just means
+        // "this theme's pagination doesn't look like the canonical WC theme".
+        // Termination still works: when the constructed URL returns 0 products,
+        // the 0-products branch above (line ~860) marks cycleComplete=true.
+        let nextUrl: string | null = adapter.getNextPageUrl?.($, currentUrl) ?? null;
+        if (!nextUrl && params.paginationPattern) {
+          nextUrl = buildPaginatedUrl(stream.url, currentPageNum + 1, params.paginationPattern);
+        }
         if (!nextUrl) {
           // No next page = we've discovered total pages for this stream
           totalPagesDiscovered = currentPageNum;

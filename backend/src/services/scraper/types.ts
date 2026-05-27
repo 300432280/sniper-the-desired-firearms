@@ -45,7 +45,17 @@ export interface ScrapeOptions {
   hasWaf?: boolean;
 }
 
-export type ExtractionOptions = Pick<ScrapeOptions, 'inStockOnly' | 'maxPrice'>;
+export type ExtractionOptions = Pick<ScrapeOptions, 'inStockOnly' | 'maxPrice'> & {
+  /**
+   * True when extractMatches is called on a search-results page (e.g. /search?q=rifle).
+   * Adapters MUST skip the per-card keyword-text filter when this is true -- the
+   * search engine already filtered results; re-filtering by the literal keyword
+   * silently drops foreign-language matches ("Carabine" != "rifle") and matches
+   * whose card text uses synonyms or model names ("Aridus Remington 870" lacks
+   * the word "rifle" but is one).
+   */
+  isSearchPage?: boolean;
+};
 
 // ── Site classification ──────────────────────────────────────────────────────
 

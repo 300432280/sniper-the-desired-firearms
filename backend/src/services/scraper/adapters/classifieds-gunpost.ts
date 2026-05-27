@@ -114,7 +114,7 @@ export class GunpostAdapter extends AbstractAdapter {
       $(selector).each((_, el) => {
         const element = $(el);
         const text = element.text();
-        if (!text.toLowerCase().includes(keywordLower)) return;
+        if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
         let titleEl = element.find('h1, h2, h3, h4').first();
         if (!titleEl.length) {

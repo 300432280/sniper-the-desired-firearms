@@ -44,12 +44,62 @@ export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolea
   const { adapter } = await getAdapterForUrl(siteUrl);
   const origin = new URL(siteUrl).origin;
   const streams: Stream[] = [];
+  const profile = options?.siteProfile;
 
-  // Step 0: Profile-first path — if siteProfile has catalogUrls, build streams directly.
-  // This bypasses adapter heuristics entirely — the profile is the source of truth.
-  if (options?.siteProfile?.catalogUrls?.length) {
+  // Step 1: Use the API stream when siteProfile DECLARES API-based crawl
+  // methods. siteProfile is the single source of truth for site capability
+  // -- we do NOT probe the live API here. If the profile says "use API"
+  // (via crawlers.maintain.verifyMethod === 'store-api' or
+  // crawlers.watermark.method === 'api-date-since-watermark'), we trust it.
+  //
+  // This matters because the API path runs Store API enrichment which
+  // carries stock status; the HTML path on minimalist catalog themes
+  // (Tommy Enterprises -- title+price only, no "Add to cart" text) cannot
+  // read stock at all and silently flags everything as out-of-stock.
+  // Bootstrap exists to make stock data ready for maintain, so we MUST use
+  // API whenever the profile says it's available.
+  const profileDeclaresApi =
+    profile?.crawlers?.maintain?.verifyMethod === 'store-api'
+    || profile?.crawlers?.watermark?.method === 'api-date-since-watermark';
+
+  // An explicit `apiAlternative` (mysimplestore / ecwid-storefront-api /
+  // bigcommerce-graphql) is a third API trigger. These are page-partitioned
+  // JSON APIs that GenericRetail.fetchCatalogPage already dispatches on.
+  // Without this trigger the stream-detector emitted them as HTML streams
+  // (e.g. liangjian.ca /shop/ols/products is a SPA -- HTML returns 0
+  // products and the Playwright fallback only renders ~15 cards from the
+  // first page of React state), so 1,800+ products never reached
+  // ProductIndex even though the JSON API serves them in 8 pages at
+  // perPage=250.
+  const hasApiAlternative = !!profile?.apiAlternative?.type;
+
+  if ((profileDeclaresApi || hasApiAlternative) && adapter.fetchCatalogPage) {
+    // For apiAlternative-only sites the adapter's static `supportsDateFilter`
+    // does not represent the API alternative's capability (mysimplestore
+    // ignores dateAfter/dateBefore; bootstrap doesn't send them; maintain
+    // uses page-range tier partitioning per catalog-crawler.ts:686). Force
+    // 'api' so crawlStreamTier (catalog-crawler.ts:683) dispatches to
+    // fetchCatalogPage. For profileDeclaresApi sites preserve the existing
+    // supportsDateFilter-driven behavior (Shopify -> 'html', WooCommerce -> 'api').
+    const streamType: 'api' | 'html' =
+      hasApiAlternative
+        ? 'api'
+        : (adapter.supportsDateFilter !== false ? 'api' : 'html');
+    streams.push({
+      id: 'api',
+      url: origin,
+      type: streamType,
+      category: undefined,
+    });
+    return streams;
+  }
+
+  // Step 2: Profile-supplied catalogUrls as HTML streams. Used when the
+  // profile does NOT declare API access (or the adapter lacks fetchCatalogPage).
+  // Each catalog URL becomes its own stream so T2/T3/T4 can partition by page range.
+  if (profile?.catalogUrls?.length) {
     const seenIds = new Set<string>();
-    for (const rawUrl of options.siteProfile.catalogUrls as string[]) {
+    for (const rawUrl of profile.catalogUrls as string[]) {
       const url = rawUrl.startsWith('http') ? rawUrl : `${origin}${rawUrl}`;
       const category = deriveCategoryFromUrl(url);
       const id = category || `profile-${streams.length}`;
@@ -58,29 +108,7 @@ export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolea
       streams.push({ id, url, type: 'html', category });
     }
     if (streams.length > 0) return streams;
-    // Empty or invalid catalogUrls — fall through to adapter detection
-  }
-
-  // Step 1: Try API stream — but verify it actually returns products for this site.
-  // Some adapters (generic-retail) have fetchCatalogPage but only support it for
-  // specific domains (e.g. Klevu API for alflahertys). For other domains it returns empty.
-  if (adapter.fetchCatalogPage) {
-    try {
-      const probe = await adapter.fetchCatalogPage(origin, 1, { perPage: 10, hasWaf: options?.hasWaf });
-      if (probe && probe.products.length > 0) {
-        const streamType = adapter.supportsDateFilter !== false ? 'api' : 'html';
-        streams.push({
-          id: 'api',
-          url: origin,
-          type: streamType,
-          category: undefined,
-        });
-        return streams;
-      }
-      // API returned empty for this site — fall through to HTML streams
-    } catch {
-      // API probe failed — fall through to HTML streams
-    }
+    // Empty or invalid catalogUrls -- fall through to adapter detection
   }
 
   // Step 2: Use adapter's catalog URLs as HTML streams
@@ -169,13 +197,29 @@ export async function probeStreamTotalPages(streams: Stream[], siteUrl: string, 
  */
 export function initStreamState(streams: Stream[], crawlPhase?: string): SiteStreamState {
   const tiers: Record<string, StreamTierState> = {};
-  const tierList = crawlPhase === 'bootstrap' ? [4] as const : [2, 3, 4] as const;
+  // Bootstrap uses T4 ONLY. The polling logic in
+  // backend/scripts/enable-new-site.ts:streamStateLooksComplete() depends on
+  // this -- it checks `${streams[0].id}:4`. If you extend the bootstrap
+  // tierList to [2,3,4], also update streamStateLooksComplete to match, or
+  // the polling will report "done" on a T2/T3 completion that fires before
+  // T4 actually finishes.
+  const isBootstrap = crawlPhase === 'bootstrap';
+  const tierList = isBootstrap ? [4] as const : [2, 3, 4] as const;
 
   for (const stream of streams) {
-    // If totalPages was discovered during probe, compute ranges upfront
-    const ranges = stream.totalPages && stream.totalPages > 0
-      ? computePageRanges(stream.totalPages)
-      : null;
+    // Bootstrap walks the WHOLE catalog from page 1 (no tier partitioning -- see
+    // worker.ts:186-188 "No date filters, no tier partitioning. One stream, one
+    // pagination cursor"). Skipping computePageRanges here is mandatory: ranges
+    // place T4 starting at t3End+1, which is past page 1 and skips the bulk of
+    // the catalog. Bug observed 2026-05-25 on tommyenterprises.com -- detected
+    // totalPages=2, computePageRanges gave T4=[3, undefined], bootstrap walked
+    // page 3 (past end of catalog) -> 0 products -> falsely marked complete.
+    // For maintain phase, ranges remain useful (T2/T3/T4 each cover a slice).
+    const ranges = isBootstrap
+      ? null
+      : (stream.totalPages && stream.totalPages > 0
+          ? computePageRanges(stream.totalPages)
+          : null);
 
     for (const tier of tierList) {
       const key = `${stream.id}:${tier}`;
@@ -198,6 +242,39 @@ export function initStreamState(streams: Stream[], crawlPhase?: string): SiteStr
     tiers,
     detectedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Add T2 and T3 tier entries to a streamState if missing. Used when
+ * transitioning a site from bootstrap (T4-only) to maintain (T2+T3+T4).
+ * Preserves existing T4 progress; only fills in the gaps.
+ *
+ * For api streams the new tier entries get currentPage=1/no range (date
+ * filtering handles partitioning). For html streams with a known totalPages,
+ * page ranges are computed via computePageRanges -- same shape initStreamState
+ * would have produced.
+ */
+export function ensureMaintainTiers(state: SiteStreamState): SiteStreamState {
+  for (const stream of state.streams) {
+    const ranges = stream.type === 'html' && stream.totalPages && stream.totalPages > 0
+      ? computePageRanges(stream.totalPages)
+      : null;
+    for (const tier of [2, 3, 4] as const) {
+      const key = `${stream.id}:${tier}`;
+      if (state.tiers[key]) continue;
+      const tierKey = `t${tier}` as 't2' | 't3' | 't4';
+      const range = ranges ? ranges[tierKey] : null;
+      state.tiers[key] = {
+        streamId: stream.id,
+        tier,
+        currentPage: range ? range[0] : 1,
+        pageRangeStart: range ? range[0] : 1,
+        pageRangeEnd: range ? range[1] : undefined,
+        status: 'idle',
+      };
+    }
+  }
+  return state;
 }
 
 /**

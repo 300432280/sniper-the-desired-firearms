@@ -1,0 +1,647 @@
+{
+  "generatedAt": "2026-05-27T16:34:10.332Z",
+  "keywords": [
+    "rifle",
+    "shotgun",
+    "pistol",
+    "ammunition",
+    "scope",
+    "magazine",
+    "holster",
+    "case",
+    "cleaning",
+    "knife"
+  ],
+  "sites": [
+    {
+      "domain": "aagcanada.ca",
+      "keywords": [
+        {
+          "keyword": "rifle",
+          "faCount": 147,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "shotgun",
+          "faCount": 40,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "pistol",
+          "faCount": 19,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "ammunition",
+          "faCount": 31,
+          "liveCount": 7,
+          "liveInDb": 7,
+          "faNotMatchingKw": 23,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "scope",
+          "faCount": 28,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 6,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "magazine",
+          "faCount": 32,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 13,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "holster",
+          "faCount": 1,
+          "liveCount": 1,
+          "liveInDb": 1,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "case",
+          "faCount": 11,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "cleaning",
+          "faCount": 5,
+          "liveCount": 6,
+          "liveInDb": 6,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "knife",
+          "faCount": 0,
+          "liveCount": 2,
+          "liveInDb": 2,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        }
+      ]
+    },
+    {
+      "domain": "corwin-arms.com",
+      "keywords": [
+        {
+          "keyword": "rifle",
+          "faCount": 1,
+          "liveCount": 2,
+          "liveInDb": 2,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "shotgun",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "pistol",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "ammunition",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "scope",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "magazine",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "holster",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "case",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "cleaning",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "knife",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        }
+      ]
+    },
+    {
+      "domain": "groupepronature.ca",
+      "keywords": [
+        {
+          "keyword": "rifle",
+          "faCount": 87,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 41,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "shotgun",
+          "faCount": 71,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 49,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "pistol",
+          "faCount": 12,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "ammunition",
+          "faCount": 2,
+          "liveCount": 1,
+          "liveInDb": 1,
+          "faNotMatchingKw": 1,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "scope",
+          "faCount": 65,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 2,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "magazine",
+          "faCount": 29,
+          "liveCount": 8,
+          "liveInDb": 8,
+          "faNotMatchingKw": 21,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "holster",
+          "faCount": 1,
+          "liveCount": 1,
+          "liveInDb": 1,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "case",
+          "faCount": 40,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 5,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "cleaning",
+          "faCount": 7,
+          "liveCount": 9,
+          "liveInDb": 9,
+          "faNotMatchingKw": 2,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "knife",
+          "faCount": 36,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        }
+      ]
+    },
+    {
+      "domain": "tacord.com",
+      "keywords": [
+        {
+          "keyword": "rifle",
+          "faCount": 8,
+          "liveCount": 12,
+          "liveInDb": 12,
+          "faNotMatchingKw": 8,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "shotgun",
+          "faCount": 21,
+          "liveCount": 17,
+          "liveInDb": 17,
+          "faNotMatchingKw": 8,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "pistol",
+          "faCount": 3,
+          "liveCount": 12,
+          "liveInDb": 12,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "ammunition",
+          "faCount": 2,
+          "liveCount": 11,
+          "liveInDb": 11,
+          "faNotMatchingKw": 1,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "scope",
+          "faCount": 3,
+          "liveCount": 3,
+          "liveInDb": 3,
+          "faNotMatchingKw": 2,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "magazine",
+          "faCount": 25,
+          "liveCount": 17,
+          "liveInDb": 17,
+          "faNotMatchingKw": 14,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "holster",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        },
+        {
+          "keyword": "case",
+          "faCount": 0,
+          "liveCount": 12,
+          "liveInDb": 12,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "cleaning",
+          "faCount": 0,
+          "liveCount": 2,
+          "liveInDb": 2,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "knife",
+          "faCount": 0,
+          "liveCount": 0,
+          "liveInDb": 0,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "SKIP"
+        }
+      ]
+    },
+    {
+      "domain": "tommyenterprises.com",
+      "keywords": [
+        {
+          "keyword": "rifle",
+          "faCount": 12,
+          "liveCount": 15,
+          "liveInDb": 15,
+          "faNotMatchingKw": 2,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "shotgun",
+          "faCount": 0,
+          "liveCount": 3,
+          "liveInDb": 3,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "pistol",
+          "faCount": 0,
+          "liveCount": 11,
+          "liveInDb": 11,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "ammunition",
+          "faCount": 0,
+          "liveCount": 3,
+          "liveInDb": 3,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "scope",
+          "faCount": 0,
+          "liveCount": 6,
+          "liveInDb": 6,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "magazine",
+          "faCount": 10,
+          "liveCount": 12,
+          "liveInDb": 12,
+          "faNotMatchingKw": 1,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "holster",
+          "faCount": 0,
+          "liveCount": 3,
+          "liveInDb": 3,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "case",
+          "faCount": 0,
+          "liveCount": 5,
+          "liveInDb": 5,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "cleaning",
+          "faCount": 0,
+          "liveCount": 11,
+          "liveInDb": 11,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "knife",
+          "faCount": 0,
+          "liveCount": 3,
+          "liveInDb": 3,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        }
+      ]
+    },
+    {
+      "domain": "westernmetal.ca",
+      "keywords": [
+        {
+          "keyword": "rifle",
+          "faCount": 200,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 151,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "shotgun",
+          "faCount": 200,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 162,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "pistol",
+          "faCount": 148,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 39,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "ammunition",
+          "faCount": 200,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 148,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "scope",
+          "faCount": 105,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        },
+        {
+          "keyword": "magazine",
+          "faCount": 200,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 163,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "holster",
+          "faCount": 19,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 16,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "case",
+          "faCount": 200,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 117,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "cleaning",
+          "faCount": 176,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 143,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "YELLOW"
+        },
+        {
+          "keyword": "knife",
+          "faCount": 13,
+          "liveCount": 10,
+          "liveInDb": 10,
+          "faNotMatchingKw": 0,
+          "errors": [],
+          "liveNotInDb": [],
+          "verdict": "GREEN"
+        }
+      ]
+    }
+  ]
+}

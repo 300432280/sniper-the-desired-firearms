@@ -292,7 +292,8 @@ export async function schedulerTick(): Promise<void> {
           });
         }
 
-        // Auto-transition DISABLED — use verify-maintain-ready.js --transition for each site
+        // Auto-transition DISABLED — operator transitions per-site via the admin
+        // UI (/dashboard/admin/bootstrap) or POST /api/admin/sites/:id/transition-to-maintain.
         // await checkBootstrapComplete(site);
       }
     }

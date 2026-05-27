@@ -47,8 +47,18 @@ async function refreshCache(): Promise<void> {
   if (Date.now() < cacheExpiresAt) return;
 
   try {
+    // Include enabled sites AND sites currently in bootstrap phase (isEnabled:false but
+    // crawlPhase:'bootstrap'). Without bootstrap sites in the cache, the worker's
+    // `_getSiteCacheEntry(domain)` returns undefined during bootstrap, so the crawler
+    // falls back to default perPage / paginationPattern instead of the profile values
+    // — breaks LightSpeed perPage=100, suffix-replace pagination, etc.
     const sites = await prisma.monitoredSite.findMany({
-      where: { isEnabled: true },
+      where: {
+        OR: [
+          { isEnabled: true },
+          { isEnabled: false, crawlPhase: 'bootstrap' },
+        ],
+      },
       select: {
         domain: true,
         adapterType: true,

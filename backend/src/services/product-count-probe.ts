@@ -97,7 +97,7 @@ export type ProductCountMethod =
   | KlevuApiCountMethod
   | StreamPageCountMethod;
 
-export const COVERAGE_THRESHOLD = 0.95; // 95% — matches verify-maintain-ready.js
+export const COVERAGE_THRESHOLD = 0.95; // 95% — matches maintain-readiness.ts
 
 // ── Method-name allowlist ────────────────────────────────────────────────────
 

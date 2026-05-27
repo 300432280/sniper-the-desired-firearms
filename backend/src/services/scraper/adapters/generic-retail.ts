@@ -94,7 +94,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       $(selector).each((_, el) => {
         const element = $(el);
         const text = element.text();
-        if (!text.toLowerCase().includes(keywordLower)) return;
+        if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
         const rawTitle = this.extractTitle(element, text);
         if (!rawTitle || rawTitle.length < 3) return;
@@ -139,7 +139,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
         const href = a.attr('href') || '';
 
         // Must contain keyword and be a real product link
-        if (!text.toLowerCase().includes(keywordLower)) return;
+        if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
         if (text.length < 8 || text.length > 500) return;
         if (/^\$?\d[\d,.]*$/.test(text)) return; // Just a price
         if (this.isNavTitle(text)) return;
@@ -629,10 +629,32 @@ export class GenericRetailAdapter extends AbstractAdapter {
     const totalProducts = getPath(data, totalPath);
     const totalPages = typeof totalProducts === 'number' ? Math.ceil(totalProducts / perPage) : undefined;
 
+    // Resolve a canonical base URL prefix for relative `urls.directPageUrl` paths.
+    // The body template carries it under `urlParams.canonicalBaseUrl` (e.g.
+    // "https://www.triggersandbows.com/store/"). We need an origin like
+    // "https://www.triggersandbows.com" to prepend onto "/store/#!/Slug/p/ID".
+    const canonicalBase: string | undefined = apiCfg.bodyTemplate?.urlParams?.canonicalBaseUrl;
+    let originPrefix = '';
+    if (canonicalBase) {
+      try { originPrefix = new URL(canonicalBase).origin; } catch { /* keep '' */ }
+    }
+
     const products: CatalogProduct[] = [];
     for (const p of rawProducts) {
       if (!p) continue;
-      const url = getPath(p, productUrlPath);
+      // Try schema's productUrlPath first (typically 'seo.canonicalUrl').
+      // Fallback to `urls.directPageUrl` — observed 2026-05-27 on
+      // triggersandbows.com where `seo.canonicalUrl` is missing but
+      // `urls.directPageUrl` carries the SPA-hash route the site actually serves.
+      let url: string | undefined = getPath(p, productUrlPath);
+      if (!url) {
+        const direct = getPath(p, 'urls.directPageUrl');
+        if (direct) {
+          url = typeof direct === 'string' && direct.startsWith('/') && originPrefix
+            ? `${originPrefix}${direct}`
+            : String(direct);
+        }
+      }
       const name = getPath(p, productNamePath);
       if (!url || !name) continue;
 

@@ -67,15 +67,45 @@ function delay(ms: number): Promise<void> {
   return new Promise(r => setTimeout(r, ms));
 }
 
+/**
+ * Resolve the canonical origin (protocol+host) from a profile.
+ * Per SKILL.md Stage 4 catalogUrls can be path-only ("/shop/") -- fall back to
+ * extractionSample[].url (always absolute) to derive the origin.
+ */
+function resolveProfileOrigin(profile: any): string | null {
+  // Try canonicalUrl, then absolute catalogUrls, then extractionSample.
+  if (typeof profile.canonicalUrl === 'string' && profile.canonicalUrl.startsWith('http')) {
+    try { return new URL(profile.canonicalUrl).origin; } catch { /* fall through */ }
+  }
+  const urls: any[] = profile.catalogUrls || [];
+  for (const u of urls) {
+    if (typeof u === 'string' && u.startsWith('http')) {
+      try { return new URL(u).origin; } catch { /* skip */ }
+    }
+  }
+  const samples: any[] = profile.extractionSample || [];
+  for (const s of samples) {
+    if (s && typeof s.url === 'string' && s.url.startsWith('http')) {
+      try { return new URL(s.url).origin; } catch { /* skip */ }
+    }
+  }
+  return null;
+}
+
 function extractDomainFromProfile(profile: any): string {
-  // Try to get domain from the first catalogUrl
-  const urls: string[] = profile.catalogUrls || [];
-  if (urls.length > 0) {
-    try {
-      return new URL(urls[0]).hostname.replace(/^www\./, '');
-    } catch { /* fall through */ }
+  const origin = resolveProfileOrigin(profile);
+  if (origin) {
+    try { return new URL(origin).hostname.replace(/^www\./, ''); } catch { /* fall through */ }
   }
   return 'unknown';
+}
+
+/** Resolve a (possibly path-only) catalogUrl to an absolute URL using the profile's origin. */
+function resolveCatalogUrl(catUrl: string, profile: any): string | null {
+  if (catUrl.startsWith('http')) return catUrl;
+  const origin = resolveProfileOrigin(profile);
+  if (!origin) return null;
+  return origin + (catUrl.startsWith('/') ? catUrl : '/' + catUrl);
 }
 
 // ---- Stage 1: Spec Compliance ----------------------------------------------
@@ -149,12 +179,13 @@ export async function runStage1Spec(profile: any): Promise<StageResult> {
     }
   }
 
-  // Consistency guard: wafType vs hasWaf
-  if (profile.wafType !== null && profile.wafType !== undefined && profile.hasWaf !== true) {
-    blockingErrors.push(
-      `consistency-guard-wafType-vs-hasWaf: wafType='${profile.wafType}' but hasWaf=${profile.hasWaf}`
-    );
-  }
+  // (Removed legacy consistency-guard-wafType-vs-hasWaf: per SKILL.md B10 the
+  //  CORRECT pairing is hasWaf:false + wafType:'cloudflare-passive' or similar
+  //  passive label. The OPPOSITE pairing -- hasWaf:true + wafType:*-passive --
+  //  is the invalid one, and that is enforced by profile-validator.ts's
+  //  `wafTypePassiveCoherence` check (Stage 1 above). The old guard required
+  //  hasWaf:true whenever wafType was set, which is the inverse of B10 and
+  //  blocked every correctly-shaped passive-WAF profile.)
 
   // Method C requires reason
   if (profile.crawlers?.watermark?.method === 'full-catalog-sweep') {
@@ -212,11 +243,15 @@ export async function runStage2Walk(profile: any): Promise<StageResult> {
   }
 
   for (let i = 0; i < catalogUrls.length; i++) {
-    const catUrl = catalogUrls[i];
+    const catUrlRaw = catalogUrls[i];
+    // Per SKILL.md Stage 4, catalogUrls can be path-only ("/shop/"); the runtime
+    // walker resolves against the site origin. Stage 2 must do the same before
+    // calling fetchUrl (which needs an absolute URL).
+    const catUrl = resolveCatalogUrl(catUrlRaw, profile);
     if (i > 0) await delay(DELAY_MS);
 
     const urlResult: typeof perUrlResults[0] = {
-      url: catUrl,
+      url: catUrl ?? catUrlRaw,
       page1Products: 0,
       page1Slugs: [],
       page2Products: 0,
@@ -224,6 +259,13 @@ export async function runStage2Walk(profile: any): Promise<StageResult> {
       page3Products: 0,
       paginationVerdict: 'unknown',
     };
+
+    if (!catUrl) {
+      blockingErrors.push(`${catUrlRaw}: cannot resolve to absolute URL (no canonicalUrl/extractionSample in profile)`);
+      urlResult.paginationVerdict = 'unresolved';
+      perUrlResults.push(urlResult);
+      continue;
+    }
 
     try {
       // Page 1
@@ -314,16 +356,18 @@ export async function runStage2Walk(profile: any): Promise<StageResult> {
 async function getApiCount(profile: any): Promise<number | null> {
   const platform = (profile.platform || '').toLowerCase();
   const catalogUrls: string[] = profile.catalogUrls || [];
-  const method = (profile.productCountMethod || '').toLowerCase();
+  // productCountMethod is a discriminated-union object {method, ...} per SKILL.md B6.
+  // Legacy profiles may still ship a bare string; tolerate both rather than
+  // crashing via .toLowerCase() on an object.
+  const methodRaw = profile.productCountMethod;
+  const method = (typeof methodRaw === 'string'
+    ? methodRaw
+    : (methodRaw && typeof methodRaw === 'object' ? String(methodRaw.method || '') : '')
+  ).toLowerCase();
 
-  // Derive siteUrl from first catalogUrl
-  let siteUrl: string | null = null;
-  if (catalogUrls.length > 0) {
-    try {
-      const u = new URL(catalogUrls[0]);
-      siteUrl = `${u.protocol}//${u.host}`;
-    } catch { /* no siteUrl available */ }
-  }
+  // Derive siteUrl from the profile (handles path-only catalogUrls via
+  // resolveProfileOrigin fallbacks).
+  const siteUrl: string | null = resolveProfileOrigin(profile);
   if (!siteUrl) return null;
 
   try {
@@ -687,9 +731,14 @@ export async function writeReviewReport(result: ReviewResult): Promise<void> {
   const outputDir = path.resolve(__dirname, '..', '..', 'docs', 'site-audit');
   await fs.mkdir(outputDir, { recursive: true });
 
-  const ts = result.timestamp.replace(/[:.]/g, '-');
-  const jsonPath = path.join(outputDir, `${result.domain}-${ts}-review.json`);
-  const mdPath = path.join(outputDir, `${result.domain}-${ts}-review.md`);
+  // Derive output filenames from the INPUT profile basename so they match
+  // exactly what enable-new-site.ts looks for: `<profile>-review.json`.
+  // Previously this used `${domain}-${runTimestamp}` which never matched the
+  // profile's own filename, so enable-new-site always exited 4 ("No review
+  // file found").
+  const profileBase = path.basename(result.profilePath, '.json');
+  const jsonPath = path.join(outputDir, `${profileBase}-review.json`);
+  const mdPath = path.join(outputDir, `${profileBase}-review.md`);
 
   // Set file paths on Stage 5 details BEFORE serializing
   const stage5 = result.stages.find(s => s.stage === 5);

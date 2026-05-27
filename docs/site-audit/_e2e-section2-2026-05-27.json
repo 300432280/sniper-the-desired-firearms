@@ -1,0 +1,970 @@
+{
+  "generatedAt": "2026-05-27T07:07:13.014Z",
+  "sites": [
+    {
+      "domain": "aagcanada.ca",
+      "hasWaf": false,
+      "sampled": 7,
+      "passed": 7,
+      "products": [
+        {
+          "url": "https://aagcanada.ca/products/quantum-lux-universal-gun-cleaning-kit-multi-caliber-rifle-pistol-shotgun-cleaning-set-with-brass-rods-brushes-mops-accessories",
+          "title": "Quantum Lux Universal Gun Cleaning Kit – Multi-Caliber Rifle, Pistol & Shotgun C",
+          "productType": "ammunition",
+          "price": 59.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 193333,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 2054909,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://aagcanada.ca/products/spanish-side-by-side-coach-gun-12-gauge-20-barrels-double-trigger-made-in-spain",
+          "title": "Spanish Side-by-Side Coach Gun – 12 Gauge – 20” Barrels – Double Trigger – Made ",
+          "productType": "firearm",
+          "price": 599,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 198982,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 2916000,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://aagcanada.ca/products/dnt-optics-the-one-7-35x56-ffp-riflescope-w-nightforce-rings-like-new-in-box",
+          "title": "DNT Optics “THE ONE” 7-35x56 FFP Riflescope w/ Nightforce Rings – Like New in Bo",
+          "productType": "optics",
+          "price": 899,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 210941,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 2635555,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://aagcanada.ca/products/pilla-performance-shooting-glasses-kit-tomcat-frame-w-zeiss-vx-lenses-22ci-32cimx-orange-case-accessories",
+          "title": "Pilla Performance Shooting Glasses Kit – Tomcat Frame w/ Zeiss VX Lenses (22CI, ",
+          "productType": "gear",
+          "price": 800,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 174565,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 2058679,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://aagcanada.ca/products/czechoslovak-brno-vz-24-马四环-with-czech-lion-crest-8-57-mauser",
+          "title": "Czechoslovak Brno VZ.24 (马四环) with Czech Lion Crest – 8×57 Mauser",
+          "productType": "other",
+          "price": 1499,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 256928,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 1781766,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://aagcanada.ca/products/german-k98k-bayonet-s84-98-iii-1940-coppel-waa253-steel-scabbard",
+          "title": "German K98k Bayonet (S84/98 III) – 1940 Coppel – WaA253 – Steel Scabbard",
+          "productType": "knives",
+          "price": 320,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 211605,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 3076168,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://aagcanada.ca/products/tikka-t3x-ace-target-223-rem-23-7-threaded-barrel-made-in-finland-new-in-box",
+          "title": "Tikka T3x ACE Target – .223 Rem – 23.7” Threaded Barrel – Made in Finland – New ",
+          "productType": "parts",
+          "price": 1999,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 209783,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 2425006,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        }
+      ]
+    },
+    {
+      "domain": "corwin-arms.com",
+      "hasWaf": false,
+      "sampled": 3,
+      "passed": 3,
+      "products": [
+        {
+          "url": "https://www.corwin-arms.com/product/scottish-lion-flag/",
+          "title": "Scottish  Lion Flag",
+          "productType": "other",
+          "price": 12.5,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 350747,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 249615,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://www.corwin-arms.com/product/mosin-rifle-bend-bolt-actions-in-7-62x54r/",
+          "title": "Mosin Rifle Bend Bolt Actions in  7.62x54R",
+          "productType": "firearm",
+          "price": 497,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 360001,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 317916,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://www.corwin-arms.com/product/original-swiss-army-weapons-protective-lubricant-automatenfett/",
+          "title": "Original Swiss Army weapons  protective lubricant “Automatenfett”",
+          "productType": "knives",
+          "price": 75,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 357810,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 340426,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        }
+      ]
+    },
+    {
+      "domain": "groupepronature.ca",
+      "hasWaf": true,
+      "sampled": 7,
+      "passed": 7,
+      "products": [
+        {
+          "url": "https://groupepronature.ca/products/hamac-double-hammock-double-chez-pronature",
+          "title": "Hamac - double",
+          "productType": "ammunition",
+          "price": 54.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 576594,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 173638,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://groupepronature.ca/products/carabine-semi-atuomatique-wildcat-midnight-sr-s-cal-22-lr-wildcat-midnight-sr-s-semi-automatic-rifle-cal-22-lr",
+          "title": "Carabine semi-atuomatique \"Wildcat Midnight SR-S\" cal. 22 LR",
+          "productType": "firearm",
+          "price": 499.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 489121,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 152972,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://groupepronature.ca/products/carabine-a-verrou-camo-stevens-series-334-avec-telescope-engage-3-9x40-camo-stevens-series-334-bolt-action-rifle-with-engage-3-9x40-scope",
+          "title": "Carabine à verrou camo \"Stevens Series 334\" avec télescope Engage 3-9x40",
+          "productType": "optics",
+          "price": 899.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 807287,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 23974,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://groupepronature.ca/products/nettoyant-rem-action-en-aerosol-rem-action-aerosol-cleaner",
+          "title": "Nettoyant REM Action en aérosol",
+          "productType": "gear",
+          "price": 14.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 458707,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 210570,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://groupepronature.ca/products/lunettes-polarisees-bifocales-2-00-bifocal-polarized-sunglasses-2-00",
+          "title": "Lunettes polarisées bifocales (+2,00)",
+          "productType": "other",
+          "price": 44.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 458254,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 113987,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://groupepronature.ca/products/couteau-pliant-folding-knife",
+          "title": "Couteau pliant",
+          "productType": "knives",
+          "price": 16.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 459724,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 60937,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://groupepronature.ca/products/montage-portable-clamp-mount-chez-pronature",
+          "title": "Montage portable \"Mount Clamp\"",
+          "productType": "parts",
+          "price": 48.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 462421,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 36098,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        }
+      ]
+    },
+    {
+      "domain": "tacord.com",
+      "hasWaf": false,
+      "sampled": 5,
+      "passed": 5,
+      "products": [
+        {
+          "url": "https://tacord.com/product/detachable-carrier/",
+          "title": "Aridus Industries Detachable Carrier – 6 Round",
+          "productType": "ammunition",
+          "price": 75,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 160855,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 95817,
+            "thumbContentType": "image/png",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://tacord.com/product/mossberg-big-speed-safety/",
+          "title": "VCS Mossberg Big Speed Safety",
+          "productType": "other",
+          "price": 45,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 163403,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 8420,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://tacord.com/product/remington-870-quich-detach-carrier/",
+          "title": "Aridus Industries Remington 870 Quick-Detach Carrier",
+          "productType": "firearm",
+          "price": 225,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 167877,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 164837,
+            "thumbContentType": "image/png",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://tacord.com/product/beretta-1301-tactical-aimpoint-micro-co-witness-ready-optic-mount/",
+          "title": "Aridus Industries Beretta 1301 Tactical – Aimpoint Micro CROM",
+          "productType": "optics",
+          "price": 155,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 183846,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 112635,
+            "thumbContentType": "image/png",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://tacord.com/product/magpul-m-lok-aluminum-rail-3-slots/",
+          "title": "MAGPUL M-LOK® Aluminum Rail, 3 Slots",
+          "productType": "parts",
+          "price": 25,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 164240,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 2891,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        }
+      ]
+    },
+    {
+      "domain": "tommyenterprises.com",
+      "hasWaf": false,
+      "sampled": 5,
+      "passed": 4,
+      "products": [
+        {
+          "url": "https://tommyenterprises.com/product/custom-work/",
+          "title": "Custom Work",
+          "productType": "other",
+          "price": 20,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": false,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 193915,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbOk": false
+          },
+          "notes": [
+            "thumbnail null in DB"
+          ],
+          "pass": false
+        },
+        {
+          "url": "https://tommyenterprises.com/product/mlok-handguard-for-derya-tm22-la-lever-action/",
+          "title": "MLOK handguard for Derya TM22-LA Lever Action",
+          "productType": "firearm",
+          "price": 80,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 195283,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 11818,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://tommyenterprises.com/product/gsg-16-sight-pins-multiple-colours/",
+          "title": "GSG-16 sight pins – multiple colours",
+          "productType": "optics",
+          "price": 10,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 202386,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 28871,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://tommyenterprises.com/product/ar-grip-stock-adapter-for-henry-survival-ar7/",
+          "title": "AR grip/stock adapter for Henry Survival AR7",
+          "productType": "gear",
+          "price": 75,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 193917,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 31910,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://tommyenterprises.com/product/gsg-16-muzzle-device-adapter-1-2-28/",
+          "title": "GSG-16 Muzzle Device Adapter (1/2″-28)",
+          "productType": "parts",
+          "price": 35,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 190945,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 19018,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        }
+      ]
+    },
+    {
+      "domain": "westernmetal.ca",
+      "hasWaf": false,
+      "sampled": 7,
+      "passed": 7,
+      "products": [
+        {
+          "url": "https://westernmetal.ca/product/lee-precision-r5-shell-holder-lp-90522/",
+          "title": "LEE PRECISION – R5 SHELL HOLDER – LP-90522",
+          "productType": "ammunition",
+          "price": 7.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 2047730,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 23173,
+            "thumbContentType": "image/png",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://westernmetal.ca/product/heritage-c-22-lr-16-1%e2%80%b3-rough-rider-rancher-carbine-n-br226b16hs-ls/",
+          "title": "Heritage c.22 LR 16.1″ Rough Rider® Rancher™ Carbine, N-BR226B16HS-LS",
+          "productType": "firearm",
+          "price": 589.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 2048137,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 127729,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://westernmetal.ca/product/arrowstop-foam-archery-target-dm-70112/",
+          "title": "ARROWSTOP FOAM ARCHERY TARGET. DM-70112",
+          "productType": "gear",
+          "price": 64.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 2046433,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 54221,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://westernmetal.ca/product/riton-3-tactix-mprd-2-red-dot-a-rit-3tmprd2-2/",
+          "title": "RITON 3 TACTIX MPRD 2 RED DOT, A-RIT-3TMPRD2",
+          "productType": "optics",
+          "price": 369.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 2050154,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 13089,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://westernmetal.ca/product/lead-wire-0-020-in-1-lb-spools-lw-020-1-lb/",
+          "title": "LEAD WIRE 0.020″ IN 1 LB SPOOLS LW .020 1 LB",
+          "productType": "other",
+          "price": 115.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 2045203,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 60853,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://westernmetal.ca/product/accusharp-001c-knife-tool-sharpener-a-as-001c/",
+          "title": "ACCUSHARP 001C KNIFE/TOOL SHARPENER A-AS-001C",
+          "productType": "knives",
+          "price": 20,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 2047053,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 31849,
+            "thumbContentType": "image/jpeg",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        },
+        {
+          "url": "https://westernmetal.ca/product/morisson-lever-mares-leg-44-mag-12%e2%80%b3-black-tact-forend-5-1-n-ml1812t-44/",
+          "title": "MORISSON LEVER MARES LEG 44 MAG 12″ BLACK TACT FOREND 5 1, N-ML1812T-44",
+          "productType": "parts",
+          "price": 829.99,
+          "dbChecks": {
+            "url": true,
+            "title": true,
+            "price": true,
+            "thumbnail": true,
+            "stockStatus": true,
+            "sourceId": true
+          },
+          "liveChecks": {
+            "status": 200,
+            "bytes": 2050666,
+            "urlOk": true,
+            "titleOk": true,
+            "priceOk": true,
+            "thumbStatus": 200,
+            "thumbBytes": 72668,
+            "thumbContentType": "image/png",
+            "thumbOk": true
+          },
+          "notes": [],
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

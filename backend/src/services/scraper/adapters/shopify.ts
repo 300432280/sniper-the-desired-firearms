@@ -23,6 +23,14 @@ export class ShopifyAdapter extends AbstractAdapter {
 
   async searchViaApi(origin: string, keyword: string, options: ScrapeOptions): Promise<ScrapedMatch[]> {
     try {
+      // `origin` may include a locale prefix (e.g. "...ca/en") so /search/suggest.json
+      // hits the right locale and returns English titles on bilingual stores.
+      // Shopify's response payload, however, already encodes the locale into
+      // each product.url ("/en/products/<handle>"), so joining product.url
+      // with the locale-prefixed origin would produce "/en/en/products/<handle>"
+      // -- a double prefix that doesn't exist. Use the BARE origin (protocol +
+      // host only) when constructing the product URL.
+      const bareOrigin = new URL(origin).origin;
       const url = `${origin}/search/suggest.json`;
       const response = await axios.get(url, {
         params: {
@@ -45,11 +53,14 @@ export class ShopifyAdapter extends AbstractAdapter {
 
       for (const product of products) {
         const title = (product.title || '').trim();
-        if (!title || !title.toLowerCase().includes(keywordLower)) continue;
+        if (!title) continue;
+        // Don't re-filter by `title.includes(keyword)` -- /search/suggest.json already
+        // matched server-side; re-filtering drops foreign-language hits
+        // (e.g. "Carabine" never matches "rifle") and synonym/model-name hits.
 
         let productUrl = product.url
-          ? (product.url.startsWith('http') ? product.url : `${origin}${product.url}`)
-          : origin;
+          ? (product.url.startsWith('http') ? product.url : `${bareOrigin}${product.url}`)
+          : bareOrigin;
         // Strip Shopify search tracking params to avoid duplicate ProductIndex entries
         try {
           const u = new URL(productUrl);
@@ -106,7 +117,7 @@ export class ShopifyAdapter extends AbstractAdapter {
       $(selector).each((_, el) => {
         const element = $(el);
         const text = element.text();
-        if (!text.toLowerCase().includes(keywordLower)) return;
+        if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
         const rawTitle = this.extractTitle(element, text);
         if (!rawTitle || rawTitle.length < 3) return;

@@ -28,7 +28,7 @@ export class XenForoAdapter extends AbstractAdapter {
     xfThreads.each((_, el) => {
       const element = $(el);
       const text = element.text();
-      if (!text.toLowerCase().includes(keywordLower)) return;
+      if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
       // XenForo title structure: .structItem-title may contain a prefix label <a> ("WTS :")
       // followed by the actual thread title <a>. Use full container text for title,

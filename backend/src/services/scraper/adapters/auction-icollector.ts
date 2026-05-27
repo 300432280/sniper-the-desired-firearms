@@ -85,7 +85,8 @@ export class ICollectorAdapter extends AbstractAdapter {
     for (const item of items) {
       const title = (item.ItemTitle || '').trim();
       if (!title) continue;
-      if (!title.toLowerCase().includes(keywordLower)) continue;
+      // Don't re-filter by title.includes(keyword) -- the CloudSearch API
+      // already matched server-side; re-filtering drops synonym/model-name hits.
 
       const titleKey = title.toLowerCase().slice(0, 60);
       if (seen.has(titleKey)) continue;
@@ -149,7 +150,7 @@ export class ICollectorAdapter extends AbstractAdapter {
 
         if (!rawTitle) {
           const text = element.text();
-          if (!text.toLowerCase().includes(keywordLower)) return;
+          if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
           let titleEl = element.find('[class*="lot-title"], [class*="lotTitle"]').first();
           if (!titleEl.length) titleEl = element.find('h3, h4, h2').first();
@@ -159,7 +160,7 @@ export class ICollectorAdapter extends AbstractAdapter {
 
         if (!rawTitle || rawTitle.length < 3) return;
         if (/^\$?\d[\d,.]*$/.test(rawTitle)) return;
-        if (!rawTitle.toLowerCase().includes(keywordLower)) return;
+        if (!options.isSearchPage && !rawTitle.toLowerCase().includes(keywordLower)) return;
 
         const cleanTitle = rawTitle.replace(/^\d+[A-Za-z]?\s*-\s*/, '');
         const titleKey = cleanTitle.toLowerCase().slice(0, 60);

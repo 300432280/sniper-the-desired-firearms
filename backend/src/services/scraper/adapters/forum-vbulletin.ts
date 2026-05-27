@@ -28,7 +28,7 @@ export class VBulletinAdapter extends AbstractAdapter {
     vbThreads.each((_, el) => {
       const element = $(el);
       const text = element.text();
-      if (!text.toLowerCase().includes(keywordLower)) return;
+      if (!options.isSearchPage && !text.toLowerCase().includes(keywordLower)) return;
 
       let titleEl = element.find('.threadtitle a, a[id^="thread_title_"]').first();
       if (!titleEl.length) titleEl = element.find('a[href*="showthread"]').first();
