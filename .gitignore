@@ -33,4 +33,5 @@ sm2.xml
 # Session scratch: one-off diagnostic/probe/apply scripts + their backups (kept on disk, not tracked)
 backend/scripts/_*
 backend/_*.ts
+backend/_*_backup_*/
 .claude/worktrees/
