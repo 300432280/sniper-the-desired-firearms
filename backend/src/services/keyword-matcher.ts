@@ -11,9 +11,68 @@
  */
 
 import { prisma } from '../lib/prisma';
-import { sendAlertEmail } from './email';
-import { config } from '../config';
 import { pushEvent } from './debugLog';
+
+// Max ProductIndex rows fetched per searchProductIndex broad-ILIKE pass before
+// JS refinement. A keyword×catalog combo that hits this cap is silently
+// truncated (rows beyond the cap never reach the word-boundary refine step), so
+// we warn + emit a debug event when it's reached.
+//
+// SCOPE: this cap binds the SITE-SCOPED path (siteIds provided). For a single
+// site, 1000 newest matching rows is far more than any one catalog yields for a
+// real keyword, so it effectively never truncates there — its purpose is purely
+// a safety ceiling + observability for that path.
+const SEARCH_INDEX_CAP = 1000;
+
+// Per-site cap for the ALL-SITES global search path (siteIds undefined). The old
+// single global `take: SEARCH_INDEX_CAP` ordered by firstSeenAt was UNFAIR: the
+// 1000 newest matches cluster on a few high-volume sites, so other sites were
+// squeezed to ~0 (measured 2026-06-05: "glock" surfaced 26/47 sites, "ammo" 8/49).
+// Instead we fetch the newest PER_SITE_CAP matches PER maintain-site, so every
+// site is represented and total rows are bounded at PER_SITE_CAP × (#sites).
+//
+// IMPORTANT: this cap bounds the BROAD (pre-refine) per-site SQL fetch, NOT the
+// post-refine count. So the ceiling must sit ABOVE the busiest NORMAL keyword's
+// per-site BROAD row count, or that site would be truncated before refinement
+// and return FEWER results than the old path. Measured per-site broad maxima
+// (2026-06-05, busiest single site): glock 602, remington-870 432, tikka 1000,
+// sako 413, cz 773, ruger 1518, savage 2035. 3000 clears the worst normal brand
+// (savage 2035) with headroom, so no ordinary keyword is truncated.
+//
+// Bare CATEGORY words still exceed it on their biggest sites (per-site broad:
+// ammo up to 37,609; rifle up to 18,893) and ARE truncated per-site — that is
+// acceptable (those sets are paginated client-side) AND is surfaced by the
+// PER_SITE_CAP observability below. At cap=3000 the worst bare-category search
+// ("ammo") fetches ~30,106 broad rows total (vs 66,486 uncapped).
+const PER_SITE_CAP = 3000;
+
+// Bounded-concurrency map returning settled results. The all-sites path issues
+// one indexed per-site query per maintain-site (~56); running them 8-at-a-time
+// keeps Neon connection use sane while the siteId composite indexes make each
+// query a cheap seek (vs the old single unindexed global scan+sort). Results are
+// returned per input in order as {status:'fulfilled',value} | {status:'rejected',
+// reason} so ONE site's query failure (a Neon hiccup) drops only that site
+// instead of failing the entire 56-query search.
+async function mapSettledWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<Array<{ status: 'fulfilled'; value: R } | { status: 'rejected'; reason: unknown }>> {
+  const out: Array<{ status: 'fulfilled'; value: R } | { status: 'rejected'; reason: unknown }> = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const idx = next++;
+      try {
+        out[idx] = { status: 'fulfilled', value: await fn(items[idx]) };
+      } catch (reason) {
+        out[idx] = { status: 'rejected', reason };
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return out;
+}
 
 // ── Alias Expansion ─────────────────────────────────────────────────────────
 
@@ -60,19 +119,136 @@ export function matchesKeyword(title: string, keyword: string): boolean {
   // spaces/hyphens between each character, with a word boundary on the left.
   // "ar15" → /(?<![a-z0-9])a[\s\-]?r[\s\-]?1[\s\-]?5/i
   // Matches: "AR-15", "AR 15", "AR15"
+  //
+  // SHORT, PURELY-ALPHABETIC aliases ALSO get a RIGHT boundary so they don't
+  // prefix-match into longer words. Longer aliases, and short aliases that
+  // carry a digit/symbol model code ("g19", "ar15"), stay right-unbounded so
+  // "glock" -> "Glock17" and "ar15" -> "AR15A4" model variants keep matching.
+  // See isShortAlphaAlias and matchesKeywordExact for the rationale.
   if (kwStripped.length >= 3 && kwStripped.length <= 20) {
     const escaped = kwStripped.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s\\-]?');
-    const re = new RegExp(`(?<![a-z0-9])${escaped}`, 'i');
+    const right = isShortAlphaAlias(kwStripped) ? '(?![a-z0-9])' : '';
+    const re = new RegExp(`(?<![a-z0-9])${escaped}${right}`, 'i');
     if (re.test(title)) return true;
   }
 
-  // Multi-word AND matching: "mauser 308" matches if BOTH "mauser" AND "308"
-  // appear independently in the title (words don't need to be adjacent).
+  // Multi-word AND matching WITH a proximity constraint: every word must
+  // appear AND the hits must fall within a small token window. Without the
+  // window, the SKS-clone alias "type 56" matched
+  // "NORINCO TYPE 97 NSR G3 .223/5.56 ..." because "type" (from TYPE 97) and
+  // "56" (from the 5.56 caliber) each appear, far apart, in unrelated
+  // positions. (2026-05-27 westernmetal.ca false positive.) The window keeps
+  // legit brand+spec hits like "mauser 308" -> "Mauser K98 .308 Win".
   const words = keyword.split(/\s+/).filter(w => w.length >= 2);
-  if (words.length >= 2) {
-    if (words.every(word => matchesKeyword(title, word))) return true;
+  if (words.length >= 2 && wordsWithinProximity(title, words, words.length - 1 + PROXIMITY_SLACK)) {
+    return true;
   }
 
+  return false;
+}
+
+/**
+ * Extra filler tokens allowed between the words of a multi-word keyword,
+ * beyond the words themselves. N adjacent words have span N-1; we allow up to
+ * PROXIMITY_SLACK additional tokens in the span. (e.g. 2 words -> span <= 2,
+ * so "Mauser K98 .308" matches "mauser 308" but "TYPE 97 ... 5.56" does not
+ * match "type 56" — its clean hits land 3+ tokens apart.)
+ */
+const PROXIMITY_SLACK = 1;
+
+const SHORT_ALIAS_MAX = 3;
+
+/**
+ * A short alias is required to match as a COMPLETE token (left AND right word
+ * boundary) — rather than the usual left-only prefix match — ONLY when it is
+ * short (<= SHORT_ALIAS_MAX chars) AND purely alphabetic (letters only, no
+ * digit, no symbol).
+ *
+ * Why purely-alphabetic: the false positives are short ALPHA aliases that
+ * prefix a different WORD. A bare 3-char alias like "mag" (an alias of
+ * "magazine") otherwise prefix-matches into "Magnum", "Magpul",
+ * "Magnet/Magnetic", and SKUs like "MAG526-BLK". Measured live: 59% of 405
+ * "magazine" hits on bullseyenorth came ONLY via this "mag" prefix collision
+ * (Magpul SKUs, Magnum ammo, even a Morakniv).
+ *
+ * Why NOT digit/symbol short aliases: short aliases that carry a digit or
+ * symbol are model codes whose prefix-into-VARIANT is desired and has no
+ * alpha fallback: "g19" -> "Glock G19X", "g17" -> "Glock G17L", "m&p" ->
+ * "S&W M&P9 Compact", ".45" -> ".45ACP". These keep right-unbounded matching.
+ *
+ * Longer aliases (>= 4 chars: "glock", "mauser", "german", "magazine") also
+ * keep the right-unbounded prefix behavior so model/plural/variant suffixes
+ * still match ("Glock17", "Mausers", "Germany").
+ *
+ * BY DESIGN, a bare purely-alpha short alias does NOT match a glued model
+ * variant: "sks" does NOT match "SKS47". "SKS Rifle" still matches via the
+ * space boundary, and "SKS-45" matches via the dedicated `sks-45` alias in the
+ * SKS keyword group — but the glued "SKS47" form is intentionally excluded to
+ * keep the "mag" FP fix simple and predictable. (2026-06-01 "mag" prefix FP;
+ * pure-alpha refinement same day after m&p/g19/.45 false-negative review.)
+ */
+function isShortAlphaAlias(kw: string): boolean {
+  return kw.length <= SHORT_ALIAS_MAX && /^[a-z]+$/i.test(kw);
+}
+
+/**
+ * Stricter per-token match for the multi-word proximity branch. Builds on the
+ * left-boundary prefix match (matchesKeywordExact) but rejects two spurious
+ * sub-matches that caused false positives:
+ *  - numeric component matching the fractional part of a decimal caliber
+ *    ("56" in "5.56") — digit before the '.'.
+ *  - short (<3 char) alpha component prefixing into a longer word ("tm" in
+ *    "tmj") — require a clean right boundary.
+ * Longer alpha components (rem, moss, sig...) keep prefix matching, and numeric
+ * variant suffixes (92->92fs, 64->64f, 19->19x) are unaffected because those
+ * match via the EXACT branch (contiguous "brand NN"), not this multiword path.
+ */
+function componentMatchesToken(token: string, word: string): boolean {
+  const t = token.toLowerCase();
+  const w = word.toLowerCase();
+  const idx = t.indexOf(w);
+  if (idx === -1) return false;
+  const before = idx > 0 ? t[idx - 1] : ' ';
+  if (/[a-z0-9]/i.test(before)) return false;          // left boundary (same as matchesKeywordExact)
+  const after = idx + w.length < t.length ? t[idx + w.length] : '';
+  // Rule 1: numeric component must not be a decimal fraction ("56" in "5.56").
+  if (/^\d+$/.test(w) && before === '.') {
+    const before2 = idx >= 2 ? t[idx - 2] : '';
+    if (/[0-9]/.test(before2)) return false;
+  }
+  // Rule 2: short (<3) alpha component must be a complete run, not a prefix
+  // into a longer alphanumeric token ("tm" in "tmj").
+  if (/^[a-z]+$/i.test(w) && w.length < 3 && after && /[a-z0-9]/i.test(after)) return false;
+  return true;
+}
+
+/**
+ * True when every word in `words` matches some token in `text` AND a single
+ * window of at most `window` tokens covers at least one hit for every word.
+ * Uses componentMatchesToken per token, then a sliding window over the sorted
+ * hits (classic "smallest range covering K lists").
+ */
+function wordsWithinProximity(text: string, words: string[], window: number): boolean {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  const hits: Array<{ pos: number; word: number }> = [];
+  for (let w = 0; w < words.length; w++) {
+    for (let i = 0; i < tokens.length; i++) {
+      if (componentMatchesToken(tokens[i], words[w])) hits.push({ pos: i, word: w });
+    }
+  }
+  if (new Set(hits.map(h => h.word)).size < words.length) return false;
+  hits.sort((a, b) => a.pos - b.pos);
+
+  const counts = new Array(words.length).fill(0);
+  let distinct = 0;
+  for (let left = 0, right = 0; right < hits.length; right++) {
+    if (counts[hits[right].word]++ === 0) distinct++;
+    while (distinct === words.length) {
+      if (hits[right].pos - hits[left].pos <= window) return true;
+      if (--counts[hits[left].word] === 0) distinct--;
+      left++;
+    }
+  }
   return false;
 }
 
@@ -83,14 +259,26 @@ function matchesKeywordExact(title: string, keyword: string): boolean {
   const idx = titleLower.indexOf(kw);
   if (idx === -1) return false;
 
-  // Require word boundary on the left only (no alphanumeric before).
-  // Right side is unrestricted so model variants match naturally:
-  //   "sks" → "SKS45", "SKS-45", "SKS 45"    ✓
+  // Require word boundary on the left (no alphanumeric before).
+  // Left boundary prevents mid-word matches like "DESKTOP" matching "skt".
+  const charBefore = idx > 0 ? titleLower[idx - 1] : ' ';
+  if (/[a-z0-9]/i.test(charBefore)) return false;
+
+  // Right side is unrestricted for normal-length keywords so model variants
+  // match naturally:
   //   "german" → "Germany"                     ✓
   //   "mauser" → "Mausers"                     ✓
-  // Left boundary still prevents mid-word matches like "DESKTOP" matching "skt".
-  const charBefore = idx > 0 ? titleLower[idx - 1] : ' ';
-  return !/[a-z0-9]/i.test(charBefore);
+  //   "glock"  → "Glock17"                      ✓
+  // but SHORT, PURELY-ALPHABETIC aliases require a RIGHT boundary too, so a
+  // bare "mag" does not prefix-match "Magnum"/"Magpul"/"MAG526". Short aliases
+  // that contain a digit or symbol ("g19", "m&p", ".45") are model codes whose
+  // prefix-into-variant IS desired, so they keep right-unbounded matching. (See
+  // isShortAlphaAlias.)
+  if (isShortAlphaAlias(kw)) {
+    const charAfter = idx + kw.length < titleLower.length ? titleLower[idx + kw.length] : ' ';
+    if (/[a-z0-9]/i.test(charAfter)) return false;
+  }
+  return true;
 }
 
 /**
@@ -108,222 +296,6 @@ export function matchesWithExtras(
 ): boolean {
   const combined = [title, extras?.tags || '', extras?.urlSlug || ''].join(' ');
   return matchesKeyword(combined, keyword);
-}
-
-// ── Match New Products ──────────────────────────────────────────────────────
-
-interface MatchResult {
-  matchesCreated: number;
-  notificationsSent: number;
-}
-
-/**
- * Send a PRO-tier instant notification for a set of products matched against
- * a search. Handles both fresh-new matches and back-in-stock restocks — the
- * only difference is how Match rows are resolved (look up by (searchId, url)
- * in both cases, since fresh Match rows have just been inserted by the caller).
- *
- * Returns true if an email was attempted (for notification counter accounting).
- */
-async function sendProNotification(
-  search: { id: string; keyword: string; websiteUrl: string; notifyEmail: string | null; notificationType: string; user: { email: string | null; tier: string } | null },
-  products: Array<{ title: string; price?: number | null; url: string; thumbnail?: string | null }>,
-  isRestock: boolean,
-): Promise<boolean> {
-  if (!search.user || search.user.tier !== 'PRO' || products.length === 0) return false;
-  const recipientEmail = search.user.email ?? search.notifyEmail;
-  if (!recipientEmail) return false;
-  if (search.notificationType !== 'EMAIL' && search.notificationType !== 'BOTH') return false;
-
-  try {
-    const notification = await prisma.notification.create({
-      data: { searchId: search.id, type: 'EMAIL', status: 'pending' },
-    });
-
-    const matchRows = await prisma.match.findMany({
-      where: { searchId: search.id, url: { in: products.map(p => p.url) } },
-      select: { id: true },
-    });
-
-    if (matchRows.length > 0) {
-      await prisma.notificationMatch.createMany({
-        data: matchRows.map(m => ({ notificationId: notification.id, matchId: m.id })),
-      });
-    }
-
-    await sendAlertEmail({
-      to: recipientEmail,
-      keyword: search.keyword,
-      matches: products.map(p => ({
-        title: p.title,
-        price: p.price ?? undefined,
-        url: p.url,
-        thumbnail: p.thumbnail ?? undefined,
-      })),
-      notificationId: notification.id,
-      backendUrl: config.backendUrl,
-      isRestock,
-    });
-
-    await prisma.notification.update({ where: { id: notification.id }, data: { status: 'sent' } });
-    return true;
-  } catch (err) {
-    console.error(`[KeywordMatcher] Failed to send notification for search ${search.id}:`, err);
-    return false;
-  }
-}
-
-/**
- * Match a batch of new products against all active searches.
- * Called after products are upserted into ProductIndex.
- *
- * @param products  The freshly saved products to match against active searches.
- * @param restockUrls  Optional set of URLs that represent back-in-stock events
- *   (products that were previously out_of_stock and are now in_stock). For URLs
- *   in this set, the matcher will NOT attempt to create new Match rows (which
- *   would violate the unique([searchId, url]) constraint). Instead, it finds
- *   the existing Match rows, creates a fresh Notification + NotificationMatch
- *   rows linking to them, bumps each Match.foundAt to now, and sends an alert
- *   email to PRO users with a "BACK IN STOCK" subject line.
- */
-export async function matchNewProducts(
-  products: Array<{ id: string; siteId: string; url: string; title: string; price?: number | null; thumbnail?: string | null; tags?: string | null }>,
-  restockUrls?: Set<string>,
-): Promise<MatchResult> {
-  if (products.length === 0) return { matchesCreated: 0, notificationsSent: 0 };
-
-  // Get all active searches (with user info for notifications)
-  const searches = await prisma.search.findMany({
-    where: { isActive: true },
-    include: { user: true },
-  });
-
-  if (searches.length === 0) return { matchesCreated: 0, notificationsSent: 0 };
-
-  // Build siteId → domain map so we can match products to searches by site
-  const siteIds = [...new Set(products.map(p => p.siteId))];
-  const sites = await prisma.monitoredSite.findMany({
-    where: { id: { in: siteIds } },
-    select: { id: true, domain: true },
-  });
-  const siteIdToDomain = new Map(sites.map(s => [s.id, s.domain]));
-
-  // Build keyword → aliases map (cached for this batch)
-  const keywordAliasCache = new Map<string, string[]>();
-
-  let matchesCreated = 0;
-  let notificationsSent = 0;
-
-  for (const search of searches) {
-    const keyword = search.keyword.toLowerCase().trim();
-
-    // Parse keyword for category filter: "7.62x39 ammo" → search "7.62x39", filter to ammunition
-    const { searchTerm, categoryFilter } = parseKeywordWithCategory(keyword);
-
-    // Get aliases for the search term (not the full keyword with category word)
-    if (!keywordAliasCache.has(searchTerm)) {
-      keywordAliasCache.set(searchTerm, await expandKeyword(searchTerm));
-    }
-    const aliases = keywordAliasCache.get(searchTerm)!;
-
-    // Extract the domain from the search's websiteUrl for site filtering
-    let searchDomain: string;
-    try {
-      searchDomain = new URL(search.websiteUrl).hostname.replace(/^www\./, '');
-    } catch {
-      continue; // Skip searches with invalid URLs
-    }
-
-    // Check title, tags, and URL slug, with optional category filtering.
-    const matchingProducts = products.filter(product => {
-      const productDomain = siteIdToDomain.get(product.siteId);
-      if (!productDomain) return false;
-      if (productDomain.replace(/^www\./, '') !== searchDomain) return false;
-      const urlSlug = product.url.split('/').pop()?.replace(/-/g, ' ') || '';
-      if (!aliases.some(alias =>
-        matchesWithExtras(product.title, alias, { tags: product.tags, urlSlug }),
-      )) return false;
-      // Apply category filter if keyword had one (e.g., "7.62x39 ammo" → only ammunition)
-      if (categoryFilter) {
-        const matchesTags = product.tags && categoryFilter.tags.some(t => product.tags!.toLowerCase().includes(t));
-        // productType is not available on the incoming product — only tags from crawler
-        if (!matchesTags) return false;
-      }
-      return true;
-    });
-
-    if (matchingProducts.length === 0) continue;
-
-    // Split into fresh-new vs restock groups
-    const restockCandidates = restockUrls && restockUrls.size > 0
-      ? matchingProducts.filter(p => restockUrls.has(p.url))
-      : [];
-    const nonRestockCandidates = restockUrls && restockUrls.size > 0
-      ? matchingProducts.filter(p => !restockUrls.has(p.url))
-      : matchingProducts;
-
-    // Check existing matches to avoid duplicates (for the fresh-new group)
-    const existingUrls = new Set(
-      (await prisma.match.findMany({
-        where: { searchId: search.id, url: { in: matchingProducts.map(p => p.url) } },
-        select: { url: true },
-      })).map(m => m.url),
-    );
-
-    const freshNewProducts = nonRestockCandidates.filter(p => !existingUrls.has(p.url));
-    // Restock products must already have a Match row for this search — otherwise
-    // they are effectively new (first time this search has ever matched them) and
-    // should go through the fresh-new path instead.
-    const restockProducts = restockCandidates.filter(p => existingUrls.has(p.url));
-    const restockAsNewProducts = restockCandidates.filter(p => !existingUrls.has(p.url));
-    freshNewProducts.push(...restockAsNewProducts);
-
-    // ── Fresh-new products: create Match rows and notify ────────────────────
-    if (freshNewProducts.length > 0) {
-      await prisma.match.createMany({
-        data: freshNewProducts.map(p => ({
-          searchId: search.id,
-          productIndexId: p.id, // FK to ProductIndex — enables live title/price enrichment
-          title: p.title,
-          price: p.price ?? null,
-          url: p.url,
-          hash: `pi:${p.id}`, // ProductIndex-sourced match
-          thumbnail: p.thumbnail ?? null,
-        })),
-        skipDuplicates: true,
-      });
-
-      matchesCreated += freshNewProducts.length;
-
-      if (await sendProNotification(search, freshNewProducts, false)) {
-        notificationsSent++;
-      }
-    }
-
-    // ── Restock products: reuse existing Match rows, new Notification ──────
-    if (restockProducts.length > 0) {
-      // Bump foundAt on the existing Match rows so dashboards reflect the restock
-      await prisma.match.updateMany({
-        where: { searchId: search.id, url: { in: restockProducts.map(p => p.url) } },
-        data: { foundAt: new Date() },
-      });
-
-      console.log(`[Matcher] ${search.id}: ${restockProducts.length} restock notifications queued`);
-
-      if (await sendProNotification(search, restockProducts, true)) {
-        notificationsSent++;
-      }
-    }
-  }
-
-  if (matchesCreated > 0) {
-    pushEvent({
-      type: 'info',
-      message: `Keyword matcher: ${matchesCreated} new matches from ${products.length} products, ${notificationsSent} notifications sent`,
-    });
-  }
-
-  return { matchesCreated, notificationsSent };
 }
 
 // ── Category Filter Words ────────────────────────────────────────────────────
@@ -398,8 +370,16 @@ function parseKeywordWithCategory(keyword: string): {
 export async function searchProductIndex(
   keyword: string,
   siteIds?: string[],
-  options?: { inStockOnly?: boolean },
-): Promise<Array<{ url: string; title: string; price: number | null; regularPrice: number | null; thumbnail: string | null; siteId: string; firstSeenAt: Date; stockStatus: string | null; category: string | null }>> {
+  options?: {
+    inStockOnly?: boolean;
+    maxPrice?: number;
+    changedSince?: Date;
+    minPrice?: number;
+    stock?: 'all' | 'in' | 'out';
+    ammo?: 'include' | 'exclude';
+    sortBy?: 'newest' | 'updated' | 'price_asc' | 'price_desc';
+  },
+): Promise<Array<{ url: string; title: string; price: number | null; regularPrice: number | null; thumbnail: string | null; siteId: string; firstSeenAt: Date; contentChangedAt: Date; stockStatus: string | null; category: string | null; productType: string | null }>> {
   // Parse keyword for category filter: "7.62x39 ammo" → search "7.62x39", filter to ammunition
   const { searchTerm, categoryFilter } = parseKeywordWithCategory(keyword);
   const aliases = await expandKeyword(searchTerm);
@@ -451,20 +431,110 @@ export async function searchProductIndex(
     };
   }
 
-  const products = await prisma.productIndex.findMany({
-    where: {
-      isActive: true,
-      ...(siteIds && siteIds.length > 0 ? { siteId: { in: siteIds } } : {}),
-      ...(options?.inStockOnly ? { stockStatus: { not: 'out_of_stock' } } : {}),
-      ...searchFilter,
-    },
-    orderBy: { firstSeenAt: 'desc' },
-    take: 1000,
-  });
+  // Shared keyword/recency/stock predicates (everything EXCEPT site scoping +
+  // the maintain-phase gate). Reused by both the site-scoped and all-sites paths
+  // so the matching semantics are identical between them.
+  const matchWhere = {
+    isActive: true,
+    ...(options?.inStockOnly ? { stockStatus: { not: 'out_of_stock' as const } } : {}),
+    // Cursor filter: only products first-seen OR content-changed after the cursor.
+    // Combined via AND so it doesn't clobber searchFilter's top-level `OR` key
+    // (both keyword match AND cursor recency must hold). Uses
+    // @@index([siteId, contentChangedAt]); ordered by contentChangedAt so
+    // recently-changed (not just recently-first-seen) rows are within the take cap.
+    ...(options?.changedSince
+      ? { AND: [{ OR: [{ firstSeenAt: { gt: options.changedSince } }, { contentChangedAt: { gt: options.changedSince } }] }] }
+      : {}),
+    ...searchFilter,
+  };
+  const orderBy = options?.changedSince
+    ? { contentChangedAt: 'desc' as const }
+    : { firstSeenAt: 'desc' as const };
+
+  // Only surface products from sites we're actively maintaining: enabled, not
+  // paused, AND past bootstrap (crawlPhase='maintain'). A disabled or
+  // still-bootstrapping site has stale/incomplete data (e.g. sold listings never
+  // re-verified, partial catalog), so its indexed rows must not appear in search
+  // or alerts even though they exist in the DB.
+  const maintainSite = { isEnabled: true, isPaused: false, crawlPhase: 'maintain' };
+
+  let products: Awaited<ReturnType<typeof prisma.productIndex.findMany>>;
+
+  if (siteIds && siteIds.length > 0) {
+    // ── SITE-SCOPED path (unchanged behavior) ─────────────────────────────────
+    // Every production caller except the global /search route lands here with a
+    // single siteId; this query, its orderBy, its SEARCH_INDEX_CAP, and the
+    // cap-hit observability are byte-for-byte the original behavior. A single
+    // site's matching set never approaches 1000 for a real keyword, so the cap
+    // here is a safety ceiling, not the cross-site fairness problem.
+    products = await prisma.productIndex.findMany({
+      where: { site: maintainSite, siteId: { in: siteIds }, ...matchWhere },
+      orderBy,
+      take: SEARCH_INDEX_CAP,
+    });
+    if (products.length === SEARCH_INDEX_CAP) {
+      console.warn(
+        `[keyword-matcher] searchProductIndex hit SEARCH_INDEX_CAP=${SEARCH_INDEX_CAP} for keyword="${keyword}" siteIds=${siteIds.join(',')} — results may be truncated`,
+      );
+      pushEvent({
+        type: 'info',
+        keyword,
+        message: `searchProductIndex hit SEARCH_INDEX_CAP=${SEARCH_INDEX_CAP} — results may be truncated`,
+        data: { keyword, siteIds, cap: SEARCH_INDEX_CAP },
+      });
+    }
+  } else {
+    // ── ALL-SITES path (fair per-site sampling) ───────────────────────────────
+    // The old single global `take: SEARCH_INDEX_CAP` ordered by firstSeenAt
+    // starved low-volume sites (the newest 1000 matches clustered on a few
+    // high-volume sites). Instead, fetch the newest PER_SITE_CAP matches PER
+    // maintain-site so every site is represented, then merge + globally re-sort
+    // by the same key the consumers expect. (No caller passes changedSince with
+    // undefined siteIds, but the orderBy is honored either way.)
+    const sites = await prisma.monitoredSite.findMany({
+      where: maintainSite,
+      select: { id: true },
+    });
+    const ids = sites.map(s => s.id);
+    const perSite = await mapSettledWithConcurrency(ids, 8, siteId =>
+      prisma.productIndex.findMany({
+        where: { siteId, ...matchWhere },
+        orderBy,
+        take: PER_SITE_CAP,
+      }),
+    );
+    // Keep only successful sites; drop (don't throw on) any site whose query
+    // rejected, so one Neon hiccup can't 500 the whole 56-query search.
+    products = perSite.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
+    const failedSites = ids.filter((_, i) => perSite[i].status === 'rejected');
+    // Re-sort the merged set globally so the final ordering matches the
+    // site-scoped path's "newest first" (or "most-recently-changed first") order.
+    const orderKey: 'contentChangedAt' | 'firstSeenAt' = options?.changedSince ? 'contentChangedAt' : 'firstSeenAt';
+    products.sort((a, b) => b[orderKey].getTime() - a[orderKey].getTime());
+
+    // Observability: a site that returned exactly PER_SITE_CAP broad rows was
+    // truncated before refinement for THIS keyword (expected only for bare
+    // category words on the biggest sites — see PER_SITE_CAP note); and a failed
+    // site was dropped entirely. Both degrade coverage, so surface both.
+    const cappedSites = perSite.filter(r => r.status === 'fulfilled' && r.value.length === PER_SITE_CAP).length;
+    if (cappedSites > 0 || failedSites.length > 0) {
+      console.warn(
+        `[keyword-matcher] searchProductIndex all-sites coverage degraded for keyword="${keyword}": ` +
+        `${cappedSites} site(s) hit PER_SITE_CAP=${PER_SITE_CAP} (per-site truncated)` +
+        (failedSites.length > 0 ? `, ${failedSites.length} site(s) query FAILED and were dropped (${failedSites.join(',')})` : ''),
+      );
+      pushEvent({
+        type: 'info',
+        keyword,
+        message: `searchProductIndex all-sites coverage degraded: ${cappedSites} capped, ${failedSites.length} failed`,
+        data: { keyword, siteIds: null, perSiteCap: PER_SITE_CAP, cappedSites, failedSites },
+      });
+    }
+  }
 
   // Refine with word-boundary matching on title, tags, or URL slug
   // Use aliasVariants (includes space-stripped forms) for matching
-  return products
+  const refined = products
     .filter(p => {
       const urlSlug = p.url.split('/').pop()?.replace(/-/g, ' ') || '';
       if (!aliasVariants.some(alias => matchesWithExtras(p.title, alias, { tags: p.tags, urlSlug }))) {
@@ -476,6 +546,20 @@ export async function searchProductIndex(
         const matchesType = p.productType && categoryFilter.productTypes.includes(p.productType);
         if (!matchesTags && !matchesType) return false;
       }
+      // Apply price ceiling if present — a null-price product can't satisfy it
+      if (options?.maxPrice != null && !(p.price != null && p.price <= options.maxPrice)) {
+        return false;
+      }
+      // Apply price floor if present — a null-price product can't satisfy it
+      if (options?.minPrice != null && !(p.price != null && p.price >= options.minPrice)) {
+        return false;
+      }
+      // Stock filter (explicit). When set it overrides the legacy inStockOnly
+      // (which still applies at the SQL `where` above for other callers).
+      if (options?.stock === 'in' && p.stockStatus !== 'in_stock') return false;
+      if (options?.stock === 'out' && p.stockStatus !== 'out_of_stock') return false;
+      // Ammo filter — 'exclude' hides ammunition; 'include'/undefined keeps all.
+      if (options?.ammo === 'exclude' && p.productType === 'ammunition') return false;
       return true;
     })
     .map(p => ({
@@ -486,7 +570,43 @@ export async function searchProductIndex(
       thumbnail: p.thumbnail,
       siteId: p.siteId,
       firstSeenAt: p.firstSeenAt,
+      contentChangedAt: p.contentChangedAt,
       stockStatus: p.stockStatus,
       category: p.category,
+      productType: p.productType,
     }));
+
+  // Sort ONLY when sortBy is provided. When absent, leave the current ordering
+  // exactly as-is (the dispatcher relies on the changedSince/contentChangedAt
+  // SQL ordering, and other callers expect today's firstSeenAt-desc behavior).
+  if (options?.sortBy) {
+    // NULL prices sort last in both price directions.
+    const byPriceAsc = (a: typeof refined[number], b: typeof refined[number]) => {
+      if (a.price == null && b.price == null) return 0;
+      if (a.price == null) return 1;
+      if (b.price == null) return -1;
+      return a.price - b.price;
+    };
+    switch (options.sortBy) {
+      case 'price_asc':
+        refined.sort(byPriceAsc);
+        break;
+      case 'price_desc':
+        refined.sort((a, b) => {
+          if (a.price == null && b.price == null) return 0;
+          if (a.price == null) return 1;
+          if (b.price == null) return -1;
+          return b.price - a.price;
+        });
+        break;
+      case 'updated':
+        refined.sort((a, b) => b.contentChangedAt.getTime() - a.contentChangedAt.getTime());
+        break;
+      case 'newest':
+        refined.sort((a, b) => b.firstSeenAt.getTime() - a.firstSeenAt.getTime());
+        break;
+    }
+  }
+
+  return refined;
 }
