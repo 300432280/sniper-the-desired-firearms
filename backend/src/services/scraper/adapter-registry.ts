@@ -34,6 +34,7 @@ const adapters: Record<string, SiteAdapter> = {
 interface CachedSiteInfo {
   adapterType: string;
   siteType: string;
+  siteCategory: string;
   searchUrlPattern: string | null;
   requiresSucuri: boolean;
   siteProfile: any | null; // SiteProfile JSON from DB
@@ -63,6 +64,7 @@ async function refreshCache(): Promise<void> {
         domain: true,
         adapterType: true,
         siteType: true,
+        siteCategory: true,
         searchUrlPattern: true,
         requiresSucuri: true,
         siteProfile: true,
@@ -71,9 +73,10 @@ async function refreshCache(): Promise<void> {
 
     const newCache = new Map<string, CachedSiteInfo>();
     for (const site of sites) {
-      newCache.set(site.domain, {
+      newCache.set(normalizeDomain(site.domain), {
         adapterType: site.adapterType,
         siteType: site.siteType,
+        siteCategory: site.siteCategory,
         searchUrlPattern: site.searchUrlPattern,
         requiresSucuri: site.requiresSucuri,
         siteProfile: site.siteProfile ?? null,
@@ -154,6 +157,7 @@ export async function getAdapterForUrl(url: string): Promise<AdapterLookupResult
   }
 
   // Unknown domain → generic
+  console.warn(`[AdapterRegistry] Unknown domain '${domain}' (from ${url}) — falling back to 'generic' adapter; site may index 0 products if it needs a platform-specific adapter`);
   return {
 
     adapter: adapters.generic,
@@ -169,7 +173,7 @@ export async function getAdapterForUrl(url: string): Promise<AdapterLookupResult
  * Returns the CachedSiteInfo or undefined if not found.
  */
 export function _getSiteCacheEntry(domain: string): CachedSiteInfo | undefined {
-  return siteCache.get(domain);
+  return siteCache.get(normalizeDomain(domain));
 }
 
 /**

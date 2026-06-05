@@ -9,6 +9,7 @@
  */
 
 import type { Browser, Page } from 'playwright-core';
+import { isCfInterstitial } from './cf-interstitial';
 
 export const PLAYWRIGHT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
@@ -27,6 +28,35 @@ function resolvePlaywrightUa(url: string): string {
   } catch { /* fall through */ }
   return PLAYWRIGHT_UA;
 }
+
+// ── Playwright concurrency semaphore ─────────────────────────────────────────
+// Caps the number of concurrent Playwright fetches to prevent memory exhaustion
+// when many BullMQ jobs hit the Playwright fallback path simultaneously.
+const PLAYWRIGHT_MAX_CONCURRENCY = 3;
+let _semRunning = 0;
+const _semQueue: Array<() => void> = [];
+
+function _semAcquire(url: string): Promise<void> {
+  if (_semRunning < PLAYWRIGHT_MAX_CONCURRENCY) {
+    _semRunning++;
+    return Promise.resolve();
+  }
+  console.log(`[Playwright] concurrency cap reached (${_semRunning} running), queuing ${url}`);
+  return new Promise<void>((resolve) => {
+    _semQueue.push(resolve);
+  });
+}
+
+function _semRelease(): void {
+  const next = _semQueue.shift();
+  if (next) {
+    // Hand the slot directly to the next waiter (running count unchanged)
+    next();
+  } else {
+    _semRunning--;
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 let browser: Browser | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -84,6 +114,13 @@ export interface PlaywrightFetchResult {
   responseTimeMs: number;
   /** Solved WAF cookies as a Cookie header string, if any were captured. */
   cookies?: string;
+  /**
+   * Final URL after browser-following of 301/302/JS redirects. Differs from the
+   * requested URL when the site redirected (e.g. Shopify delisted product →
+   * storefront homepage). Used by product-verifier to detect "302 → home"
+   * zombies that look like successful page loads.
+   */
+  resolvedUrl?: string;
 }
 
 /** Safely get page content, retrying if the page is mid-navigation */
@@ -131,8 +168,23 @@ function parseCookieHeader(cookieHeader: string, url: string): Array<{
 /**
  * Fetch a page using a headless browser.
  * Waits for network idle (no requests for 500ms) then returns the rendered HTML.
+ *
+ * At most PLAYWRIGHT_MAX_CONCURRENCY fetches run simultaneously; excess calls
+ * queue and are admitted as slots free (semaphore above).
  */
 export async function fetchWithPlaywright(
+  url: string,
+  options: { timeout?: number; waitForSelector?: string; userAgent?: string; cookies?: string } = {}
+): Promise<PlaywrightFetchResult> {
+  await _semAcquire(url);
+  try {
+    return await _fetchWithPlaywrightInner(url, options);
+  } finally {
+    _semRelease();
+  }
+}
+
+async function _fetchWithPlaywrightInner(
   url: string,
   options: { timeout?: number; waitForSelector?: string; userAgent?: string; cookies?: string } = {}
 ): Promise<PlaywrightFetchResult> {
@@ -208,17 +260,11 @@ export async function fetchWithPlaywright(
     }
 
     // ── Cloudflare challenge (IUAM / turnstile / managed challenge) ────────
-    const isCfChallenge =
-      initialContent.includes('cf-browser-verification') ||
-      initialContent.includes('Just a moment...') ||
-      initialContent.includes('challenge-platform') ||
-      initialContent.includes('Checking your browser') ||
-      initialContent.includes('cf-challenge') ||
-      initialContent.includes('_cf_chl') ||
-      initialContent.includes('Attention Required') ||
-      initialContent.includes('Verifying you are human') ||
-      // Detect minimal CF challenge pages (tiny HTML with cloudflare references)
-      (initialContent.length < 5000 && initialContent.includes('cloudflare'));
+    // NOTE: the `challenge-platform` beacon (cdn-cgi/challenge-platform/...) is
+    // embedded on EVERY page of a passive-CF site, not just interstitials, so it
+    // is NOT a challenge signal. isCfInterstitial keys only on true block-page
+    // markers.
+    const isCfChallenge = isCfInterstitial(initialContent);
 
     if (isCfChallenge) {
       console.log(`[Playwright] Detected Cloudflare challenge (${initialContent.length}b), waiting for resolution...`);
@@ -229,15 +275,20 @@ export async function fetchWithPlaywright(
         `(() => {
           const text = document.body?.innerText || '';
           const html = document.documentElement?.innerHTML || '';
-          // Challenge is resolved when these indicators disappear
+          // Resolved when the true INTERSTITIAL markers are gone. We deliberately
+          // do NOT key off 'challenge-platform' — that beacon is present on every
+          // page of a passive-CF site, so requiring its absence would mean the
+          // challenge never reports as resolved (returns empty/challenge HTML → 0
+          // products). Interstitial markers below ONLY appear on the block page.
           return !text.includes('Just a moment') &&
                  !text.includes('Checking your browser') &&
                  !text.includes('Verifying you are human') &&
                  !text.includes('Attention Required') &&
+                 !html.includes('_cf_chl_opt') &&
+                 !html.includes('challenges.cloudflare.com/turnstile') &&
                  !document.querySelector('#cf-browser-verification') &&
                  !document.querySelector('#challenge-running') &&
                  !document.querySelector('#challenge-form') &&
-                 !html.includes('challenge-platform') &&
                  // Also check that we have real content (not an empty shell)
                  html.length > 5000;
         })()`,
@@ -310,6 +361,13 @@ export async function fetchWithPlaywright(
     const html = await safeGetContent(page);
     const responseTimeMs = Date.now() - startTime;
 
+    // Capture the post-redirect URL while the page is still open. After all
+    // 301/302/JS redirects resolve, `page.url()` reflects whatever location
+    // the browser actually landed on (e.g. Shopify storefront homepage when
+    // a delisted product 302s). Best-effort: fall back to the request URL.
+    let resolvedUrl: string | undefined;
+    try { resolvedUrl = page.url() || url; } catch { resolvedUrl = url; }
+
     // Capture cookies from the browser context before closing. These are the
     // WAF-solved session cookies (Sucuri, sgcaptcha, CF clearance, etc.) that
     // can be replayed in subsequent axios calls to the same domain.
@@ -322,7 +380,7 @@ export async function fetchWithPlaywright(
       }
     } catch { /* cookie extraction is best-effort */ }
 
-    return { html, responseTimeMs, cookies };
+    return { html, responseTimeMs, cookies, resolvedUrl };
   } finally {
     await page.close().catch(() => {});
     await context.close().catch(() => {});
