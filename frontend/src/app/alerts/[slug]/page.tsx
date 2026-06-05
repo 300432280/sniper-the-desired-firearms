@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import GuestSearchForm from '@/components/GuestSearchForm';
@@ -158,7 +159,15 @@ export default function AlertSlugPage({ params }: PageProps) {
 
           {/* Right: form */}
           <div className="lg:sticky lg:top-20">
-            <GuestSearchForm defaultKeyword={entry.keyword} />
+            <Suspense
+              fallback={
+                <div className="card">
+                  <div className="h-10 bg-surface-elevated border border-border-strong animate-pulse" />
+                </div>
+              }
+            >
+              <GuestSearchForm defaultKeyword={entry.keyword} />
+            </Suspense>
           </div>
         </div>
       </div>

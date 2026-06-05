@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import GuestSearchForm from '@/components/GuestSearchForm';
 
@@ -150,14 +151,22 @@ export default function HomePage() {
           </h1>
 
           <p className="text-foreground-muted text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-            Monitor Canadian firearms retailers for the items you want.
-            Get instant alerts when AR-15s, SKS rifles, handguns, and ammunition come back in stock.
+            Search every Canadian firearm retailer at once &mdash; see what&apos;s in stock right
+            now, instantly.
           </p>
         </div>
 
         {/* Guest form */}
         <div className="relative z-10 w-full max-w-lg">
-          <GuestSearchForm />
+          <Suspense
+            fallback={
+              <div className="card">
+                <div className="h-10 bg-surface-elevated border border-border-strong animate-pulse" />
+              </div>
+            }
+          >
+            <GuestSearchForm />
+          </Suspense>
         </div>
 
         {/* SEO keyword cloud */}
@@ -209,18 +218,18 @@ export default function HomePage() {
             {[
               {
                 n: '01',
-                title: 'Enter Your Keyword',
-                desc: 'Type the exact item you\'re hunting — model name, calibre, SKU, or any search term.',
+                title: 'Search a Keyword',
+                desc: 'Type any model name, calibre, or SKU you\'re hunting for.',
               },
               {
                 n: '02',
-                title: 'Paste the Retailer URL',
-                desc: 'Give us the URL of the product listing or search results page at your preferred Canadian retailer.',
+                title: 'See Live Results',
+                desc: 'We search every monitored Canadian retailer at once and show what\'s indexed right now.',
               },
               {
                 n: '03',
-                title: 'Receive Your Alert',
-                desc: 'We monitor the page and send you an email (or SMS for Pro) the moment your keyword appears.',
+                title: 'Create an Account for Alerts',
+                desc: 'Optional — create a free account to get notified when new matches appear.',
               },
             ].map((step) => (
               <div key={step.n} className="flex gap-5">
