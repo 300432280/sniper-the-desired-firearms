@@ -55,6 +55,7 @@ model Search {
   maxPrice         Float?
   lastChecked      DateTime?
   lastMatchHash    String?
+  alertCursor      DateTime?
   expiresAt        DateTime?
   searchAllGroupId String?
   createdAt        DateTime         @default(now())
@@ -69,21 +70,21 @@ model Search {
 }
 
 model Match {
-  id              String              @id @default(cuid())
-  searchId        String
-  search          Search              @relation(fields: [searchId], references: [id], onDelete: Cascade)
-  productIndexId  String?             // FK to ProductIndex — used for live data enrichment
-  productIndex    ProductIndex?       @relation(fields: [productIndexId], references: [id], onDelete: SetNull)
-  title           String
-  price           Float?
-  regularPrice    Float? // Original price before discount (for strikethrough display)
-  url             String
-  hash            String
-  thumbnail       String?
-  postDate        DateTime?
-  seller          String?
-  foundAt         DateTime            @default(now())
-  notifications   NotificationMatch[]
+  id             String              @id @default(cuid())
+  searchId       String
+  search         Search              @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  productIndexId String? // FK to ProductIndex — used for live data enrichment
+  productIndex   ProductIndex?       @relation(fields: [productIndexId], references: [id], onDelete: SetNull)
+  title          String
+  price          Float?
+  regularPrice   Float? // Original price before discount (for strikethrough display)
+  url            String
+  hash           String
+  thumbnail      String?
+  postDate       DateTime?
+  seller         String?
+  foundAt        DateTime            @default(now())
+  notifications  NotificationMatch[]
 
   @@unique([searchId, url])
   @@index([productIndexId])
@@ -91,13 +92,14 @@ model Match {
 }
 
 model Notification {
-  id       String              @id @default(cuid())
-  searchId String
-  search   Search              @relation(fields: [searchId], references: [id], onDelete: Cascade)
-  type     NotificationType
-  sentAt   DateTime            @default(now())
-  status   String              @default("sent")
-  matches  NotificationMatch[]
+  id              String              @id @default(cuid())
+  searchId        String
+  search          Search              @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  type            NotificationType
+  sentAt          DateTime            @default(now())
+  status          String              @default("sent")
+  emailedProducts Json? // Audit trail of emailed products (replaces NotificationMatch for cursor dispatcher)
+  matches         NotificationMatch[]
 
   @@index([searchId])
   @@map("notifications")
@@ -193,8 +195,8 @@ model MonitoredSite {
   siteProfile Json?
 
   // Crawl phase: bootstrap (index via listing pages) or maintain (verify from DB)
-  crawlPhase         String    @default("bootstrap") // "bootstrap" | "maintain"
-  bootstrapStartedAt DateTime? // When bootstrap began (watermark anchor date)
+  crawlPhase           String    @default("bootstrap") // "bootstrap" | "maintain"
+  bootstrapStartedAt   DateTime? // When bootstrap began (watermark anchor date)
   bootstrapCompletedAt DateTime? // When bootstrap finished → transitioned to maintain
 
   // Cold start tracking
@@ -212,35 +214,54 @@ model MonitoredSite {
 }
 
 model ProductIndex {
-  id           String        @id @default(cuid())
-  siteId       String
-  site         MonitoredSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  url          String
-  sourceId     String?       // Platform-stable product ID (Shopify product ID, WP post ID, Drupal node ID, etc.)
-  title        String
-  price        Float?
-  regularPrice Float? // Original price before discount (for strikethrough display)
-  stockStatus  String? // "in_stock" | "out_of_stock" | "unknown"
-  thumbnail    String?
-  category     String? // "new" | "used" | "auction_lot" | "classified"
-  tags         String? // Comma-separated product tags from source (e.g. Shopify)
-  productType  String? // "firearm" | "ammunition" | "optics" | "parts" | "gear" | "knives" | "other"
-  closingAt    DateTime? // For auction lots — enables live countdown timer
-  firstSeenAt     DateTime      @default(now())
-  lastSeenAt      DateTime      @default(now())
-  isActive        Boolean       @default(true)
-  staleSince      DateTime?     // When first flagged as missing from all tier sweeps
-  staleVerifiedAt DateTime?     // Last detail-page verification attempt
-  verifyErrors    Int           @default(0) // Consecutive verification errors. After 5 → mark deleted.
-  matches         Match[]       // Matches that reference this product
+  id               String           @id @default(cuid())
+  siteId           String
+  site             MonitoredSite    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  url              String
+  sourceId         String? // Platform-stable product ID (Shopify product ID, WP post ID, Drupal node ID, etc.)
+  title            String
+  price            Float?
+  regularPrice     Float? // Original price before discount (for strikethrough display)
+  stockStatus      String? // "in_stock" | "out_of_stock" | "unknown"
+  thumbnail        String?
+  category         String? // "new" | "used" | "auction_lot" | "classified"
+  tags             String? // Comma-separated product tags from source (e.g. Shopify)
+  productType      String? // "firearm" | "ammunition" | "optics" | "parts" | "gear" | "knives" | "other"
+  closingAt        DateTime? // For auction lots — enables live countdown timer
+  firstSeenAt      DateTime         @default(now())
+  lastSeenAt       DateTime         @default(now())
+  isActive         Boolean          @default(true)
+  delistReason     String? // null = live; 'sold' | 'unknown' when delisted (isActive=false). Orthogonal to stockStatus.
+  staleSince       DateTime? // When first flagged as missing from all tier sweeps
+  staleVerifiedAt  DateTime? // Last detail-page verification attempt
+  verifyErrors     Int              @default(0) // Consecutive verification errors. After 5 → mark deleted.
+  contentChangedAt DateTime         @default(now()) // Bumped ONLY when price/regularPrice/stockStatus actually change
+  matches          Match[] // Matches that reference this product
+  history          ProductHistory[] // Append-only price/stock change log
 
   @@unique([siteId, url])
   @@index([siteId, sourceId])
   @@index([siteId, lastSeenAt])
   @@index([siteId, isActive, lastSeenAt]) // For T2-T4 maintain-phase queries sorted by lastSeenAt ASC
   @@index([siteId, isActive, stockStatus]) // For stale detector queries
+  @@index([siteId, contentChangedAt]) // For cursor-based alert dispatch queries
   @@index([title])
   @@map("product_index")
+}
+
+model ProductHistory {
+  id             String       @id @default(cuid())
+  productIndexId String
+  product        ProductIndex @relation(fields: [productIndexId], references: [id], onDelete: Cascade)
+  price          Float?
+  regularPrice   Float?
+  stockStatus    String?
+  changeKind     String // "new" | "price" | "stock" | "price+stock"
+  observedAt     DateTime     @default(now())
+
+  @@index([productIndexId, observedAt])
+  @@index([observedAt])
+  @@map("product_history")
 }
 
 model KeywordGroup {
