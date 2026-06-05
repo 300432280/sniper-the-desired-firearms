@@ -28,7 +28,6 @@ import { fetchPageWithMeta, randomDelay } from './scraper/http-client';
 import { buildPaginatedUrl } from './catalog-crawler';
 import { pushEvent } from './debugLog';
 import { consumeToken, getTier1Remaining } from './token-budget';
-import { matchNewProducts } from './keyword-matcher';
 import type { CatalogProduct, CatalogPage } from './scraper/types';
 import { saveProducts, checkExistingProducts, checkExistingProductsWithStock } from './product-upsert';
 import * as cheerio from 'cheerio';
@@ -136,8 +135,14 @@ async function extractProductsFromHtml(
   const $ = cheerio.load(html);
   let products: CatalogProduct[] = [];
 
+  // Per-site opt-in: sites whose listing cards never expose stock (gobles.ca,
+  // northprosports.com) → no-signal card maps to 'unknown' not 'out_of_stock'.
+  const wmProfile = _getSiteCacheEntry(domain.replace(/^www\./, ''));
+  if (!wmProfile) console.warn(`[stock-flag] ${domain}: no adapter-cache entry; listingOmitsStock defaults false (cache cold?)`);
+  const extractOpts = { listingOmitsStock: wmProfile?.siteProfile?.listingOmitsStock === true };
+
   if (adapter.extractCatalogProducts) {
-    products = adapter.extractCatalogProducts($, pageUrl);
+    products = adapter.extractCatalogProducts($, pageUrl, extractOpts);
   }
 
   // Playwright fallback: static HTML is large but yielded 0 products → likely AJAX-loaded
@@ -149,7 +154,7 @@ async function extractProductsFromHtml(
       if (pwResult.html.length > html.length) {
         const $pw = cheerio.load(pwResult.html);
         if (adapter.extractCatalogProducts) {
-          products = adapter.extractCatalogProducts($pw, pageUrl);
+          products = adapter.extractCatalogProducts($pw, pageUrl, extractOpts);
           if (products.length > 0) {
             console.log(`[WatermarkCrawler] ${domain}: Playwright found ${products.length} products`);
           }
@@ -305,6 +310,13 @@ async function crawlNavigateThenWalk(params: {
   const MAX_COLLECTED_PAGES = 100; // Safety cap to prevent unbounded memory growth
   const collectedPages: { products: CatalogProduct[]; existingUrls?: Set<string>; }[] = [];
   let hitWatermark = false;
+  // Set true when the API path bailed because fetchCatalogPage returned `null`
+  // (adapter exposes the method but no API is configured for THIS site, e.g.
+  // GenericRetail BC Stencil / Celerant without Klevu/GraphQL). In that case the
+  // API navigation collected nothing and we MUST fall through to HTML navigation.
+  // A `null` return means "not configured" — distinct from `{products: []}` which
+  // means a working API hit the genuine end of catalog (do NOT fall through).
+  let apiReturnedNull = false;
 
   if (useApi) {
     // API-based navigation (no date filter — just paginate newest-first)
@@ -320,8 +332,9 @@ async function crawlNavigateThenWalk(params: {
         console.log(`[WatermarkCrawler] ${domain}: API page ${page} failed — ${err instanceof Error ? err.message : err}`);
         break;
       }
-      // null = adapter doesn't support API crawl — fall through to HTML navigation
-      if (catalogPage === null) break;
+      // null = adapter doesn't support API crawl for this site — fall through to
+      // HTML navigation below (do NOT just stop, or T1 becomes a permanent no-op).
+      if (catalogPage === null) { apiReturnedNull = true; break; }
       pagesScanned++;
 
       if (catalogPage.products.length === 0) break;
@@ -378,7 +391,16 @@ async function crawlNavigateThenWalk(params: {
       page++;
       await randomDelay(300, 800);
     }
-  } else {
+  }
+
+  // HTML navigation runs when:
+  //  (a) the adapter has no API path at all (useApi === false), OR
+  //  (b) useApi was true but fetchCatalogPage returned `null` (no API configured
+  //      for this site) and the API loop collected nothing — fall through so T1
+  //      is not a permanent no-op. Mirrors maintain-readiness.ts:1046-1067.
+  // It does NOT run when a working API returned products or a genuine empty page.
+  const htmlFallthrough = apiReturnedNull && collectedPages.length === 0 && !!adapter.extractCatalogProducts;
+  if (!useApi || htmlFallthrough) {
     // HTML-based navigation
     const candidateUrls: string[] = [];
     if (adapter.getNewArrivalsUrls) {
@@ -678,7 +700,22 @@ export async function crawlWatermark(params: {
   const entry = _getSiteCacheEntry(domain.replace(/^www\./, ''));
   const watermarkMethod: string =
     entry?.siteProfile?.crawlers?.watermark?.method || 'navigate-from-watermark';
-  const catalogUrls: string[] = entry?.siteProfile?.catalogUrls || [];
+  // Profile catalogUrls may be stored relative (e.g. canadasgunstore: "/departments/...")
+  // or absolute (e.g. triggersandbows: "https://www.../store/..."). full-catalog-sweep
+  // passes these directly to fetchPageWithMeta which can't resolve relative paths
+  // (http-client.ts:442 throws on `new URL(rel).hostname`, then axios rejects). Normalize
+  // to absolute here so Method C works for both storage conventions. Matches the idiom
+  // already used by generic-retail.ts:198 / generic.ts:153 / maintain-readiness.ts:891.
+  const rawCatalogUrls: string[] = entry?.siteProfile?.catalogUrls || [];
+  const catalogUrls = rawCatalogUrls.map(u => {
+    if (u.startsWith('http')) return u;
+    // Protocol-relative `//cdn.x/y` → `https://cdn.x/y`. Without this, the
+    // raw concat below would produce `https://site.com//cdn.x/y` which
+    // resolves to the SITE's own host instead of the CDN. Mirrors the
+    // resolveThumbUrl idiom at product-verifier.ts:843.
+    if (u.startsWith('//')) return `https:${u}`;
+    return `${origin}${u}`;
+  });
   const paginationPattern = entry?.siteProfile?.paginationPattern;
   const profilePerPage: number | undefined = entry?.siteProfile?.perPage ?? undefined;
 
@@ -775,12 +812,25 @@ export async function crawlWatermark(params: {
       newestDateSeen = result.newestDateSeen;
     }
 
-    // Save to ProductIndex and run keyword matcher.
+    // Save to ProductIndex (indexing + content-change hook).
     // `backInStockUrls` (only set by full-catalog-sweep) forces previously-OOS
-    // products to be included in the saved array so they flow through matching.
-    const savedProducts = await saveProducts(siteId, allNewProducts, backInStockUrls);
-    if (savedProducts.length > 0) {
-      await matchNewProducts(savedProducts, backInStockUrls);
+    // products to be included in the saved array so they get re-indexed; the
+    // generic contentChangedAt hook then records the restock. Alert matching is
+    // handled by the cursor-based dispatcher, not here.
+    await saveProducts(siteId, allNewProducts, backInStockUrls);
+
+    // Broken-T1 detector: a healthy run scans >=1 page even when it finds the
+    // watermark on page 1 (found=0, pages=1 is fine). pages=0 means the crawl
+    // produced NO signal at all — null adapter with no HTML extractor, a throw
+    // on page 1, or fetchHtml returning null. Surface it instead of returning a
+    // silent status:'success' productsFound:0 pages:0.
+    if (pagesScanned === 0) {
+      const warnMsg = `[WatermarkCrawler] ${domain}: T1 scanned 0 pages (watermark method='${watermarkMethod}') — crawl produced no signal; watermark/adapter likely misconfigured`;
+      console.warn(warnMsg);
+      // DebugEvent.type has no 'warn' member (see debugLog.ts:7-19); use the
+      // file's established 'info' convention (matches the budget-exhaustion
+      // pushEvent above). console.warn carries the severity to the logs.
+      pushEvent({ type: 'info', message: warnMsg });
     }
 
     return {

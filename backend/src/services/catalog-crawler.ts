@@ -17,9 +17,10 @@ import { prisma } from '../lib/prisma';
 import { getAdapterForUrl, _getSiteCacheEntry } from './scraper/adapter-registry';
 import { fetchPageWithMeta, randomDelay } from './scraper/http-client';
 import { consumeToken } from './token-budget';
-import { matchNewProducts } from './keyword-matcher';
 import type { CatalogProduct, Stream, StreamTierState } from './scraper/types';
 import { saveProducts } from './product-upsert';
+import { pageSignature, isRepeatPage } from './catalog-page-signature';
+import { normalizeTag } from './tag-normalize';
 import * as cheerio from 'cheerio';
 
 /** WAF sites require multiple consecutive empty pages before declaring end-of-catalog. */
@@ -264,13 +265,16 @@ export async function crawlCatalogTier(params: {
   // siteProfile is the source of truth for per-site config. Read perPage from it;
   // fall back to the historical WAF/non-WAF defaults only when the profile is missing the field.
   const profileEntry = _getSiteCacheEntry(domain.replace(/^www\./, ''));
+  if (!profileEntry) console.warn(`[stock-flag] ${domain}: no adapter-cache entry; listingOmitsStock defaults false (cache cold?)`);
   const profilePerPage: number | undefined = profileEntry?.siteProfile?.perPage ?? undefined;
+  // Per-site opt-in: sites whose listing cards never expose stock (gobles.ca,
+  // northprosports.com) → no-signal card maps to 'unknown' not 'out_of_stock'.
+  const extractOpts = { listingOmitsStock: profileEntry?.siteProfile?.listingOmitsStock === true };
 
   let pagesScanned = 0;
   let tokensUsed = 0;
   let productsFound = 0;
   let cycleComplete = false;
-  const allProducts: CatalogProduct[] = [];
 
   try {
     // API-based catalog crawl (preferred — Shopify, WooCommerce, iCollector)
@@ -319,7 +323,11 @@ export async function crawlCatalogTier(params: {
         }
         consecutiveEmptyApi = 0;
 
-        allProducts.push(...catalogPage.products);
+        // Persist this page immediately so an interrupted job keeps the pages it
+        // already scanned instead of losing the whole run at a single end-of-walk
+        // save (the data-loss bug fixed in crawlStreamTier — same pattern here).
+        await saveProducts(siteId, catalogPage.products);
+
         productsFound += catalogPage.products.length;
 
         if (!catalogPage.nextPageUrl && (!catalogPage.totalPages || page >= catalogPage.totalPages)) {
@@ -410,7 +418,8 @@ export async function crawlCatalogTier(params: {
             try {
               const fetchResult = await fetchPageWithMeta(currentUrl, undefined, { difficultyRating: 0 });
               html = fetchResult.html;
-            } catch {
+            } catch (e) {
+              console.warn(`[CatalogCrawler] fetch failed at ${currentUrl}, stopping walk:`, e instanceof Error ? e.message : e);
               break; // Fetch failed, try next URL
             }
 
@@ -437,7 +446,7 @@ export async function crawlCatalogTier(params: {
           const $ = cheerio.load(html);
           pagesScanned++;
 
-          let products = adapter.extractCatalogProducts($, currentUrl);
+          let products = adapter.extractCatalogProducts($, currentUrl, extractOpts);
 
           // Playwright fallback: large HTML but 0 products (SPA/AJAX-loaded content)
           if (products.length === 0 && !params.hasWaf && html.length > 5000) {
@@ -446,7 +455,7 @@ export async function crawlCatalogTier(params: {
               const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
               if (pwResult.html.length > html.length) {
                 const $pw = cheerio.load(pwResult.html);
-                products = adapter.extractCatalogProducts($pw, currentUrl);
+                products = adapter.extractCatalogProducts($pw, currentUrl, extractOpts);
               }
             } catch { /* continue */ }
           }
@@ -459,7 +468,7 @@ export async function crawlCatalogTier(params: {
               const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
               const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
               const $pw = cheerio.load(pwResult.html);
-              products = adapter.extractCatalogProducts($pw, currentUrl);
+              products = adapter.extractCatalogProducts($pw, currentUrl, extractOpts);
             } catch { /* still 0 products */ }
           }
 
@@ -480,7 +489,9 @@ export async function crawlCatalogTier(params: {
           }
           consecutiveEmptyHtml = 0; // Reset on success
 
-          allProducts.push(...products);
+          // Persist this page immediately (see API-loop note above).
+          await saveProducts(siteId, products);
+
           productsFound += products.length;
 
           // Check for next page (BigCommerce: ?page=N, Magento: ?p=N, etc.)
@@ -511,13 +522,7 @@ export async function crawlCatalogTier(params: {
       cycleComplete = true;
     }
 
-    // Save products to ProductIndex
-    const savedProducts = await saveProducts(siteId, allProducts);
-
-    // Run keyword matcher on newly discovered products
-    if (savedProducts.length > 0) {
-      await matchNewProducts(savedProducts);
-    }
+    // Products are saved per page during the walk; no end-of-walk save remains.
 
     return {
       tier,
@@ -672,12 +677,17 @@ export async function crawlStreamTier(params: {
   const { adapter } = await getAdapterForUrl(url);
   const origin = new URL(url).origin;
 
+  // Per-site opt-in: sites whose listing cards never expose stock (gobles.ca,
+  // northprosports.com) → no-signal card maps to 'unknown' not 'out_of_stock'.
+  const streamProfile = _getSiteCacheEntry(params.domain.replace(/^www\./, ''));
+  if (!streamProfile) console.warn(`[stock-flag] ${params.domain}: no adapter-cache entry; listingOmitsStock defaults false (cache cold?)`);
+  const extractOpts = { listingOmitsStock: streamProfile?.siteProfile?.listingOmitsStock === true };
+
   let pagesScanned = 0;
   let tokensUsed = 0;
   let productsFound = 0;
   let cycleComplete = false;
   let totalPagesDiscovered: number | undefined;
-  const allProducts: CatalogProduct[] = [];
 
   try {
     if (adapter.fetchCatalogPage && stream.type === 'api') {
@@ -739,7 +749,23 @@ export async function crawlStreamTier(params: {
         }
         consecutiveEmptyStreamApi = 0;
 
-        allProducts.push(...catalogPage.products);
+        // Persist this page immediately (see HTML-path note below) so an
+        // interrupted job keeps the pages it already scanned instead of losing
+        // the whole run at the single end-of-walk save.
+        if (stream.category) {
+          // Normalize before tagging (see HTML-path note at the other tagging
+          // site below): strip any trailing file extension so ProductIndex.tags
+          // never carries `.html` / `.php` / `.aspx` noise. normalizeTag is a
+          // no-op on already-clean slugs. Skips tagging if it normalizes to null.
+          const tag = normalizeTag(stream.category);
+          if (tag) {
+            for (const p of catalogPage.products) {
+              if (!p.tags) p.tags = tag;
+            }
+          }
+        }
+        await saveProducts(siteId, catalogPage.products);
+
         productsFound += catalogPage.products.length;
 
         if (!catalogPage.nextPageUrl && (!catalogPage.totalPages || page >= catalogPage.totalPages)) {
@@ -766,6 +792,12 @@ export async function crawlStreamTier(params: {
       tierState.currentPageUrl = undefined;
       const pageRangeEnd = tierState.pageRangeEnd;
       let consecutiveEmptyStreamHtml = 0;
+      // Identity of the previous page's products (firstURL|lastURL|count). Some
+      // platforms (e.g. Odoo) silently return page-1 content for out-of-range
+      // pages instead of an empty page, which would loop forever on 0-products
+      // termination alone. If the current page matches the previous one exactly,
+      // it's a repeat/overflow page → end the stream.
+      let prevPageSignature: string | null = null;
 
       while (currentUrl && tokensUsed < tokensAllocated) {
         // Stop if we've exceeded this tier's page range
@@ -808,7 +840,8 @@ export async function crawlStreamTier(params: {
           try {
             const fetchResult = await fetchPageWithMeta(currentUrl, undefined, { difficultyRating: 0 });
             html = fetchResult.html;
-          } catch {
+          } catch (e) {
+            console.warn(`[CatalogCrawler] fetch failed at ${currentUrl}, stopping walk:`, e instanceof Error ? e.message : e);
             break;
           }
 
@@ -832,7 +865,7 @@ export async function crawlStreamTier(params: {
           if (detected) totalPagesDiscovered = detected;
         }
 
-        let products = adapter.extractCatalogProducts($, currentUrl);
+        let products = adapter.extractCatalogProducts($, currentUrl, extractOpts);
 
         if (products.length === 0 && !params.hasWaf && html.length > 5000) {
           try {
@@ -840,7 +873,7 @@ export async function crawlStreamTier(params: {
             const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 30000 });
             if (pwResult.html.length > html.length) {
               const $pw = cheerio.load(pwResult.html);
-              products = adapter.extractCatalogProducts($pw, currentUrl);
+              products = adapter.extractCatalogProducts($pw, currentUrl, extractOpts);
             }
           } catch { /* continue */ }
         }
@@ -852,7 +885,7 @@ export async function crawlStreamTier(params: {
             const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
             const pwResult = await fetchWithPlaywright(currentUrl, { timeout: 45000 });
             const $pw = cheerio.load(pwResult.html);
-            products = adapter.extractCatalogProducts($pw, currentUrl);
+            products = adapter.extractCatalogProducts($pw, currentUrl, extractOpts);
           } catch { /* still 0 products */ }
         }
 
@@ -879,7 +912,45 @@ export async function crawlStreamTier(params: {
         }
         consecutiveEmptyStreamHtml = 0;
 
-        allProducts.push(...products);
+        // Out-of-range / repeat-page guard. If this page's products are identical
+        // to the previous page's (same first AND last product URL AND same count),
+        // the site is serving page-1 content for an overflow page (e.g. Odoo) and
+        // we would otherwise loop forever. End the stream WITHOUT saving the dupes.
+        const curSignature = pageSignature(products);
+        if (isRepeatPage(prevPageSignature, curSignature)) {
+          console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: page ${currentPageNum} duplicates previous page (out-of-range/overflow), ending stream`);
+          cycleComplete = true;
+          break;
+        }
+        prevPageSignature = curSignature;
+
+        // Tag with the stream category (if the adapter didn't derive one) BEFORE
+        // saving, then persist THIS page immediately. Saving per page (instead of
+        // accumulating the whole stream and saving once at the end) means a job
+        // that is interrupted mid-walk — killed by the BullMQ stalled-job timeout,
+        // a restart, or an OOM — still keeps every page it already scanned. A
+        // 61-page / ~2.4k-product stream's single end-of-walk save took ~3 min of
+        // sequential upserts on top of the ~2 min walk, overrunning the 5-min lock
+        // and silently losing the ENTIRE run's products (lockharttactical.com:
+        // 844 rows, 0 new since the one run that happened to finish). See
+        // product-upsert.saveProducts.
+        if (stream.category) {
+          // Normalize the category before tagging: a catalogUrl ending in
+          // `firearms.html` / `categories.php` yields stream.category =
+          // "firearms.html", which would otherwise be stamped verbatim into
+          // ProductIndex.tags and cause keyword tag-matches against the
+          // extension noise. normalizeTag strips the trailing extension; if it
+          // normalizes to null we skip tagging entirely. This does NOT touch
+          // stream.id (derived separately in stream-detector.ts).
+          const tag = normalizeTag(stream.category);
+          if (tag) {
+            for (const p of products) {
+              if (!p.tags) p.tags = tag;
+            }
+          }
+        }
+        await saveProducts(siteId, products);
+
         productsFound += products.length;
 
         // Try the adapter's next-page selector first; fall back to the profile's
@@ -938,20 +1009,9 @@ export async function crawlStreamTier(params: {
       }
     }
 
-    // Tag products with stream category if they don't already have tags.
-    // This ensures products from category-specific streams (e.g. /firearms, /ammunition)
-    // get tagged even if the adapter couldn't derive a tag from the HTML.
-    if (stream.category) {
-      for (const p of allProducts) {
-        if (!p.tags) p.tags = stream.category;
-      }
-    }
-
-    // Save products to ProductIndex
-    const savedProducts = await saveProducts(siteId, allProducts);
-    if (savedProducts.length > 0) {
-      await matchNewProducts(savedProducts);
-    }
+    // Products are now saved per page during the walk (category tagging applied
+    // there too), so an interrupted job keeps every page it scanned. No single
+    // end-of-walk save remains.
 
     return {
       streamId: stream.id,

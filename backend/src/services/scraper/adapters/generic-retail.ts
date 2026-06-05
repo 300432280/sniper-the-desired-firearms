@@ -88,6 +88,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       'a[href*="/marketplace/"]',    // TownPost classifieds (Next.js SPA, anchor-wrapped cards)
       '[class*="oe_product"]',       // Odoo Website Sale (outfitters.goldnloan.com) — explicit; .card fallback already catches most
       'form[class*="oe_product"]',   // Odoo form-wrapped product cards
+      '[data-hook="product-list-grid-item"]', // Wix Stores Thunderbolt (surplusherbys.com) — added 2026-05-31; without this Phase-1 misses Wix cards entirely and Phase-2 anchor fallback merges title+price into "TitlePrice$X.YY"
     ];
 
     for (const selector of SELECTORS) {
@@ -658,13 +659,27 @@ export class GenericRetailAdapter extends AbstractAdapter {
       const name = getPath(p, productNamePath);
       if (!url || !name) continue;
 
-      // Verified via live probe on 2026-04-09 (playbook Mistake 31):
+      // Verified via live probe on 2026-04-09 (playbook Mistake 31), image paths
+      // re-verified live on 2026-05-29 (the 2026-04-09 "no image field" note was WRONG):
       //   - Product ID lives at `identifier.productId` (NOT `p.id`).
       //   - Price lives at `defaultOptionsOverrides.pricesOverrides.basePrice`.
-      //   - No `media.images` / thumbnail field exists in /catalog/search responses.
+      //   - Thumbnail DOES exist, nested under
+      //     `defaultOptionsOverrides.variationOverrides.productGridMediaItems.*`
+      //     (and a `mediaItems.*` twin). Each carries image160/400/800/1500pxUrl +
+      //     imageOriginalUrl. We prefer the 400px grid image as the thumbnail.
       //   - No `created_at` / `updated_at` / date fields exist (see class doc above).
       const productId = getPath(p, 'identifier.productId');
       const priceNumeric = getPath(p, 'defaultOptionsOverrides.pricesOverrides.basePrice');
+
+      const overrides = getPath(p, 'defaultOptionsOverrides.variationOverrides') || {};
+      const gridMedia = overrides.productGridMediaItems || overrides.mediaItems || {};
+      const thumbnail: string | undefined =
+        gridMedia.image400pxUrl ||
+        gridMedia.image160pxUrl ||
+        gridMedia.image800pxUrl ||
+        gridMedia.imageOriginalUrl ||
+        getPath(p, 'seo.ogMetaTags.image') ||
+        undefined;
 
       products.push({
         url: String(url),
@@ -672,7 +687,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
         title: String(name).trim().slice(0, 160),
         price: typeof priceNumeric === 'number' ? priceNumeric : undefined,
         stockStatus: 'unknown', // /catalog/search preview shape does not expose stock
-        // thumbnail: undefined — Ecwid /catalog/search does not return image URLs
+        thumbnail,
         // postDate: undefined — Ecwid product responses have no date fields
       });
     }
@@ -772,6 +787,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
                 }
                 defaultImage { url(width: 300) }
                 availabilityV2 { status }
+                inventory { isInStock }
                 sku
               }
             }
@@ -838,8 +854,14 @@ export class GenericRetailAdapter extends AbstractAdapter {
         sourceId: node.entityId != null ? String(node.entityId) : undefined,
         title: String(node.name).trim().slice(0, 160),
         price: typeof price === 'number' ? price : undefined,
-        stockStatus: node.availabilityV2?.status === 'Available' ? 'in_stock'
-          : node.availabilityV2?.status === 'Unavailable' ? 'out_of_stock' : 'unknown',
+        // BC GraphQL: availabilityV2.status returns "Available" for any VISIBLE/purchasable
+        // product (NOT a stock signal — verified live on theshootingcentre, returns "Available"
+        // even when inventory.isInStock=false). Use inventory.isInStock as the real stock signal;
+        // fall back to availabilityV2.status only when inventory is absent/null (defensive).
+        stockStatus: node.inventory != null && typeof node.inventory.isInStock === 'boolean'
+          ? (node.inventory.isInStock ? 'in_stock' : 'out_of_stock')
+          : (node.availabilityV2?.status === 'Available' ? 'in_stock'
+            : node.availabilityV2?.status === 'Unavailable' ? 'out_of_stock' : 'unknown'),
         thumbnail: node.defaultImage?.url || undefined,
         postDate: node.createdAt?.utc || undefined,
         tags: node.sku || undefined,
@@ -940,7 +962,22 @@ export class GenericRetailAdapter extends AbstractAdapter {
     }
   }
 
-  extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
+  extractCatalogProducts(
+    $: cheerio.CheerioAPI,
+    baseUrl: string,
+    opts?: { listingOmitsStock?: boolean },
+  ): CatalogProduct[] {
+    // listingOmitsStock: per-site opt-in. When the site's listing cards expose NO
+    // stock signal at all (e.g. gobles.ca lightspeed-ecom `.product-element` theme,
+    // northprosports.com opencart whose "Cart" button also renders for OOS items),
+    // isInStock() returns undefined for EVERY card → the default below would flag the
+    // whole catalog out_of_stock (gobles: 3371/3371 false OOS). With the flag on, an
+    // undefined (no-signal) card maps to 'unknown' instead — which product-upsert.ts
+    // treats as "don't touch the stored stockStatus" (line 238 hasRealStock gate), so
+    // it produces ZERO false restock alerts. An EXPLICIT false (disabled cart / "sold
+    // out" text) still maps to out_of_stock regardless of the flag. Default off = the
+    // historical no-buy-signal=OOS behavior (preserved for all unflagged sites).
+    const listingOmitsStock = opts?.listingOmitsStock ?? false;
     const products: CatalogProduct[] = [];
     const seen = new Set<string>();
 
@@ -986,6 +1023,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
       'a[href*="/marketplace/"]',    // TownPost classifieds (Next.js SPA, anchor-wrapped cards)
       '[class*="oe_product"]',       // Odoo Website Sale (outfitters.goldnloan.com) — explicit; .card fallback already catches most
       'form[class*="oe_product"]',   // Odoo form-wrapped product cards
+      '[data-hook="product-list-grid-item"]', // Wix Stores Thunderbolt (surplusherbys.com) — added 2026-05-31; without this Phase-1 misses Wix cards entirely and Phase-2 anchor fallback merges title+price into "TitlePrice$X.YY"
     ];
 
     // Sidebar blocks that Magento 2 (and similar platforms) render even on
@@ -1026,7 +1064,19 @@ export class GenericRetailAdapter extends AbstractAdapter {
         // Reject obvious nav/category labels (short, generic, no specifics)
         if (this.isNavTitle(title)) return;
 
-        const url = this.extractLink(element, baseUrl);
+        // LightSpeed eCom (newer Bootstrap themes, e.g. fulcrumoutdoors.ca) render a
+        // wishlist "add" link (`<a href="/account/wishlistAdd/<id>?variant_id=...">`)
+        // as the FIRST non-image anchor inside each product card. The generic
+        // extractLink() then returns that utility URL, and isNavUrl() rejects it
+        // (matches `/account/`), silently dropping every product (0 extracted).
+        // These themes ALSO label the real product anchor `a.product-image` /
+        // `.product-title a`, which deterministically points at the product detail
+        // page. Prefer that explicit product anchor when present; fall through to the
+        // generic extractLink otherwise so all other sites are unaffected.
+        const productAnchorHref = element.find('a.product-image, .product-title a').first().attr('href');
+        const url = (productAnchorHref && !/^(javascript:|mailto:|tel:|data:|#)/i.test(productAnchorHref.trim()))
+          ? this.resolveUrl(productAnchorHref, baseUrl)
+          : this.extractLink(element, baseUrl);
         if (!url || seen.has(url)) return;
         // Magento 1.x product detail URLs follow `/catalog/product/view/id/NN/s/slug/category/NN/`.
         // The trailing `/category/NN/` breadcrumb segment trips the generic `isNavUrl`
@@ -1053,15 +1103,36 @@ export class GenericRetailAdapter extends AbstractAdapter {
           if (urlIdMatch) sourceId = urlIdMatch[1];
         }
 
+        // BC Stencil exposes no card-level date field. Extract UNIX timestamp
+        // from the image filename pattern `/products/<eid>/<iid>/IMG__x.<ts>.jpg`
+        // (verified per-card on theammosource.com, 0/51 ordering violations).
+        // Used by runWatermarkWalkCheck sort-direction proof. Non-BC sites
+        // fall through (no regex match → postDate undefined → existing partial-
+        // coverage handling at maintain-readiness.ts:1086-1091 applies). Added
+        // 2026-06-01 (Fix 2 per BC Stencil postDate investigation).
+        let postDate: string | undefined;
+        const imgSrc = element.find('img.card-image').attr('data-src')
+          || element.find('img.card-image').attr('src');
+        const tsMatch = imgSrc?.match(/\/products\/\d+\/\d+\/[^/?"]+?\.(\d{10})\.jpg/);
+        if (tsMatch) {
+          const ts = parseInt(tsMatch[1], 10);
+          if (ts > 1_000_000_000 && ts < 2_000_000_000) {
+            postDate = new Date(ts * 1000).toISOString();
+          }
+        }
+
         products.push({
           url,
           sourceId,
           title,
           price,
           regularPrice,
-          stockStatus: inStock ? 'in_stock' : 'out_of_stock',
+          stockStatus: inStock === true
+            ? 'in_stock'
+            : (inStock === false ? 'out_of_stock' : (listingOmitsStock ? 'unknown' : 'out_of_stock')),
           thumbnail,
           tags: categoryTag,
+          postDate,
         });
       });
     }
@@ -1087,7 +1158,7 @@ export class GenericRetailAdapter extends AbstractAdapter {
         if (this.isNavUrl(href)) return;
 
         // Must look like a product/detail page link (not a navigation link)
-        const isProductLink = /\/(product|item|lot|p\/|listing|detail|shop\/ols\/products|departments)\b/i.test(hrefPath) ||
+        const isProductLink = /\/(product|item|lot|p\/|listing|detail|shop\/ols\/products)\b/i.test(hrefPath) ||
           /\.(html?|php|asp)(\?|$)/.test(href) ||
           /product_detail|product\.php|product_name|_p\//i.test(href);
         if (!isProductLink) return;

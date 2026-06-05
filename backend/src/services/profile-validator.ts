@@ -89,6 +89,18 @@ const checks: Check[] = [
     },
   },
   {
+    // Optional per-site flag (generic-retail HTML extraction). When true, a catalog
+    // card with NO stock signal (isInStock()===undefined) maps to 'unknown' instead
+    // of the default 'out_of_stock'. For sites whose listing cards never expose stock
+    // (e.g. gobles.ca lightspeed-ecom, northprosports.com opencart). Absent = false =
+    // historical no-buy-signal=OOS behavior. Consumed by generic-retail.ts
+    // extractCatalogProducts via catalog-crawler.ts / watermark-crawler.ts.
+    name: 'listingOmitsStock',
+    severity: 'recommended',
+    run: (p) => (p.listingOmitsStock === undefined || typeof p.listingOmitsStock === 'boolean')
+      ? null : 'listingOmitsStock must be a boolean true/false — a string "true" or number 1 is silently treated as false at runtime (strict === true).',
+  },
+  {
     name: 'adapterType',
     severity: 'required',
     run: (p) => (VALID_ADAPTER_TYPES as readonly string[]).includes(p.adapterType || p.adapter)
@@ -112,9 +124,13 @@ const checks: Check[] = [
         return p.crawlers?.watermark?.reason
           ? null : 'full-catalog-sweep requires a reason explaining why sort-based crawling is not viable';
       }
-      // For navigate-from-watermark and api-date-since-watermark, sort must be verified
+      // api-date-since-watermark is date-driven (filters by modified_after); it never reads
+      // sortParam, so requiring a verified sort is a false-negative (2026-06-02 audit: blocked
+      // marstar/alflahertys-class WC sites in the promotion gate). Only navigate-from-watermark
+      // genuinely needs a verified newest-first sort (it paginates page-1-newest-first).
+      if (method === 'api-date-since-watermark') return null;
       if (p.sortVerified === true || p.sortParam) return null;
-      return 'sortVerified must be true or sortParam must be set (unless using full-catalog-sweep with reason)';
+      return 'sortVerified must be true or sortParam must be set (unless using full-catalog-sweep with reason, or api-date-since-watermark which is date-driven)';
     },
   },
   // ── C5 (2026-05-21): productCountMethod.method must be in the canonical
