@@ -506,6 +506,31 @@ function detectStockStatus($: cheerio.CheerioAPI, html: string): 'in_stock' | 'o
   if (/\bin\s*stock\b/.test(stockText)) return 'in_stock';
   if (/\bout\s*of\s*stock\b/.test(stockText) || /\bsold\s*out\b/.test(stockText)) return 'out_of_stock';
 
+  // "Availability:" label scan (OpenCart / osCommerce / Zen Cart family).
+  // These carts render stock in a bare <li>/<span> with no .stock class, e.g.
+  // `<li>Availability: In Stock</li>` or `<li>Availability: Out Of Stock</li>`,
+  // so the class-scoped check above misses it. Match only text anchored on the
+  // explicit "availability:" label to avoid catching narrative prose, then read
+  // the verdict from the value that follows the label. The label requirement
+  // keeps this from firing on descriptions that merely contain "in stock".
+  let availFromLabel: 'in_stock' | 'out_of_stock' | undefined;
+  $('li, span, div, p, td').each((_, el) => {
+    if (availFromLabel) return false; // break .each
+    const t = $(el).text().trim().replace(/\s+/g, ' ');
+    const m = /^availability\s*:?\s*(.+)$/i.exec(t);
+    if (!m) return;
+    const val = m[1].toLowerCase();
+    if (/\bout\s*of\s*stock\b|\bsold\s*out\b|\bunavailable\b|\bbackorder/.test(val)) {
+      availFromLabel = 'out_of_stock';
+      return false;
+    }
+    if (/\bin\s*stock\b|\bavailable\b/.test(val)) {
+      availFromLabel = 'in_stock';
+      return false;
+    }
+  });
+  if (availFromLabel) return availFromLabel;
+
   // Open Graph / product availability meta (generic; fills the gap when JSON-LD/
   // microdata are absent or use obfuscated markup, e.g. Wix). Placed AFTER explicit
   // on-page OOS evidence (CSS/text) because og:availability is a social-share hint
