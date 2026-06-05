@@ -29,3 +29,8 @@ ProjectsFIREARM-ALERT_*
 liang_r1.json
 sm1.xml
 sm2.xml
+
+# Session scratch: one-off diagnostic/probe/apply scripts + their backups (kept on disk, not tracked)
+backend/scripts/_*
+backend/_*.ts
+.claude/worktrees/
