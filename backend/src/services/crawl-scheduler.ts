@@ -17,13 +17,13 @@
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { scrapeQueue } from './queue';
+import { scrapeQueue, removeStaleJob } from './queue';
 import { recalculateSitePriority } from './priority-engine';
 import { pushEvent } from './debugLog';
 import { getColdStartStatus } from './cold-start';
 import { getBudget } from './token-budget';
 import { parseTierState, getActiveTiers } from './catalog-crawler';
-import { detectStreams, initStreamState, parseStreamState, probeStreamTotalPages } from './stream-detector';
+import { detectStreams, initStreamState, parseStreamState, probeStreamTotalPages, maybeReseedStreamState, hasPendingStreams } from './stream-detector';
 import { resolveTuning } from './crawl-tuning';
 
 // ── Safety Ceilings ──────────────────────────────────────────────────────────
@@ -105,9 +105,40 @@ export async function schedulerTick(): Promise<void> {
   const STALE_PROGRESS_MS = 15 * 60 * 1000; // 15 min — stale in_progress without active lock
   const allEnabledSites = await prisma.monitoredSite.findMany({
     where: { isEnabled: true, isPaused: false, NOT: { streamState: { equals: Prisma.DbNull } } },
-    select: { id: true, domain: true, streamState: true, crawlLock: true, crawlPhase: true },
+    select: { id: true, domain: true, url: true, hasWaf: true, streamState: true, crawlLock: true, crawlPhase: true, siteProfile: true },
   });
   for (const site of allEnabledSites) {
+    // 2b.i Re-seed streamState when siteProfile.lastVerified > streamState.detectedAt.
+    // Without this, profile audits that change catalogUrls never reach production —
+    // streamState stays pinned to the URLs detected at site onboarding (incident
+    // 2026-05-30: bullseyenorth + jobrookoutdoors crawled stale URLs for months).
+    // The helper preserves per-tier progress (currentPage, ranges, status) for any
+    // stream id present in both old and new states. If re-seed runs, we skip stuck-
+    // tier recovery this tick (new state has no stuck tiers anyway) and persist once.
+    //
+    // Bug A R1 rework 2026-05-31: read siteProfile DIRECTLY from the DB row, not
+    // from the in-memory adapter cache. The cache is keyed by normalizeDomain(hostname)
+    // while the prior code used site.domain.replace(/^www\./, '') — a normalization
+    // mismatch that could silently zero the profile lookup. The DB read also avoids
+    // the 5-min cache TTL gap (re-seed sees profile updates immediately).
+    let reseededState: ReturnType<typeof parseStreamState> = null;
+    try {
+      const siteProfile = (site as any).siteProfile ?? null;
+      if (siteProfile) {
+        const { state, changed } = await maybeReseedStreamState(site, siteProfile);
+        if (changed && state) {
+          await prisma.monitoredSite.update({
+            where: { id: site.id },
+            data: { streamState: state as any },
+          });
+          reseededState = state;
+        }
+      }
+    } catch (err) {
+      console.error(`[Scheduler] ${site.domain}: re-seed check failed:`, err instanceof Error ? err.message : err);
+    }
+    if (reseededState) continue; // Fresh state has no stuck tiers; skip recovery this tick.
+
     const ss = parseStreamState(site.streamState);
     if (!ss) continue;
     let needsPersist = false;
@@ -197,6 +228,8 @@ export async function schedulerTick(): Promise<void> {
     const isMaintain = site.crawlPhase === 'maintain';
     const tuning = resolveTuning(site.crawlTuning);
     const tuningObj = (site.crawlTuning && typeof site.crawlTuning === 'object') ? site.crawlTuning as Record<string, any> : {};
+    // Clear any dead terminal-state singleton job before re-enqueue (see removeStaleJob).
+    await removeStaleJob(`watermark-${site.id}`);
     await scrapeQueue.add('crawl-watermark', {
       siteId: site.id,
       domain: site.domain,
@@ -208,10 +241,13 @@ export async function schedulerTick(): Promise<void> {
       crawlTuning: site.crawlTuning,
       hasWaf: site.hasWaf,
     }, {
-      jobId: `watermark-${site.id}-${Date.now()}`,
+      // Stable singleton jobId — BullMQ rejects duplicate enqueues for the same
+      // siteId, preventing two watermark crawls racing on the same lastWatermarkUrl.
+      // removeOnComplete drops the record after success so the next tick re-enqueues.
+      jobId: `watermark-${site.id}`,
       priority: isMaintain ? 1 : 2, // T1 maintain=1 (top), T1 bootstrap=2
       attempts: 1,
-      removeOnComplete: 50,
+      removeOnComplete: true,  // Fix 4 rework 2026-06-01: must purge completed hash so singleton jobId can re-enqueue. Failed-jobs history retained via removeOnFail.
       removeOnFail: 100,
     });
 
@@ -270,7 +306,20 @@ export async function schedulerTick(): Promise<void> {
           }
         }
 
-        if (activeTiers.tier2 || activeTiers.tier3 || activeTiers.tier4) {
+        // Dispatch gate (bootstrap phase). Stream-based bootstrap (the active system)
+        // tracks ALL progress in `streamState`; its legacy `tierState` column is never
+        // written by the stream path, so `getActiveTiers(tierState)` is a stale signal —
+        // if that frozen tierState happens to sit in unexpired cooldown it blocks dispatch
+        // even though streams are pending, and the site stalls with no catalog job. So for
+        // stream-based sites gate on real stream progress (`hasPendingStreams`); fall back
+        // to the legacy `activeTiers` gate only for legacy (no-streamState) bootstrap sites.
+        const catalogDispatchAllowed = streamState
+          ? hasPendingStreams(streamState)
+          : (activeTiers.tier2 || activeTiers.tier3 || activeTiers.tier4);
+
+        if (catalogDispatchAllowed) {
+          // Clear any dead terminal-state singleton job before re-enqueue (see removeStaleJob).
+          await removeStaleJob(`catalog-${site.id}`);
           await scrapeQueue.add('crawl-catalog', {
             siteId: site.id,
             domain: site.domain,
@@ -284,10 +333,13 @@ export async function schedulerTick(): Promise<void> {
             streamState: streamState ?? undefined,
             crawlIntervalMin: site.crawlIntervalMin,
           }, {
-            jobId: `catalog-${site.id}-${Date.now()}`,
+            // Stable singleton jobId — BullMQ rejects duplicate enqueues for the same
+            // siteId, preventing two workers from racing on the same streamState read/write.
+            // removeOnComplete drops the record after success so the next tick re-enqueues.
+            jobId: `catalog-${site.id}`,
             priority: 10,
             attempts: 1,
-            removeOnComplete: 50,
+            removeOnComplete: true,  // Fix 4 rework 2026-06-01: must purge completed hash so singleton jobId can re-enqueue. Failed-jobs history retained via removeOnFail.
             removeOnFail: 100,
           });
         }
@@ -569,6 +621,8 @@ async function queueMaintainVerification(
 
     if (products.length > 0) {
       console.log(`[MaintainVerify] ${site.domain} T${t.tier}: queuing ${products.length} products (budget=${t.tokens})`);
+      // Clear any dead terminal-state singleton job before re-enqueue (see removeStaleJob).
+      await removeStaleJob(`verify-${site.id}-t${t.tier}`);
       await scrapeQueue.add('crawl-verify', {
         siteId: site.id,
         domain: site.domain,
@@ -576,10 +630,12 @@ async function queueMaintainVerification(
         productIds: products.map(p => p.id),
         hasWaf: site.hasWaf,
       }, {
-        jobId: `verify-${site.id}-t${t.tier}-${Date.now()}`,
+        // Stable singleton jobId — tier is part of the key so T2/T3/T4 can run
+        // concurrently for the same site, but two T2 verify jobs cannot stack.
+        jobId: `verify-${site.id}-t${t.tier}`,
         priority: 3, // Below T1 watermarks, above bootstrap catalog
         attempts: 1,
-        removeOnComplete: 50,
+        removeOnComplete: true,  // Fix 4 rework 2026-06-01: must purge completed hash so singleton jobId can re-enqueue. Failed-jobs history retained via removeOnFail.
         removeOnFail: 100,
       });
     } else {

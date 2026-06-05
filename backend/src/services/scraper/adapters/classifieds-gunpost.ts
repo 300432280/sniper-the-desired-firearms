@@ -32,13 +32,9 @@ export class GunpostAdapter extends AbstractAdapter {
 
   /** Detect wanted/WTB/WTT/ISO ads by title or CSS class — buy requests, not for-sale listings */
   private isWantedAd(title: string, element?: cheerio.Cheerio<any>): boolean {
-    // Check title prefix (e.g. "Wanted: ...", "WTB ...", "ISO ...")
-    if (/^(wanted|wtb|wtt|iso)\b/i.test(title.trim())) return true;
-    // Check title suffix (e.g. "Sks wanted", "Norinco parts Wanted")
-    if (/\b(wanted|wtb|wtt|iso)\s*$/i.test(title.trim())) return true;
-    // Check if title or element contains "Wanted:" text (gunpost h1 pattern)
-    if (/\bwanted\s*:/i.test(title)) return true;
-    // Check for CSS class on the article/node element (gunpost uses class="wanted" or class="node__title wanted")
+    // Shared title-based detection (prefix/suffix/inline, expanded patterns).
+    if (this.isWantedAdTitle(title)) return true;
+    // Gunpost-specific: CSS class on the article/node element (class="wanted" or "node__title wanted")
     if (element) {
       const cls = element.attr('class') || '';
       if (/\bwanted\b/.test(cls)) return true;

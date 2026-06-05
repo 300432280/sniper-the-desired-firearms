@@ -66,6 +66,77 @@ export class GenericAdapter extends AbstractAdapter {
     return matches;
   }
 
+  // ── Classifieds scoping ───────────────────────────────────────────────────
+
+  /**
+   * True when the site this URL belongs to is a classifieds marketplace
+   * (siteCategory='classified' / siteType='classifieds', e.g. townpost.ca).
+   * Looked up from the DB site cache by domain — the same source
+   * getNewArrivalsUrls() already uses. Returns false for the ~23 RETAIL sites
+   * that also fall back to this generic adapter, so their out-of-stock /
+   * price / title behaviour is unchanged.
+   */
+  private isClassifiedSite(baseUrl: string): boolean {
+    try {
+      const domain = new URL(baseUrl).hostname.replace(/^www\./, '');
+      const { _getSiteCacheEntry } = require('../adapter-registry');
+      const entry = _getSiteCacheEntry?.(domain);
+      return entry?.siteCategory === 'classified' || entry?.siteType === 'classifieds';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Resolve stock status for a card.
+   *
+   * RETAIL (isClassified=false): unchanged from the original
+   * `inStock ? 'in_stock' : 'out_of_stock'` — a true `false`/`undefined` from
+   * isInStock (disabled cart, "out of stock" text, or no buy signal) keeps
+   * marking out_of_stock so real OOS retail products are still flagged.
+   *
+   * CLASSIFIEDS (isClassified=true): a live listing is AVAILABLE by default. A
+   * classified ad has no add-to-cart, so isInStock() returns undefined for every
+   * ad — the old retail mapping wrongly turned that into out_of_stock for all
+   * 9,046 active townpost ads. Here a card is `in_stock` UNLESS isInStock()
+   * explicitly returns false (an out-of-stock term like "sold" appears in the
+   * card text). The detail-page `<title>Sold ` signal isn't present on listing
+   * cards, so listing extraction yields in_stock; a "sold"/"sold out" badge in
+   * card text (if a site adds one) is still honoured via isInStock's outTerms.
+   */
+  private resolveStockStatus(
+    element: cheerio.Cheerio<any>,
+    isClassified: boolean,
+  ): 'in_stock' | 'out_of_stock' {
+    const signal = this.isInStock(element);
+    if (isClassified) {
+      return signal === false ? 'out_of_stock' : 'in_stock';
+    }
+    return signal ? 'in_stock' : 'out_of_stock';
+  }
+
+  /**
+   * Classifieds price extraction. A classified card carries its asking price in
+   * a free-text field a seller types — TownPost renders it as
+   * `<span title="95$">95$</span>` (trailing-$) or `<span title="$195.00">`
+   * (prefix-$). The shared extractPriceFromElement only catches prefix-$ via
+   * `[title^="$"]`, so trailing-$ asking prices are missed. Here we read ANY
+   * `title` attr (or its text) that contains a `$` — safe because it is only
+   * called on classifieds cards — and parse it with extractPriceFromTitle,
+   * which understands prefix-$, no-space-$, and trailing-$ forms. Picks the
+   * LOWEST positive value when several are present (mirrors base.ts 2b).
+   */
+  private extractClassifiedPrice(element: cheerio.Cheerio<any>): number | undefined {
+    const candidates: number[] = [];
+    element.find('[title*="$"]').each((_, el) => {
+      const node = element.find(el);
+      const attr = node.attr('title') || '';
+      const p = this.extractPriceFromTitle(attr) ?? this.extractPriceFromTitle(node.text());
+      if (p) candidates.push(p);
+    });
+    return candidates.length ? Math.min(...candidates) : undefined;
+  }
+
   // ── Catalog Crawl Methods (Phase 3) ───────────────────────────────────────
 
   getNewArrivalsUrl(origin: string): string {
@@ -91,6 +162,7 @@ export class GenericAdapter extends AbstractAdapter {
   extractCatalogProducts($: cheerio.CheerioAPI, baseUrl: string): CatalogProduct[] {
     const products: CatalogProduct[] = [];
     const seen = new Set<string>();
+    const isClassified = this.isClassifiedSite(baseUrl);
 
     const ALL_SELECTORS = [
       '[class*="product-card"]', '[class*="product-item"]', '[class*="product-tile"]',
@@ -117,8 +189,13 @@ export class GenericAdapter extends AbstractAdapter {
         if (this.isNavUrl(url)) return;
         seen.add(url);
 
-        const price = this.extractPriceFromElement(element) ?? this.extractPriceFromTitle(title);
-        const inStock = this.isInStock(element);
+        // On classifieds, the asking price lives in a seller-typed price span
+        // (TownPost: `<span title="95$">`). Read it directly (handles trailing-$),
+        // then fall back to the shared element/title extractors. Retail keeps the
+        // original element-first order untouched.
+        const price = isClassified
+          ? (this.extractClassifiedPrice(element) ?? this.extractPriceFromElement(element) ?? this.extractPriceFromTitle(title))
+          : (this.extractPriceFromElement(element) ?? this.extractPriceFromTitle(title));
         const thumbnail = this.extractThumbnail($, element, baseUrl);
 
         // Source ID extraction — same patterns as generic-retail.ts:1020-1032.
@@ -134,13 +211,18 @@ export class GenericAdapter extends AbstractAdapter {
           if (urlIdMatch) sourceId = urlIdMatch[1];
         }
 
+        // Classifieds (e.g. TownPost) carry buy-requests ("wanted"/WTB/ISO/LF)
+        // alongside for-sale listings — tag them so search can filter them out.
+        // A buy-request has no real price/stock, so suppress both.
+        const wanted = this.isWantedAdTitle(title);
         products.push({
           url,
           sourceId,
           title,
-          price,
-          stockStatus: inStock ? 'in_stock' : 'out_of_stock',
+          price: wanted ? undefined : price,
+          stockStatus: wanted ? undefined : this.resolveStockStatus(element, isClassified),
           thumbnail,
+          category: wanted ? 'wanted' : undefined,
         });
       });
     }

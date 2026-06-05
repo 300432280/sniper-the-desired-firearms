@@ -3,6 +3,7 @@ import vm from 'vm';
 import crypto from 'crypto';
 import { spawn } from 'child_process';
 import { normalizeDomain } from './utils/url';
+import { isCfInterstitial } from './cf-interstitial';
 
 // ── Deterministic user agent selection ───────────────────────────────────────
 
@@ -117,13 +118,20 @@ export function detectDifficultySignals(
   headers: Record<string, any>,
   body: string
 ): DifficultySignals {
+  // PASSIVE Cloudflare emits `cf-ray` / `server: cloudflare` on EVERY response,
+  // including a normal HTTP 200 product page. Treating that alone as a WAF forces
+  // every catalog page through Playwright (catalog-crawler hasWaf branch) and makes
+  // the scheduler re-latch hasWaf back to true after an operator clears the column
+  // (crawl-scheduler.ts:442). So Cloudflare only counts as a WAF when the BODY is a
+  // genuine interstitial/challenge page. Sucuri signals stay unconditional — the
+  // Sucuri reverse proxy is a real WAF whose JS challenge the crawler must solve.
+  const cloudflarePresent = !!(headers['cf-ray'] || (headers['server'] && /cloudflare/i.test(headers['server'])));
   return {
     hasWaf: !!(
-      headers['cf-ray'] ||
       headers['x-sucuri-id'] ||
       headers['x-sucuri-cache'] ||
-      (headers['server'] && /cloudflare/i.test(headers['server'])) ||
-      body.includes('sucuri_cloudproxy')
+      body.includes('sucuri_cloudproxy') ||
+      (cloudflarePresent && isCfInterstitial(body))
     ),
     hasRateLimit: !!(
       statusCode === 429 ||
@@ -229,6 +237,14 @@ export interface FetchResult {
   statusCode: number;
   signals: DifficultySignals;
   headers: Record<string, any>;
+  /**
+   * Final URL after all redirects were followed. May differ from the requested
+   * URL when the server issued 301/302/303/307/308 redirects (e.g. Shopify
+   * redirecting a delisted product to the storefront homepage). Callers can
+   * compare `resolvedUrl` to the request URL to detect "302 → home" zombie
+   * patterns that look like 200 OK responses.
+   */
+  resolvedUrl?: string;
 }
 
 // ── Main HTTP fetch ──────────────────────────────────────────────────────────
@@ -306,17 +322,34 @@ async function nativeFetchFallback(
       statusCode: resp.status,
       signals: { hasWaf: false, hasRateLimit: false, hasCaptcha: false },
       headers: Object.fromEntries(resp.headers.entries()),
+      // `resp.url` reflects the final URL after `redirect: 'follow'` resolves
+      // 301/302/etc — exactly what we need for zombie detection.
+      resolvedUrl: resp.url || url,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    // Node 24 undici wraps HPE in err.cause.message='Invalid header token'
+    // while outer err.message='fetch failed'. Inspect both — Celerant trailing-
+    // space headers and Cloudflare-decorated headers (gunpost.ca) only surface
+    // the HPE marker on the cause.
+    const causeMsg = (err && typeof err === 'object' && 'cause' in err && (err as any).cause instanceof Error)
+      ? (err as any).cause.message
+      : '';
+    const combined = `${msg} ${causeMsg}`;
     // Node 24 undici-based fetch fails on malformed headers — fall through to curl.
+    // Patterns are intentionally specific so caller-side TypeErrors with
+    // generic "Invalid header" messages don't trigger the curl fallback.
     if (
-      msg.includes('Parse Error') ||
-      msg.includes('HPE_INVALID') ||
-      msg.includes('header parsing failed') ||
-      msg.includes('Invalid header')
+      combined.includes('Parse Error') ||
+      combined.includes('HPE_INVALID') ||
+      combined.includes('header parsing failed') ||
+      combined.includes('Invalid header token') ||
+      combined.includes('Invalid header value') ||
+      combined.includes('Invalid header field char') ||
+      combined.includes('Headers Overflow') ||
+      combined.includes('UND_ERR_HEADERS_OVERFLOW')
     ) {
-      console.log(`[HTTP] Native fetch parse error for ${url}, falling back to curl-spawn`);
+      console.log(`[HTTP] Native fetch parse error for ${url} (cause=${causeMsg.substring(0, 60)}), falling back to curl-spawn`);
       return await curlSpawnFallback(url, headers, cookies);
     }
     throw err;
@@ -337,11 +370,16 @@ async function curlSpawnFallback(
 ): Promise<FetchResult> {
   const startTime = Date.now();
 
+  // Append a sentinel-wrapped effective URL to stdout via -w so we can recover
+  // the post-redirect URL for zombie detection (Shopify 302→/). The sentinel
+  // is parsed after the body and stripped from the returned HTML.
+  const EFFECTIVE_URL_SENTINEL = '\n__FA_EFFECTIVE_URL__:';
   const args: string[] = [
     '-sSL',           // silent + show errors + follow redirects
     '--max-time', '15',
     '-i',             // include response headers in stdout
     '--compressed',   // accept gzip/deflate
+    '-w', `${EFFECTIVE_URL_SENTINEL}%{url_effective}`,
   ];
   for (const [key, value] of Object.entries(headers)) {
     args.push('-H', `${key}: ${value}`);
@@ -381,7 +419,17 @@ async function curlSpawnFallback(
         return;
       }
       const responseTimeMs = Date.now() - startTime;
-      const fullOutput = Buffer.concat(stdoutChunks).toString('utf-8');
+      let fullOutput = Buffer.concat(stdoutChunks).toString('utf-8');
+
+      // Extract the effective URL appended by curl's -w sentinel (see args above)
+      // and strip it from the body. If the sentinel isn't found (older curl, etc.),
+      // resolvedUrl stays undefined and callers fall back to the request URL.
+      let resolvedUrl: string | undefined;
+      const sentinelIdx = fullOutput.lastIndexOf(EFFECTIVE_URL_SENTINEL);
+      if (sentinelIdx >= 0) {
+        resolvedUrl = fullOutput.substring(sentinelIdx + EFFECTIVE_URL_SENTINEL.length).trim();
+        fullOutput = fullOutput.substring(0, sentinelIdx);
+      }
 
       // With -L, curl emits one header block per redirect hop, separated by blank lines.
       // We want the LAST header block (final response) + everything after it (body).
@@ -395,13 +443,21 @@ async function curlSpawnFallback(
       }
 
       if (statusBlockIdx === -1) {
-        // Couldn't find a status line — return raw output as body, 200 OK.
+        // No status line found — could be malformed response OR empty body.
+        // Guard against the empty-body case: empty body resolves as fake-success
+        // and silently fails downstream extraction (Concern B 2026-05-31).
+        if (fullOutput.trim() === '') {
+          finish(() => reject(new Error(`curl returned empty body for ${url}`)));
+          return;
+        }
+        // Non-empty body, no status line: treat as 200 with raw body (existing behavior).
         finish(() => resolve({
           html: fullOutput,
           responseTimeMs,
           statusCode: 200,
           signals: { hasWaf: false, hasRateLimit: false, hasCaptcha: false },
           headers: {},
+          resolvedUrl: resolvedUrl || url,
         }));
         return;
       }
@@ -428,6 +484,7 @@ async function curlSpawnFallback(
         statusCode,
         signals: { hasWaf: false, hasRateLimit: false, hasCaptcha: false },
         headers: responseHeaders,
+        resolvedUrl: resolvedUrl || url,
       }));
     });
   });
@@ -552,7 +609,7 @@ async function fetchWithRedirects(
       const domain = normalizeDomain(hostname);
       domainCooldown.set(domain, Date.now() + MALCARE_COOLDOWN_MS);
       console.warn(`[HTTP] MalCare ban detected on ${domain} — cooldown ${MALCARE_COOLDOWN_MS / 60000}min`);
-      return { html, responseTimeMs, statusCode: 403, signals, headers: response.headers };
+      return { html, responseTimeMs, statusCode: 403, signals, headers: response.headers, resolvedUrl: currentUrl };
     }
 
     // Sucuri WAF challenge → solve and retry same URL
@@ -564,7 +621,7 @@ async function fetchWithRedirects(
         continue; // retry same URL — cached cookie will be picked up next iteration
       }
       console.log(`[HTTP] Could not solve Sucuri challenge for ${hostname}`);
-      return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers };
+      return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers, resolvedUrl: currentUrl };
     }
 
     // HTTP redirect — follow manually
@@ -575,14 +632,17 @@ async function fetchWithRedirects(
       continue;
     }
 
-    return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers };
+    return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers, resolvedUrl: currentUrl };
   }
 
-  // Exhausted redirect/challenge attempts — last resort direct fetch
+  // Exhausted redirect/challenge attempts — last resort direct fetch.
+  // axios follows redirects internally here, so `response.request.res.responseUrl`
+  // is the most accurate final URL; fall back to currentUrl if it's not exposed.
   console.log(`[HTTP] Exhausted ${MAX_REDIRECT_HOPS} hops, falling back to direct fetch for ${currentUrl}`);
   const response = await axios.get(currentUrl, { headers: baseHeaders, timeout: 12000, maxRedirects: 5 });
   const html = response.data as string;
   const responseTimeMs = Date.now() - startTime;
   const signals = detectDifficultySignals(response.status, response.headers, html);
-  return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers };
+  const finalUrl = (response.request?.res?.responseUrl as string | undefined) || currentUrl;
+  return { html, responseTimeMs, statusCode: response.status, signals, headers: response.headers, resolvedUrl: finalUrl };
 }

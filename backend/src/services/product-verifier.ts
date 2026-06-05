@@ -80,7 +80,7 @@ export async function verifyProduct(params: {
 
   try {
     const playwrightTimeout = profile?.playwrightTimeout ?? profile?.timeout ?? 30_000;
-    const { html, statusCode, responseTimeMs } = await fetchProductPage(url, domain, !!hasWaf, {
+    const { html, statusCode, responseTimeMs, resolvedUrl } = await fetchProductPage(url, domain, !!hasWaf, {
       fetchTimeoutMs: FETCH_TIMEOUT_MS,
       retryDelayMs: RETRY_DELAY_MS,
       maxRetries: MAX_RETRIES,
@@ -92,6 +92,41 @@ export async function verifyProduct(params: {
     // HTTP-level deletion signals
     if (statusCode === 404 || statusCode === 410) {
       return { status: 'deleted', responseTimeMs, statusCode };
+    }
+
+    // Redirect-to-homepage deletion signal (Shopify 302 → home zombie).
+    // When a delisted product is removed, Shopify (and some other platforms)
+    // respond 302 → `/` and the fetcher follows it transparently — the caller
+    // gets 200 OK with the storefront homepage HTML, which `analyzeProductPage`
+    // would happily parse as the product (extracting the site title as the
+    // product name). Detect this by comparing the original product URL's path
+    // to the resolved URL's path: if the resolver landed on `/` (or the bare
+    // origin), the original URL was a delisted product. Must run BEFORE
+    // analyzeProductPage so we don't pollute the result with homepage data.
+    if (resolvedUrl) {
+      try {
+        const reqUrl = new URL(url);
+        const finalUrl = new URL(resolvedUrl);
+        // Only treat as deleted when the redirect crosses paths AND the original
+        // URL had a non-root path (i.e. it was a product page, not a homepage
+        // probe that legitimately stayed at `/`).
+        // Shopify delisted-product redirects target several non-product paths:
+        // `/` (homepage), `/cart`, `/account/login`, `/collections/all`. Each
+        // of these returns HTTP 200 with non-product HTML that analyzeProductPage
+        // would happily parse as the product. Extended 2026-06-01 (Fix 1 R2 rework
+        // per Concern 4 — `/cart` and `/account/login` MED severity).
+        const finalPath = finalUrl.pathname || '/';
+        const DELETION_REDIRECT_PATHS = new Set(['/', '', '/cart', '/account/login', '/collections/all']);
+        const finalIsDeletionTarget = DELETION_REDIRECT_PATHS.has(finalPath);
+        const reqWasProduct = reqUrl.pathname !== '/' && reqUrl.pathname !== '';
+        const reqWasDifferentPath = reqUrl.pathname !== finalPath;
+        const sameOrigin = finalUrl.origin === reqUrl.origin;
+        if (finalIsDeletionTarget && reqWasProduct && reqWasDifferentPath && sameOrigin) {
+          return { status: 'deleted', responseTimeMs, statusCode };
+        }
+      } catch {
+        // Malformed URL — fall through to normal page analysis
+      }
     }
 
     const $ = cheerio.load(html);
@@ -115,6 +150,14 @@ interface FetchedPage {
   html: string;
   statusCode: number;
   responseTimeMs: number;
+  /**
+   * Final URL after server-side redirects (axios manual hops, native fetch
+   * redirect:'follow', or Playwright JS navigation). Used to detect "302 →
+   * storefront homepage" zombies — e.g. delisted Shopify products that
+   * silently redirect to `/` and would otherwise be parsed as the homepage
+   * and incorrectly kept active.
+   */
+  resolvedUrl?: string;
 }
 
 /** Per-call fetch configuration derived from site profile */
@@ -161,6 +204,7 @@ async function fetchProductPage(
           html: result.html,
           statusCode: result.statusCode,
           responseTimeMs: result.responseTimeMs,
+          resolvedUrl: result.resolvedUrl,
         };
       }
 
@@ -174,6 +218,7 @@ async function fetchProductPage(
         html: result.html,
         statusCode: result.statusCode,
         responseTimeMs: result.responseTimeMs,
+        resolvedUrl: result.resolvedUrl,
       };
     } catch (err) {
       if (attempt < cfg.maxRetries) {
@@ -201,6 +246,7 @@ async function fetchViaPlaywright(url: string, cfg: FetchConfig): Promise<Fetche
     html: result.html,
     statusCode,
     responseTimeMs: result.responseTimeMs,
+    resolvedUrl: result.resolvedUrl,
   };
 }
 
@@ -222,18 +268,70 @@ function analyzeProductPage(
   baseUrl: string,
   domain?: string,
 ): VerifyProductResult {
-  // 1. Soft-404 detection (page returns 200 but content says "not found")
+  // 1. Soft-404 detection (page returns 200 but content says "not found").
+  // Scan BOTH <h1> and <title>, but SPLIT patterns by safety profile:
+  //   h1OnlyPatterns  — bare substrings ("not found", "404"…) that legitimately
+  //                     appear in many UI titles (search-results pages, etc.).
+  //                     Safe only against the deletion banner <h1>, not <title>.
+  //   h1OrTitlePatterns — specific soft-404 UX prose tightly bound to deletion
+  //                       pages ("has been deleted", "ad not found"). Safe in
+  //                       either <h1> or <title>. Catches the Townpost variant
+  //                       where the title carries the signal: <title>Ad Not
+  //                       Found · TownPost</title> + <h1>This ad has been
+  //                       deleted...</h1>.
+  // Body-regex (below) stays strictly on the original `removed` verb to avoid
+  // false-positiving on legitimate product descriptions that say "this product
+  // was sold exclusively..." or similar historical prose.
   const h1Text = $('h1').first().text().toLowerCase();
-  const softDeletePatterns = [
+  const titleText = $('title').first().text().toLowerCase();
+
+  // 1a. Per-site deletion markers (Gap 4) — checked FIRST, before global
+  // patterns. Captured by backend/scripts/_detect-deletion-markers-2026-05-30.js
+  // via live-vs-invalid URL diff. Patterns are pre-lowercased at capture time
+  // so plain .includes() works. Falls through to global patterns if absent or
+  // if none of this site's markers match.
+  const perSiteMarkers = domain ? _getSiteCacheEntry(domain)?.siteProfile?.deletionMarkers : undefined;
+  if (perSiteMarkers && typeof perSiteMarkers === 'object') {
+    const h1Patterns: string[] = Array.isArray(perSiteMarkers.h1Patterns) ? perSiteMarkers.h1Patterns : [];
+    const titlePatterns: string[] = Array.isArray(perSiteMarkers.titlePatterns) ? perSiteMarkers.titlePatterns : [];
+    const bodyPatterns: string[] = Array.isArray(perSiteMarkers.bodyPatterns) ? perSiteMarkers.bodyPatterns : [];
+    if (h1Patterns.length > 0 && h1Patterns.some(p => p && h1Text.includes(p))) {
+      return { status: 'deleted', responseTimeMs: 0 };
+    }
+    if (titlePatterns.length > 0 && titlePatterns.some(p => p && titleText.includes(p))) {
+      return { status: 'deleted', responseTimeMs: 0 };
+    }
+    if (bodyPatterns.length > 0) {
+      const psBody = $('body').text().substring(0, 3000).toLowerCase();
+      for (const src of bodyPatterns) {
+        if (!src) continue;
+        try {
+          if (new RegExp(src, 'i').test(psBody)) {
+            return { status: 'deleted', responseTimeMs: 0 };
+          }
+        } catch { /* malformed regex source — skip silently */ }
+      }
+    }
+  }
+
+  const h1OnlyPatterns = [
     'not found', 'page introuvable', '404',
     'no longer available', 'has been removed',
     'does not exist', 'page not found',
   ];
-  if (softDeletePatterns.some(p => h1Text.includes(p))) {
+  const h1OrTitlePatterns = [
+    'has been deleted',                 // Townpost soft-404 h1 prefix
+    'ad not found',                     // Townpost soft-404 title
+  ];
+  if (h1OnlyPatterns.some(p => h1Text.includes(p)) ||
+      h1OrTitlePatterns.some(p => h1Text.includes(p) || titleText.includes(p))) {
     return { status: 'deleted', responseTimeMs: 0 };
   }
 
-  // Also check broader page text for removal notices
+  // Also check broader page text for removal notices. Kept narrow to avoid
+  // false positives on descriptions that mention "this product was sold..."
+  // in historical/narrative prose. Townpost's deletion signal is already
+  // caught by the h1OrTitlePatterns above ("has been deleted" / "ad not found").
   const bodyText = $('body').text().substring(0, 3000).toLowerCase();
   if (/the page you requested does not exist/i.test(bodyText) ||
       /this (page|product|listing) (has been|was) removed/i.test(bodyText)) {
@@ -408,6 +506,27 @@ function detectStockStatus($: cheerio.CheerioAPI, html: string): 'in_stock' | 'o
   if (/\bin\s*stock\b/.test(stockText)) return 'in_stock';
   if (/\bout\s*of\s*stock\b/.test(stockText) || /\bsold\s*out\b/.test(stockText)) return 'out_of_stock';
 
+  // Open Graph / product availability meta (generic; fills the gap when JSON-LD/
+  // microdata are absent or use obfuscated markup, e.g. Wix). Placed AFTER explicit
+  // on-page OOS evidence (CSS/text) because og:availability is a social-share hint
+  // that can be served stale from SSR cache; current on-page signals must win to
+  // avoid false restock alerts. Ambiguous enum values (preorder/backorder/presale/
+  // limitedAvailability/onlineOnly) intentionally fall through to no-verdict.
+  const ogAvailEl = $('meta[property="og:availability"], meta[name="og:availability"], meta[property="product:availability"], meta[name="product:availability"]').first();
+  if (ogAvailEl.length) {
+    const ogVal = (ogAvailEl.attr('content') || '').toLowerCase().trim();
+    if (ogVal) {
+      const compact = ogVal.replace(/[\s_-]+/g, '');
+      if (compact.includes('instock')) return 'in_stock';
+      if (
+        compact.includes('outofstock') ||
+        compact.includes('soldout') ||
+        compact.includes('discontinued') ||
+        compact.includes('oos')
+      ) return 'out_of_stock';
+    }
+  }
+
   // Add-to-cart button present and enabled = likely in stock
   const cartBtn = $('button[class*="cart"], [id*="add-to-cart"], input[value*="Add to Cart" i], .add-to-cart');
   if (cartBtn.length && cartBtn.attr('disabled') === undefined && !cartBtn.hasClass('disabled')) {
@@ -495,7 +614,7 @@ function extractFromJsonLd($: cheerio.CheerioAPI): JsonLdData {
               const p = typeof offer.price === 'number'
                 ? offer.price
                 : parseFloat(String(offer.price).replace(/,/g, ''));
-              if (!isNaN(p) && p >= 10) {
+              if (!isNaN(p) && p > 0) {
                 result.price = p;
               }
             }
@@ -507,7 +626,7 @@ function extractFromJsonLd($: cheerio.CheerioAPI): JsonLdData {
                   const p = typeof spec.price === 'number'
                     ? spec.price
                     : parseFloat(String(spec.price).replace(/,/g, ''));
-                  if (!isNaN(p) && p >= 10) {
+                  if (!isNaN(p) && p > 0) {
                     result.price = p;
                     break;
                   }
@@ -519,13 +638,13 @@ function extractFromJsonLd($: cheerio.CheerioAPI): JsonLdData {
               const p = typeof offer.lowPrice === 'number'
                 ? offer.lowPrice
                 : parseFloat(String(offer.lowPrice).replace(/,/g, ''));
-              if (!isNaN(p) && p >= 10) result.price = p;
+              if (!isNaN(p) && p > 0) result.price = p;
             }
             if (offer.highPrice !== undefined) {
               const rp = typeof offer.highPrice === 'number'
                 ? offer.highPrice
                 : parseFloat(String(offer.highPrice).replace(/,/g, ''));
-              if (!isNaN(rp) && rp >= 10 && rp > (result.price ?? 0)) {
+              if (!isNaN(rp) && rp > 0 && rp > (result.price ?? 0)) {
                 result.regularPrice = rp;
               }
             }
@@ -591,8 +710,12 @@ function extractJsonLdAvailability($: cheerio.CheerioAPI): string | null {
 
         const offerList = Array.isArray(product.offers) ? product.offers : [product.offers];
         for (const offer of offerList) {
-          if (offer.availability) {
-            availability = String(offer.availability);
+          // Case-insensitive availability key (Wix emits "Availability" with a capital A).
+          const availKey = offer && typeof offer === 'object'
+            ? Object.keys(offer).find(k => k.toLowerCase() === 'availability')
+            : undefined;
+          if (availKey && offer[availKey]) {
+            availability = String(offer[availKey]);
             return;
           }
         }
@@ -626,7 +749,7 @@ function extractFromOpenGraph($: cheerio.CheerioAPI): OgData {
   const ogPrice = $('meta[property="product:price:amount"]').attr('content');
   if (ogPrice) {
     const p = parseFloat(ogPrice.replace(/,/g, ''));
-    if (!isNaN(p) && p >= 10) result.price = p;
+    if (!isNaN(p) && p > 0) result.price = p;
   }
 
   return result;
@@ -695,7 +818,9 @@ function extractFromHtml($: cheerio.CheerioAPI, baseUrl: string): HtmlData {
     const content = el.attr('content');
     if (content) {
       const p = parseFloat(content.replace(/,/g, ''));
-      if (!isNaN(p) && p >= 10) return p;
+      // `content` attr is a declared price value (microdata/[itemprop=price]), not display
+      // text — accept any positive value. Cart/related/upsell are already excluded above.
+      if (!isNaN(p) && p > 0) return p;
     }
     const p = extractPrice(el.text());
     return p || undefined;

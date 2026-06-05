@@ -23,8 +23,17 @@ describe('validateMethod (Fix 4)', () => {
 
   it('does not throw for any of the 11 canonical method names', () => {
     for (const name of VALID_METHOD_NAMES) {
-      expect(() => validateMethod({ method: name } as any)).not.toThrow();
+      // sitemap-index requires a non-empty urls[] to be valid (B2 2026-06-02);
+      // supply one so this test asserts name-recognition, not shape completeness.
+      const m = name === 'sitemap-index' ? { method: name, urls: ['/sitemap1.xml'] } : { method: name };
+      expect(() => validateMethod(m as any)).not.toThrow();
     }
+  });
+
+  it('throws for sitemap-index without a non-empty urls[] (B2 — legacy {sitemapUrl} shape)', () => {
+    expect(() => validateMethod({ method: 'sitemap-index' } as any)).toThrow(/non-empty urls\[\] array/i);
+    expect(() => validateMethod({ method: 'sitemap-index', urls: [] } as any)).toThrow(/non-empty urls\[\] array/i);
+    expect(() => validateMethod({ method: 'sitemap-index', sitemapUrl: '/x', subSitemapPattern: '?p={N}' } as any)).toThrow(/non-empty urls\[\] array/i);
   });
 
   it('exposes exactly the 11 canonical method names', () => {

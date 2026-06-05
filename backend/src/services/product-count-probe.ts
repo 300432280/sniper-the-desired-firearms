@@ -182,7 +182,16 @@ export function validateMethod(m: any): void {
     }
   } else if (name === 'sitemap-index') {
     const urls = (m as SitemapIndexMethod).urls;
-    if (Array.isArray(urls)) {
+    // B2 (2026-06-02): the legacy shape {sitemapUrl, subSitemapPattern} has no urls[],
+    // so `for…of m.urls` (line ~302) threw a TypeError that was caught → silent null
+    // (firearmsoutletcanada). Fail loud + actionable instead.
+    if (!Array.isArray(urls) || urls.length === 0) {
+      throw new Error(
+        `[productCountProbe] sitemap-index requires a non-empty urls[] array; got ${JSON.stringify(urls)}. ` +
+        `The legacy {sitemapUrl, subSitemapPattern} shape is unsupported — use scalar method 'sitemap' or populate urls[].`
+      );
+    }
+    {
       for (const u of urls) {
         if (typeof u === 'string' && /^https?:\/\//i.test(u)) {
           throw new Error(
@@ -539,7 +548,9 @@ export async function probeExpectedProductCount(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[ProductCountProbe] ${siteUrl}: probe failed — ${msg.substring(0, 80)}`);
+    // Full message (no truncation): descriptive validateMethod throws (e.g. the B2
+    // sitemap-index guard) carry an actionable remediation hint past 80 chars.
+    console.error(`[ProductCountProbe] ${siteUrl}: probe failed — ${msg}`);
     return null;
   }
 }

@@ -164,6 +164,31 @@ export class ShopifyAdapter extends AbstractAdapter {
     return `${origin}/collections/all?sort_by=created-descending`;
   }
 
+  /**
+   * Build a resolvable product URL from a Shopify handle.
+   *
+   * Most handles are ASCII-only (Shopify slugifies titles), but a merchant can
+   * create handles containing raw non-ASCII characters (e.g. CJK). The public
+   * /products.json API returns those handles UNENCODED, so naively interpolating
+   * them yields a URL with raw CJK in the path — which Shopify's storefront 404s.
+   * The on-site hrefs and the only resolvable form are PERCENT-ENCODED.
+   *
+   * encodeURI() encodes non-ASCII bytes while leaving "/", "-", etc. intact, and
+   * is a no-op for already-ASCII handles. We guard against double-encoding (which
+   * would turn "%E9" into "%25E9") by skipping handles that already contain a
+   * valid percent-escape — products.json always returns raw handles, but the
+   * guard keeps this safe if an already-encoded handle ever reaches here.
+   *
+   * Root cause repro: aagcanada.ca 2026-05-29. Previously this line ran
+   * decodeURIComponent(), which for a raw-CJK handle was a no-op (left the 404ing
+   * form) and for an encoded handle actively broke it.
+   */
+  private buildProductUrl(origin: string, handle: string): string {
+    const raw = `${origin}/products/${handle}`;
+    if (/%[0-9A-Fa-f]{2}/.test(handle)) return raw; // already encoded — don't double-encode
+    return encodeURI(raw);
+  }
+
   async fetchCatalogPage(
     origin: string,
     page: number,
@@ -200,7 +225,7 @@ export class ShopifyAdapter extends AbstractAdapter {
         : (typeof p.tags === 'string' && p.tags ? p.tags : undefined);
 
       return {
-        url: (() => { try { return decodeURIComponent(`${origin}/products/${p.handle}`); } catch { return `${origin}/products/${p.handle}`; } })(),
+        url: this.buildProductUrl(origin, p.handle),
         sourceId: String(p.id),
         title: (p.title || '').trim().slice(0, 160),
         price: p.variants?.[0]?.price ? parseFloat(p.variants[0].price) : undefined,
@@ -249,9 +274,17 @@ export class ShopifyAdapter extends AbstractAdapter {
         const title = this.extractTitle(element, element.text());
         if (!title || title.length < 3) return;
         if (/^\$?\d[\d,.]*$/.test(title)) return;
+        // Reject nav/category/URL-shaped titles (e.g. "www.aagcanada.ca") that a
+        // non-product card or footer/share link can produce. The API path
+        // (fetchCatalogPage) is the source of truth; HTML extraction is a fallback
+        // and must not inject junk rows. aagcanada.ca repro 2026-05-29.
+        if (this.isNavTitle(title)) return;
 
         const url = this.extractLink(element, baseUrl);
         if (!url || seen.has(url)) return;
+        // Shopify product pages are ALWAYS /products/<handle> (optionally locale-prefixed).
+        // Anything else (collection, page, footer link, homepage) is not a product.
+        if (!/\/products\/[^/?#]+/.test(url)) return;
         seen.add(url);
 
         const price = this.extractPriceFromElement(element);

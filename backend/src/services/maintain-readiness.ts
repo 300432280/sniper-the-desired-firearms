@@ -106,6 +106,16 @@ export interface WatermarkWalkReport {
   page1FirstDate?: string;
   page1LastDate?: string;
   watermarkOnPage1?: boolean;
+  // Sort-axis assertion (Gap 2): verifies adapter-emitted postDate equals
+  //   rawApiRow[siteProfile.sortAxis] for sampled products. Currently runs
+  //   for WC api-date-since-watermark sites only (the platform where the axis
+  //   is request-dependent and the A2 misalignment risk exists).
+  //   null  → skipped (sortAxis profile field is null/missing, raw API
+  //           refetch not supported for this platform, or sample too small)
+  //   true  → emitted postDate matches rawApiRow[sortAxis] for sampled rows
+  //   false → mismatch detected; check `notes` for offending sourceIds
+  sortAxisOk?: boolean | null;
+  sortAxisChecked?: string; // 'modified' | 'date' | 'published_at' (the axis we asserted against)
 }
 
 export interface BootstrapSiteSummary {
@@ -214,19 +224,28 @@ export async function checkMaintainReadiness(
   const hasWatermark = Boolean(site.lastWatermarkUrl);
   if (!hasWatermark) reasons.push('no lastWatermarkUrl');
 
-  // [5] Bootstrap tier completion -- for bootstrap phase only T4 on streams[0]
+  // [5] Bootstrap tier completion -- for bootstrap phase, T4 on EVERY stream must have
+  // completed a round. Bootstrap is round-robin across all streams (worker.ts), and the
+  // end-of-round coverage gate CLEARS every stream's lastCycleCompletedAt when it starts
+  // a fresh retry round — so requiring all streams complete keeps the site in bootstrap
+  // through retry rounds and only passes once the final round settles. Checking only
+  // streams[0] (the old behavior) let a site transition to maintain after the first
+  // stream finished while 48 other streams were still unindexed. 2026-06-01.
   let tiersComplete = false;
   const tierStatus: string[] = [];
   const ss = site.streamState as any;
   if (ss && Array.isArray(ss.streams) && ss.tiers) {
     if (site.crawlPhase === 'bootstrap') {
-      const first = ss.streams[0];
-      if (first) {
-        const key = `${first.id}:4`;
-        const ts = ss.tiers[key];
-        const completed = Boolean(ts && ts.lastCycleCompletedAt);
-        tierStatus.push(`${key}=${completed ? 'done' : 'pending'}`);
-        tiersComplete = completed;
+      if (ss.streams.length > 0) {
+        let all = true;
+        for (const stream of ss.streams) {
+          const key = `${stream.id}:4`;
+          const ts = ss.tiers[key];
+          const completed = Boolean(ts && ts.lastCycleCompletedAt);
+          tierStatus.push(`${key}=${completed ? 'done' : 'pending'}`);
+          if (!completed) all = false;
+        }
+        tiersComplete = all;
       } else {
         reasons.push('streamState has no streams');
       }
@@ -256,7 +275,19 @@ export async function checkMaintainReadiness(
   // the denominator made alsimmonsgunshop (47% OOS) look like a 53% price
   // failure when in reality all its in-stock products have prices.
   // stockCoverage and thumbCoverage stay on all-active denominator.
-  const noStock = await prisma.productIndex.count({ where: { siteId, isActive: true, stockStatus: null } });
+  // Both `null` and the string 'unknown' mean "we have no real stock signal"
+  // for coverage purposes. Treat them identically. Previously only NULL was
+  // counted, which let Ecwid-on-WordPress sites (whose /catalog/search API
+  // doesn't expose stock — see generic-retail.ts:688) transition to maintain
+  // with what looked like 100% stockCoverage but was functionally 0%. The
+  // gate must block these transitions until the operator either backfills
+  // stock (e.g. detail-page verify pass) or downgrades the site category.
+  const noStock = await prisma.productIndex.count({
+    where: {
+      siteId, isActive: true,
+      OR: [{ stockStatus: null }, { stockStatus: 'unknown' }],
+    },
+  });
   const noThumb = await prisma.productIndex.count({ where: { siteId, isActive: true, thumbnail: null } });
   const inStockCount = await prisma.productIndex.count({ where: { siteId, isActive: true, stockStatus: 'in_stock' } });
   const inStockWithPrice = await prisma.productIndex.count({
@@ -695,9 +726,18 @@ async function runDeepVerifyCheck(siteId: string): Promise<DeepVerifyReport> {
     // detail-page path: same fetchWithPlaywright the production verify worker
     // falls back to (worker.ts:769). Prime WAF cookies first if needed.
     const { ensureCookies } = await import('./scraper/waf-cookie-manager');
+    let wafUa: string | undefined;
+    let wafCookies: string | undefined;
     if (site.hasWaf) {
-      try { await ensureCookies(site.domain, origin); } catch { /* fetchWithPlaywright will retry */ }
+      try { const creds = await ensureCookies(site.domain, origin); wafUa = creds.userAgent; wafCookies = creds.cookies; }
+      catch { /* fetchWithPlaywright will retry */ }
     }
+    // This gate can run from a cold-cache context (e.g. a standalone transition
+    // script) where playwright-fetcher's resolvePlaywrightUa cannot see the site's
+    // userAgentOverride. Pass it explicitly so UA-gated WAFs (e.g. SiteGround
+    // sgcaptcha — doctordeals needs the iPhone UA) aren't served a challenge page
+    // and misread as "no product markers".
+    const verifyUa = wafUa || profile.userAgentOverride || undefined;
     const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
 
     // Loop: try the batch. For each miss, swap in a replacement from pool.
@@ -708,7 +748,7 @@ async function runDeepVerifyCheck(siteId: string): Promise<DeepVerifyReport> {
         if (i > 0 || attempts > 1) await new Promise(r => setTimeout(r, 800));
         const s = batch[i];
         try {
-          const pw = await fetchWithPlaywright(s.url, { timeout: 30000 });
+          const pw = await fetchWithPlaywright(s.url, { timeout: 30000, userAgent: verifyUa, cookies: wafCookies });
           if (PRODUCT_PAGE_MARKERS.test(pw.html)) {
             confirmed.push(s);
           } else {
@@ -821,7 +861,7 @@ async function runWatermarkWalkCheck(siteId: string): Promise<WatermarkWalkRepor
         const cp = await (adapter as any).fetchCatalogPage(origin, 1, {
           sortBy: 'oldest', perPage: 10, dateAfter: lastDateAfter, hasWaf: site.hasWaf,
         });
-        lastProducts = cp.products || [];
+        lastProducts = cp?.products || [];
         if (lastProducts.length >= 2) break;
       } catch (e) {
         return {
@@ -860,32 +900,175 @@ async function runWatermarkWalkCheck(siteId: string): Promise<WatermarkWalkRepor
     if (!allNewer) notes.push('some returned products predate dateAfter -- API may be ignoring the date filter');
     if (!ascending) notes.push('returned products are not in ascending date order -- API may be ignoring order=asc');
     if (allNewer && ascending) notes.push(`date filter + asc ordering both work (${dated.length} items with dateAfter=${lastWindow}d)`);
+
+    // ── Gap-2 sort-axis assertion ──────────────────────────────────────────
+    // Verify that the adapter's emitted postDate equals rawApiRow[sortAxis] for
+    // the first 3 returned products. Detects A2-style axis misalignment: e.g.
+    // the WP REST API is sorted by `modified` (Method A always sets
+    // orderby=modified + modified_after) but the adapter emits postDate from
+    // `date` -- maintain-readiness would still see ascending order (modified
+    // dates ARE ascending) but watermark-crawler.ts:244 newestDateSeen would
+    // advance on the wrong field.
+    let sortAxisOk: boolean | null = null;
+    let sortAxisChecked: string | undefined;
+    const sortAxis: string | null | undefined = profile.sortAxis;
+    if (sortAxis && (adapter as any).name === 'WooCommerce') {
+      sortAxisChecked = sortAxis;
+      try {
+        // Refetch the same page directly against WP REST -- bypasses the
+        // adapter's post-processing so we see the raw row fields.
+        const sample = lastProducts.slice(0, 3).filter(p => p.sourceId);
+        if (sample.length === 0) {
+          notes.push(`sortAxis check skipped: no sourceId on sampled products (axis=${sortAxis})`);
+        } else {
+          const wpResp = await axios.get(`${origin}/wp-json/wp/v2/product`, {
+            params: {
+              per_page: 10, page: 1,
+              orderby: 'modified', order: 'asc',
+              modified_after: lastDateAfter,
+              include: sample.map(p => parseInt(p.sourceId!, 10)).filter(n => Number.isFinite(n)),
+            },
+            headers: { 'User-Agent': resolveUserAgent(new URL(origin).hostname), Accept: 'application/json' },
+            timeout: site.hasWaf ? 30000 : 15000,
+            validateStatus: s => s === 200,
+          });
+          if (!Array.isArray(wpResp.data) || wpResp.data.length === 0) {
+            // Refetch returned 0 rows -- inconclusive, not a failure. walkOk unaffected.
+            notes.push(`sortAxis check inconclusive: raw refetch returned 0 rows (axis=${sortAxis})`);
+          } else {
+            // Compare to date-precision (sub-second alignment is unreliable
+            // when the row has been edited between fetches).
+            const toDay = (s: any) => typeof s === 'string' ? s.slice(0, 10) : '';
+            const rawById = new Map<string, any>();
+            for (const r of wpResp.data) rawById.set(String(r.id), r);
+            const mismatches: string[] = [];
+            let compared = 0;
+            let matchedRowsMissingAxis = 0;
+            const missingAxisIds: string[] = [];
+            for (const p of sample) {
+              const raw = rawById.get(String(p.sourceId));
+              // Raw row not found for this sourceId: benign skip (product may
+              // have been deleted between calls). Does NOT count as a row whose
+              // axis field is missing.
+              if (!raw) continue;
+              const rawAxisVal = raw[sortAxis];
+              if (rawAxisVal === undefined) {
+                // HARD FAILURE: row exists but the axis field the operator
+                // declared in the profile is not present on the raw API row.
+                // sortAxis is misconfigured for this site.
+                matchedRowsMissingAxis++;
+                missingAxisIds.push(String(p.sourceId));
+                continue;
+              }
+              if (!rawAxisVal) continue; // empty string / null on the axis -- treat as inconclusive for this row
+              compared++;
+              if (toDay(p.postDate) !== toDay(rawAxisVal)) {
+                mismatches.push(`sourceId=${p.sourceId}: postDate=${p.postDate} != raw.${sortAxis}=${rawAxisVal}`);
+              }
+            }
+            if (matchedRowsMissingAxis > 0) {
+              // At least one matched raw row lacked the declared axis field.
+              // Profile is misconfigured -- fail loudly.
+              sortAxisOk = false;
+              notes.push(`sortAxis assertion FAILED: sortAxis='${sortAxis}' field not present on raw API row for sourceId(s)=${missingAxisIds.join(',')}; profile sortAxis is misconfigured`);
+            } else if (compared === 0) {
+              // All matched rows had axis missing or empty, OR no sourceIds
+              // matched. We already handled matchedRowsMissingAxis>0 above, so
+              // here either (a) no rawRows matched any sourceId, or (b) all
+              // matched rows had empty axis values.
+              const anyMatched = sample.some(p => rawById.has(String(p.sourceId)));
+              if (anyMatched) {
+                // Matched but axis empty/null on every one -- treat as hard
+                // failure: the axis is declared but never populated.
+                sortAxisOk = false;
+                notes.push(`sortAxis assertion FAILED: no sampled raw row had sortAxis='${sortAxis}' field populated`);
+              } else {
+                notes.push(`sortAxis check inconclusive: 0/${sample.length} sampled products matched a raw row (axis=${sortAxis})`);
+              }
+            } else if (mismatches.length > 0) {
+              sortAxisOk = false;
+              notes.push(`sortAxis assertion FAILED (${mismatches.length}/${compared}): ${mismatches.join('; ')}`);
+            } else {
+              sortAxisOk = true;
+              notes.push(`sortAxis assertion passed: postDate == raw.${sortAxis} for ${compared}/${sample.length} sampled products`);
+            }
+          }
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const status: number | undefined = axios.isAxiosError(e) ? e.response?.status : undefined;
+        const isTransient =
+          /timeout|ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EAI_AGAIN/i.test(msg) ||
+          (axios.isAxiosError(e) && !e.response);
+        if (isTransient) {
+          sortAxisOk = null;
+          notes.push(`transient error — sortAxis assertion skipped (${msg})`);
+        } else if (status === 401 || status === 403) {
+          sortAxisOk = null;
+          notes.push(`auth gate (${status}) — sortAxis assertion skipped`);
+        } else if (status === 429) {
+          sortAxisOk = null;
+          notes.push(`rate limited — sortAxis assertion skipped`);
+        } else {
+          // Any other non-200 (404, 500, 502, 503, ...) or non-classified
+          // throw: the assertion infrastructure is broken for this site.
+          // Fail loudly so the operator notices.
+          sortAxisOk = false;
+          notes.push(`sortAxis assertion FAILED: refetch returned unexpected error (${status ?? 'no-status'}: ${msg})`);
+        }
+      }
+    } else if (sortAxis === null) {
+      sortAxisOk = null;
+      notes.push('sortAxis check skipped: profile sortAxis=null (platform has no date axis)');
+    } else if (sortAxis === undefined) {
+      sortAxisOk = null;
+      notes.push('sortAxis check skipped: profile sortAxis missing — run backfill-sort-axis script');
+    } else {
+      sortAxisOk = null;
+      notes.push(`sortAxis check skipped: raw-row refetch not implemented for adapter ${(adapter as any).name}`);
+    }
+
     return {
-      walkOk: allNewer && ascending,
+      walkOk: (allNewer && ascending) && sortAxisOk !== false,
       method, notes,
       dateAfterUsed: lastDateAfter,
       itemsReturned: lastProducts.length,
+      sortAxisOk,
+      sortAxisChecked,
     };
   }
 
   // ── Method B: navigate-from-watermark ─────────────────────────────────────
   // Test: page 1 with sortParam returns products in newest-first order AND the
   // current lastWatermarkUrl appears among page-1 URLs (URL-consistency check).
+  //
+  // Dispatcher contract: adapter.fetchCatalogPage() returns null when the adapter
+  // doesn't support API for this site (e.g. GenericRetail without Klevu/BC GraphQL
+  // configured); callers MUST fall back to HTML extraction in that case (verified
+  // 2026-05-31 on theammosource.com where API path returns null but HTML extracts
+  // 52 products via `.card` selector). Same fall-through applies when the API
+  // returns an empty products array.
   let products: any[] = [];
+  let apiAttempted = false;
   if (typeof (adapter as any).fetchCatalogPage === 'function') {
+    apiAttempted = true;
     try {
       const cp = await (adapter as any).fetchCatalogPage(origin, 1, {
         sortBy: 'newest', perPage: 10, hasWaf: site.hasWaf,
       });
-      products = cp.products || [];
+      products = cp?.products || [];
     } catch (e) {
       return { walkOk: false, method, notes: [`fetchCatalogPage threw: ${e instanceof Error ? e.message : String(e)}`] };
     }
-  } else {
-    // HTML path: build a page-1 URL with sortParam applied and extract via adapter.
+  }
+  // Fall through to HTML path when API path returned nothing AND the adapter
+  // exposes an HTML extractor. Covers: (a) adapter without fetchCatalogPage at all,
+  // (b) fetchCatalogPage returns null (no API configured for this site),
+  // (c) fetchCatalogPage returns {products: []} (empty API response).
+  if (products.length === 0 && typeof (adapter as any).extractCatalogProducts === 'function') {
     const catalogUrls: string[] = Array.isArray(profile.catalogUrls) ? profile.catalogUrls : [];
     if (catalogUrls.length === 0) {
-      return { walkOk: false, method, notes: ['no catalogUrls in siteProfile'] };
+      return { walkOk: false, method, notes: [apiAttempted ? 'fetchCatalogPage returned null/empty AND no catalogUrls for HTML fallback' : 'no catalogUrls in siteProfile'] };
     }
     const sortParam: string | undefined = typeof profile.sortParam === 'string' ? profile.sortParam : undefined;
     const baseUrl = catalogUrls[0].startsWith('http') ? catalogUrls[0] : `${origin}${catalogUrls[0]}`;
@@ -896,13 +1079,13 @@ async function runWatermarkWalkCheck(siteId: string): Promise<WatermarkWalkRepor
       const r = await fetchPageWithMeta(fullUrl, undefined, { difficultyRating: site.hasWaf ? 1 : 0 });
       const cheerio = await import('cheerio');
       const $ = cheerio.load(r.html);
-      if (typeof (adapter as any).extractCatalogProducts !== 'function') {
-        return { walkOk: false, method, notes: ['adapter has neither fetchCatalogPage nor extractCatalogProducts'] };
-      }
       products = (adapter as any).extractCatalogProducts($, fullUrl) || [];
     } catch (e) {
       return { walkOk: false, method, notes: [`HTML fetch/extract failed: ${e instanceof Error ? e.message : String(e)}`] };
     }
+  } else if (products.length === 0 && !apiAttempted) {
+    // No API path AND no HTML extractor — adapter has neither.
+    return { walkOk: false, method, notes: ['adapter has neither fetchCatalogPage nor extractCatalogProducts'] };
   }
 
   if (products.length < 2) {
@@ -911,28 +1094,69 @@ async function runWatermarkWalkCheck(siteId: string): Promise<WatermarkWalkRepor
 
   const first = products[0];
   const last = products[products.length - 1];
+  // Sticky-tolerant + partial-coverage sort check.
+  //  - Drupal classifieds (gunpost.ca) promote featured/premium listings to
+  //    positions 0-N on page 1 regardless of sort order. Treat the sort as
+  //    "newest-first" if the MAX postDate among the first 5 items is greater
+  //    than the LAST dated item's postDate.
+  //  - BC Stencil (theammosource.com) only exposes postDate on the subset of
+  //    cards whose image follows the `/products/N/M/IMG__x.{ts}.jpg` pattern
+  //    (verified 2026-06-01 at ~54% per-card coverage with correct ordering on
+  //    that subset). Use only products WITH postDate for sort verification —
+  //    partial coverage is sufficient as long as ≥2 dated samples exist and
+  //    the top-5-of-dated > last-dated relationship holds.
+  // Fails when products are genuinely sorted oldest-first or unsorted.
   let sortOk: boolean | null = null;
-  if (first.postDate && last.postDate) {
-    sortOk = new Date(first.postDate).getTime() > new Date(last.postDate).getTime();
+  const productsWithDates = products.filter(p => p.postDate);
+  if (productsWithDates.length >= 2) {
+    const lastWithDate = productsWithDates[productsWithDates.length - 1];
+    const lastDateMs = new Date(lastWithDate.postDate!).getTime();
+    const topDatesMs = productsWithDates.slice(0, 5).map(p => new Date(p.postDate!).getTime()).filter(n => !isNaN(n));
+    if (!isNaN(lastDateMs) && topDatesMs.length > 0) {
+      sortOk = Math.max(...topDatesMs) > lastDateMs;
+    }
   }
 
-  const watermarkOnPage1 = site.lastWatermarkUrl
+  const watermarkOnPage1: boolean = site.lastWatermarkUrl
     ? products.some(p => p.url === site.lastWatermarkUrl)
     : false;
+
+  // High-churn classifieds tolerance: if the watermark URL isn't on page 1 but
+  // a fresh fetch returns 200, the listing is still live — it just rolled off
+  // page 1 due to churn (gunpost.ca posts hundreds of ads/day; the watermark
+  // ages off page 1 within minutes of T1 setting it). Distinguishes
+  // "rolled off due to churn" (acceptable) from "deleted from live" (real bug)
+  // and from URL-normalization mismatches (the URL DOES return 200 unchanged).
+  // Added 2026-05-31 per gunpost re-validator finding.
+  let watermarkRolledOff = false;
+  if (site.lastWatermarkUrl && !watermarkOnPage1) {
+    try {
+      const { fetchPageWithMeta } = await import('./scraper/http-client');
+      const r = await fetchPageWithMeta(site.lastWatermarkUrl, undefined, { difficultyRating: site.hasWaf ? 1 : 0 });
+      if (r.statusCode === 200) {
+        watermarkRolledOff = true;
+      }
+    } catch (_) {
+      // Fetch failed — keep watermarkOnPage1=false. Could be a transient WAF issue
+      // but we can't distinguish from real deletion; conservative path is the
+      // original RED so the operator sees the failure note.
+    }
+  }
 
   const notes: string[] = [];
   if (sortOk === null) notes.push('extracted products have no postDate -- cannot verify newest-first sort');
   else if (!sortOk) notes.push(`page 1 NOT newest-first: first=${first.postDate}, last=${last.postDate}`);
   if (!site.lastWatermarkUrl) notes.push('no lastWatermarkUrl stored -- cannot check URL consistency');
-  else if (!watermarkOnPage1) notes.push('lastWatermarkUrl is NOT among page-1 extracted URLs -- URL normalization mismatch or watermark deleted from live');
-  if (sortOk === true && watermarkOnPage1) notes.push(`sort works (${products.length} items page-1) + watermark URL matches page-1 extraction`);
+  else if (!watermarkOnPage1 && !watermarkRolledOff) notes.push('lastWatermarkUrl NOT on page-1 AND non-200 on fresh fetch -- watermark likely deleted from live or URL normalization mismatch');
+  else if (!watermarkOnPage1 && watermarkRolledOff) notes.push('lastWatermarkUrl NOT on page 1 but fresh fetch returned 200 -- rolled off due to churn (acceptable for high-churn classifieds)');
+  if (sortOk === true && (watermarkOnPage1 || watermarkRolledOff)) notes.push(`sort works (${products.length} items page-1) + watermark URL ${watermarkOnPage1 ? 'matches page-1 extraction' : 'rolled off but still live'}`);
 
   return {
-    walkOk: sortOk === true && watermarkOnPage1,
+    walkOk: sortOk === true && (watermarkOnPage1 || watermarkRolledOff),
     method, notes,
     page1FirstDate: first.postDate,
     page1LastDate: last.postDate,
-    watermarkOnPage1,
+    watermarkOnPage1: watermarkOnPage1 || watermarkRolledOff,
   };
 }
 

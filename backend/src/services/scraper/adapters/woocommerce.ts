@@ -395,7 +395,20 @@ export class WooCommerceAdapter extends AbstractAdapter {
             thumbnail: thumb,
             tags: wpTermCats,
             sourceCategory: wpTermCats,
-            postDate: p.modified || p.date || undefined,
+            // postDate must align with whichever axis the WP REST API is being
+            // SORTED/FILTERED on this request:
+            //   hasDateFilter=true  (Method A api-date-since-watermark / dateAfter set)
+            //                      → orderby=modified + modified_after → postDate=p.modified
+            //   hasDateFilter=false (full HTML walk / dateless API walk)
+            //                      → orderby=date → postDate=p.date
+            // Triple-fallback handles products missing the preferred field
+            // (rare on WP — both fields are populated at publish). Earlier
+            // unconditional `p.modified || p.date` worked for Method A but
+            // misaligned Method B's sort key (date) with the stored value
+            // (modified). The axis-aware form keeps maintain-readiness.ts:851
+            // walkOk and watermark-crawler.ts:244 newestDateSeen monotonic
+            // advancement both correct for either method.
+            postDate: (hasDateFilter ? p.modified : p.date) || p.modified || p.date || undefined,
           });
           if (p.id) wpIdToUrl.set(p.id, url);
         }

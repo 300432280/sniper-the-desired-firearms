@@ -110,14 +110,17 @@ export class XenForoAdapter extends AbstractAdapter {
       const threadMatch = url.match(/\.(\d+)\/?$/);
       const sourceId = threadMatch ? threadMatch[1] : undefined;
 
+      // Forum classifieds carry buy-requests (WTB/ISO/"Looking for") — tag them
+      // so search can filter them out; a buy-request has no real price/stock.
+      const wanted = this.isWantedAdTitle(title);
       products.push({
         url,
         sourceId,
         title,
-        price,
-        stockStatus: 'in_stock',
+        price: wanted ? undefined : price,
+        stockStatus: wanted ? undefined : 'in_stock',
         thumbnail,
-        category: 'classified',
+        category: wanted ? 'wanted' : 'classified',
       });
     });
 

@@ -25,9 +25,65 @@ export abstract class AbstractAdapter implements SiteAdapter {
 
   // ── Shared extraction helpers ──────────────────────────────────────────
 
+  /**
+   * Detect a classifieds "wanted"/buy-request ad from its title. Anchored to the
+   * title start/end so for-sale listings aren't misflagged (e.g. a rifle whose
+   * blurb mentions "looking for"). Shared by the classifieds/forum adapters so
+   * the patterns live in one place. Wanted ads get category='wanted' and their
+   * price/stock suppressed (a buy-request has no real price/stock).
+   */
+  protected isWantedAdTitle(title: string): boolean {
+    const t = title.trim();
+    // Prefix: "Wanted: …", "WTB …", "WTT …", "ISO …", "Looking for …",
+    // "In search of …", "Want to buy …". Bare "LF" is intentionally excluded —
+    // it collides with retail product names (LF-15 lower, lead-free "LF" ammo)
+    // and the generic adapter that calls this serves ~23 retail sites.
+    if (/^(wanted|wtb|wtt|iso|looking\s+for|in\s+search\s+of|want\s+to\s+buy)\b/i.test(t)) return true;
+    // Suffix: "Sks wanted", "Norinco parts WTB"
+    if (/\b(wanted|wtb|wtt|iso)\s*$/i.test(t)) return true;
+    // Inline "Wanted:" label
+    if (/\bwanted\s*:/i.test(t)) return true;
+    return false;
+  }
+
   /** Extract thumbnail URL from an element's img children */
   protected extractThumbnail($: cheerio.CheerioAPI, element: cheerio.Cheerio<any>, baseUrl: string): string | undefined {
-    const img = element.find('img').first();
+    // 1. Try the first <img> inside the element.
+    const direct = this._thumbnailFromImg(element.find('img').first(), baseUrl);
+    if (direct) return direct;
+
+    // 2. Fallback: the matched element carries no usable <img>. This happens on
+    //    sites where the product card splits the image and the title into
+    //    SIBLING anchors (e.g. TownPost's Next.js cards: a text-only <a> wins the
+    //    URL dedupe while the image lives in a sibling <a> of the same card div
+    //    that has no card/product class to match a class selector against).
+    //    Climb to the LARGEST ancestor that still references only ONE distinct
+    //    product link, then pull its first usable image. Stopping at one-link
+    //    scope guarantees the image belongs to this card and not a neighbour —
+    //    the moment an ancestor contains 2+ distinct hrefs we are in the grid
+    //    wrapper and bail. This is additive: it only fires when step 1 found
+    //    nothing, so it can never discard an image step 1 already captured.
+    let card: cheerio.Cheerio<any> | null = null;
+    let cur = element.parent();
+    for (let depth = 0; depth < 5 && cur.length; depth++) {
+      const hrefs = new Set<string>();
+      cur.find('a[href]').each((_, a) => {
+        const h = (a.attribs?.href || '').trim();
+        if (h && !/^(javascript:|mailto:|tel:|data:|#)/i.test(h)) hrefs.add(h.replace(/[?#].*$/, ''));
+      });
+      if (hrefs.size > 1) break; // reached a multi-card container — stop before it
+      if (cur.find('img').length > 0) card = cur; // candidate: scoped to one product, has an image
+      cur = cur.parent();
+    }
+    if (card) {
+      const fromCard = this._thumbnailFromImg(card.find('img').first(), baseUrl);
+      if (fromCard) return fromCard;
+    }
+    return undefined;
+  }
+
+  /** Resolve a usable image URL from a single <img>, skipping placeholders. */
+  private _thumbnailFromImg(img: cheerio.Cheerio<any>, baseUrl: string): string | undefined {
     if (!img.length) return undefined;
 
     // Prefer data-src (lazy-loaded real image) over src (may be a placeholder/loading SVG)
@@ -37,10 +93,22 @@ export abstract class AbstractAdapter implements SiteAdapter {
     // Use data-src if available, otherwise src — but skip loading/placeholder SVGs
     const isPlaceholder = /loading|place-?holder|blank|spacer|spinner|\.svg$/i.test(src) ||
       /klevu\.com/i.test(src);
-    const chosen = dataSrc || (isPlaceholder ? '' : src);
+    let chosen = dataSrc || (isPlaceholder ? '' : src);
+    // Last resort: pull the first candidate from srcset/data-srcset. Some lazy-load
+    // themes leave src as an inline base64/SVG placeholder and only populate the
+    // responsive set (the actual CDN URLs live there).
+    if (!chosen) {
+      const set = img.attr('srcset') || img.attr('data-srcset') || '';
+      if (set) {
+        // srcset = "url1 320w, url2 640w" — first token of the first entry is the URL.
+        const first = set.split(',')[0]?.trim().split(/\s+/)[0] || '';
+        if (first && !/^data:/i.test(first)) chosen = first;
+      }
+    }
     if (!chosen) return undefined;
     // Final check: reject placeholder URLs regardless of which attribute they came from
     if (/place-?holder|klevu\.com|blank\.(gif|png|jpg)/i.test(chosen)) return undefined;
+    if (/^data:/i.test(chosen)) return undefined;
 
     try {
       if (chosen.startsWith('http')) return chosen;
@@ -73,8 +141,25 @@ export abstract class AbstractAdapter implements SiteAdapter {
 
   /** Standard title extraction from an element */
   protected extractTitle(element: cheerio.Cheerio<any>, fallbackText: string): string {
+    // Highest priority: Wix Stores product cards label the title span
+    // `data-hook="product-item-name"` and put the price in a SIBLING `[data-hook*=price]`
+    // span. Without this, the generic selectors below miss it and we fall through to
+    // fallbackText = the entire `a.text()` which concatenates title + "Price$X.YY",
+    // producing the surplusherbys.com title-merge bug (2026-05-31).
+    let titleEl = element.find('[data-hook="product-item-name"]').first();
+    // Next priority: an explicit title test-id. Classifieds marketplaces
+    // (TownPost Next.js cards) label the title span `data-testid="ad-title"` and
+    // give it NO title/name class, so without this the generic selectors below
+    // miss it and we fall through to fallbackText = the whole card's concatenated
+    // text (price + title + sr-only "categories:..." + town + "5 minutes ago").
+    // Retail cards don't carry data-testid="ad-title", so this is a no-op for them.
+    if (!titleEl.length) {
+      titleEl = element.find('[data-testid="ad-title"]').first();
+    }
     // Prefer explicit title/name classes (avoids grabbing brand-only h4 on BigCommerce)
-    let titleEl = element.find('.card-title, .product-title, .product-name, .product_name').first();
+    if (!titleEl.length) {
+      titleEl = element.find('.card-title, .product-title, .product-name, .product_name').first();
+    }
     if (!titleEl.length) {
       titleEl = element.find('[class*="product-title"], [class*="product-name"], [class*="item-title"]').first();
     }
@@ -325,6 +410,14 @@ export abstract class AbstractAdapter implements SiteAdapter {
     }
     if (!/[a-zA-Z]/.test(t)) return true;
     if (/^(CA)?\$[\d,.]+$/i.test(t)) return true;
+    // Bare domain or URL extracted as a "title" — e.g. a footer/share link or a
+    // logo-only card whose only text was the shop domain. Real product titles are
+    // never just a hostname/URL. (aagcanada.ca repro 2026-05-29: 52 rows titled
+    // "www.aagcanada.ca".)
+    if (/^(https?:\/\/|www\.)/i.test(t)) return true;
+    // Bare host like "aagcanada.ca" / "vortexoptics.com" — require an alphabetic TLD
+    // (>=2 letters) so caliber titles ("9.3x62", "5.56x45") are NOT misflagged.
+    if (/^[a-z][a-z0-9-]*(\.[a-z0-9-]+)*\.[a-z]{2,24}\/?$/i.test(t)) return true;
     if (/^(derringer|tactical|black\s*powder|lower\s+receivers?|muzzleloaders?)$/i.test(t)) return true;
     if (/^(contact\s*us|gun\s+auctions?|featured\s+items?|import\s*\/?\s*export|custom\s+engraving)$/i.test(t)) return true;
     if (/^(parts\s*&\s*gear|us\s+store|news\s*&?\s*events?|commonly\s+asked|warranty|terms|privacy|create\s+an?\s+account)$/i.test(t)) return true;

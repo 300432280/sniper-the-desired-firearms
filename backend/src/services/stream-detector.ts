@@ -14,22 +14,91 @@ import { getAdapterForUrl } from './scraper/adapter-registry';
 import { detectTotalPagesFromHtml } from './catalog-crawler';
 
 /**
+ * Pathname-derived ids that do NOT uniquely identify a category. These show up
+ * when the whole catalog routes through a single script/endpoint and the real
+ * category lives in the query string (e.g. OpenCart's
+ * `/index.php?route=product/category&path=28`). When the derived id is one of
+ * these, all such catalogUrls collide on the same id and the dedup in
+ * detectStreams() silently drops every catalogUrl but the first — dropping the
+ * products in those categories. We append a query-param discriminator instead.
+ *
+ * MAINTENANCE GUARD: this set intentionally overlaps with the `skip` set inside
+ * deriveCategoryFromUrl (shop/products/product/category). `skip` removes those
+ * segments from the joined pathname id; GENERIC_PATH_IDS triggers query-param
+ * folding when the whole id is one of them. Editing one without the other can
+ * shift LIVE stream ids and orphan existing streamState — change both together.
+ */
+const GENERIC_PATH_IDS = new Set([
+  'index.php', 'index.html', 'index.asp', 'index.aspx',
+  'shop', 'catalog', 'store', 'products', 'product', 'category',
+]);
+
+/** Category-identifying query params, in precedence order. */
+const CATEGORY_QUERY_PARAMS = ['path', 'cat', 'category', 'collection', 'category_id', 'cPath', 'id'];
+
+/** Short stable hash (djb2) of a string, base36 — for distinguishing otherwise-identical ids. */
+function shortHash(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
+}
+
+/**
  * Derive a category tag from a URL path segment.
  * E.g. "/product-category/firearms/" → "firearms"
  *       "/ammunition/" → "ammunition"
+ *
+ * When the pathname yields a generic/empty id (e.g. "index.php", "shop") but a
+ * discriminating category query param is present, the param value is folded
+ * into the id (e.g. "index.php-28") so distinct categories routed through one
+ * endpoint become distinct streams. Meaningful pathname-derived ids
+ * (/firearms/, /ammunition/) are returned unchanged.
  */
-function deriveCategoryFromUrl(url: string): string | undefined {
+export function deriveCategoryFromUrl(url: string): string | undefined {
   try {
-    const path = new URL(url).pathname.toLowerCase();
+    const parsed = new URL(url);
+    const path = parsed.pathname.toLowerCase();
     // Strip leading/trailing slashes, get meaningful segments
     const segments = path.split('/').filter(Boolean);
-    // Skip generic segments
+    // Skip generic segments. NOTE: overlaps GENERIC_PATH_IDS by design — see the
+    // maintenance guard there; edit both together to avoid shifting live ids.
     const skip = new Set(['shop', 'products', 'product', 'product-category', 'collections', 'category', 'all']);
     const meaningful = segments.filter(s => !skip.has(s));
     // Join all meaningful segments to avoid collisions (e.g. /firearms/rifles vs /used/rifles)
-    if (meaningful.length > 0) return meaningful.join('-');
-    return segments[segments.length - 1] || undefined;
-  } catch {
+    const baseId = meaningful.length > 0
+      ? meaningful.join('-')
+      : (segments[segments.length - 1] || undefined);
+
+    // A meaningful, non-generic pathname id is unique on its own — return it
+    // unchanged to preserve existing sites' stream ids (and their streamState).
+    if (baseId && !GENERIC_PATH_IDS.has(baseId)) return baseId;
+
+    // Generic or empty pathname: fold in a query-param discriminator so
+    // distinct categories routed through one endpoint get distinct ids.
+    const params = parsed.searchParams;
+    for (const key of CATEGORY_QUERY_PARAMS) {
+      const val = params.get(key);
+      if (val) {
+        const slug = val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        if (slug) return baseId ? `${baseId}-${slug}` : slug;
+      }
+    }
+
+    // No category param but a query string exists: hash it so distinct URLs
+    // still get distinct ids instead of all colliding on the generic baseId.
+    if (parsed.search) {
+      const h = shortHash(parsed.search);
+      return baseId ? `${baseId}-${h}` : h;
+    }
+
+    return baseId;
+  } catch (err) {
+    // Malformed catalogUrl — name it so the bad profile entry is searchable.
+    // Callers fall back to a positional id (`profile-N`/`html-N`), so this is
+    // recoverable, but the URL should be fixed in the siteProfile.
+    console.warn(`[StreamDetector] deriveCategoryFromUrl: unparseable url "${url}" — ${(err as Error)?.message ?? err}`);
     return undefined;
   }
 }
@@ -85,13 +154,25 @@ export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolea
       hasApiAlternative
         ? 'api'
         : (adapter.supportsDateFilter !== false ? 'api' : 'html');
-    streams.push({
-      id: 'api',
-      url: origin,
-      type: streamType,
-      category: undefined,
-    });
-    return streams;
+    // Only the genuine 'api' stream may point at the bare `origin`: crawlStreamTier
+    // (catalog-crawler.ts:683) dispatches `origin`-rooted `fetchCatalogPage(origin, page)`
+    // ONLY for type==='api'. When this resolves to 'html' (adapter.supportsDateFilter===false
+    // AND no apiAlternative — e.g. a WooCommerce site mis-tagged with the generic-retail
+    // adapter, whose fetchCatalogPage returns null), an origin-rooted HTML stream is wrong:
+    // the HTML branch would paginate the HOMEPAGE (`origin/page/N/`) instead of the real
+    // catalog (`origin/shop/page/N/`), discovering the homepage's pagination count and
+    // stopping ~5 pages in. Fall through to Step 2 so the profile's catalogUrls become the
+    // HTML stream targets. (g4cgunstore.com: bare-origin html stream capped at ~120 products
+    // vs 5,890 reachable via /shop/. 2026-06-03.)
+    if (streamType === 'api') {
+      streams.push({
+        id: 'api',
+        url: origin,
+        type: 'api',
+        category: undefined,
+      });
+      return streams;
+    }
   }
 
   // Step 2: Profile-supplied catalogUrls as HTML streams. Used when the
@@ -103,7 +184,12 @@ export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolea
       const url = rawUrl.startsWith('http') ? rawUrl : `${origin}${rawUrl}`;
       const category = deriveCategoryFromUrl(url);
       const id = category || `profile-${streams.length}`;
-      if (seenIds.has(id)) continue;
+      if (seenIds.has(id)) {
+        // Make the silent drop searchable — an undetected collision here hid the
+        // northprosports OpenCart coverage bug for weeks (6 catalogUrls → 1 stream).
+        console.warn(`[StreamDetector] ${siteUrl}: catalogUrl "${rawUrl}" skipped — stream id "${id}" already claimed by an earlier catalogUrl (possible coverage drop)`);
+        continue;
+      }
       seenIds.add(id);
       streams.push({ id, url, type: 'html', category });
     }
@@ -135,7 +221,11 @@ export async function detectStreams(siteUrl: string, options?: { hasWaf?: boolea
 
       // Deduplicate by stream id — two URLs mapping to the same id
       // (e.g. /ads and /ads?sort_by=...) would create conflicting tier states
-      if (seenIds.has(id)) continue;
+      if (seenIds.has(id)) {
+        // Make the silent drop searchable — see the profile-catalogUrls branch above.
+        console.warn(`[StreamDetector] ${siteUrl}: catalogUrl "${url}" skipped — stream id "${id}" already claimed by an earlier catalogUrl (possible coverage drop)`);
+        continue;
+      }
       seenIds.add(id);
 
       streams.push({
@@ -278,6 +368,85 @@ export function ensureMaintainTiers(state: SiteStreamState): SiteStreamState {
 }
 
 /**
+ * Re-seed streamState when siteProfile has been updated since the last detection.
+ *
+ * Production bug (bullseyenorth, jobrookoutdoors, 2026-05-30): detectStreams is only
+ * called at site onboarding. When an operator updates siteProfile.catalogUrls via a
+ * profile audit, streamState.streams[] is never regenerated and production keeps
+ * crawling stale URLs forever.
+ *
+ * This helper checks whether `siteProfile.lastVerified` is newer than
+ * `streamState.detectedAt`. If so, it re-runs detectStreams, rebuilds the tiers
+ * map via initStreamState, then PRESERVES per-tier progress (currentPage,
+ * cycleStartedAt, status, ranges, etc.) for any stream whose id appears in BOTH
+ * the old and new streams[] sets. Streams that disappeared are dropped; new
+ * streams start fresh.
+ *
+ * Safety:
+ *   - Empty new streams[] → keep old state (would otherwise brick the site).
+ *   - detectStreams throws → keep old state (log; never break the scheduler).
+ *   - siteProfile.lastVerified missing → no-op (cannot prove staleness).
+ *   - streamState.detectedAt missing → treat as ancient → re-seed.
+ *
+ * Returns { state, changed }. Caller persists when `changed` is true.
+ */
+export async function maybeReseedStreamState(
+  site: { id: string; domain: string; url: string; hasWaf: boolean; streamState: unknown; crawlPhase: string },
+  siteProfile: any,
+): Promise<{ state: SiteStreamState | null; changed: boolean }> {
+  const oldState = parseStreamState(site.streamState);
+  if (!oldState) return { state: null, changed: false };
+
+  const lastVerified = siteProfile?.lastVerified;
+  if (!lastVerified) return { state: oldState, changed: false };
+
+  // ISO string comparison: YYYY-MM-DD prefixes sort lex-monotonically, so this
+  // works for both "2026-05-12" (date-only) and "2026-05-15T08-52-58Z-R1".
+  // Missing detectedAt is treated as ancient ('') so re-seed always wins.
+  const detectedAt = oldState.detectedAt || '';
+  if (!(String(detectedAt) < String(lastVerified))) {
+    return { state: oldState, changed: false };
+  }
+
+  let freshStreams;
+  try {
+    freshStreams = await detectStreams(site.url, { hasWaf: site.hasWaf, siteProfile });
+  } catch (err) {
+    console.error(`[Scheduler] ${site.domain}: re-seed detectStreams failed:`, err instanceof Error ? err.message : err);
+    return { state: oldState, changed: false };
+  }
+
+  if (!freshStreams || freshStreams.length === 0) {
+    console.warn(`[Scheduler] ${site.domain}: re-seed produced 0 streams — keeping old streamState (would brick the site)`);
+    return { state: oldState, changed: false };
+  }
+
+  // Build a fresh state, then graft preserved per-tier progress from the old state
+  // onto any stream whose id appears in both old and new streams[].
+  const newState = initStreamState(freshStreams, site.crawlPhase);
+  const oldStreamIds = new Set(oldState.streams.map(s => s.id));
+  for (const stream of freshStreams) {
+    if (!oldStreamIds.has(stream.id)) continue;
+    // For each tier slot present in BOTH old and new tiers map, copy the old
+    // tier state in. This preserves currentPage, status, cycleStartedAt,
+    // pageRangeStart/End, lastRefreshedAt, dateRange*, bootstrap counters, etc.
+    for (const tier of [2, 3, 4] as const) {
+      const key = `${stream.id}:${tier}`;
+      const oldTier = oldState.tiers[key];
+      if (oldTier && newState.tiers[key]) {
+        newState.tiers[key] = oldTier;
+      }
+    }
+  }
+
+  const oldIds = oldState.streams.map(s => s.id).sort().join(',');
+  const newIds = freshStreams.map(s => s.id).sort().join(',');
+  console.log(`[Scheduler] ${site.domain}: re-seeded streamState (lastVerified=${lastVerified} > detectedAt=${detectedAt || '(none)'}). old=[${oldIds}] new=[${newIds}]`);
+
+  return { state: newState, changed: true };
+}
+
+/**
  * Parse streamState from DB JSON, with fallback to empty state.
  */
 export function parseStreamState(json: unknown): SiteStreamState | null {
@@ -289,6 +458,31 @@ export function parseStreamState(json: unknown): SiteStreamState | null {
     tiers: (obj.tiers as Record<string, StreamTierState>) || {},
     detectedAt: obj.detectedAt as string | undefined,
   };
+}
+
+/**
+ * True when the stream-based bootstrap crawl still has work: ANY stream whose T4
+ * tier has not completed a cycle this round (no `lastCycleCompletedAt`), or has no
+ * T4 tier entry yet. This is the SAME predicate the catalog worker uses to drive its
+ * self-queue chain (worker.ts `streamsPending`), so the scheduler's dispatch gate and
+ * the worker's drain loop agree on "is there pending stream work".
+ *
+ * Why it replaces the legacy `getActiveTiers(tierState)` gate for the bootstrap phase:
+ * stream-based bootstrap crawls track ALL progress in `streamState`; the legacy
+ * `tierState` column is never written by the stream path, so it stays frozen at the
+ * value set during onboarding. If that frozen tierState lands all three tiers in an
+ * unexpired cooldown, `getActiveTiers` returns all-false and blocks catalog dispatch
+ * even though `streamState` has pending streams — the site stalls with no catalog job.
+ * Gating on real stream progress fixes that. A site with every T4 stream completed
+ * (no pending) is done with its round and should NOT be re-dispatched — the worker's
+ * end-of-round coverage gate decides whether to re-open truncated streams.
+ */
+export function hasPendingStreams(state: SiteStreamState | null): boolean {
+  if (!state || state.streams.length === 0) return false;
+  return state.streams.some(s => {
+    const t = state.tiers[`${s.id}:4`];
+    return !t || !t.lastCycleCompletedAt;
+  });
 }
 
 /**
