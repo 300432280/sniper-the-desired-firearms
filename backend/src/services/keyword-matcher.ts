@@ -534,8 +534,24 @@ export async function searchProductIndex(
 
   // Refine with word-boundary matching on title, tags, or URL slug
   // Use aliasVariants (includes space-stripped forms) for matching
+  let oosDropped = 0;
   const refined = products
     .filter(p => {
+      // GLOBAL exclusion: products classified as out_of_scope (apparel +
+      // lifestyle) must NEVER surface in search results, alerts, or the daily
+      // digest — all three call paths converge on this refine step (search route,
+      // alert-dispatch worker, daily-digest). This is the lowest-risk mechanism:
+      // it touches only the SEARCH read path, not indexing/activation/counts/
+      // stale-detection, so out_of_scope rows are still crawled and tracked but
+      // are invisible to users. Enforces the user's "non-firearm products shall
+      // not appear in the app" rule.
+      //
+      // This guarantee depends on (a) the stored ProductIndex.productType being
+      // correct at index time (product-upsert applies the OOS veto), and (b) the
+      // operator's periodic reclassify-apply pass that re-runs the classifier over
+      // existing rows after a rule change. This filter only reads productType; it
+      // does not (re)classify here.
+      if (p.productType === 'out_of_scope') { oosDropped++; return false; }
       const urlSlug = p.url.split('/').pop()?.replace(/-/g, ' ') || '';
       if (!aliasVariants.some(alias => matchesWithExtras(p.title, alias, { tags: p.tags, urlSlug }))) {
         return false;
@@ -575,6 +591,16 @@ export async function searchProductIndex(
       category: p.category,
       productType: p.productType,
     }));
+
+  // Observability: surface how many out_of_scope rows were suppressed for this
+  // keyword so a future mis-classification (a real product wrongly tagged
+  // out_of_scope, or a leak) is visible rather than silent.
+  if (oosDropped > 0) {
+    console.debug(
+      `[keyword-matcher] suppressed ${oosDropped} out_of_scope row(s) for keyword="${keyword}"` +
+      `${siteIds && siteIds.length > 0 ? ` siteIds=${siteIds.join(',')}` : ' (all-sites)'}`,
+    );
+  }
 
   // Sort ONLY when sortBy is provided. When absent, leave the current ordering
   // exactly as-is (the dispatcher relies on the changedSince/contentChangedAt

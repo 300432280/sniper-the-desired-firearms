@@ -5,7 +5,7 @@
  * Strict for ALL categories — only falls back to "other" when all methods are exhausted.
  */
 
-export type ProductType = 'firearm' | 'ammunition' | 'optics' | 'parts' | 'gear' | 'knives' | 'other';
+export type ProductType = 'firearm' | 'ammunition' | 'optics' | 'parts' | 'gear' | 'knives' | 'out_of_scope' | 'other';
 
 export interface ClassifierInput {
   title: string;
@@ -29,8 +29,11 @@ const CATEGORY_MAP: Array<[RegExp, ProductType]> = [
   [/\b(kniv|knife|knives|blade|dagger|machete|sword|bayonet|multi[\s-]?tool)\b/i, 'knives'],
   // Parts & Accessories
   [/\b(part|accessor|trigger|barrel|stock|grip|magazine|mag[\s-]?well|bolt|spring|buffer|handguard|rail|muzzle[\s-]?brake|compensator|choke|mount|forend|bipod|sling|holster|case)\b/i, 'parts'],
-  // Gear
-  [/\b(gear|clothing|apparel|boot|glove|vest|bag|safe|cabinet|cleaning|maintenan|target|ear[\s-]?pro|eye[\s-]?pro|camo|blind|decoy|call|survival|camping|tactical[\s-]?gear)\b/i, 'gear'],
+  // Gear. NOTE: "clothing"/"apparel" are intentionally NOT here — they must fall
+  // through to the OOS classifier (classifyOutOfScope) and become 'out_of_scope',
+  // not 'gear'. Mapping a Shopify "Apparel" product_type to 'gear' here would let
+  // it bypass the Layer-0 OOS veto and leak into search. (BLOCKER 2, 2026-06-05.)
+  [/\b(gear|boot|glove|vest|bag|safe|cabinet|cleaning|maintenan|target|ear[\s-]?pro|eye[\s-]?pro|camo|blind|decoy|call|survival|camping|tactical[\s-]?gear)\b/i, 'gear'],
 ];
 
 function classifyByCategory(sourceCategory: string): ProductType | null {
@@ -110,6 +113,178 @@ const GEAR_PATTERN = /\b(cleaning[\s-]?kit|bore[\s-]?snake|gun[\s-]?oil|solvent|
 
 // ── Reloading: classified as ammunition (it's ammo-making) ──
 const RELOADING_PATTERN = /\b(reload|reloading|brass|primer|powder|die[\s-]?set|shell[\s-]?holder|press|tumbler|case[\s-]?trim|neck[\s-]?sizer|full[\s-]?length[\s-]?die|bullet[\s-]?mold|bullet[\s-]?puller|case[\s-]?gauge|hand[\s-]?prime|swage|rcbs|lee[\s-]?(precision|pro[\s-]?1000|breech[\s-]?lock|classic|collet|factory|pacesetter|rgb)|hornady[\s-]?(lock[\s-]?n[\s-]?load|custom[\s-]?grade)|redding|dillon|lyman|forster|frankford[\s-]?arsenal)\b/i;
+
+// ── Out-of-scope: apparel + lifestyle ───────────────────────────────────────
+// The user's hard rule: non-firearm products (apparel, lifestyle goods) must
+// NOT appear in the app. These are classified HIGH priority (before the positive
+// firearm/gear types) so a "Logo Hoodie" never falls through to gear/firearm.
+//
+// Guarded by an explicit firearm-adjacent KEEP list: anything that is genuinely
+// functional shooting/hunting kit (body armor, ballistic eyewear, range bags,
+// gun cases, weaponlights, TQ/bleed-control, etc.) is NEVER out_of_scope even if
+// its title brushes an apparel/lifestyle word.
+
+// KEEP: firearm-adjacent items that must NEVER be flagged out_of_scope, even
+// when they contain an apparel/lifestyle token. Checked BEFORE the OOS patterns.
+// Genuine shooting/hunting kit (body armor, ballistic eyewear, range/gun bags &
+// cases, weaponlights, chronographs, TQ/bleed-control). "Gun/Rifle/Pistol Sock"
+// is a storage item, and the "RifleKuhl Barrel Cooler" is a gun-cooling device —
+// both kept here so they aren't caught by the apparel "sock" / lifestyle
+// "cooler" tokens.
+// The "sock" group keeps gun-storage socks (gun/rifle/shotgun/pistol/scoped/
+// protection sock, gun sleeve), plus "Boresnake Sock" and "Recoil Pad Sock".
+// NOTE: the bare-"sock" ambiguity is now primarily handled by the inverted sock
+// branch in classifyOutOfScope (KEEP-by-default); this adjacent-form KEEP is a
+// fast early-out / belt-and-suspenders. (BLOCKER 1 + FIX 3, 2026-06-05.)
+const OOS_KEEP = /\b(armor|armour|plate[\s-]?carrier|ballistic|gatorz|range[\s-]?bag|gun[\s-]?bag|gun[\s-]?case|rifle[\s-]?bag|rifle[\s-]?case|pistol[\s-]?bag|pistol[\s-]?case|soft[\s-]?case|hard[\s-]?case|weapon[\s-]?light|weaponlight|chronograph|tourniquet)\b|\b(gun|handgun|rifle|shotgun|pistol|scoped|protection|boresnake|bore[\s-]?snake|recoil[\s-]?pad)[\s-]?(sleeve\/?\s?)?socks?\b|\bgun[\s-]?sleeve\b|\briflek[uü]hl\b/i;
+
+// FIREARM_CONTEXT — firearm/optics/part context. Kept as a defensive veto on the
+// LIFESTYLE branch (so a "Barrel Cooler" is never hidden by the "cooler" token —
+// FIX 2, 2026-06-05) and as an extra guard on the inverted headwear branch. It is
+// NO LONGER the primary defense for the bare cap/hat branch: that branch is now
+// KEEP-by-default and only hides on a POSITIVE apparel signal (see below), so the
+// firearm-part allow-list is no longer load-bearing — adding a new firearm "cap"
+// (handguard cap, mag cap, buttplate cap, grip cap, release cap, battery cap …)
+// can never cause it to be hidden. "medicine[\s-]?hat" / "scope" are written
+// without a left \b because townpost glues category metadata to the title body.
+const FIREARM_CONTEXT =
+  /\b(battery|eyepiece|elevation|windage|adjustment|turret|retainer|regulator|bolt|spring|mainspring|firing[\s-]?pin|sights?|binocular|objective|lens|optics?|magazine|mag[\s-]?tube|tube|riflescope|forend|fore[\s-]?end|handguard|barrel|thread(ed)?|muzzle|breech|receiver|trigger[\s-]?guard|chamber|primer|percussion|boresnake|bore[\s-]?snake|recoil[\s-]?pad|buttplate|butt[\s-]?plate|release|nose|screw|nut|extractor|surefire|nightforce|scout[\s-]?light|bullet|valve|switch|housing|slide|assembly|cb)\b|\bmount(?!ain)|multimount|mounted|\bnv[\s-]?cap\b|\b(cap[\s-]?lock|cap\s?&\s?ball|cap\s?and\s?ball|cap[\s-]?gun|cap[\s-]?pistol|handi[\s-]?cap|snow[\s-]?cap|cap[\s-]?screw|cap[\s-]?mount|cap[\s-]?assembly|rear[\s-]?cap|cb[\s-]?cap)\b|medicine[\s-]?hat\b|scope|\b(snap|end|grip|body|ring|gas|mag|plug|screw|d|flip)[\s-]?cap\b|\bcap[\s-]?primer\b|\bcap[\s-/]?car\b|\b\d+\s?gr(ain)?\b|\b\d+\s?ga\b|\b\d+\s?dr\b/i;
+
+// Apparel STRONG: unambiguous clothing — always out_of_scope.
+// NOTE: bare "socks?" is NOT here — it is AMBIGUOUS (gun sock, scope sock, recoil-
+// pad sock, "WITH X sock" bundles, shotgun-case-with-socks lots), so it gets the
+// same inverted KEEP-by-default treatment as cap/hat below. (FIX 3, 2026-06-05.)
+const OOS_APPAREL_STRONG = /\b(t[\s-]?shirt|tee[\s-]?shirt|hoodie|hoody|sweatshirt|crewneck|crew[\s-]?neck|pullover|trucker[\s-]?hat|snapback|beanie|toque|flexfit|polo[\s-]?shirt|long[\s-]?sleeve[\s-]?shirt|(logo|patch|felt|mesh)[\s-]?hat|embroidered[\s-]?logo)\b/i;
+
+// Bare " hat"/" cap" token (leading boundary so "Snap Cap" doesn't glue; trailing
+// \b so "Capacity"/"Caps" don't match).
+const APPAREL_HEADWEAR_TOKEN = /[\s-](hat|cap)\b/i;
+
+// INVERTED branch (FIX 1, 2026-06-05): the bare cap/hat branch is KEEP-by-default.
+// A bare "X Cap"/"X Hat" is hidden ONLY when a POSITIVE apparel/merch signal is
+// also present — otherwise it is KEPT. This structurally bounds firearm-part
+// hiding on this branch to ZERO, because no firearm part ("handguard cap", "high
+// cap", "grip cap", "buttplate cap", "release cap", "battery cap" …) carries an
+// apparel signal. The accepted lesser error is that a pure branded "Brand Cap"
+// (e.g. "Browning Telford Cap") with no apparel word may LEAK into search — per
+// the hard bar, a hat showing is acceptable; a hidden handguard is not.
+// Positive signals: explicit headwear types + merch descriptors + cap/hat
+// material/brim/closure words. (Most strong types also live in
+// OOS_APPAREL_STRONG, which fires earlier; this set adds the bare-token qualifiers
+// like "baseball cap", "fitted", "mesh back", "curved/flat brim", "dad cap",
+// "visor", "knit", "wool", "camo cap".)
+const APPAREL_HEADWEAR_SIGNAL = /\b(trucker|snapback|flexfit|fitted|mesh[\s-]?back|curved[\s-]?brim|flat[\s-]?brim|dad[\s-]?cap|baseball[\s-]?cap|ball[\s-]?cap|visor|beanie|toque|knit|knitted|wool|fleece|embroider(ed|y)?|camo[\s-]?(cap|hat)|(logo|patch|felt|mesh)[\s-]?(cap|hat)|adjustable[\s-]?(cap|hat))\b/i;
+
+// INVERTED sock branch (FIX 3, 2026-06-05). "socks?" is ambiguous: it covers
+// functional kit (gun/scope/recoil-pad/protection socks, "WITH X SOCK" bundles,
+// shotgun-case-with-socks lots) as well as clothing socks. So the bare token is
+// KEEP-by-default and hides ONLY when a positive apparel-sock signal is present
+// AND there is no firearm/optics/case context. This bounds firearm/optics/part
+// hiding on this branch to ZERO — no scope, gun part, or case carries an
+// apparel-sock material/style word.
+const APPAREL_SOCK_TOKEN = /\bsocks?\b/i;
+// Positive apparel-sock signals: material, style, and pack words that denote a
+// clothing sock (never a gun/scope/recoil sock).
+const APPAREL_SOCK_SIGNAL = /\b(crew|ankle|boot|hiking|hunt|hunting|dress|athletic|performance|merino|cushion|thermal|liner|over[\s-]?the[\s-]?calf|no[\s-]?show|quarter|knee[\s-]?high|wool|bamboo|cotton|compression|sock[\s-]?(pack|set)|\d+[\s-]?pack[\s-]?socks?|socks?[\s-]?\d+[\s-]?pack)\b/i;
+// Firearm/optics/case context that, if present anywhere in the title, vetoes the
+// sock branch even WITH an apparel-sock signal — handles NON-adjacent forms like
+// "Gun Protection Sock", "Scoped Rifle Sock", "... Shotgun Case ... Socks". This
+// is the sock-specific complement to FIREARM_CONTEXT (which is cap/part oriented).
+const SOCK_FIREARM_GUARD = /\b(gun|handgun|rifle|shotgun|pistol|firearm|scoped?|riflescope|optics?|case|boresnake|bore[\s-]?snake|recoil[\s-]?pad|protection[\s-]?sock|barrel|magnum|leupold|aimpoint|holosun|trijicon)\b|\b\d{1,2}(\.\d)?[\s-]?-?\d{0,2}x\d{2}\b/i;
+
+// Lifestyle: drinkware/coolers, lighters/hand-warmers, wallets/belts, freeze-
+// dried food, water filters — none of which are shooting/hunting-functional.
+// "mountain house" is the freeze-dried food brand, but "Rocky Mountain House"
+// is an Alberta town that appears in townpost classified titles — exclude it via
+// a negative lookbehind so a "Ruger rifle … Rocky Mountain House, AB" listing is
+// not wrongly hidden.
+const OOS_LIFESTYLE = /\b(yeti|rambler|cooler|coolers|zippo|windproof[\s-]?lighter|hand[\s-]?warmer|heatbank|groove[\s-]?(wallet|life|belt)|peak[\s-]?refuel|readywise|ready[\s-]?wise|(?<!rocky[\s-])mountain[\s-]?house|water[\s-]?filter|microfilter)\b/i;
+
+// STRUCTURAL firearm-scope signal — the platform's own taxonomy (URL path, tags,
+// sourceCategory) saying this product lives in a firearm/ammo/optics/parts
+// department. This is GROUND TRUTH and outranks any title-only apparel/lifestyle
+// guess: a lifestyle-brand-edition firearm/optic ("USED MOSSBERG PATRIOT YETI
+// 6.5 CREED" under /firearms/used-rifles/, tags FIREARMS) must NEVER be hidden by
+// the lifestyle brand in its title. Token enumeration of brand colorways can't
+// fix that class — this structural veto does, generically. (FIX 4, 2026-06-05.)
+//
+// Deliberately firearm-scope ONLY (no "gear"/"apparel"/"clothing" here): a
+// "Browning Camp T-Shirt" under /gear/apparel must STILL hide, so apparel
+// departments are NOT a firearm signal.
+const STRUCTURAL_FIREARM_URL = /\/(firearms?|rifles?|shotguns?|handguns?|pistols?|revolvers?|ammunition|ammo|optics|scopes?|red[\s-]?dot|reloading|magazines?|centerfire|rimfire|used[\s-]?(centerfire|rifle|firearm|shotgun|handgun|pistol)|firearm[\s-]?parts|gun[\s-]?parts|muzzleload)/i;
+const STRUCTURAL_FIREARM_TAGS = /\b(firearms?|rifles?|shotguns?|handguns?|pistols?|revolvers?|ammunition|ammo|optics|scopes?|red[\s-]?dot|reloading|magazines?|centerfire|rimfire|muzzleload|firearm[\s-]?parts|gun[\s-]?parts)\b/i;
+
+/** True when the platform taxonomy (url/tags/sourceCategory) places this product
+ *  in a firearm/ammo/optics/parts department. */
+function hasStructuralFirearmSignal(ctx?: { sourceCategory?: string | null; url?: string | null; tags?: string | null }): boolean {
+  if (!ctx) return false;
+  if (ctx.url && STRUCTURAL_FIREARM_URL.test(ctx.url)) return true;
+  if (ctx.tags && STRUCTURAL_FIREARM_TAGS.test(ctx.tags)) return true;
+  if (ctx.sourceCategory && STRUCTURAL_FIREARM_TAGS.test(ctx.sourceCategory)) return true;
+  return false;
+}
+
+/**
+ * Classify a title as out_of_scope (apparel/lifestyle) or null (keep).
+ *
+ * Optional ctx (`sourceCategory`/`url`/`tags`):
+ *  - A STRUCTURAL firearm-scope signal (firearm/ammo/optics/parts url/tags/
+ *    category) is GROUND TRUTH and vetoes ALL out_of_scope branches, so a
+ *    lifestyle-brand-edition firearm/optic is never hidden.
+ *  - A clean apparel/clothing sourceCategory can additionally hide a bare cap/hat
+ *    even without an in-title apparel word.
+ */
+export function classifyOutOfScope(
+  title: string,
+  ctx?: { sourceCategory?: string | null; url?: string | null; tags?: string | null },
+): ProductType | null {
+  // STRUCTURAL firearm-scope veto — beats every out_of_scope branch below.
+  if (hasStructuralFirearmSignal(ctx)) return null;
+
+  if (OOS_KEEP.test(title)) return null;
+
+  // Strong apparel: unambiguous merch words — always out_of_scope.
+  if (OOS_APPAREL_STRONG.test(title)) return 'out_of_scope';
+
+  // Lifestyle — but NEVER hide a firearm-context item (e.g. "Barrel Cooler").
+  if (OOS_LIFESTYLE.test(title) && !FIREARM_CONTEXT.test(title)) return 'out_of_scope';
+
+  // Bare cap/hat — KEEP-by-default. Hide ONLY with a positive apparel signal:
+  // an in-title headwear/merch word, OR a clean apparel/clothing sourceCategory.
+  // The URL is NOT used for the category signal: product slugs echo the title
+  // (e.g. ".../product/bt-atlas-tac-cap-replacement-steel-cap/"), so a slug
+  // containing "cap"/"hat" would falsely read as an apparel department and hide a
+  // functional part. sourceCategory is a real department string (e.g. "Apparel"),
+  // so it is safe. (FIX 1 refinement, 2026-06-05 — per R1 "keep it simple".)
+  const categoryApparel = !!(ctx?.sourceCategory && APPAREL_CATEGORY.test(ctx.sourceCategory));
+
+  if (APPAREL_HEADWEAR_TOKEN.test(title)) {
+    if ((APPAREL_HEADWEAR_SIGNAL.test(title) || categoryApparel) && !FIREARM_CONTEXT.test(title)) {
+      return 'out_of_scope';
+    }
+  }
+
+  // Bare sock — KEEP-by-default (same inversion as cap/hat). Hide ONLY with a
+  // positive apparel-sock signal (or apparel sourceCategory) AND no firearm/
+  // optics/case context anywhere in the title (handles non-adjacent forms like
+  // "Gun Protection Sock", "<scope> WITH SOCK"). (FIX 3, 2026-06-05.)
+  if (APPAREL_SOCK_TOKEN.test(title)) {
+    if (
+      (APPAREL_SOCK_SIGNAL.test(title) || categoryApparel)
+      && !SOCK_FIREARM_GUARD.test(title)
+      && !FIREARM_CONTEXT.test(title)
+    ) {
+      return 'out_of_scope';
+    }
+  }
+  return null;
+}
+
+// A clean apparel/clothing CATEGORY signal (sourceCategory ONLY — never URL).
+// Deliberately narrow: only unambiguous clothing-department words. "caps"/"hats"/
+// "t-shirts" are EXCLUDED because they collide with product nouns in slugs/titles;
+// the in-title headwear-signal gate already covers those cases.
+const APPAREL_CATEGORY = /\b(apparel|clothing|headwear|footwear|outerwear|menswear|womenswear)\b/i;
 
 function classifyByTitle(title: string, url: string): ProductType | null {
   const slug = extractSlug(url);
@@ -203,6 +378,15 @@ function extractSlug(url: string): string {
 // ── Main Classifier ─────────────────────────────────────────────────────────
 
 export function classifyProduct(input: ClassifierInput): ProductType {
+  // Layer 0: Out-of-scope (apparel + lifestyle). HIGHEST priority so an apparel
+  // item never falls through to gear/firearm via category/URL/title. A STRUCTURAL
+  // firearm-scope signal (firearm/ammo/optics/parts url/tags/category) vetoes it
+  // entirely, so a lifestyle-brand-edition firearm/optic is never hidden (FIX 4);
+  // the bare cap/hat/sock branches are KEEP-by-default (hide only on a positive
+  // apparel signal). (Inverted FIX 1/3 + structural FIX 4, 2026-06-05.)
+  const oos = classifyOutOfScope(input.title, { sourceCategory: input.sourceCategory, url: input.url, tags: input.tags });
+  if (oos) return oos;
+
   // Layer 1: Source category (strongest signal — direct from API taxonomy)
   if (input.sourceCategory) {
     const result = classifyByCategory(input.sourceCategory);
@@ -235,7 +419,13 @@ export function classifyProducts<T extends ClassifierInput & { productType?: Pro
   products: T[],
 ): T[] {
   for (const p of products) {
-    if (!p.productType) {
+    // OOS veto ALWAYS wins, even over a scraper-preset productType — a preset
+    // 'gear'/'firearm' must not let an apparel/lifestyle item bypass the Layer-0
+    // out_of_scope check. (BLOCKER 2, 2026-06-05.)
+    const oos = classifyOutOfScope(p.title, { sourceCategory: p.sourceCategory, url: p.url, tags: p.tags });
+    if (oos) {
+      (p as any).productType = oos;
+    } else if (!p.productType) {
       (p as any).productType = classifyProduct(p);
     }
   }

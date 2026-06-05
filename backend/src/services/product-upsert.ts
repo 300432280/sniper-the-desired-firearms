@@ -10,7 +10,7 @@
  */
 
 import { prisma } from '../lib/prisma';
-import { classifyProduct } from './product-classifier';
+import { classifyProduct, classifyOutOfScope } from './product-classifier';
 import type { CatalogProduct } from './scraper/types';
 
 /**
@@ -228,12 +228,18 @@ export async function saveProducts(
       // Normalize URL to strip tracking/search params before deduplication
       product.url = normalizeProductUrl(product.url);
 
-      const productType = product.productType || classifyProduct({
+      // OOS veto ALWAYS wins, even over a scraper-preset product.productType — a
+      // preset 'gear'/'firearm' must not let an apparel/lifestyle item bypass the
+      // Layer-0 out_of_scope check (CATEGORY_MAP no longer maps apparel→gear, but
+      // a preset type would otherwise short-circuit classifyProduct entirely).
+      // (BLOCKER 2, 2026-06-05.)
+      const oos = classifyOutOfScope(product.title, { sourceCategory: product.sourceCategory, url: product.url, tags: product.tags });
+      const productType = oos ?? (product.productType || classifyProduct({
         title: product.title,
         url: product.url,
         tags: product.tags,
         sourceCategory: product.sourceCategory,
-      });
+      }));
 
       const hasRealStock = product.stockStatus && product.stockStatus !== 'unknown';
       const update: Record<string, any> = {
