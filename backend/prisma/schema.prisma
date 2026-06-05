@@ -245,7 +245,9 @@ model ProductIndex {
   @@index([siteId, isActive, lastSeenAt]) // For T2-T4 maintain-phase queries sorted by lastSeenAt ASC
   @@index([siteId, isActive, stockStatus]) // For stale detector queries
   @@index([siteId, contentChangedAt]) // For cursor-based alert dispatch queries
+  @@index([siteId, firstSeenAt]) // Per-site newest-first search fairness queries (Phase B 2026-06-05)
   @@index([title])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "product_index_title_trgm_idx") // pg_trgm ILIKE acceleration (Phase B 2026-06-05; pg_trgm extension created manually)
   @@map("product_index")
 }
 
