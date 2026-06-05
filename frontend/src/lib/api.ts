@@ -85,6 +85,20 @@ export interface ScanResult {
   notificationId: string | null;
 }
 
+export interface LiveSearchResult {
+  url: string;
+  title: string;
+  price: number | null;
+  regularPrice: number | null;
+  thumbnail: string | null;
+  stockStatus: string | null;
+  category: string | null;
+  productType: string | null;
+  siteId: string;
+  firstSeenAt: string;
+  contentChangedAt: string;
+}
+
 export interface SiteCredential {
   id: string;
   domain: string;
@@ -184,6 +198,19 @@ export interface HealthSummary {
 }
 
 export const searchesApi = {
+  // Returns the FULL keyword-matched set in one request. Filtering, sorting, and
+  // pagination are applied client-side (see GuestSearchForm) so they're instant —
+  // the expensive keyword match runs once per keyword, not per filter toggle.
+  liveSearch: (params: { keyword: string; searchAll?: boolean; websiteUrl?: string }) => {
+    const qs = new URLSearchParams();
+    qs.set('keyword', params.keyword);
+    if (params.searchAll) qs.set('searchAll', 'true');
+    if (params.websiteUrl) qs.set('websiteUrl', params.websiteUrl);
+    return request<{ results: LiveSearchResult[]; total: number }>(
+      'GET', `/searches/live?${qs.toString()}`
+    );
+  },
+
   list: () => request<{ searches: Search[] }>('GET', '/searches'),
 
   get: (id: string) =>

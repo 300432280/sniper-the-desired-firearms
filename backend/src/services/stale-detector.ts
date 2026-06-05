@@ -19,6 +19,7 @@
 import { prisma } from '../lib/prisma';
 import { pushEvent } from './debugLog';
 import { _getSiteCacheEntry } from './scraper/adapter-registry';
+import { applyContentChange } from './product-upsert';
 import type { SiteStreamState } from './scraper/types';
 
 /** Max detail-page verifications per trigger (rate limiting) */
@@ -225,20 +226,34 @@ export async function checkStaleProducts(
       },
       orderBy: { lastSeenAt: 'asc' },
       take: MAX_BOOTSTRAP_BULK_PER_TICK,
-      select: { id: true },
+      select: { id: true, price: true, regularPrice: true },
     });
 
     if (bulkCandidates.length > 0) {
       const now = new Date();
-      // Bulk update — no detail-page fetch needed, API data is authoritative
-      await prisma.productIndex.updateMany({
-        where: { id: { in: bulkCandidates.map(p => p.id) } },
-        data: {
-          stockStatus: 'out_of_stock',
-          staleSince: now,
-          staleVerifiedAt: now,
-        },
-      });
+      // Bulk update — no detail-page fetch needed, API data is authoritative.
+      // All rows are in_stock → out_of_stock (a real stock change), so bump
+      // contentChangedAt and record one history row per candidate.
+      await prisma.$transaction([
+        prisma.productIndex.updateMany({
+          where: { id: { in: bulkCandidates.map(p => p.id) } },
+          data: {
+            stockStatus: 'out_of_stock',
+            staleSince: now,
+            staleVerifiedAt: now,
+            contentChangedAt: now,
+          },
+        }),
+        prisma.productHistory.createMany({
+          data: bulkCandidates.map(p => ({
+            productIndexId: p.id,
+            price: p.price,
+            regularPrice: p.regularPrice,
+            stockStatus: 'out_of_stock',
+            changeKind: 'stock',
+          })),
+        }),
+      ]);
       result.candidatesFound = bulkCandidates.length;
       result.markedSold = bulkCandidates.length;
 
@@ -306,24 +321,49 @@ export async function checkStaleProducts(
       const now = new Date();
 
       if (status === 'sold') {
-        await prisma.productIndex.update({
-          where: { id: product.id },
-          data: {
-            stockStatus: 'out_of_stock',
-            staleSince: product.staleSince ?? now,
-            staleVerifiedAt: now,
-          },
-        });
+        const change = applyContentChange(
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: product.stockStatus },
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: 'out_of_stock' },
+        );
+        await prisma.$transaction([
+          prisma.productIndex.update({
+            where: { id: product.id },
+            data: {
+              stockStatus: 'out_of_stock',
+              staleSince: product.staleSince ?? now,
+              staleVerifiedAt: now,
+              ...(change.changed ? { contentChangedAt: now } : {}),
+            },
+          }),
+          ...(change.history
+            ? [prisma.productHistory.create({ data: { productIndexId: product.id, ...change.history } })]
+            : []),
+        ]);
         result.markedSold++;
       } else if (status === 'deleted') {
-        await prisma.productIndex.update({
-          where: { id: product.id },
-          data: {
-            isActive: false,
-            staleSince: product.staleSince ?? now,
-            staleVerifiedAt: now,
-          },
-        });
+        // Also flip stockStatus → out_of_stock so the row agrees with history
+        // and future restock detection works.
+        const change = applyContentChange(
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: product.stockStatus },
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: 'out_of_stock' },
+        );
+        await prisma.$transaction([
+          prisma.productIndex.update({
+            where: { id: product.id },
+            data: {
+              isActive: false,
+              // Was already OOS then vanished → likely sold; otherwise unknown.
+              delistReason: product.stockStatus === 'out_of_stock' ? 'sold' : 'unknown',
+              stockStatus: 'out_of_stock',
+              staleSince: product.staleSince ?? now,
+              staleVerifiedAt: now,
+              ...(change.changed ? { contentChangedAt: now } : {}),
+            },
+          }),
+          ...(change.history
+            ? [prisma.productHistory.create({ data: { productIndexId: product.id, ...change.history } })]
+            : []),
+        ]);
         result.markedInactive++;
       } else {
         // False positive — product still alive, refresh lastSeenAt
@@ -333,6 +373,7 @@ export async function checkStaleProducts(
             lastSeenAt: now,
             staleSince: null,
             staleVerifiedAt: now,
+            delistReason: null, // still listed → clear any prior delist reason
           },
         });
         result.falsePositives++;
@@ -387,20 +428,37 @@ async function recheckSoldProducts(
       if (status === 'deleted') {
         await prisma.productIndex.update({
           where: { id: product.id },
-          data: { isActive: false, staleVerifiedAt: now },
+          data: {
+            isActive: false,
+            // Was already OOS then vanished → likely sold; otherwise unknown.
+            delistReason: product.stockStatus === 'out_of_stock' ? 'sold' : 'unknown',
+            staleVerifiedAt: now,
+          },
         });
         result.markedInactive++;
       } else if (status === 'alive') {
-        // Was sold but is back? Seller re-listed.
-        await prisma.productIndex.update({
-          where: { id: product.id },
-          data: {
-            stockStatus: 'in_stock',
-            staleSince: null,
-            staleVerifiedAt: now,
-            lastSeenAt: now,
-          },
-        });
+        // Was sold but is back? Seller re-listed — a restock (out_of_stock → in_stock),
+        // the most alert-worthy stock change. Record it.
+        const change = applyContentChange(
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: product.stockStatus },
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: 'in_stock' },
+        );
+        await prisma.$transaction([
+          prisma.productIndex.update({
+            where: { id: product.id },
+            data: {
+              stockStatus: 'in_stock',
+              staleSince: null,
+              staleVerifiedAt: now,
+              lastSeenAt: now,
+              delistReason: null, // re-listed → clear any prior delist reason
+              ...(change.changed ? { contentChangedAt: now } : {}),
+            },
+          }),
+          ...(change.history
+            ? [prisma.productHistory.create({ data: { productIndexId: product.id, ...change.history } })]
+            : []),
+        ]);
         result.falsePositives++;
       } else {
         // Still sold — just update verification timestamp

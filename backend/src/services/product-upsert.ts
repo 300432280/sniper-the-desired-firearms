@@ -14,12 +14,100 @@ import { classifyProduct } from './product-classifier';
 import type { CatalogProduct } from './scraper/types';
 
 /**
+ * Watched content fields for change detection: price, regularPrice, stockStatus ONLY.
+ * Title/thumbnail/category/tags changes do NOT count (they are not alert-worthy and
+ * would make contentChangedAt noisy).
+ */
+export interface ContentSnapshot {
+  price: number | null;
+  regularPrice: number | null;
+  stockStatus: string | null;
+}
+
+export interface ContentChange {
+  /** True when contentChangedAt should be bumped on the ProductIndex row. */
+  changed: boolean;
+  /** The ProductHistory row to append (sans productIndexId), or null if nothing to record. */
+  history: { price: number | null; regularPrice: number | null; stockStatus: string | null; changeKind: string } | null;
+}
+
+/**
+ * Compare a prior content snapshot against the next one and decide whether the
+ * watched content (price / regularPrice / stockStatus) actually changed.
+ *
+ * Rules:
+ * - First insert (prior === null) → changeKind 'new', always records a baseline.
+ * - Stock transition: prior.stockStatus !== next.stockStatus (after normalization).
+ * - Price transition: number→number (or number→null) for price OR regularPrice.
+ *   NULL guard: a transient null caused by the source merely omitting the price
+ *   this cycle (i.e. next is null) is NOT a price change ON ITS OWN — it only
+ *   counts when it coincides with a real stock transition. null→number IS a real
+ *   price change (the product gained a price). Callers pass null for observed-null.
+ * - changeKind combines the dimensions that changed: 'price' | 'stock' | 'price+stock'.
+ */
+export function applyContentChange(
+  prior: ContentSnapshot | null,
+  next: ContentSnapshot,
+): ContentChange {
+  if (prior === null) {
+    return {
+      changed: true,
+      history: {
+        price: next.price,
+        regularPrice: next.regularPrice,
+        stockStatus: next.stockStatus,
+        changeKind: 'new',
+      },
+    };
+  }
+
+  const stockChanged = (next.stockStatus ?? null) !== (prior.stockStatus ?? null);
+
+  // A field counts as a real price change when it gains a value (null→number),
+  // changes between two numbers (number→number), or drops a value (number→null)
+  // ONLY when a stock transition is also happening this cycle.
+  const fieldPriceChanged = (p: number | null, n: number | null): boolean => {
+    if (p === n) return false;
+    if (n !== null) return true;        // null→number or number→number(diff)
+    return stockChanged;                // number→null: only real if stock also moved
+  };
+
+  const priceChanged =
+    fieldPriceChanged(prior.price, next.price) ||
+    fieldPriceChanged(prior.regularPrice, next.regularPrice);
+
+  if (!stockChanged && !priceChanged) {
+    return { changed: false, history: null };
+  }
+
+  const changeKind =
+    priceChanged && stockChanged ? 'price+stock' : priceChanged ? 'price' : 'stock';
+
+  return {
+    changed: true,
+    history: {
+      price: next.price,
+      regularPrice: next.regularPrice,
+      stockStatus: next.stockStatus,
+      changeKind,
+    },
+  };
+}
+
+/**
  * Tracking/search query parameters that should be stripped from product URLs
  * to prevent duplicate entries from search results, UTM campaigns, etc.
  */
 const TRACKING_PARAMS = new Set([
   // BigCommerce search result tracking
   'searchid', 'search_query',
+  // Listing/sort/pagination params that leak onto product URLs (e.g. a product
+  // link inheriting `?orderby=date` from a sorted category page). These create
+  // a distinct URL key for the same product → duplicate ProductIndex rows when
+  // the product has no sourceId to dedup on. NOTE: do NOT add variant/option
+  // selectors (variant, sku, color, option, attribute) — those are MEANINGFUL
+  // product selectors and must be preserved.
+  'orderby', 'order', 'sortby', 'sort_by', 'sort', 'dir', 'view', 'page',
   // UTM parameters
   'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
   // Common tracking/session params
@@ -96,6 +184,18 @@ function isCategoryUrl(url: string): boolean {
   }
 }
 
+/**
+ * Detect error / not-found / soft-404 page titles. A soft-404 scrape returns
+ * HTTP 200 with an error-page body; without this guard it would either create a
+ * junk ProductIndex row OR overwrite a real product's title/price/thumbnail with
+ * garbage. We reject these so last-known product data is preserved — the
+ * verify/stale path is what legitimately delists a gone product.
+ */
+function isErrorPageTitle(title: string | null | undefined): boolean {
+  if (!title) return false;
+  return /^\s*(page not found|404\b|not found|error 404|oops|no longer available|nothing found)/i.test(title);
+}
+
 export async function saveProducts(
   siteId: string,
   products: CatalogProduct[],
@@ -108,6 +208,10 @@ export async function saveProducts(
     if (isCategoryUrl(p.url)) return false;
     // Reject products with very short titles that look like category names
     if (p.title && p.title.length < 4 && !p.price) return false;
+    // Reject soft-404 / error-page scrapes so they never create a junk row or
+    // overwrite a real product's title/price/thumbnail (delisting is handled by
+    // the verify/stale path, not by a bad listing-page scrape).
+    if (isErrorPageTitle(p.title)) return false;
     return true;
   });
   if (filtered.length < products.length) {
@@ -116,6 +220,8 @@ export async function saveProducts(
   }
 
   const saved: SavedProduct[] = [];
+  // Collected ProductHistory rows for a single batched createMany after the loop.
+  const historyRows: { productIndexId: string; price: number | null; regularPrice: number | null; stockStatus: string | null; changeKind: string }[] = [];
 
   for (const product of filtered) {
     try {
@@ -170,11 +276,26 @@ export async function saveProducts(
               await prisma.productIndex.delete({ where: { id: urlConflict.id } });
             }
           }
+          // Detect content change vs the prior row (price/regularPrice/stockStatus).
+          // The DB update preserves the prior price/regularPrice when the source
+          // omits the field (the `if (product.price != null)` guards above), so the
+          // diff's `next` must mirror that pass-through — otherwise an omitted price
+          // during a stock change would be misclassified as a price drop.
+          const change = applyContentChange(
+            { price: existing.price, regularPrice: existing.regularPrice, stockStatus: existing.stockStatus },
+            {
+              price: product.price ?? existing.price,
+              regularPrice: product.regularPrice ?? existing.regularPrice,
+              stockStatus: hasRealStock ? product.stockStatus! : existing.stockStatus,
+            },
+          );
+          if (change.changed) update.contentChangedAt = new Date();
           // Update existing row with current URL, title, price
           result = await prisma.productIndex.update({
             where: { id: existing.id },
             data: update,
           });
+          if (change.history) historyRows.push({ productIndexId: result.id, ...change.history });
         } else {
           // No sourceId match — check if URL already exists (pre-sourceId row)
           const byUrl = await prisma.productIndex.findUnique({
@@ -182,11 +303,23 @@ export async function saveProducts(
           });
 
           if (byUrl) {
-            // Backfill sourceId onto existing URL-matched row
+            // Backfill sourceId onto existing URL-matched row.
+            // Pass prior price through when the source omits it (mirrors the DB
+            // update's conditional price guards — see note above).
+            const change = applyContentChange(
+              { price: byUrl.price, regularPrice: byUrl.regularPrice, stockStatus: byUrl.stockStatus },
+              {
+                price: product.price ?? byUrl.price,
+                regularPrice: product.regularPrice ?? byUrl.regularPrice,
+                stockStatus: hasRealStock ? product.stockStatus! : byUrl.stockStatus,
+              },
+            );
+            if (change.changed) update.contentChangedAt = new Date();
             result = await prisma.productIndex.update({
               where: { id: byUrl.id },
               data: { ...update, sourceId: product.sourceId },
             });
+            if (change.history) historyRows.push({ productIndexId: result.id, ...change.history });
           } else {
             // Truly new product
             result = await prisma.productIndex.create({
@@ -206,10 +339,38 @@ export async function saveProducts(
               },
             });
             isNew = true;
+            // Baseline history row so the price/stock timeline has an origin.
+            historyRows.push({
+              productIndexId: result.id,
+              price: result.price,
+              regularPrice: result.regularPrice,
+              stockStatus: result.stockStatus,
+              changeKind: 'new',
+            });
           }
         }
       } else {
         // ── URL-only path: fallback for adapters without sourceId ──
+        // Read the prior row to diff content (price/regularPrice/stockStatus),
+        // but keep the WRITE atomic via upsert so a concurrent insert for the
+        // same (siteId, url) updates instead of throwing a unique-constraint
+        // violation (the catch would otherwise silently drop the row + history).
+        const existingByUrl = await prisma.productIndex.findUnique({
+          where: { siteId_url: { siteId, url: product.url } },
+        });
+        isNew = !existingByUrl;
+        const change = existingByUrl
+          ? applyContentChange(
+              { price: existingByUrl.price, regularPrice: existingByUrl.regularPrice, stockStatus: existingByUrl.stockStatus },
+              {
+                price: product.price ?? existingByUrl.price,
+                regularPrice: product.regularPrice ?? existingByUrl.regularPrice,
+                stockStatus: hasRealStock ? product.stockStatus! : existingByUrl.stockStatus,
+              },
+            )
+          : null;
+        if (change?.changed) update.contentChangedAt = new Date();
+
         result = await prisma.productIndex.upsert({
           where: { siteId_url: { siteId, url: product.url } },
           update,
@@ -227,6 +388,19 @@ export async function saveProducts(
             closingAt: product.closingAt ?? null,
           },
         });
+
+        if (isNew) {
+          // Baseline history row so the price/stock timeline has an origin.
+          historyRows.push({
+            productIndexId: result.id,
+            price: result.price,
+            regularPrice: result.regularPrice,
+            stockStatus: result.stockStatus,
+            changeKind: 'new',
+          });
+        } else if (change?.history) {
+          historyRows.push({ productIndexId: result.id, ...change.history });
+        }
       }
 
       // Only include in "new" list if it was just created, OR if the caller
@@ -245,6 +419,11 @@ export async function saveProducts(
         console.error(`[ProductUpsert] Failed to save product ${product.url}:`, err);
       }
     }
+  }
+
+  // Batch-insert all collected price/stock history rows in one round-trip.
+  if (historyRows.length > 0) {
+    await prisma.productHistory.createMany({ data: historyRows });
   }
 
   return saved;

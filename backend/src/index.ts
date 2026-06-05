@@ -8,8 +8,8 @@ import { generalLimiter, authLimiter } from './middleware/rateLimit';
 import authRouter from './routes/auth';
 import searchesRouter from './routes/searches';
 import adminRouter from './routes/admin';
-import { startWorker, startHealthWorker, startSchedulerWorker, startDigestWorker, startStaleCheckWorker } from './services/worker';
-import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs, scheduleDailyDigest, scheduleDailyStaleCheck, redisConnection } from './services/queue';
+import { startWorker, startHealthWorker, startSchedulerWorker, startDigestWorker, startStaleCheckWorker, startAlertDispatchWorker } from './services/worker';
+import { scheduleHealthChecks, startCrawlScheduler, cleanupLegacyJobs, scheduleDailyDigest, scheduleDailyStaleCheck, scheduleAlertDispatch, redisConnection } from './services/queue';
 import { prisma } from './lib/prisma';
 
 /** Escape HTML special characters to prevent XSS */
@@ -530,6 +530,7 @@ const healthWorker = startHealthWorker();
 const schedulerWorker = startSchedulerWorker();
 const digestWorker = startDigestWorker();
 const staleCheckWorker = startStaleCheckWorker();
+const alertDispatchWorker = startAlertDispatchWorker();
 
 // Schedule cron jobs + crawl scheduler
 cleanupLegacyJobs().catch((err) => {
@@ -544,6 +545,9 @@ startCrawlScheduler().catch((err) => {
 scheduleDailyDigest().catch((err) => {
   console.error('[Server] Failed to schedule daily digest:', err.message);
 });
+scheduleAlertDispatch().catch((err) => {
+  console.error('[Server] Failed to schedule alert dispatch:', err.message);
+});
 scheduleDailyStaleCheck().catch((err) => {
   console.error('[Server] Failed to schedule daily stale check:', err.message);
 });
@@ -554,18 +558,45 @@ const server = app.listen(config.port, () => {
 });
 
 // Graceful shutdown
+// Worker.close() waits for in-flight jobs to finish and releases their BullMQ
+// locks. Without this, in-flight crawl-catalog/crawl-watermark jobs orphan into
+// `active` on SIGTERM/SIGINT and get re-run with stale data on next startup.
+let shuttingDown = false;
 const shutdown = async () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   console.log('[Server] Shutting down gracefully...');
-  await Promise.all([worker.close(), healthWorker.close(), schedulerWorker.close(), digestWorker.close()]);
+  // Close every worker so active jobs finish cleanly and locks are released.
+  // allSettled (not all) so one rejected close doesn't abort the rest of
+  // shutdown; race against a timeout so a wedged Playwright job can't make
+  // worker.close() (graceful, no force) hang forever. Either way we proceed to
+  // process.exit(0) below.
+  const workerCloses = [
+    worker.close(),
+    healthWorker.close(),
+    schedulerWorker.close(),
+    digestWorker.close(),
+    staleCheckWorker.close(),
+    alertDispatchWorker.close(),
+  ];
+  await Promise.race([
+    Promise.allSettled(workerCloses).then((results) => {
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          console.error(`[Server] Worker ${i} close failed:`, r.reason instanceof Error ? r.reason.message : r.reason);
+        }
+      });
+    }),
+    new Promise((resolve) => setTimeout(resolve, 25000)),
+  ]);
   // Close Playwright browser if it was started
   try {
     const { closeBrowser } = await import('./services/scraper/playwright-fetcher');
     await closeBrowser();
   } catch { /* Playwright may not have been loaded */ }
-  server.close(() => {
-    console.log('[Server] Server closed');
-    process.exit(0);
-  });
+  server.close();
+  console.log('[Server] Server closed');
+  process.exit(0);
 };
 
 process.on('SIGTERM', shutdown);

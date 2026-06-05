@@ -11,6 +11,7 @@ import { expireFreeAlerts } from './free-tier';
 import { allocateCatalogTokens } from './token-budget';
 import { resolveTuning } from './crawl-tuning';
 import { parseStreamState } from './stream-detector';
+import { applyContentChange } from './product-upsert';
 import type { SiteStreamState } from './scraper/types';
 
 interface WatermarkJobData {
@@ -37,6 +38,23 @@ interface CatalogJobData {
   crawlTuning?: unknown;
   streamState?: unknown;
   crawlIntervalMin?: number;
+}
+
+/**
+ * Returned by a bootstrap catalog job when the stream-drain chain should continue
+ * to the NEXT pending stream. The actual re-enqueue is performed in the worker's
+ * `completed` event handler — NOT inside the active job body. Doing it inside the
+ * active body is a no-op: the self-queued job reuses the singleton jobId
+ * `catalog-<siteId>`, which still exists in Redis while THIS job is active, so
+ * BullMQ de-dupes the add and the chain dies after one stream (proven 2026-06-02:
+ * empirically `add(sameJobId)` AND `add(sameJobId,{delay})` both yield runs=1 while
+ * active; re-enqueue in the `completed` hook yields runs=N and drains all streams,
+ * maxConcurrentActive=1 so the singleton race guard still holds). The `completed`
+ * hook runs after `removeOnComplete:true` has purged the active hash, so the fresh
+ * singleton add succeeds. The legacy (non-stream) catalog path returns null. */
+interface CatalogReenqueue {
+  jobName: 'crawl-catalog';
+  jobData: CatalogJobData;
 }
 
 // ─── Watermark Crawl Job Processor (Tier 1 — New Items) ─────────────────────
@@ -81,7 +99,7 @@ async function processWatermarkCrawl(job: Job<WatermarkJobData>): Promise<void> 
 
 // ─── Catalog Crawl Job Processor (Tiers 2-4 — Full Catalog Refresh) ─────────
 
-async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
+async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<CatalogReenqueue | null> {
   const { siteId, domain, url, baseBudget, capacity, activeTiers } = job.data;
   const tuning = resolveTuning(job.data.crawlTuning);
 
@@ -89,8 +107,7 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
     // Try stream-based crawling first (Phase 2)
     const streamState = parseStreamState(job.data.streamState);
     if (streamState && streamState.streams.length > 0) {
-      await processStreamCatalogCrawl(job.data, streamState, tuning, activeTiers);
-      return;
+      return await processStreamCatalogCrawl(job.data, streamState, tuning, activeTiers);
     }
 
     // Legacy path: per-tier crawling (sites without streamState)
@@ -154,9 +171,13 @@ async function processCatalogCrawl(job: Job<CatalogJobData>): Promise<void> {
     });
 
     pushEvent({ type: 'info', message: `Catalog crawl complete: ${domain} — ${totalProductsFound} products, ${totalPagesScanned} pages` });
+    // Legacy (non-stream) path never self-queues — its T2-T4 loop runs continuously
+    // within one job and is re-dispatched only by the scheduler tick.
+    return null;
   } catch (err) {
     console.error(`[CatalogWorker] Fatal error for ${domain}:`, err);
     pushEvent({ type: 'scrape_fail', websiteUrl: url, message: `Catalog crawl error: ${domain} — ${(err as Error).message}` });
+    return null;
   } finally {
     // Always release crawl lock so site isn't stuck for 5 minutes
     await prisma.monitoredSite.update({
@@ -180,14 +201,24 @@ async function processStreamCatalogCrawl(
   streamState: SiteStreamState,
   tuning: ReturnType<typeof resolveTuning>,
   activeTiers: { tier2: boolean; tier3: boolean; tier4: boolean },
-): Promise<void> {
+): Promise<CatalogReenqueue | null> {
   const { siteId, domain, url, baseBudget, capacity } = data;
   const now = new Date();
   // ── BOOTSTRAP: single continuous crawl using ALL catalog tokens ──
   // No date filters, no tier splitting. One stream, one pagination cursor.
   // Track progress in T4's tier state (T2/T3 mirror T4 for compatibility).
-  const stream = streamState.streams[0];
-  if (!stream) return;
+  //
+  // ROUND-ROBIN: for multi-stream sites we must rotate across ALL streams,
+  // not just streams[0]. Pick the stream whose T4 tier was dispatched
+  // longest ago (or never). Empty strings sort first, so unvisited streams
+  // are always picked before any visited one.
+  const candidates = streamState.streams.map(s => ({
+    stream: s,
+    lastDispatched: streamState.tiers[`${s.id}:4`]?.lastDispatchedAt ?? '',
+  }));
+  candidates.sort((a, b) => a.lastDispatched.localeCompare(b.lastDispatched));
+  const stream = candidates[0]?.stream;
+  if (!stream) return null;
 
   const stateKey = `${stream.id}:4`; // Use T4 as the bootstrap cursor
   let tierState = streamState.tiers[stateKey];
@@ -200,10 +231,25 @@ async function processStreamCatalogCrawl(
     streamState.tiers[stateKey] = tierState;
   }
 
+  // Mark this stream as dispatched NOW so the next invocation picks a different stream.
+  tierState.lastDispatchedAt = now.toISOString();
+  // EARLY PERSIST (Bug D rework 2026-05-31): write streamState before the crawl so
+  // rotation advances even if the crawl body throws / worker crashes / OOM. Without this,
+  // a stream that always crashes the worker would be picked on every retry and starve
+  // the other streams. One extra DB write per job; acceptable.
+  try {
+    await prisma.monitoredSite.update({
+      where: { id: siteId },
+      data: { streamState: streamState as any },
+    });
+  } catch (e) {
+    console.warn(`[CatalogWorker] Early-persist of lastDispatchedAt failed for ${domain}:`, e instanceof Error ? e.message : e);
+  }
+
   // Get ALL remaining catalog tokens (not split by tier)
   const { getCatalogRemaining } = await import('./token-budget');
   const totalCatalogTokens = getCatalogRemaining(siteId, baseBudget, capacity);
-  if (totalCatalogTokens <= 0) return;
+  if (totalCatalogTokens <= 0) return null;
 
   // Start cycle if idle
   if (tierState.status === 'idle' || tierState.status === 'cooldown') {
@@ -242,66 +288,48 @@ async function processStreamCatalogCrawl(
   let shouldSelfQueue = false;
 
   if (result.cycleComplete) {
-    // ── Coverage verification gate ──
-    // Before marking bootstrap complete, verify we captured enough products.
-    const siteProfile = profileEntry?.siteProfile ?? null;
-    const productCountMethod = siteProfile?.productCountMethod ?? null;
-    const expectedProductCount = siteProfile?.expectedProductCount ?? null;
-
-    const passCount = tierState.bootstrapPassCount ?? 0;
-    let markComplete = true;
-
-    if (productCountMethod !== null || expectedProductCount !== null) {
-      const { verifyBootstrapCoverage, COVERAGE_THRESHOLD } = await import('./product-count-probe');
-      const coverage = await verifyBootstrapCoverage(siteId, data.url, productCountMethod, expectedProductCount, { hasWaf: data.hasWaf });
-
-      // Store expectedProductCount for future checks
-      if (coverage.expectedCount !== null && !siteProfile?.expectedProductCount) {
-        try {
-          const updatedProfile = { ...(siteProfile ?? {}), expectedProductCount: coverage.expectedCount };
-          await prisma.monitoredSite.update({ where: { id: siteId }, data: { siteProfile: updatedProfile } });
-        } catch { /* non-fatal */ }
-      }
-
-      if (coverage.ratio !== null && coverage.ratio < COVERAGE_THRESHOLD) {
-        if (passCount < 3) {
-          markComplete = false;
-          tierState.bootstrapPassCount = passCount + 1;
-          tierState.currentPage = 1;
-          tierState.currentPageUrl = undefined;
-          tierState.status = 'idle';
-          // Signal self-queue to continue crawling despite cycleComplete
-          shouldSelfQueue = true;
-          console.log(`[CatalogWorker] ${domain}: coverage ${(coverage.ratio * 100).toFixed(1)}% < 95% (${coverage.dbCount}/${coverage.expectedCount}), retrying pass ${passCount + 1}/3`);
-        } else {
-          markComplete = true;
-          tierState.coverageWarning = true;
-          console.warn(`[CatalogWorker] ${domain}: COVERAGE WARNING — ${(coverage.ratio * 100).toFixed(1)}% after ${passCount + 1} passes (${coverage.dbCount}/${coverage.expectedCount}). Marking complete anyway.`);
-        }
-      } else {
-        console.log(`[CatalogWorker] ${domain}: coverage OK — ${coverage.dbCount}/${coverage.expectedCount ?? '?'} (${coverage.ratio !== null ? (coverage.ratio * 100).toFixed(1) + '%' : 'unmeasurable'})`);
+    // This STREAM finished its walk for the current round. ALWAYS record that —
+    // decoupled from the site-level coverage gate (moved to end-of-round below).
+    // Marking the stream complete here (instead of only when whole-site coverage
+    // passes) is what lets the round-robin picker rotate to the NEXT unvisited
+    // stream rather than re-walking this finished one from page 1 on every rotation.
+    // Re-walking a finished stream re-extracts the same product URLs (no-op upserts)
+    // and never advances coverage — that was the bootstrap "freeze" (jobrook/solely
+    // sat at 15-24% because the OLD per-stream coverage reset at this point prevented
+    // the multi-stream sweep from ever completing). 2026-06-01.
+    tierState.status = 'idle';
+    tierState.currentPage = 1;
+    tierState.currentPageUrl = undefined;
+    tierState.lastRefreshedAt = now.toISOString();
+    tierState.lastCycleStartedAt = tierState.cycleStartedAt;
+    tierState.lastCycleCompletedAt = now.toISOString();
+    tierState.cycleStartedAt = undefined;
+    // Part E (2026-06-02): natural end reached — the whole catalog for this stream has
+    // been walked (possibly across several budget-truncated jobs). Clear the truncated
+    // flag so the end-of-round gate does NOT re-open (re-walk) this stream: re-walking a
+    // naturally-completed stream from page 1 re-indexes already-saved products and burns
+    // the per-site token budget for zero new coverage. See the end-of-round gate below.
+    // (`truncated` is a runtime-only flag on the JSON tier object; not in StreamTierState
+    //  since this task constrains edits to worker.ts — cast through any.)
+    (tierState as any).truncated = false;
+    // Mirror onto T2/T3 (bootstrap completion check reads all tiers).
+    for (const t of [2, 3] as const) {
+      const k = `${stream.id}:${t}`;
+      if (streamState.tiers[k]) {
+        streamState.tiers[k].lastCycleCompletedAt = now.toISOString();
+        streamState.tiers[k].status = 'idle';
       }
     }
-
-    if (markComplete) {
-      tierState.status = 'idle';
-      tierState.currentPage = 1;
-      tierState.lastRefreshedAt = now.toISOString();
-      tierState.lastCycleStartedAt = tierState.cycleStartedAt;
-      tierState.lastCycleCompletedAt = now.toISOString();
-      tierState.cycleStartedAt = undefined;
-      // Also mark T2/T3 as complete (for bootstrap completion check)
-      for (const t of [2, 3] as const) {
-        const k = `${stream.id}:${t}`;
-        if (streamState.tiers[k]) {
-          streamState.tiers[k].lastCycleCompletedAt = now.toISOString();
-          streamState.tiers[k].status = 'idle';
-        }
-      }
-      console.log(`[CatalogWorker] Bootstrap complete for ${domain}: ${result.productsFound} products on final pass`);
-    }
+    console.log(`[CatalogWorker] Stream "${stream.id}" finished bootstrap pass for ${domain}: ${result.productsFound} products`);
   }
-  // If not complete, currentPage was updated in-place by crawlStreamTier
+  // If not complete, currentPage was updated in-place by crawlStreamTier.
+  // Part E (2026-06-02): a non-complete walk that scanned ≥1 page was cut off by the
+  // per-site token budget mid-catalog → mark truncated so the end-of-round gate knows
+  // this stream still has unwalked pages and re-opening it makes REAL progress. A
+  // 0-page no-op job (broken stream) is NOT truncation — leave the flag as-is.
+  else if (result.pagesScanned > 0) {
+    (tierState as any).truncated = true;
+  }
 
   // Persist
   await prisma.monitoredSite.update({
@@ -323,34 +351,150 @@ async function processStreamCatalogCrawl(
 
   pushEvent({ type: 'info', message: `Bootstrap crawl: ${domain} page ${tierState.currentPage}, ${result.productsFound} products, ${result.pagesScanned} pages, ${result.tokensUsed} tokens` });
 
-  // Self-queue next batch
+  // More streams still need work? (multi-stream bootstrap throughput fix 2026-06-01)
+  // Reads the SAME streamState object just persisted above, so the stream that
+  // completed this cycle has its T4 lastCycleCompletedAt reflected. While ANY stream
+  // has a T4 tier that was never dispatched OR never completed a cycle, keep the
+  // self-queue chain alive instead of waiting ~17 min for the next scheduler tick.
+  const streamsPending = streamState.streams.some(s => {
+    const t = streamState.tiers[`${s.id}:4`];
+    if (!t) {
+      console.warn(`[CatalogWorker] ${domain}: stream ${s.id} has no T4 tier entry — streams/tiers inconsistent`);
+    }
+    return !t || !t.lastCycleCompletedAt;
+  });
+
+  // ── End-of-round site-level coverage gate (2026-06-01) ──
+  // Run the (expensive, network) coverage probe ONLY when a FULL round over every
+  // stream has just completed (streamsPending === false). Previously the probe ran
+  // after EVERY single stream and reset that one stream to page 1, which (a) starved
+  // the round-robin sweep and (b) burned a coverage probe per stream. The pass counter
+  // is SITE-level — stored on the first stream's T4 tier — not per-stream, so a small
+  // category finishing first can't exhaust the budget for the whole site.
+  //
+  // Part E (2026-06-02): on a sub-95% round we re-open ONLY streams that were
+  // token-truncated mid-walk (truncated===true) — those still have unwalked pages, so
+  // resuming them advances coverage. Streams that reached natural end-of-catalog
+  // (truncated===false) are LEFT complete: re-walking them from page 1 re-indexes
+  // already-saved products and burns the per-site budget for zero gain (the observed
+  // 34-54-token re-walk burn). If NO stream is truncated (every stream hit its catalog
+  // end) yet coverage is still <95%, the gap is STRUCTURAL — catalogUrls don't cover the
+  // expected count — so we mark coverageWarning IMMEDIATELY (no wasted retry rounds) and
+  // let the site go readiness-eligible at its reachable max. Bounded at 3 rounds.
+  if (!streamsPending && result.cycleComplete) {
+    const siteProfile = profileEntry?.siteProfile ?? null;
+    const productCountMethod = siteProfile?.productCountMethod ?? null;
+    const expectedProductCount = siteProfile?.expectedProductCount ?? null;
+
+    if (productCountMethod !== null || expectedProductCount !== null) {
+      const firstKey = `${streamState.streams[0].id}:4`;
+      const siteTier = streamState.tiers[firstKey];
+      const sitePassCount = siteTier?.bootstrapPassCount ?? 0;
+
+      const { verifyBootstrapCoverage, COVERAGE_THRESHOLD } = await import('./product-count-probe');
+      const coverage = await verifyBootstrapCoverage(siteId, data.url, productCountMethod, expectedProductCount, { hasWaf: data.hasWaf });
+
+      // Store expectedProductCount for future checks
+      if (coverage.expectedCount !== null && !siteProfile?.expectedProductCount) {
+        try {
+          const updatedProfile = { ...(siteProfile ?? {}), expectedProductCount: coverage.expectedCount };
+          await prisma.monitoredSite.update({ where: { id: siteId }, data: { siteProfile: updatedProfile } });
+        } catch { /* non-fatal */ }
+      }
+
+      if (coverage.ratio !== null && coverage.ratio < COVERAGE_THRESHOLD) {
+        // Streams cut off by the budget mid-catalog this round — re-opening these makes
+        // real progress. Streams that reached natural end (truncated===false) have nothing
+        // more to give and are NOT re-opened.
+        const truncatedStreamIds = streamState.streams
+          .filter(s => (streamState.tiers[`${s.id}:4`] as any)?.truncated === true)
+          .map(s => s.id);
+
+        if (sitePassCount < 3 && siteTier && truncatedStreamIds.length > 0) {
+          siteTier.bootstrapPassCount = sitePassCount + 1;
+          // Start a fresh round but re-open ONLY the truncated streams: clear their
+          // completion marker so the round-robin picker resumes them from their preserved
+          // currentPage/currentPageUrl (deeper into the catalog). Naturally-completed
+          // streams keep lastCycleCompletedAt so they are NOT re-walked from page 1.
+          for (const id of truncatedStreamIds) {
+            const t = streamState.tiers[`${id}:4`];
+            if (t) t.lastCycleCompletedAt = undefined;
+          }
+          shouldSelfQueue = true;
+          await prisma.monitoredSite.update({ where: { id: siteId }, data: { streamState: streamState as any } });
+          console.log(`[CatalogWorker] ${domain}: round complete, coverage ${(coverage.ratio * 100).toFixed(1)}% < 95% (${coverage.dbCount}/${coverage.expectedCount}), re-opening ${truncatedStreamIds.length} truncated stream(s), starting round ${sitePassCount + 2}/4`);
+        } else if (siteTier) {
+          // Either out of retry rounds (bound) OR no stream is truncated (every stream
+          // reached natural end → STRUCTURAL gap). Either way, more rounds cannot help —
+          // mark bootstrap complete with a coverage warning so the site is readiness-eligible.
+          siteTier.coverageWarning = true;
+          await prisma.monitoredSite.update({ where: { id: siteId }, data: { streamState: streamState as any } });
+          const reason = truncatedStreamIds.length === 0
+            ? 'no truncated streams (structural gap — catalogUrls under-cover expected count)'
+            : `${sitePassCount + 1} rounds exhausted`;
+          console.warn(`[CatalogWorker] ${domain}: COVERAGE WARNING — ${(coverage.ratio * 100).toFixed(1)}% (${coverage.dbCount}/${coverage.expectedCount}), ${reason}. Bootstrap complete anyway.`);
+        }
+      } else {
+        console.log(`[CatalogWorker] ${domain}: bootstrap complete — coverage ${coverage.dbCount}/${coverage.expectedCount ?? '?'} (${coverage.ratio !== null ? (coverage.ratio * 100).toFixed(1) + '%' : 'unmeasurable'})`);
+      }
+    }
+  }
+
+  // Gate the streamsPending fast-chain on forward progress THIS cycle. A broken
+  // bootstrap stream never reaches cycleComplete (pageRangeEnd is undefined, so the
+  // skip-ahead guard never fires) and would keep streamsPending=true forever — the
+  // chain would hot-loop at BullMQ speed every hour as budget re-arms. Requiring
+  // pagesScanned > 0 means a 0-page job falls back to the bounded scheduler tick;
+  // the picker has already advanced that stream's lastDispatchedAt so it rotates away.
+  const madeProgress = result.pagesScanned > 0;
+  // Gate the "keep paginating this stream" arm on progress too. A permanently-broken
+  // bootstrap stream returns cycleComplete=false on every job (pageRangeEnd is undefined,
+  // so catalog-crawler's skip-ahead guard never fires, and the null-adapter path scans 0
+  // pages). Without the `&& madeProgress` guard the bare `!cycleComplete` arm would
+  // self-queue forever, re-arming hourly with budget. Requiring pagesScanned > 0 means a
+  // 0-page job stops the chain and falls back to the bounded scheduler tick.
+  const shouldContinue = !result.cycleComplete && madeProgress;
+
+  // Decide whether to continue the stream-drain chain to the next pending stream.
+  // The unchanged guards bound the loop: it only continues while there is catalog
+  // budget remaining AND (this stream still has pages | a sub-95% round re-opened a
+  // truncated stream | another stream is still pending AND this job made forward
+  // progress). A 0-page no-op job (madeProgress=false, cycleComplete=false) returns
+  // null → chain stops, falls back to the bounded scheduler tick.
+  //
+  // The actual re-enqueue is performed in the worker's `completed` handler, NOT here:
+  // adding `catalog-<siteId>` while THIS job is still active is de-duped by BullMQ
+  // (singleton jobId) and silently dropped — that was the chain-dies-after-1-stream
+  // bug. After completion `removeOnComplete:true` has purged the active hash, so the
+  // singleton add succeeds. See CatalogReenqueue. We re-read the freshest streamState
+  // (this job persisted rotation + progress above) so the next job picks the next stream.
   try {
     const remaining = getCatalogRemaining(siteId, baseBudget, capacity);
-    if (remaining > 0 && (!result.cycleComplete || shouldSelfQueue)) {
-      const { scrapeQueue: sq } = await import('./queue');
+    if (remaining > 0 && (shouldContinue || shouldSelfQueue || (streamsPending && madeProgress))) {
       const site = await prisma.monitoredSite.findUnique({
         where: { id: siteId },
-        select: { streamState: true, crawlTuning: true, crawlPhase: true },
+        select: { streamState: true, crawlTuning: true, crawlPhase: true, isEnabled: true, isPaused: true },
       });
-      if (site && site.crawlPhase === 'bootstrap') {
-        await sq.add('crawl-catalog', {
-          siteId, domain, url: data.url,
-          baseBudget: data.baseBudget, capacity: data.capacity,
-          tierState: data.tierState, activeTiers: data.activeTiers,
-          hasWaf: data.hasWaf, crawlTuning: site.crawlTuning,
-          streamState: parseStreamState(site.streamState) ?? undefined,
-        }, {
-          jobId: `catalog-${siteId}-${Date.now()}`,
-          priority: 10, // Lower priority than maintain-phase verify/watermark jobs
-          attempts: 1, removeOnComplete: 50, removeOnFail: 100,
-        });
+      if (site && site.crawlPhase === 'bootstrap' && site.isEnabled === true && site.isPaused === false) {
+        return {
+          jobName: 'crawl-catalog',
+          jobData: {
+            siteId, domain, url: data.url,
+            baseBudget: data.baseBudget, capacity: data.capacity,
+            tierState: data.tierState, activeTiers: data.activeTiers,
+            hasWaf: data.hasWaf, crawlTuning: site.crawlTuning,
+            streamState: parseStreamState(site.streamState) ?? undefined,
+          },
+        };
+      } else if (site) {
+        console.log(`[CatalogWorker] Bootstrap self-queue skipped for ${domain}: enabled=${site.isEnabled} paused=${site.isPaused} phase=${site.crawlPhase}`);
       }
     }
   } catch (err) {
-    console.error(`[CatalogWorker] Bootstrap self-queue failed for ${domain}:`, err instanceof Error ? err.message : err);
+    console.error(`[CatalogWorker] Bootstrap self-queue decision failed for ${domain}:`, err instanceof Error ? err.message : err);
   }
 
-  return;
+  return null;
 }
 
 // ─── Maintain Phase: Product Verification Job ────────────────────────────────
@@ -379,7 +523,7 @@ interface WooVerifyResult {
  * or none of the products have sourceIds.
  */
 async function tryStoreApiVerify(
-  products: Array<{ id: string; sourceId: string | null; url: string; staleSince: Date | null; verifyErrors: number; title: string }>,
+  products: Array<{ id: string; sourceId: string | null; url: string; staleSince: Date | null; verifyErrors: number; title: string; price: number | null; regularPrice: number | null; stockStatus: string | null }>,
   domain: string,
   siteId: string,
   hasWaf?: boolean,
@@ -450,7 +594,18 @@ async function tryStoreApiVerify(
 
         const apiTimeout = profile?.apiTimeout ?? profile?.timeout ?? 15000;
         response = await axios.get(apiUrl, {
-          params: { include: ids, per_page: CHUNK_SIZE },
+          params: {
+            include: ids,
+            per_page: CHUNK_SIZE,
+            // Override WC's `wc_hide_out_of_stock_items` admin filter so the
+            // Store API returns OOS products too. Without this, sites with
+            // that setting on (e.g. ISS) silently drop OOS products from the
+            // response → those IDs miss the apiMap.get() hit at L513 → fall
+            // through to per-product Playwright at L823. Net positive
+            // fleet-wide: WC sites without the visibility filter are
+            // unaffected (the union of both states = the default unfiltered).
+            'stock_status[]': ['instock', 'outofstock'],
+          },
           headers,
           timeout: apiTimeout,
           validateStatus: () => true,
@@ -506,6 +661,7 @@ async function tryStoreApiVerify(
     // Process each product in this chunk — collect updates, then batch via $transaction
     const now = new Date();
     const batchOps: ReturnType<typeof prisma.productIndex.update>[] = [];
+    const historyRows: { productIndexId: string; price: number | null; regularPrice: number | null; stockStatus: string | null; changeKind: string }[] = [];
 
     for (const product of chunk) {
       const apiProduct = apiMap.get(product.sourceId!);
@@ -528,6 +684,20 @@ async function tryStoreApiVerify(
         if (price != null) updateData.price = price;
         if (regularPrice != null) updateData.regularPrice = regularPrice;
         if (thumbnail) updateData.thumbnail = thumbnail;
+
+        // Detect content change vs the prior DB row (price/regularPrice/stockStatus).
+        // price/regularPrice are null when the API omitted them — pass prior value
+        // through so a transient null isn't seen as a price drop (NULL guard).
+        const change = applyContentChange(
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: product.stockStatus },
+          {
+            price: price ?? product.price,
+            regularPrice: regularPrice ?? product.regularPrice,
+            stockStatus,
+          },
+        );
+        if (change.changed) updateData.contentChangedAt = now;
+        if (change.history) historyRows.push({ productIndexId: product.id, ...change.history });
 
         batchOps.push(prisma.productIndex.update({
           where: { id: product.id },
@@ -557,7 +727,10 @@ async function tryStoreApiVerify(
 
     // Execute all updates for this chunk in a single transaction
     if (batchOps.length > 0) {
-      await prisma.$transaction(batchOps);
+      await prisma.$transaction([
+        ...batchOps,
+        ...(historyRows.length > 0 ? [prisma.productHistory.createMany({ data: historyRows })] : []),
+      ]);
     }
 
     // Delay between chunks for WAF sites
@@ -603,27 +776,52 @@ async function verifyProductsViaPlaywright(
       const now = new Date();
 
       if (result.status === 'deleted') {
-        await prisma.productIndex.update({
-          where: { id: product.id },
-          data: {
-            isActive: false,
-            staleSince: product.staleSince ?? now,
-            staleVerifiedAt: now,
-            verifyErrors: 0,
-          },
-        });
+        // A purchasable product disappearing is a real stock change — also flip
+        // stockStatus → out_of_stock so the row agrees with the history we write.
+        const deletedChange = applyContentChange(
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: product.stockStatus },
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: 'out_of_stock' },
+        );
+        await prisma.$transaction([
+          prisma.productIndex.update({
+            where: { id: product.id },
+            data: {
+              isActive: false,
+              // Was already OOS then vanished → likely sold; otherwise unknown.
+              delistReason: product.stockStatus === 'out_of_stock' ? 'sold' : 'unknown',
+              stockStatus: 'out_of_stock',
+              staleSince: product.staleSince ?? now,
+              staleVerifiedAt: now,
+              verifyErrors: 0,
+              ...(deletedChange.changed ? { contentChangedAt: now } : {}),
+            },
+          }),
+          ...(deletedChange.history
+            ? [prisma.productHistory.create({ data: { productIndexId: product.id, ...deletedChange.history } })]
+            : []),
+        ]);
         deleted++;
       } else if (result.status === 'sold') {
-        await prisma.productIndex.update({
-          where: { id: product.id },
-          data: {
-            stockStatus: 'out_of_stock',
-            staleSince: product.staleSince ?? now,
-            staleVerifiedAt: now,
-            lastSeenAt: now,
-            verifyErrors: 0,
-          },
-        });
+        const soldChange = applyContentChange(
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: product.stockStatus },
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: 'out_of_stock' },
+        );
+        await prisma.$transaction([
+          prisma.productIndex.update({
+            where: { id: product.id },
+            data: {
+              stockStatus: 'out_of_stock',
+              staleSince: product.staleSince ?? now,
+              staleVerifiedAt: now,
+              lastSeenAt: now,
+              verifyErrors: 0,
+              ...(soldChange.changed ? { contentChangedAt: now } : {}),
+            },
+          }),
+          ...(soldChange.history
+            ? [prisma.productHistory.create({ data: { productIndexId: product.id, ...soldChange.history } })]
+            : []),
+        ]);
         sold++;
       } else if (result.status === 'wanted') {
         await prisma.productIndex.update({
@@ -643,6 +841,7 @@ async function verifyProductsViaPlaywright(
           staleVerifiedAt: now,
           verifyErrors: 0,
           isActive: true,
+          delistReason: null, // listed again → clear any prior delist reason
         };
         if (result.title) update.title = result.title;
         if (result.price != null) update.price = result.price;
@@ -650,10 +849,27 @@ async function verifyProductsViaPlaywright(
         if (result.stockStatus) update.stockStatus = result.stockStatus;
         if (result.thumbnail) update.thumbnail = result.thumbnail;
 
-        await prisma.productIndex.update({
-          where: { id: product.id },
-          data: update,
-        });
+        // Detect content change vs the prior DB row. Pass prior value through
+        // when the detail page didn't report a field (NULL guard).
+        const aliveChange = applyContentChange(
+          { price: product.price, regularPrice: product.regularPrice, stockStatus: product.stockStatus },
+          {
+            price: result.price ?? product.price,
+            regularPrice: result.regularPrice ?? product.regularPrice,
+            stockStatus: result.stockStatus ?? product.stockStatus,
+          },
+        );
+        if (aliveChange.changed) update.contentChangedAt = now;
+
+        await prisma.$transaction([
+          prisma.productIndex.update({
+            where: { id: product.id },
+            data: update,
+          }),
+          ...(aliveChange.history
+            ? [prisma.productHistory.create({ data: { productIndexId: product.id, ...aliveChange.history } })]
+            : []),
+        ]);
         alive++;
       } else {
         const newErrors = (product.verifyErrors || 0) + 1;
@@ -663,6 +879,8 @@ async function verifyProductsViaPlaywright(
             where: { id: product.id },
             data: {
               isActive: false,
+              // Was already OOS then vanished → likely sold; otherwise unknown.
+              delistReason: product.stockStatus === 'out_of_stock' ? 'sold' : 'unknown',
               staleSince: product.staleSince ?? now,
               staleVerifiedAt: now,
               verifyErrors: newErrors,
@@ -821,9 +1039,13 @@ async function selfQueueNextBatch(
 
     const site = await prisma.monitoredSite.findUnique({
       where: { id: siteId },
-      select: { baseBudget: true, capacity: true, crawlTuning: true, crawlPhase: true, hasWaf: true, crawlIntervalMin: true },
+      select: { baseBudget: true, capacity: true, crawlTuning: true, crawlPhase: true, hasWaf: true, crawlIntervalMin: true, isEnabled: true, isPaused: true },
     });
-    if (!site || site.crawlPhase !== 'maintain') return;
+    if (!site) return;
+    if (!(site.crawlPhase === 'maintain' && site.isEnabled === true && site.isPaused === false)) {
+      console.log(`[VerifyWorker] Maintain self-queue skipped for ${domain}: enabled=${site.isEnabled} paused=${site.isPaused} phase=${site.crawlPhase}`);
+      return;
+    }
 
     const { allocateMaintainTokens } = await import('./token-budget');
     const tuning = resolveTuning(site.crawlTuning);
@@ -874,7 +1096,9 @@ async function selfQueueNextBatch(
       return;
     }
 
-    const { scrapeQueue } = await import('./queue');
+    const { scrapeQueue, removeStaleJob } = await import('./queue');
+    // Clear any dead terminal-state singleton job before re-enqueue (see removeStaleJob).
+    await removeStaleJob(`verify-${siteId}-t${tier}`);
     await scrapeQueue.add('crawl-verify', {
       siteId,
       domain,
@@ -882,10 +1106,12 @@ async function selfQueueNextBatch(
       productIds: products.map(p => p.id),
       hasWaf: hasWaf ?? site.hasWaf,
     }, {
-      jobId: `verify-${siteId}-t${tier}-${Date.now()}`,
+      // Stable singleton jobId — tier is part of the key so T2/T3/T4 can run
+      // concurrently for the same site, but two T2 verify jobs cannot stack.
+      jobId: `verify-${siteId}-t${tier}`,
       priority: 3, // Below T1 watermarks, above bootstrap catalog
       attempts: 1,
-      removeOnComplete: 50,
+      removeOnComplete: true,  // Fix 4 rework 2026-06-01: must purge completed hash so singleton jobId can re-enqueue.
       removeOnFail: 100,
     });
   } catch (err) {
@@ -901,7 +1127,10 @@ export function startWorker(): Worker {
     if (job.name === 'crawl-watermark') {
       await processWatermarkCrawl(job as Job<WatermarkJobData>);
     } else if (job.name === 'crawl-catalog') {
-      await processCatalogCrawl(job as Job<CatalogJobData>);
+      // Return value drives the stream-drain self-queue chain — see the `completed`
+      // handler below. Returning the payload here (instead of adding inside the active
+      // job body) is load-bearing: the singleton jobId would de-dupe an in-body add.
+      return await processCatalogCrawl(job as Job<CatalogJobData>);
     } else if (job.name === 'crawl-verify') {
       await processVerifyCrawl(job as Job<VerifyJobData>);
     } else {
@@ -915,9 +1144,36 @@ export function startWorker(): Worker {
     stalledInterval: 300000,  // Check for stalled jobs every 5 minutes
   });
 
-  worker.on('completed', (job) => {
+  worker.on('completed', async (job, returnvalue) => {
     console.log(`[Worker] Job ${job.id} completed`);
     pushEvent({ type: 'job_completed', message: `Job ${job.id} completed` });
+
+    // Stream-drain self-queue chain (bootstrap catalog). processCatalogCrawl returns a
+    // CatalogReenqueue payload when the next pending stream should be walked. We enqueue
+    // it HERE — after completion — because by now `removeOnComplete:true` has purged the
+    // active `catalog-<siteId>` hash, so this singleton add is NOT de-duped and the chain
+    // advances one stream per completion until the guards in processStreamCatalogCrawl
+    // stop returning a payload (budget exhausted, no pending streams, or a no-op 0-page
+    // job). maxConcurrentActive stays 1: a successor only exists after its predecessor
+    // completed, so no two catalog jobs race on the same streamState (proven 2026-06-02).
+    const reenqueue = returnvalue as CatalogReenqueue | null | undefined;
+    if (job.name === 'crawl-catalog' && reenqueue && reenqueue.jobName === 'crawl-catalog') {
+      try {
+        const { scrapeQueue: sq, removeStaleJob } = await import('./queue');
+        const siteId = reenqueue.jobData.siteId;
+        // Clear any dead terminal-state singleton job before re-enqueue (see removeStaleJob).
+        await removeStaleJob(`catalog-${siteId}`);
+        await sq.add('crawl-catalog', reenqueue.jobData, {
+          // Stable singleton jobId — prevents the scheduler tick from racing a second
+          // catalog job onto the same site while this chain is in flight.
+          jobId: `catalog-${siteId}`,
+          priority: 10, // Lower priority than maintain-phase verify/watermark jobs
+          attempts: 1, removeOnComplete: true, removeOnFail: 100,
+        });
+      } catch (err) {
+        console.error(`[Worker] Catalog self-queue re-enqueue failed for ${job.id}:`, err instanceof Error ? err.message : err);
+      }
+    }
   });
 
   worker.on('failed', (job, err) => {
@@ -1054,6 +1310,165 @@ export function startDigestWorker(): Worker {
   return worker;
 }
 
+// ─── Alert Dispatch Worker (cursor-based, every 5 min) ───────────────────────
+
+/**
+ * DRY-RUN gate. While true, the dispatcher only LOGS what it would send — it
+ * does NOT send email, create Notification rows, or advance Search.alertCursor.
+ * LIVE as of the Phase 4 cutover (crawl-time matchNewProducts path removed, so
+ * there is no double-email path). Flip back to true to silence the dispatcher.
+ */
+const ALERT_DISPATCH_DRYRUN = false;
+
+export function startAlertDispatchWorker(): Worker {
+  const worker = new Worker('alert-dispatch', async (_job: Job) => {
+    const { searchProductIndex } = await import('./keyword-matcher');
+    const { sendAlertEmail } = await import('./email');
+    const { config } = await import('../config');
+
+    const now = new Date();
+    const searches = await prisma.search.findMany({
+      where: { isActive: true },
+      include: { user: true },
+    });
+
+    let due = 0;
+    let wouldNotify = 0;
+
+    for (const search of searches) {
+      // PRO-only: FREE users are served by the daily digest; guests never got
+      // instant alerts (old sendProNotification required PRO). Skipping here
+      // avoids running searchProductIndex for non-PRO searches every tick.
+      if (search.user?.tier !== 'PRO') continue;
+
+      const cursor = search.alertCursor ?? search.createdAt;
+
+      // Gate by checkInterval: don't re-scan a 60-min alert on every 5-min tick.
+      const intervalMs = (search.checkInterval || 30) * 60 * 1000;
+      if (now.getTime() - cursor.getTime() < intervalMs) continue;
+      due++;
+
+      // Resolve the site for this search (each group member is one site row).
+      let searchDomain: string;
+      try {
+        searchDomain = new URL(search.websiteUrl).hostname.replace(/^www\./, '');
+      } catch {
+        continue; // invalid URL — skip
+      }
+      // EXACT domain match (normalize www. on both sides). NEVER fall back to
+      // siteIds=undefined — searchProductIndex treats undefined as "ALL sites",
+      // which would email PRO users matches from sites they never subscribed to.
+      const candidateSites = await prisma.monitoredSite.findMany({
+        where: { OR: [{ domain: searchDomain }, { domain: `www.${searchDomain}` }] },
+        select: { id: true, domain: true },
+      });
+      const site = candidateSites.find(s => s.domain.replace(/^www\./, '') === searchDomain);
+      if (!site) continue; // unresolved site — skip (don't broadcast across all sites)
+
+      const candidates = await searchProductIndex(search.keyword, [site.id], {
+        inStockOnly: search.inStockOnly,
+        maxPrice: search.maxPrice ?? undefined,
+        changedSince: cursor,
+      });
+
+      if (candidates.length === 0) continue;
+      wouldNotify++;
+
+      const sample = candidates.slice(0, 2).map(c => c.title).join(' | ');
+      console.log(
+        `[AlertDispatch ${ALERT_DISPATCH_DRYRUN ? 'DRY-RUN' : 'LIVE'}] ${searchDomain} "${search.keyword}" ` +
+        `${ALERT_DISPATCH_DRYRUN ? 'would notify' : 'notifying'} ${candidates.length} products ` +
+        `since ${cursor.toISOString()} (sample: ${sample})`
+      );
+
+      if (!ALERT_DISPATCH_DRYRUN) {
+        // ── LIVE path (Phase 4 enables) ─────────────────────────────────────
+        // Loop is already PRO-gated at the top. Notification is the idempotency
+        // anchor; emailedProducts (Json) is the audit trail (replaces the old
+        // NotificationMatch linking — no NotificationMatch rows are created).
+        // Guest searches are PRO-gated out at the loop top → display-only, no
+        // alert email (matches prior behavior); so use the user's email only.
+        const recipientEmail = search.user?.email ?? null;
+        const wantsEmail = search.notificationType === 'EMAIL' || search.notificationType === 'BOTH';
+        const needsEmail = !!(recipientEmail && wantsEmail);
+
+        // Newest change actually observed (strict >), NOT now() — avoids skipping
+        // a product whose change lands between the query and the cursor write.
+        const maxObserved = candidates.reduce((max, c) => {
+          const t = Math.max(c.contentChangedAt.getTime(), c.firstSeenAt.getTime());
+          return t > max ? t : max;
+        }, cursor.getTime());
+        const advanceCursor = prisma.search.update({
+          where: { id: search.id },
+          data: { alertCursor: new Date(maxObserved) },
+        });
+
+        if (needsEmail) {
+          // The products actually emailed (capped). The audit trail stores a
+          // lean {url,title,price}; the email body also carries thumbnails.
+          const emailedProducts = candidates.slice(0, 50);
+          const auditTrail = emailedProducts.map(c => ({
+            url: c.url,
+            title: c.title,
+            price: c.price,
+          }));
+
+          const notification = await prisma.notification.create({
+            data: {
+              searchId: search.id,
+              type: 'EMAIL',
+              status: 'pending',
+              emailedProducts: auditTrail,
+            },
+          });
+          try {
+            await sendAlertEmail({
+              to: recipientEmail!,
+              keyword: search.keyword,
+              matches: emailedProducts.map(c => ({
+                title: c.title,
+                price: c.price ?? undefined,
+                url: c.url,
+                thumbnail: c.thumbnail ?? undefined,
+              })),
+              notificationId: notification.id,
+              backendUrl: config.backendUrl,
+            });
+            // Mark sent AND advance the cursor atomically — closes the
+            // crash-window double-send and the failed-send silent-loss bug.
+            await prisma.$transaction([
+              prisma.notification.update({ where: { id: notification.id }, data: { status: 'sent' } }),
+              advanceCursor,
+            ]);
+          } catch (err) {
+            console.error(`[AlertDispatch] Email failed for search ${search.id}:`, err instanceof Error ? err.message : err);
+            // Failure: mark notification failed and DO NOT advance the cursor —
+            // next tick retries the same changedSince window.
+            await prisma.notification.update({ where: { id: notification.id }, data: { status: 'failed' } });
+          }
+        } else {
+          // PRO search with no email (SMS-only / no address): nothing to send,
+          // but advance the cursor so we don't re-scan the same window forever.
+          await advanceCursor;
+        }
+      }
+    }
+
+    const mode = ALERT_DISPATCH_DRYRUN ? 'DRY-RUN' : 'LIVE';
+    console.log(`[AlertDispatch ${mode}] tick complete — ${due} due searches, ${wouldNotify} with matches`);
+  }, {
+    connection: redisConnection,
+    concurrency: 1,
+  });
+
+  worker.on('error', (err) => {
+    console.error(`[AlertDispatchWorker] Worker error: ${err.message}`);
+  });
+
+  console.log(`[AlertDispatchWorker] Alert dispatch worker started (${ALERT_DISPATCH_DRYRUN ? 'DRY-RUN' : 'LIVE'})`);
+  return worker;
+}
+
 // ─── Stale Product Check Worker (Daily — sold/deleted detection) ─────────────
 
 export function startStaleCheckWorker(): Worker {
@@ -1121,6 +1536,23 @@ export function startStaleCheckWorker(): Worker {
     }
     if (budgetChanges > 0) {
       console.log(`[StaleWorker] Adjusted ${budgetChanges} site budget(s)`);
+    }
+
+    // ── ProductHistory retention prune ──
+    // Bound the append-only price/stock history table. 18 months is long enough
+    // for the price-report feature; the @@index([observedAt]) supports the delete.
+    try {
+      const HISTORY_RETENTION_MONTHS = 18;
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - HISTORY_RETENTION_MONTHS);
+      const pruned = await prisma.productHistory.deleteMany({
+        where: { observedAt: { lt: cutoff } },
+      });
+      if (pruned.count > 0) {
+        console.log(`[StaleWorker] Pruned ${pruned.count} ProductHistory rows older than ${cutoff.toISOString().slice(0, 10)}`);
+      }
+    } catch (err) {
+      console.error(`[StaleWorker] ProductHistory prune failed:`, err instanceof Error ? err.message : err);
     }
   }, {
     connection: redisConnection,

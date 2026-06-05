@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import { config } from '../config';
+import { decideStaleJobAction } from './queue-stale-job';
 
 export const redisConnection = new IORedis(config.redisUrl, {
   maxRetriesPerRequest: null, // Required by BullMQ
@@ -42,6 +43,49 @@ export const scrapeQueue = new Queue('scrape', {
     },
   },
 });
+
+/**
+ * Remove a pre-existing scrape job by jobId IF AND ONLY IF it is in a TERMINAL
+ * state (failed / completed / unknown). Singleton-jobId enqueues (catalog-<id>,
+ * watermark-<id>, verify-<id>-t<n>) use `removeOnComplete: true` + `removeOnFail: 100`.
+ * A FAILED job (attempts:1, no retry) keeps its hash in Redis under the same jobId,
+ * and BullMQ's `add()` silently de-dupes against it — so every subsequent enqueue is
+ * a no-op and the site stalls permanently (Mistake-34 class: re-enqueue path exists
+ * but is silently swallowed). Calling this before `add()` clears the dead hash.
+ *
+ * Removes failed / completed / unknown jobs and orphaned ACTIVE jobs whose lock
+ * has EXPIRED (worker died on SIGKILL without releasing it — see decideStaleJobAction).
+ * SKIPS a fresh active job (a live worker genuinely owns it — removing would yank a
+ * running crawl). An expired-lock active job may be re-grabbed by a live worker the
+ * instant we try to remove it; job.remove() then throws ("locked"), which we treat as
+ * a benign skip. Any OTHER error (Redis down, unexpected BullMQ failure) is rethrown —
+ * swallowing it would hide a real failure as if a worker held the lock.
+ */
+export async function removeStaleJob(jobId: string): Promise<'removed' | 'skipped' | 'not-found'> {
+  const job = await scrapeQueue.getJob(jobId);
+  if (!job) return 'not-found';
+
+  const state = await job.getState();
+  const action = decideStaleJobAction(state, job.processedOn);
+
+  if (action === 'skip') {
+    console.warn(`[Queue] removeStaleJob: ${jobId} is active with a fresh lock — not removing; if its worker died, the reaper recovers it within ~5min`);
+    return 'skipped';
+  }
+
+  try {
+    await job.remove();
+    if (action === 'remove-active') {
+      console.log(`[Queue] removeStaleJob: removed orphaned active job ${jobId} (lock expired)`);
+    }
+    return 'removed';
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/lock|could not (be )?remove/i.test(msg)) throw err;
+    console.warn(`[Queue] removeStaleJob: ${jobId} could not be removed (state=${state}, action=${action}, likely re-locked by a live worker): ${msg}`);
+    return 'skipped';
+  }
+}
 
 /**
  * @deprecated Legacy per-search scheduling. The unified crawl scheduler now handles
@@ -219,6 +263,54 @@ export async function scheduleDailyDigest(): Promise<void> {
     console.log('[Queue] Daily digest scheduled at 11:00 PM UTC (6:00 PM EST)');
   } catch (err) {
     console.error('[Queue] Failed to schedule daily digest:', err instanceof Error ? err.message : err);
+  }
+}
+
+// ─── Alert Dispatch Queue ─────────────────────────────────────────────────────
+
+export const alertDispatchQueue = new Queue('alert-dispatch', {
+  connection: redisConnection,
+  defaultJobOptions: {
+    removeOnComplete: 10,
+    removeOnFail: 20,
+    attempts: 1,
+  },
+});
+
+/**
+ * Schedule the cursor-based alert dispatcher (runs every 5 minutes).
+ * Call once at startup.
+ */
+export async function scheduleAlertDispatch(): Promise<void> {
+  try {
+    const jobId = 'alert-dispatch';
+
+    // Remove existing repeatable job before re-creating
+    try {
+      const repeatableJobs = await alertDispatchQueue.getRepeatableJobs();
+      for (const job of repeatableJobs) {
+        if (job.id === jobId) {
+          await alertDispatchQueue.removeRepeatableByKey(job.key);
+        }
+      }
+    } catch {
+      // Ignore if doesn't exist
+    }
+
+    await alertDispatchQueue.add(
+      'dispatch-alerts',
+      {},
+      {
+        jobId,
+        repeat: {
+          every: 5 * 60 * 1000, // Every 5 minutes
+        },
+      }
+    );
+
+    console.log('[Queue] Alert dispatch scheduled every 5 minutes');
+  } catch (err) {
+    console.error('[Queue] Failed to schedule alert dispatch:', err instanceof Error ? err.message : err);
   }
 }
 

@@ -7,6 +7,7 @@
 
 import { prisma } from '../lib/prisma';
 import { sendAlertEmail } from './email';
+import { searchProductIndex } from './keyword-matcher';
 import { config } from '../config';
 import { pushEvent } from './debugLog';
 
@@ -41,6 +42,8 @@ export async function sendDailyDigests(): Promise<{ sent: number; skipped: numbe
           id: true,
           keyword: true,
           websiteUrl: true,
+          inStockOnly: true,
+          maxPrice: true,
         },
       });
 
@@ -51,27 +54,53 @@ export async function sendDailyDigests(): Promise<{ sent: number; skipped: numbe
 
       const searchIds = searches.map(s => s.id);
 
-      const newMatches = await prisma.match.findMany({
-        where: {
-          searchId: { in: searchIds },
-          foundAt: { gt: since },
-        },
-        include: {
-          search: { select: { keyword: true, websiteUrl: true } },
-        },
-        orderBy: { foundAt: 'desc' },
-        take: 50, // Cap digest size
-      });
+      // Source new matches LIVE from ProductIndex (cursor = lastDailyDigestAt),
+      // aggregated across the user's searches. Each entry carries its keyword.
+      const newMatches: Array<{ keyword: string; title: string; price: number | null; url: string }> = [];
+      // Track the newest change observed so we advance the cursor to maxObserved
+      // (not now()) — avoids skipping changes that land between query and write.
+      let maxObserved = since.getTime();
+      for (const search of searches) {
+        let searchDomain: string;
+        try {
+          searchDomain = new URL(search.websiteUrl).hostname.replace(/^www\./, '');
+        } catch {
+          continue;
+        }
+        // EXACT domain match (normalize www. on both sides); skip if unresolved —
+        // never broadcast across all sites (searchProductIndex treats undefined
+        // siteIds as "ALL sites").
+        const candidateSites = await prisma.monitoredSite.findMany({
+          where: { OR: [{ domain: searchDomain }, { domain: `www.${searchDomain}` }] },
+          select: { id: true, domain: true },
+        });
+        const site = candidateSites.find(s => s.domain.replace(/^www\./, '') === searchDomain);
+        if (!site) continue;
+
+        const results = await searchProductIndex(search.keyword, [site.id], {
+          inStockOnly: search.inStockOnly,
+          maxPrice: search.maxPrice ?? undefined,
+          changedSince: since,
+        });
+        for (const p of results) {
+          newMatches.push({ keyword: search.keyword, title: p.title, price: p.price, url: p.url });
+          const t = Math.max(p.contentChangedAt.getTime(), p.firstSeenAt.getTime());
+          if (t > maxObserved) maxObserved = t;
+        }
+      }
 
       if (newMatches.length === 0) {
         skipped++;
         continue;
       }
 
-      // Group matches by keyword for the digest
+      // Cap digest size after aggregation
+      newMatches.length = Math.min(newMatches.length, 50);
+
+      // Group matches by keyword for the digest summary
       const byKeyword = new Map<string, typeof newMatches>();
       for (const match of newMatches) {
-        const key = match.search.keyword;
+        const key = match.keyword;
         if (!byKeyword.has(key)) byKeyword.set(key, []);
         byKeyword.get(key)!.push(match);
       }
@@ -86,21 +115,9 @@ export async function sendDailyDigests(): Promise<{ sent: number; skipped: numbe
         },
       });
 
-      // Link all new matches to this notification
-      const matchIds = newMatches.map(m => m.id);
-      if (matchIds.length > 0) {
-        await prisma.notificationMatch.createMany({
-          data: matchIds.map(matchId => ({
-            notificationId: notification.id,
-            matchId,
-          })),
-          skipDuplicates: true,
-        });
-      }
-
       // Build the digest email — reuse the alert email format with a summary
       const digestMatches = newMatches.slice(0, 10).map(m => ({
-        title: `[${m.search.keyword}] ${m.title}`,
+        title: `[${m.keyword}] ${m.title}`,
         price: m.price,
         url: m.url,
       }));
@@ -117,10 +134,12 @@ export async function sendDailyDigests(): Promise<{ sent: number; skipped: numbe
           notificationId: notification.id,
           backendUrl: config.backendUrl,
         });
-        await prisma.notification.update({
-          where: { id: notification.id },
-          data: { status: 'sent' },
-        });
+        // Mark sent AND advance the cursor atomically (to maxObserved, not now()).
+        // Only on success — on failure the cursor is left so the next run retries.
+        await prisma.$transaction([
+          prisma.notification.update({ where: { id: notification.id }, data: { status: 'sent' } }),
+          prisma.user.update({ where: { id: user.id }, data: { lastDailyDigestAt: new Date(maxObserved) } }),
+        ]);
         sent++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'unknown';
@@ -129,16 +148,13 @@ export async function sendDailyDigests(): Promise<{ sent: number; skipped: numbe
           where: { id: notification.id },
           data: { status: 'failed' },
         });
+        // Do NOT advance lastDailyDigestAt — next run retries this window.
       }
-
-      // Update last digest timestamp
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { lastDailyDigestAt: new Date() },
-      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'unknown';
       console.error(`[DailyDigest] Failed for user ${user.id}: ${msg}`);
+      // TODO(observability): pushEvent on a whole-digest-run failure (not just
+      // per-user console.error) so run-level failures surface in the debug log.
       skipped++;
     }
   }
