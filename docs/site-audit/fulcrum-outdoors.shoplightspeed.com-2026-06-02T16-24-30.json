@@ -1,0 +1,90 @@
+{
+  "profileVersion": 1,
+  "platform": "lightspeed-ecom",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T20:21:55Z",
+  "wafProbeMethod": "single-get-blind",
+  "wafProbeResult": "Cloudflare in front (Server: cloudflare, __cf_bm cookie) but all probes returned 200; no challenge body. R1 BLIND used single-GET only — 8-batch heavy probe deferred to R2.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["server: cloudflare", "set-cookie: __cf_bm=..."],
+    "lightspeedHeaders": ["x-shop-id: 665196", "x-developer: Page/Render/Mem/DB", "x-runtime"],
+    "rapidBurstTested": false,
+    "sustainedWalkPages": 0,
+    "note": "BLIND round — no rapid-burst / multi-UA / sustained walk run. Cloudflare classified passive on single-GET evidence only."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3285,
+  "productCountMethod": { "method": "generic-product-sitemap", "url": "/sitemap.xml", "pattern": "\\.html?(?:$|[?#])" },
+  "catalogUrls": [
+    "https://www.fulcrumoutdoors.ca/firearms/?sort=newest",
+    "https://www.fulcrumoutdoors.ca/shooting/?sort=newest",
+    "https://www.fulcrumoutdoors.ca/optics/?sort=newest",
+    "https://www.fulcrumoutdoors.ca/hunting/?sort=newest",
+    "https://www.fulcrumoutdoors.ca/archery/?sort=newest",
+    "https://www.fulcrumoutdoors.ca/custom-rifle-building/?sort=newest"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.fulcrumoutdoors.ca/brigade-mfg-makasi-mk-15-556-nato-186-barrel-short.html", "title": "PRE-ORDER Brigade MFG. MAKASI MK-15 5.56 NATO 18.6\" Barrel, Short Stroke Piston, 12\" M-LOK Handguard, BLK", "price": 2349.99, "stockStatus": "unknown" },
+    { "url": "https://www.fulcrumoutdoors.ca/crusader-arms-pnd-556-rifle-186-barrel-black.html", "title": "Crusader Arms PND 556 Rifle 18.6'' Barrel Black", "price": 1199.99, "stockStatus": "in_stock" },
+    { "url": "https://www.fulcrumoutdoors.ca/akdas-alcor-semi-auto-223-hunting-rifle-185.html", "title": "Akdas Alcor Semi Auto 223 Hunting Rifle 18.6''", "price": 1549.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "suffix-replace",
+    "template": "page{N}.html",
+    "match": ".html",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": null
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-BLIND-fulcrum-2026-06-02",
+    "round": "R1-blind",
+    "canonicalRedirect": "input host fulcrum-outdoors.shoplightspeed.com 301-redirects to canonical https://www.fulcrumoutdoors.ca (custom domain). Lightspeed x-shop-id=665196.",
+    "verifyMethodPolicy": "detail-page selected (non-WC platform; no Store API). Restock/OOS detection via Playwright detail-page.",
+    "expectedCountSurface": "sitemap .html product URLs (whole-catalog, all departments). Firearm-relevant subset NOT isolated in BLIND round.",
+    "discoveredApiEndpoints": [],
+    "scopeNote": "Cross-shop site: firearms/shooting/optics/hunting/archery/custom-rifle-building are firearm-relevant; fishing/camping/outdoor-cooking/apparel/e-bikes/cool-stuff excluded per Rule C. catalogUrls = firearm-relevant top-level categories only.",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "low — single-GET only, Cloudflare passive UNVERIFIED by 8-batch/sustained probe",
+      "sortParam": "high — 3-outcome cache-bust test passed (default vs newest vs asc all distinct)",
+      "paginationPattern": "high — page2.html zero-overlap; ?page=2 confirmed ignored (9/9 overlap)",
+      "expectedProductCount": "medium — sitemap .html count 3285 (whole catalog), not reconciled to firearm-relevant walk",
+      "catalogUrls": "low — firearm-relevant slugs confirmed live (200 + extract) but NO full-walk ID-dedup coverage proof (BLIND); mixed-category /hunting/ + subcategory completeness unverified"
+    },
+    "stageNotes": [
+      "Stage 1: input fulcrum-outdoors.shoplightspeed.com 301 -> https://www.fulcrumoutdoors.ca; <link rel=canonical> agrees.",
+      "Stage 2: Cloudflare passive on single-GET (Server: cloudflare, __cf_bm). hasWaf=false. No CAPTCHA. 8-batch/sustained DEFERRED to R2.",
+      "Stage 3: Lightspeed eCom (cdn.shoplightspeed.com x189, webshopapp.com, x-shop-id, x-developer). adapterType=generic-retail. No age-gate. Plain HTTP returns 563KB rendered product HTML -> needsPlaywright=false. Custom theme: product cards use '.product position-relative' / '.product-title' NOT '.product-element'.",
+      "Stage 4: firearm-relevant top-level cats confirmed live (firearms 333 products, shooting/optics/hunting/archery/custom-rifle-building). NO full-walk ID-dedup (BLIND). /catalog/ landing page has no product count text.",
+      "Stage 5: suffix-replace pagination. page2.html zero-overlap with page1. ?page=2 IGNORED (9/9 overlap with page1, Mistake 26 confirmed). perPage=12 observed; no perPage <select> control.",
+      "Stage 6: <select id=sortselect name=sort> options: default/popular/newest/lowest/highest/asc/desc. 3-outcome cache-bust test: default(118086894,114366279) vs ?sort=newest(118481297,118455128) vs ?sort=asc(115385178,116637820) all distinct -> HONORED. sortParam=?sort=newest, sortVerified=true.",
+      "Stage 7: no date-filter API on Lightspeed; sort=newest honored + monotonic-descending auto-increment IDs + /index.rss New-products feed -> navigate-from-watermark.",
+      "Stage 8: flat sitemap.xml (not index), 4195 total <loc>, 3285 .html product URLs. generic-product-sitemap method. Whole-catalog count (all departments).",
+      "Stage 9: candidate written BEFORE DB read per R1-blind protocol."
+    ]
+  }
+}

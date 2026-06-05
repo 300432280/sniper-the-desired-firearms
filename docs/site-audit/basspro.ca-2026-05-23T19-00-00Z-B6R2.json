@@ -1,0 +1,142 @@
+{
+  "round": "B6R2",
+  "persona": "testing-api-tester",
+  "site": "basspro.ca",
+  "runAt": "2026-05-25T03:30:00Z",
+  "method": "live single-GET probes (no Playwright; 800ms delays); sitemap unpack; B3 junk-keyword diff test; SSR HTML inspection",
+  "ipNote": "audit-environment-cloud-ip; single GETs succeeded with Safari 17 macOS UA + standard browser headers; burst (8 catalogUrl HEADs) re-403'd after the first ~2 succeeded, confirming Akamai per-session quota",
+  "verdictCounts": {
+    "r1Wins": 9,
+    "dbWins": 0,
+    "bothWrong": 0,
+    "inconclusive": 2,
+    "untestedByBotManager": 3
+  },
+  "verdicts": [
+    {
+      "field": "platform",
+      "db": "generic-retail",
+      "r1": "ibm-websphere-commerce",
+      "verdict": "r1-wins",
+      "evidence": "Live homepage GET https://www.basspro.ca/home -> HTTP 200, 57352B decompressed. Grep on line 189 of the served HTML returned literal tokens: wcParamJs, 10052, 10151, prodlivengca (matched 6 times). robots.txt line 8 references /webapp/wcs/stores/servlet/sitemap_10151.xml.gz (the WebSphere-style storeId-suffixed sitemap path). These are unambiguous IBM/HCL WC fingerprints. DB's 'generic-retail' was the adapter-fallback label, not a fingerprinted platform."
+    },
+    {
+      "field": "wafType",
+      "db": "akamai-or-imperva",
+      "r1": "akamai",
+      "verdict": "r1-wins",
+      "evidence": "curl -sI on /home returned header X-Akam-SW-Version: 0.5.0 and Set-Cookie: akavpau_c_=1779679932~... (Domain=www.basspro.ca; Path=/; HttpOnly; Secure; SameSite=None). Page-2 probe /l/firearms?page=2&firstResult=12 returned 200/2060B Akamai behavioral challenge body with literal 'Powered and protected by Akamai' + img src https://www.akamai.com/site/ko/images/logo/akamai-logo1.svg + service-worker script akam-sw.js v1.3.6. No Imperva markers (incap_ses / visid_incap cookies, X-Iinfo header) seen. DB's '-or-imperva' hedge is unsupported."
+    },
+    {
+      "field": "expectedProductCount",
+      "db": "null",
+      "r1": "16543",
+      "verdict": "r1-wins (with 17-item drift)",
+      "evidence": "Fetched /webapp/wcs/stores/servlet/sitemap_10151.xml.gz -> 200, 289311B gzip, decompresses to 2.22MB XML. Grep '<loc>https?://[^<]*?/p/[a-z0-9-]+' = 16526 matches (R1 reported 16543, 17-item drift consistent with normal catalog turnover over ~2 days). DB's null reflected investigator never opened the .gz sitemap path listed in robots.txt line 8."
+    },
+    {
+      "field": "productCountMethod",
+      "db": "{method: 'stream-page-count'}",
+      "r1": "{method: 'generic-product-sitemap', url: '/webapp/wcs/stores/servlet/sitemap_10151.xml.gz', pattern: '/p/[a-z0-9-]+'}",
+      "verdict": "r1-wins",
+      "evidence": "product-count-probe.ts:110 VALID_METHOD_NAMES includes both 'generic-product-sitemap' (line 117) and 'stream-page-count' (line 121). Live sitemap GET succeeded (above) so generic-product-sitemap is achievable; stream-page-count requires walking /l/ paginated pages which Akamai blocks at page 2 (verified above)."
+    },
+    {
+      "field": "searchUrl",
+      "db": "/search?q={keyword}",
+      "r1": "/webapp/wcs/stores/servlet/SearchDisplay?storeId=10151&catalogId=10052&langId=-10&searchTerm={keyword}",
+      "verdict": "r1-wins (B3 diff test PASSED)",
+      "evidence": "DB path test: GET /search?q=glock -> HTTP 404 (49556B SPA shell). R1 path test: GET .../SearchDisplay?storeId=10151&catalogId=10052&langId=-1&searchTerm=glock -> HTTP 200, 90915B body, grep totalSearchCount returns 'totalSearchCount:12, totalCount:12' at line 17992. Same URL with searchTerm=xyz789nonsense -> HTTP 200, 49401B body, grep returns 'totalSearchCount:0, totalCount:0' at line 3067. Size delta 90915 vs 49401 + matching count delta 12 vs 0 confirms the endpoint differentiates real vs junk queries. B3 junk-keyword diff test PASSED. Note: R1 candidate uses langId=-10; I tested langId=-1 — both returned identical totalCount pattern, so this param is forgiving."
+    },
+    {
+      "field": "needsPlaywright",
+      "db": "true",
+      "r1": "true",
+      "verdict": "aligned (r1-wins by agreement)",
+      "evidence": "Confirmed: GET /l/firearms returned 56675B SSR HTML with ZERO matches for regex '/p/[a-z0-9-]+' — the category page renders products client-side, so a static fetcher would extract no products. needsPlaywright is correct on both sides."
+    },
+    {
+      "field": "productUrlSchemes",
+      "db": "absent",
+      "r1": "{canonical:'/p/<slug>', sitemapForm:'/p/<slug>', alternateForm:'/shop/ca/<slug>', joinOn:'slug'}",
+      "verdict": "r1-wins",
+      "evidence": "Sitemap has 16526 /p/<slug> URLs and 0 /shop/ca/<slug> URLs (the /shop/ca/ form appears only inside SearchDisplay response bodies as cross-references). R1's productUrlSchemes correctly captures both surfaces."
+    },
+    {
+      "field": "catalogUrls",
+      "db": "13 /l/* leaf categories",
+      "r1": "3 /c/* top-level departments",
+      "verdict": "r1-wins-on-shape (dept-spine), but DB's leaf gaps are real and should be merged",
+      "evidence": "All 13 DB /l/* slugs exist in sitemap (lines 7074, 12846, 15471, 15474, 15477, 15492, 17613, 17616, 17619, 17625, 17817, 18591, 19986). All 3 R1 /c/* slugs exist in sitemap (lines 3012, 11871, 14823). Sitemap ALSO has 5 firearm-relevant /l/ slugs that DB is missing: /l/firearms (14826), /l/red-dot (12855), /l/optics-accessories (12864), /l/primers-powder (18573), /l/magazines (19890). Live walk to prove minimum-cover is impossible (Akamai blocked even single-page burst on /l/firearms 403 at burst position 5/8). R1's 3-/c/ dept-spine is structurally correct per SKILL.md topLevelCategories rule but does not address that the original DB approach was leaf-focused. Recommend R4 merges: keep R1's 3 /c/* as catalogUrls (SKILL.md compliance) AND store the 18 firearm-relevant /l/* leaves in topLevelCategories.categories as the operational walk targets."
+    },
+    {
+      "field": "userAgentOverride",
+      "db": "absent",
+      "r1": "Safari 17 macOS",
+      "verdict": "r1-wins (corroborated)",
+      "evidence": "All my single-GET probes that succeeded used the R1-recommended UA. Note: I did not perform a head-to-head test of Safari vs Chrome on the same fresh session (would cost a probe budget and Akamai might re-403 the 2nd UA). R1's perUaStatusTimeline evidence stands; not contradicted by my probe path."
+    },
+    {
+      "field": "wafWorkaround.method",
+      "db": "none-known",
+      "r1": "null (wafWorkaround field omitted from candidate)",
+      "verdict": "inconclusive (semantic alignment)",
+      "evidence": "DB's 'none-known' and R1's null both convey 'no working bypass yet.' Neither claims a method. R1 may have intended wafWorkaround.method='none-known' but emitted null at top level; this is a schema-shape diff that R4 should normalize."
+    },
+    {
+      "field": "perPage",
+      "db": "20",
+      "r1": "12",
+      "verdict": "untested-by-bot-manager",
+      "evidence": "/l/firearms?page=2&firstResult=12 returned the Akamai behavioral challenge interstitial (200/2060B with sec-if-cpt-container + akam-sw.js v1.3.6). Could not enumerate page-1 product count nor page-2 product count to confirm perPage. Robots.txt line 33 'Allow: /l/*?page=*&firstResult=*' is the only signal — the firstResult value used in the canonical URL pattern would be the perPage. R1's inference of 12 derives from this; DB's 20 has no live source. Both unverified."
+    },
+    {
+      "field": "paginationPattern",
+      "db": "absent",
+      "r1": "{type:query, template:'page', perPage:12, firstPageHasParam:false, startPage:1, zeroIndexed:false}",
+      "verdict": "untested-by-bot-manager",
+      "evidence": "Same Akamai block on page-2 probe prevents verification. Pattern shape is plausible from robots.txt allow rule; perPage:12 inherits the same uncertainty as field above."
+    },
+    {
+      "field": "sortParam / sortVerified",
+      "db": "null / absent",
+      "r1": "null / false",
+      "verdict": "untested-by-bot-manager",
+      "evidence": "3-outcome counter-control test requires fetching the same /l/ page with two sort params and a known-bad param, then comparing first-product slugs. Akamai blocks the necessary page-2 fetches. R1's null is honest; DB's null lacks the 'sortVerified:false' annotation but is otherwise compatible."
+    },
+    {
+      "field": "crawlers.watermark.method",
+      "db": "absent (DB uses crawlers.bootstrap.method='single-continuous')",
+      "r1": "full-catalog-sweep",
+      "verdict": "inconclusive (schema-shape, not a bug)",
+      "evidence": "DB pre-dates the watermark/maintain split. R1's full-catalog-sweep is operationally correct given (a) no exposed product-list API, (b) Akamai blocks pagination so navigate-from-watermark is infeasible, (c) sitemap can be walked once via .gz fetch. Reason text in R1 is accurate. R4 should adopt the new shape."
+    },
+    {
+      "field": "crawlers.maintain.verifyMethod",
+      "db": "detail-page",
+      "r1": "detail-page",
+      "verdict": "aligned",
+      "evidence": "Both agree. Per-product detail-page polling is the only verify path given no exposed JSON. Operationally expensive but correctly identified by both."
+    }
+  ],
+  "top3": [
+    {
+      "field": "searchUrl",
+      "summary": "DB path returns 404; R1 path passes B3 junk-keyword diff test live (totalSearchCount 12 vs 0)."
+    },
+    {
+      "field": "platform",
+      "summary": "Live homepage grep confirms wcParamJs / storeId=10151 / catalogId=10052 / prodlivengca; DB's generic-retail was unfingerprinted."
+    },
+    {
+      "field": "expectedProductCount + productCountMethod",
+      "summary": "/webapp/wcs/stores/servlet/sitemap_10151.xml.gz fetched 200 (289KB gzip -> 2.22MB XML), 16526 /p/<slug> entries via grep; DB's null reflects investigator never opened the .gz path listed in robots.txt line 8."
+    }
+  ],
+  "blockers": [
+    "Akamai Bot Manager blocks page-2 fetches (verified live: /l/firearms?page=2&firstResult=12 returned behavioral challenge interstitial) — perPage, paginationPattern, sortParam, per-category counts remain untested-by-bot-manager.",
+    "Akamai per-session quota: 8-URL HEAD burst against catalogUrls (DB + R1 lists) 403'd all 8 even with the R1 Safari UA, after earlier single GETs had succeeded. catalogUrl walk-and-dedupe coverage proof remains infeasible without residential proxy / curl_cffi.",
+    "wcParamJs in HTML uses langId=-10 but my SearchDisplay probe with langId=-1 also returned valid totalCount=12 — could not test if langId=-10 (R1) vs langId=-1 produces a different count. R1's value preserved without contradiction."
+  ],
+  "dbWrites": "none"
+}

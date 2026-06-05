@@ -1,0 +1,91 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T20:22:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every response) but fully passive: homepage 200, no-UA 200, SQLi-shaped 200, rapid honeypot /.env 403 + /admin/ 302 are origin/BC app filtering not a CDN challenge. No challenge body anywhere. hasWaf=false.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: a0592a5f5f3874a5-YYZ", "Server: cloudflare", "__cf_bm cookie set"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "not-rate-limited (single-shot batches only in blind mode)",
+    "sqliRuleFired": false,
+    "xssRuleFired": null,
+    "honeypotPathsBlocked": ["/.env -> 403", "/admin/ -> 302 (login redirect)"],
+    "botUaBlocked": false,
+    "noUaStatus": 200,
+    "perUaStatusTimeline": "blind mode: only Chrome120 production UA tested single-shot; sustained multi-UA walk deferred to R2/R3 per B9/B11",
+    "untestedAttackSurfaces": ["sustained 50-page walk", "full 5-UA rotation matrix", "auth/path-traversal/large-body-POST (harness policy)"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1277,
+  "productCountMethod": { "method": "sitemap", "url": "/xmlsitemap.php?type=products&page=1" },
+  "catalogUrls": [
+    "https://frontierfirearms.ca/firearms.html",
+    "https://frontierfirearms.ca/optics/scopes.html",
+    "https://frontierfirearms.ca/ammunition-reloading/centerfire-ammunition.html",
+    "https://frontierfirearms.ca/equipment/",
+    "https://frontierfirearms.ca/surplus/",
+    "https://frontierfirearms.ca/shooting-accessories.html",
+    "https://frontierfirearms.ca/security-devices.html"
+  ],
+  "extractionTested": false,
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 50,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 50,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": { "method": "navigate-from-watermark" },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-2026-06-02",
+    "round": "R1 (blind skill run; no full walk, no scaled probe)",
+    "bcStoreHash": "s-7rboesvul1",
+    "bcStoreId": "10041189",
+    "verifyMethodPolicy": "detail-page selected (BC Stencil, non-WC) — restock/OOS detection via Playwright detail-page; no store-api available.",
+    "expectedCountSurface": "BC products sitemap (/xmlsitemap.php?type=products) = 1277, includes OOS/hidden by design.",
+    "wcCategoryApi": "n/a (BigCommerce, not WooCommerce)",
+    "discoveredApiEndpoints": ["/xmlsitemap.php (sitemap index)", "/xmlsitemap.php?type=products&page=1", "/xmlsitemap.php?type=categories&page=1"],
+    "coverageRisk": "BLIND-UNVERIFIED. BC Stencil parent categories render subcategory TILES with 0 product cards (verified: /firearms/handguns.html=0 cards has sub-subcats; ruger.html leaf=0 cards+tiles; /ammunition-reloading.html=soft-404). Some top-level forms render+paginate (firearms.html=34 unique, equipment/=43, surplus/=43), others 404 (optics.html/optics/ both 404). URL form is INCONSISTENT per category (.html vs trailing-slash). catalogUrls here are the working firearm-relevant top-level spine but FULL-WALK COVERAGE NOT PROVEN in blind mode — R2 must walk every candidate + ID-dedup vs sitemap 1277, and likely replace tile-parents with leaf URLs (B15 / Mistake 29 break-on-zero risk at catalog-crawler.ts:358).",
+    "sortEvidence": "3-outcome test on /firearms.html (cache-bust): default first3 IDs [26031,26027,26026] == sort=newest first3 [26031,26027,26026]; counter-control sort=alphaasc differs [25853,25863,24590]. Verdict honored-default-is-newest. Descending product IDs (26031>26027>26026) confirm newest-first. sort=newest read verbatim from <select name='sort' id='sort'> <option value='newest'>.",
+    "paginationEvidence": "BC Stencil ?page=N query form. perPage NOT probed for max in blind mode (default page-1 ~43 unique products); 50 is a conservative placeholder — R2 must probe <select> limit / max honored perPage per Stage 5. firearms.html?page=2 returned 0 (parent only has page 1); equipment/ showed 'Page 1' in title (paginated). page1-vs-page2 zero-overlap NOT confirmed on a multi-page category in blind mode.",
+    "platformInflationNote": "card count 68 = ~34 unique products x quick-view duplication (BC Stencil Mistake 29). Dedup by data-product-id before counting.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "expectedProductCount": "high (sitemap 1277, single page, product-type-filtered)",
+      "sortParam": "high (3-outcome verified)",
+      "catalogUrls": "LOW (blind, parent-tile coverage risk, no full walk)",
+      "perPage": "low (placeholder, max not probed)",
+      "paginationPattern": "medium (form correct, multi-page zero-overlap unconfirmed)",
+      "crawlers.watermark.method": "medium-high"
+    },
+    "stageNotes": [
+      "Stage 1: apex frontierfirearms.ca = canonical (www 301->apex, Chrome120 UA). No <link rel=canonical>. No robots.txt Sitemap: directive (BC default).",
+      "Stage 2: Cloudflare-passive. cf-ray everywhere, all 200 incl no-UA & SQLi-shaped; /.env 403 + /admin/ 302 = origin filtering. hasWaf=false. No CAPTCHA markers.",
+      "Stage 3: BigCommerce Stencil (cdn11.bigcommerce.com, stencil x174, card-figure x36, x-bc-store-id 10041189, store hash s-7rboesvul1, Pinnacle theme, meta platform=bigcommerce.stencil). adapterType=generic-retail per table. No age-gate, no login-wall.",
+      "Stage 4: Categories sitemap = 245 nested URLs across ~10 firearm-relevant top-level departments. BC parent-tile behavior verified. catalogUrls = working top-level spine; FULL-WALK DEFERRED (blind). extractionTested=false.",
+      "Stage 5: ?page=N query pagination (BC default). perPage placeholder 50, max not probed in blind mode.",
+      "Stage 6: sort=newest verified honored-default-is-newest via 3-outcome cache-busted test on firearms.html. sortVerified=true.",
+      "Stage 7: navigate-from-watermark — sort verified + descending numeric product IDs (auto-increment) as date proxy.",
+      "Stage 8: expectedProductCount=1277 from /xmlsitemap.php?type=products&page=1 (single page, all flat product slugs, no category contamination). productCountMethod=sitemap.",
+      "Stage 9: assembled. extractionTested=false (Stage 10 runtime sim not run in blind mode; coverage unproven)."
+    ]
+  }
+}

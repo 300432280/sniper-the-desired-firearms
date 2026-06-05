@@ -1,0 +1,139 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "malcare",
+  "wafLastProbedAt": "2026-06-02T19:29:44Z",
+  "wafProbeMethod": "passive-homepage-only",
+  "wafProbeResult": "No active CDN/plugin WAF markers on homepage GET or open REST endpoints (all 200). MalCare carried as DB context; heavy 8-batch burst INTENTIONALLY SKIPPED (R1 ban-avoidance constraint — MalCare body markers only surface in 403 burst/honeypot bodies). hasWaf:true defensive pending R2 confirmation.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "malcareBodyMarker": "not-probed (burst skipped)",
+    "homepageStatus": 200,
+    "storeApiStatus": 200,
+    "wpRestProductStatus": 200,
+    "server": "Apache",
+    "note": "Single-GET passive only. hasWaf/wafType NOT verified via heavy probe — R2 must run the 8-batch probe (carefully, MalCare is aggressive) to confirm wafType=malcare and whether it actively blocks the crawl path."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 235,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://dlaskarms.com/product-category/parts-accessories/",
+    "https://dlaskarms.com/product-category/dlask-custom-parts/",
+    "https://dlaskarms.com/product-category/surplus/",
+    "https://dlaskarms.com/product-category/tuf-22/",
+    "https://dlaskarms.com/product-category/rifles/",
+    "https://dlaskarms.com/product-category/magpul/",
+    "https://dlaskarms.com/product-category/kidd/",
+    "https://dlaskarms.com/product-category/clearance/",
+    "https://dlaskarms.com/product-category/magazines/",
+    "https://dlaskarms.com/product-category/shotguns/",
+    "https://dlaskarms.com/product-category/dlask-custom-build/",
+    "https://dlaskarms.com/product-category/gunsmithing-services/",
+    "https://dlaskarms.com/product-category/pistols/",
+    "https://dlaskarms.com/product-category/dlask-custom-shotgun/",
+    "https://dlaskarms.com/product-category/tuf-22-td/",
+    "https://dlaskarms.com/product-category/gsg-16/",
+    "https://dlaskarms.com/product-category/shotgun/",
+    "https://dlaskarms.com/product-category/derya/",
+    "https://dlaskarms.com/product-category/tuf-22-customize/",
+    "https://dlaskarms.com/product-category/tuf-22-td-customize/"
+  ],
+  "extractionTested": true,
+  "sortParam": "?orderby=date",
+  "sortVerified": false,
+  "perPage": 16,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 16,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api-categories (parent:0)",
+    "categories": [
+      { "slug": "/product-category/parts-accessories/", "allOption": 211 },
+      { "slug": "/product-category/dlask-custom-parts/", "allOption": 79 },
+      { "slug": "/product-category/surplus/", "allOption": 28 },
+      { "slug": "/product-category/tuf-22/", "allOption": 21 },
+      { "slug": "/product-category/rifles/", "allOption": 18 },
+      { "slug": "/product-category/magpul/", "allOption": 14 },
+      { "slug": "/product-category/kidd/", "allOption": 12 },
+      { "slug": "/product-category/clearance/", "allOption": 10 },
+      { "slug": "/product-category/magazines/", "allOption": 10 },
+      { "slug": "/product-category/shotguns/", "allOption": 9 },
+      { "slug": "/product-category/dlask-custom-build/", "allOption": 7 },
+      { "slug": "/product-category/gunsmithing-services/", "allOption": 6 },
+      { "slug": "/product-category/pistols/", "allOption": 5 },
+      { "slug": "/product-category/dlask-custom-shotgun/", "allOption": 3 },
+      { "slug": "/product-category/tuf-22-td/", "allOption": 3 },
+      { "slug": "/product-category/gsg-16/", "allOption": 2 },
+      { "slug": "/product-category/shotgun/", "allOption": 2 },
+      { "slug": "/product-category/derya/", "allOption": 1 },
+      { "slug": "/product-category/tuf-22-customize/", "allOption": 1 },
+      { "slug": "/product-category/tuf-22-td-customize/", "allOption": 1 }
+    ],
+    "totalsSumCheck": "Sum of parent:0 recursive counts = 443 vs Store API X-WP-Total = 235. Divergence is expected: WC Store API category recursion double-counts products that live in both a top-level parent (e.g. parts-accessories=211) and its nested subcategories (1911-parts, ar-15-parts, barrels, etc.). 235 is the deduplicated customer-visible product corpus. catalogUrls coverage NOT walk-verified in R1 (full walk deferred to R2). gunsmithing-services (6) is a service category, not firearm products, but kept (firearm-adjacent) per no-drop rule."
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-dlaskarms-2026-06-02",
+    "round": "R1 (blind skill run, minimal-request, ban-avoidance mode)",
+    "requestBudgetUsed": 7,
+    "verifyMethodPolicy": "store-api accepted (WC default); restock/OOS-transition alerts NOT guaranteed (worker.ts:549/711 early-return). Operator must confirm whether restock alerts are required — if so, switch verifyMethod to detail-page and re-pair expectedProductCount to WP REST core total.",
+    "expectedCountSurface": "wc-store-api (/wp-json/wc/store/v1/products X-WP-Total=235). Paired with verifyMethod=store-api per B8.",
+    "wcCategoryApi": "store-api (category counts recurse into subcategories; top-level parent:0 spine chosen as catalogUrls)",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products (count + maintain verify)",
+      "/wp-json/wc/store/v1/products/categories (taxonomy spine)",
+      "/wp-json/wp/v2/product?modified_after=<ISO> (watermark date filter, open/un-gated)"
+    ],
+    "fieldConfidence": {
+      "platform": "high (92 woocommerce refs, wc-block, woocommerce plugin assets)",
+      "hasWaf": "low (MalCare from DB context; passive homepage showed NO WAF markers; heavy probe deliberately skipped)",
+      "wafType": "low (unverified — carried from DB context)",
+      "expectedProductCount": "high (Store API X-WP-Total=235, live)",
+      "catalogUrls": "medium (taxonomy-API-derived top-level spine; full walk + ID-dedup coverage NOT done — R2)",
+      "sortParam": "medium (WC orderby=date 'Sort by latest' option read from live <select>; 3-outcome counter-control NOT run — sortVerified:false)",
+      "paginationPattern": "medium (path /page/N/ present in rifles HTML; page-1-vs-page-2 overlap test NOT run)",
+      "perPage": "high (Showing 1-16 of 18 results)",
+      "watermarkMethod": "medium (WP REST core modified_after future-date probe returned X-WP-Total:0; the second past-date probe NOT run)"
+    },
+    "blindLimitations": "R1 ban-avoidance: NO heavy 8-batch WAF burst, NO full catalog walk, NO 3-outcome sort test, NO pagination overlap test, NO extraction multi-sample (single rifles page only). extractionTested:true is provisional (16 valid /product/ URLs extracted from one category). sortVerified:false. All medium/low fields require R2 live confirmation.",
+    "stageNotes": [
+      "Stage1: apex dlaskarms.com returns 200 cleanly (no redirect); canonical=https://dlaskarms.com. robots.txt Sitemap: /sitemap_index.xml (Yoast).",
+      "Stage2: passive homepage only — Server:Apache, breakdance_* + PHPSESSID cookies, NO cf-ray/sucuri/malcare/captcha/age-gate markers. Heavy probe skipped (MalCare ban risk). hasWaf:true defensive.",
+      "Stage3: WooCommerce (generator Site Kit; wp-content/plugins/woocommerce; 92 woocommerce class refs). Breakdance = page builder, NOT platform (Mistake 39). No age-gate on homepage. identity-verification-for-woocommerce plugin present (firearm identity verify) but no crawl-path gate observed.",
+      "Stage4: WC Store API /products/categories returned 41 cats single page; 20 top-level (parent:0). catalogUrls = 20 top-level product-category URLs. rifles HTML extraction returned 16 valid /product/ links. Full walk + ID-dedup coverage proof DEFERRED to R2.",
+      "Stage5: pagination path-form /page/{N}/ present in rifles HTML. perPage=16 (Showing 1-16 of 18). Max-perPage probe + page1-vs-page2 overlap test NOT run (R1 budget).",
+      "Stage6: WC orderby <select> read live: date='Sort by latest' (newest candidate), default=menu_order. sortParam=?orderby=date. 3-outcome counter-control test NOT run -> sortVerified:false.",
+      "Stage7: WP REST core /wp/v2/product modified_after=2099 returned X-WP-Total:0 (open endpoint, filter honored). watermark=api-date-since-watermark, dateFilterField=modified_after (WP REST core, per woocommerce.ts:337). Past-date confirmation probe NOT run.",
+      "Stage8: expectedProductCount=235 via wp-rest-header on /wp-json/wc/store/v1/products (X-WP-Total). Paired with verifyMethod=store-api per B8.",
+      "Stage9: candidate assembled and written BEFORE DB read (R1 blind protocol). Validator + markdown report not generated in this throwaway R1 pass."
+    ]
+  }
+}

@@ -1,0 +1,199 @@
+{
+  "round": "R2-live-investigation",
+  "domain": "frontierfirearms.ca",
+  "auditedAt": "2026-06-02",
+  "method": "live full-walk + ID-dedup (data-product-id) with >=850ms delay; methods deliberately differ from R1 (R1 used cache-busted 3-outcome sort test + blind spine sampling; R2 walked categories sitemap end-to-end, paginated every catalogUrl, set-cover analysis, and read runtime code paths)",
+  "evidenceFiles": [
+    "docs/site-audit/_ff-walk-raw-2026-06-02.json (DB-13 spine + 4 extra; union 627/628)",
+    "docs/site-audit/_ff-leafwalk-raw-2026-06-02.json (220 firearm-relevant sitemap leaves; union 1088)",
+    "docs/site-audit/_ff-mincover-2026-06-02.json (60 productive cats; greedy min-cover = 36 cats reaching 1088)"
+  ],
+  "corrections": [
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "7 catalogUrls (firearms.html, optics/scopes.html, centerfire-ammunition.html, equipment/, surplus/, shooting-accessories.html, security-devices.html); fieldConfidence LOW, full walk deferred",
+      "liveMethod": "Walked DB-13 spine + 4 extras AND all 220 firearm-relevant categories from /xmlsitemap.php?type=categories, paginated ?page=N each, deduped by data-product-id, then greedy set-cover.",
+      "evidence": "DB-13 union = 627 unique (49% of 1277). R1's 7 is a strict subset, fewer still. Full 220-leaf union = 1088 unique = 85.2%. DB's biggest listed URL '/surplus-bags-hats-clothing/' is now a 301 -> '/surplus/clothing/' (the 286-product department moved). NO category-PLP set can exceed ~1088: firearms, optics-by-brand, and most ammo PLPs render literal 'There are no products' (verified static HTML on /firearms/centerfire-rifles/ruger.html etc.) - those ~189 products exist ONLY as flat-slug PDPs in the products sitemap. 100% coverage via category PLPs is structurally impossible; the products sitemap is the authoritative full-catalog source. Greedy min-cover for 1088 = 36 cats; top-12 carry the bulk.",
+      "proposedValue": [
+        "/surplus/clothing/",
+        "/equipment/",
+        "/surplus/",
+        "/equipment/hunting-accessories/",
+        "/shooting-accessories.html",
+        "/optics/scope-mounts.html",
+        "/rifles/",
+        "/power-equipment/",
+        "/equipment/boxes-crates-cans-bottles/",
+        "/equipment/survival-camping-gear/",
+        "/equipment/gas-masks-chemical-gear/",
+        "/buy-online.html",
+        "/surplus/bags-pouches-packs/",
+        "/ammunition-reloading/rimfire-ammunition.html",
+        "/farm-supplies/",
+        "/equipment/body-armor-kevlar/",
+        "/firearms.html",
+        "/surplus/surplus-misc-items/",
+        "/scopes-optics/",
+        "/equipment/fox-outdoor-supplies/",
+        "/emp-shield/",
+        "/equipment/blankets-sleeping-gear-and-tents/",
+        "/equipment/food-food-preparation/",
+        "/security-devices.html",
+        "/equipment/helmets/",
+        "/firearms/surplus-military-firearms/",
+        "/ammunition-reloading/centerfire-ammunition.html",
+        "/optics/scope-mounts/weaver.html"
+      ],
+      "proposedValueNote": "This is the greedy min-cover trimmed at marginal>=2 (28 URLs -> ~1085 unique = 85%). The full 36-cat set reaches 1088; the last 8 cats add only +1 each and can be dropped for spine economy. CRITICAL: the only reliable path to 100% (1277) is the products sitemap /xmlsitemap.php?type=products&page=1 - recommend the operator pair this spine with a runtime sitemap-product-walk fallback. DROP DB's dead '/surplus-bags-hats-clothing/' (301). DB's per-category ammo URLs (rimfire-/surplus-/centerfire-) yield 0-17 each and most ammo is sitemap-only.",
+      "confidence": "high (every number is a live deduped walk; coverage ceiling proven by 'There are no products' in static HTML)"
+    },
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "1277 (sitemap)",
+      "liveMethod": "Re-pulled /xmlsitemap.php?type=products&page=1 (139,295 bytes); counted <loc>; confirmed page=2 = 404 (single-page sitemap).",
+      "evidence": "Live <loc> count = 1277. R1's 1277 is exactly right. DB siteProfile.expectedProductCount = 1281 (4 stale from natural inventory churn since 2026-04-13).",
+      "proposedValue": 1277,
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod.url",
+      "round1Hypothesis": "ABSOLUTE 'https://frontierfirearms.ca/xmlsitemap.php?type=products&page=1'",
+      "liveMethod": "Read product-count-probe.ts:291-292 case 'sitemap'.",
+      "evidence": "L292 builds `${origin}${m.url}`. An absolute m.url -> 'https://frontierfirearms.cahttps://frontierfirearms.ca/...' -> fetch fails -> null. validateMethod (L138-150) checks only the method NAME, not scheme, so the bad URL passes validation and fails at fetch. m.url MUST be path-relative. Current DB already has it path-relative ('/xmlsitemap.php?type=products&page=1') - DB is correct, today's R1 candidate regressed it to absolute. (Note: the prior-batch B5R2/B5R3 claims that DB used a broken 'sitemap-index'+'sitemapUrl' shape are STALE - the live DB now has the correct {method:'sitemap', url:'/...'} scalar shape.)",
+      "proposedValue": { "method": "sitemap", "url": "/xmlsitemap.php?type=products&page=1" },
+      "confidence": "high"
+    },
+    {
+      "field": "searchUrl",
+      "round1Hypothesis": "OMITTED from candidate JSON",
+      "liveMethod": "Live GET /search.php?search_query=ruger and =glock.",
+      "evidence": "/search.php?search_query=ruger -> HTTP 200, 274KB, 33 'ruger' matches + product cards. This is the BigCommerce Stencil platform-default search template and is live. Per persona rule, emit the platform-default searchUrl even when the probe is deferred. R1 omitted it (regression vs DB which has the correct value). robots.txt Disallows /search.php for crawlers (informational; our keyword-search use is a feature path, not a catalog crawl).",
+      "proposedValue": "/search.php?search_query={keyword}",
+      "confidence": "high"
+    },
+    {
+      "field": "perPage",
+      "round1Hypothesis": "50 (R1 placeholder; claimed limit=50 honored)",
+      "liveMethod": "Counted data-product-id on /equipment/ with no param and with ?limit=50 / ?limit=100; read catalog-crawler.ts HTML-walk + generic-retail.getNextPageUrl.",
+      "evidence": "Site DEFAULT page size = 40 (equipment/ p1 = exactly 40 cards). ?limit=50 -> 50 cards, ?limit=100 -> 100 cards (server honors limit up to >=100). BUT the runtime HTML catalog walk (catalog-crawler.ts:494) and watermark walk (watermark-crawler.ts:644-649) follow the site's own '.pagination-item--next' href via generic-retail.getNextPageUrl - they do NOT inject ?limit=N. So perPage in the profile is inert for this site's HTML crawl (only used by the API path, which this token-less BC Stencil store does not use). Set perPage to the observed default 40 to avoid confusion; both 40 and 50 are otherwise harmless. DB=40 matches the live default; R1's 50 is a non-load-bearing placeholder.",
+      "proposedValue": 40,
+      "confidence": "high (cosmetic field - inert for the HTML walk)"
+    },
+    {
+      "field": "platform",
+      "round1Hypothesis": "bigcommerce-stencil",
+      "liveMethod": "Read live HTML head: meta platform tag, CDN bundle, stencil.js.",
+      "evidence": "<meta ... platform content='bigcommerce.stencil'>, cdn11.bigcommerce.com/s-7rboesvul1, stencil.js, stencil-stylesheet, BCData global, stencilBootstrap. DEFINITIVELY Stencil, NOT Blueprint. R1 field is correct. The DB siteProfile.notes string ('BigCommerce Blueprint (legacy, NOT Stencil)') is WRONG/stale operator residue - the DB platform FIELD itself correctly says bigcommerce-stencil. The 'Stencil assets on a Blueprint store' disambiguation resolves to: this IS a Stencil store (Pinnacle theme), the URL-convention mix (.html top-level + trailing-slash deeper) is just legacy URL aliases, not a Blueprint engine.",
+      "proposedValue": "bigcommerce-stencil",
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf / wafType",
+      "round1Hypothesis": "hasWaf=false, wafType=cloudflare-passive",
+      "liveMethod": "Header capture on firearms.html + no-UA request + sustained ?page=N walk.",
+      "evidence": "Server: cloudflare, CF-RAY present, __cf_bm cookie set, but no-UA GET = 200, no cf-mitigated, no challenge body anywhere across the full multi-hundred-request walk. Cloudflare is passive. R1 hasWaf=false is correct; DB column already false. (B10 satisfied.)",
+      "proposedValue": { "hasWaf": false, "wafType": "cloudflare-passive" },
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam / sortVerified",
+      "round1Hypothesis": "?sort=newest, verified (R1 tested on firearms.html)",
+      "liveMethod": "Independent re-test on /equipment/ (different category than R1): compared default vs ?sort=newest first-5 IDs and walked ?sort=newest&page=2.",
+      "evidence": "equipment/ default first-5 == ?sort=newest first-5 (26039,26015,26003,25968,25967) -> default order IS newest-first. ?sort=newest&page=2 starts at 25098 (< page-1 min 25967) -> strictly older, descending product IDs -> sort survives pagination. Confirms sortVerified=true and navigate-from-watermark validity.",
+      "proposedValue": { "sortParam": "?sort=newest", "sortVerified": true },
+      "confidence": "high"
+    },
+    {
+      "field": "canonicalHost (DB url field)",
+      "round1Hypothesis": "apex frontierfirearms.ca canonical (R1 stage 1)",
+      "liveMethod": "GET apex vs www with redirect trace.",
+      "evidence": "www.frontierfirearms.ca 301 -> https://frontierfirearms.ca/ ; apex returns 200 directly. Canonical = apex. DB MonitoredSite.url = 'https://www.frontierfirearms.ca' (stores www). Minor: runtime follows the 301 so not a hard failure, but the stored url carries the non-canonical www host. R1 apex verdict correct.",
+      "proposedValue": "https://frontierfirearms.ca",
+      "confidence": "medium (informational; 301 is followed at runtime)"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "B (does runtime HTML-paginate?)",
+      "file": "backend/src/services/catalog-crawler.ts:494 (+ buildPaginatedUrl:119-126, watermark-crawler.ts:644-649)",
+      "confirmed": true,
+      "detail": "YES. catalog-crawler HTML branch calls adapter.getNextPageUrl($, currentUrl) (L494) and loops; buildPaginatedUrl for {type:'query',template:'page'} sets ?page=N (correct for this BC Stencil site). watermark-crawler navigate-from-watermark does the same (L644-649). getNextPageUrl (generic-retail.ts:1331-1355) reads '.pagination-item--next a' for BigCommerce. Live ?page=2 on equipment/ = 40 NEW cards, zero overlap with page 1 - HTML pagination works."
+    },
+    {
+      "theme": "B sub (Mistake-29 break-on-zero / parent-tile trap)",
+      "file": "backend/src/services/catalog-crawler.ts:484, 501-503",
+      "confirmed": true,
+      "detail": "For non-WAF sites, products.length===0 breaks the INNER page loop (L484). The OUTER loop then advances urlIdx++ (L501-503), so a tile-only / empty parent yields 0 for THAT url and the walk continues to the next catalogUrl. The break is PER-URL, not catalog-fatal. So including low-yield parents like /firearms.html (31) or empty firearms leaves is not catastrophic - they just under-contribute. The real coverage limit here is structural (no all-products PLP; firearms/optics/ammo PLPs say 'There are no products')."
+    },
+    {
+      "theme": "D (passive WAF confirm)",
+      "file": "n/a (live header capture)",
+      "confirmed": true,
+      "detail": "Server: cloudflare + CF-RAY + __cf_bm on every response, but no-UA = 200 and zero challenge/cf-mitigated across the entire multi-hundred-request walk. Cloudflare passive. hasWaf=false correct; setting hasWaf=true would needlessly engage Playwright + drop perPage 50->20 (catalog-crawler.ts:290) with zero benefit."
+    },
+    {
+      "theme": "productCountMethod absolute-URL bug",
+      "file": "backend/src/services/product-count-probe.ts:291-292 (validateMethod 138-150)",
+      "confirmed": true,
+      "detail": "case 'sitemap' builds `${origin}${m.url}`; an absolute m.url double-prefixes the origin and fetch fails -> null. validateMethod checks the method name only, not URL scheme. Today's R1 candidate's absolute productCountMethod.url would silently null the probe (only matters when expectedProductCount is absent, which it is not here - but the value is still wrong)."
+    },
+    {
+      "theme": "catalogUrls plumbing",
+      "file": "backend/src/services/scraper/adapters/generic-retail.ts:196-199, 265-277",
+      "confirmed": true,
+      "detail": "getCatalogUrls -> _getSiteSpecificUrls returns profile.catalogUrls (resolved to absolute against origin) when present, THEN appends generic fallbacks /categories.php, /shop/, /products, /. So DB/profile catalogUrls ARE consumed by the runtime; /categories.php is appended as an extra (it is a tile index = 0 cards, harmless per the per-URL break above)."
+    }
+  ],
+  "coverageProof": {
+    "walked": {
+      "db13Spine": "13 DB catalogUrls + 4 extra top-level, paginated, deduped",
+      "leafSweep": "220 firearm-relevant categories from /xmlsitemap.php?type=categories (245 total minus clearance/specials overlays), paginated, deduped",
+      "delayMs": 850
+    },
+    "uniqueIds": {
+      "db13UnionUnique": 627,
+      "leafUnionUnique": 1088,
+      "greedyMinCoverCats": 36,
+      "greedyMinCoverUnique": 1088
+    },
+    "expected": 1277,
+    "pct": {
+      "db13": "49.1%",
+      "fullLeafSweep": "85.2%",
+      "structuralCeilingViaPLP": "~85% (firearms/optics/ammo PLPs render 'There are no products'; ~189 products are sitemap-only flat-slug PDPs)"
+    },
+    "recommendedCatalogUrls": [
+      "/surplus/clothing/",
+      "/equipment/",
+      "/surplus/",
+      "/equipment/hunting-accessories/",
+      "/shooting-accessories.html",
+      "/optics/scope-mounts.html",
+      "/rifles/",
+      "/power-equipment/",
+      "/equipment/boxes-crates-cans-bottles/",
+      "/equipment/survival-camping-gear/",
+      "/equipment/gas-masks-chemical-gear/",
+      "/buy-online.html",
+      "/surplus/bags-pouches-packs/",
+      "/ammunition-reloading/rimfire-ammunition.html",
+      "/farm-supplies/",
+      "/equipment/body-armor-kevlar/",
+      "/firearms.html",
+      "/surplus/surplus-misc-items/",
+      "/scopes-optics/",
+      "/equipment/fox-outdoor-supplies/",
+      "/emp-shield/",
+      "/equipment/blankets-sleeping-gear-and-tents/",
+      "/equipment/food-food-preparation/",
+      "/security-devices.html",
+      "/equipment/helmets/",
+      "/firearms/surplus-military-firearms/",
+      "/ammunition-reloading/centerfire-ammunition.html",
+      "/optics/scope-mounts/weaver.html"
+    ],
+    "recommendedCatalogUrlsNote": "28-URL spine (greedy cover trimmed at marginal>=2) = ~1085 unique (~85%). 100% (1277) is unreachable via category PLPs - REQUIRES pairing this spine with a products-sitemap walk (/xmlsitemap.php?type=products&page=1, single page, 1277 flat-slug PDPs). The crawlers.bootstrap single-continuous note in DB already implies sitemap discovery; the maintain/tier catalog spine should use the above for newest-item navigation and rely on the products sitemap for the full-corpus refresh."
+  },
+  "untestedAttackSurfaces": ["auth-attempts", "path-traversal", "large-body-POST", "shellshock UA"],
+  "blockers": "None. Site fully reachable from audit IP, no UA-selective behavior, no rate-limit fire across the multi-hundred-request walk, no CAPTCHA, no age-gate. Crawler left PAUSED/not-resumed per constraints; no DB writes."
+}

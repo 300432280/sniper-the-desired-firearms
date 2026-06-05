@@ -1,0 +1,549 @@
+diff --git a/backend/src/index.ts b/backend/src/index.ts
+index 412b50c..237fda6 100644
+--- a/backend/src/index.ts
++++ b/backend/src/index.ts
+@@ -554,18 +554,44 @@ const server = app.listen(config.port, () => {
+ });
+ 
+ // Graceful shutdown
++// Worker.close() waits for in-flight jobs to finish and releases their BullMQ
++// locks. Without this, in-flight crawl-catalog/crawl-watermark jobs orphan into
++// `active` on SIGTERM/SIGINT and get re-run with stale data on next startup.
++let shuttingDown = false;
+ const shutdown = async () => {
++  if (shuttingDown) return;
++  shuttingDown = true;
+   console.log('[Server] Shutting down gracefully...');
+-  await Promise.all([worker.close(), healthWorker.close(), schedulerWorker.close(), digestWorker.close()]);
++  // Close every worker so active jobs finish cleanly and locks are released.
++  // allSettled (not all) so one rejected close doesn't abort the rest of
++  // shutdown; race against a timeout so a wedged Playwright job can't make
++  // worker.close() (graceful, no force) hang forever. Either way we proceed to
++  // process.exit(0) below.
++  const workerCloses = [
++    worker.close(),
++    healthWorker.close(),
++    schedulerWorker.close(),
++    digestWorker.close(),
++    staleCheckWorker.close(),
++  ];
++  await Promise.race([
++    Promise.allSettled(workerCloses).then((results) => {
++      results.forEach((r, i) => {
++        if (r.status === 'rejected') {
++          console.error(`[Server] Worker ${i} close failed:`, r.reason instanceof Error ? r.reason.message : r.reason);
++        }
++      });
++    }),
++    new Promise((resolve) => setTimeout(resolve, 25000)),
++  ]);
+   // Close Playwright browser if it was started
+   try {
+     const { closeBrowser } = await import('./services/scraper/playwright-fetcher');
+     await closeBrowser();
+   } catch { /* Playwright may not have been loaded */ }
+-  server.close(() => {
+-    console.log('[Server] Server closed');
+-    process.exit(0);
+-  });
++  server.close();
++  console.log('[Server] Server closed');
++  process.exit(0);
+ };
+ 
+ process.on('SIGTERM', shutdown);
+diff --git a/backend/src/services/__test__/catalog-page-signature.test.ts b/backend/src/services/__test__/catalog-page-signature.test.ts
+new file mode 100644
+index 0000000..edb6acc
+--- /dev/null
++++ b/backend/src/services/__test__/catalog-page-signature.test.ts
+@@ -0,0 +1,57 @@
++// backend/src/services/__test__/catalog-page-signature.test.ts
++//
++// FIX 2 — out-of-range / repeat-page detection. Odoo (and others) return page-1
++// content for overflow pages WITH products, so the walk never sees 0 products
++// and loops forever. We end the stream when a page's signature
++// (firstURL|lastURL|count) repeats the previous page's. The lastURL component
++// prevents a false positive on legit catalogs that pin a featured product to
++// position 0 of every page (those differ in the tail).
++import { describe, it, expect } from 'vitest';
++import { pageSignature, isRepeatPage } from '../catalog-page-signature';
++
++const page = (...urls: string[]) => urls.map((url) => ({ url }));
++
++describe('pageSignature / isRepeatPage (FIX 2)', () => {
++  it('first page is never a repeat (prev = null)', () => {
++    const sig = pageSignature(page('/p/a', '/p/b', '/p/c'));
++    expect(isRepeatPage(null, sig)).toBe(false);
++  });
++
++  it('flags an identical-end-to-end overflow page (same first, last AND count) as a repeat', () => {
++    const p1 = pageSignature(page('/p/a', '/p/b', '/p/c'));
++    const overflow = pageSignature(page('/p/a', '/p/b', '/p/c')); // page-1 served again
++    expect(isRepeatPage(p1, overflow)).toBe(true);
++  });
++
++  it('does NOT flag a pinned-featured legit next page (same first URL + count, different tail)', () => {
++    // WooCommerce/Shopify "featured first": product /p/feat is pinned to slot 0
++    // of every page, and both pages are full (count 3), but the rest differs.
++    const p2 = pageSignature(page('/p/feat', '/p/b', '/p/c'));
++    const p3 = pageSignature(page('/p/feat', '/p/d', '/p/e'));
++    expect(isRepeatPage(p2, p3)).toBe(false); // must NOT truncate the catalog
++  });
++
++  it('does NOT flag a genuinely different next page', () => {
++    const p1 = pageSignature(page('/p/a', '/p/b', '/p/c'));
++    const p2 = pageSignature(page('/p/d', '/p/e', '/p/f'));
++    expect(isRepeatPage(p1, p2)).toBe(false);
++  });
++
++  it('distinguishes by count even when the first URL matches (partial last page)', () => {
++    const full = pageSignature(page('/p/a', '/p/b', '/p/c'));
++    const shorter = pageSignature(page('/p/a', '/p/b')); // same first URL, fewer items
++    expect(isRepeatPage(full, shorter)).toBe(false);
++  });
++
++  it('distinguishes by first URL even when counts match', () => {
++    const a = pageSignature(page('/p/a', '/p/b'));
++    const b = pageSignature(page('/p/x', '/p/y')); // same count, different first URL
++    expect(isRepeatPage(a, b)).toBe(false);
++  });
++
++  it('never treats a zero-products signature as a repeat (empty page handled by caller)', () => {
++    const empty = pageSignature(page()); // '||0'
++    expect(empty).toBe('||0');
++    expect(isRepeatPage(empty, empty)).toBe(false);
++  });
++});
+diff --git a/backend/src/services/__test__/queue-stale-job.test.ts b/backend/src/services/__test__/queue-stale-job.test.ts
+new file mode 100644
+index 0000000..c8adf81
+--- /dev/null
++++ b/backend/src/services/__test__/queue-stale-job.test.ts
+@@ -0,0 +1,44 @@
++// backend/src/services/__test__/queue-stale-job.test.ts
++//
++// FIX 1b — removeStaleJob lock-expiry decision. An orphaned `active` job (worker
++// died on SIGKILL without releasing the lock) must be removable once its lock
++// has expired, but a FRESH active job (a live worker genuinely running it) must
++// NEVER be removed. Other states (waiting/delayed/failed/completed/unknown) are
++// always safe to remove.
++import { describe, it, expect } from 'vitest';
++import { decideStaleJobAction, LOCK_DURATION_MS } from '../queue-stale-job';
++
++const NOW = 1_000_000_000_000;
++
++describe('decideStaleJobAction (FIX 1b)', () => {
++  it('skips a FRESH active job (live worker holds the lock)', () => {
++    const processedOn = NOW - 1000; // 1s ago, well within lock duration
++    expect(decideStaleJobAction('active', processedOn, NOW)).toBe('skip');
++  });
++
++  it('skips an active job exactly at the lock boundary (age == LOCK_DURATION_MS)', () => {
++    const processedOn = NOW - LOCK_DURATION_MS; // age == lock duration → still fresh
++    expect(decideStaleJobAction('active', processedOn, NOW)).toBe('skip');
++  });
++
++  it('removes an active job whose lock has EXPIRED (orphan from a dead worker)', () => {
++    const processedOn = NOW - (LOCK_DURATION_MS + 1); // 1ms past expiry
++    expect(decideStaleJobAction('active', processedOn, NOW)).toBe('remove-active');
++  });
++
++  it('removes an active job with no processedOn (treated as infinitely old)', () => {
++    expect(decideStaleJobAction('active', null, NOW)).toBe('remove-active');
++    expect(decideStaleJobAction('active', undefined, NOW)).toBe('remove-active');
++  });
++
++  it('removes waiting / delayed jobs (not running)', () => {
++    expect(decideStaleJobAction('waiting', null, NOW)).toBe('remove');
++    expect(decideStaleJobAction('delayed', null, NOW)).toBe('remove');
++  });
++
++  it('removes failed / completed / unknown jobs', () => {
++    expect(decideStaleJobAction('failed', null, NOW)).toBe('remove');
++    expect(decideStaleJobAction('completed', NOW, NOW)).toBe('remove');
++    expect(decideStaleJobAction('unknown', null, NOW)).toBe('remove');
++  });
++});
+diff --git a/backend/src/services/catalog-crawler.ts b/backend/src/services/catalog-crawler.ts
+index 7aea677..9de9e02 100644
+--- a/backend/src/services/catalog-crawler.ts
++++ b/backend/src/services/catalog-crawler.ts
+@@ -20,6 +20,7 @@ import { consumeToken } from './token-budget';
+ import { matchNewProducts } from './keyword-matcher';
+ import type { CatalogProduct, Stream, StreamTierState } from './scraper/types';
+ import { saveProducts } from './product-upsert';
++import { pageSignature, isRepeatPage } from './catalog-page-signature';
+ import * as cheerio from 'cheerio';
+ 
+ /** WAF sites require multiple consecutive empty pages before declaring end-of-catalog. */
+@@ -758,6 +759,12 @@ export async function crawlStreamTier(params: {
+       tierState.currentPageUrl = undefined;
+       const pageRangeEnd = tierState.pageRangeEnd;
+       let consecutiveEmptyStreamHtml = 0;
++      // Identity of the previous page's products (first URL + count). Some
++      // platforms (e.g. Odoo) silently return page-1 content for out-of-range
++      // pages instead of an empty page, which would loop forever on 0-products
++      // termination alone. If the current page matches the previous one exactly,
++      // it's a repeat/overflow page → end the stream.
++      let prevPageSignature: string | null = null;
+ 
+       while (currentUrl && tokensUsed < tokensAllocated) {
+         // Stop if we've exceeded this tier's page range
+@@ -871,6 +878,18 @@ export async function crawlStreamTier(params: {
+         }
+         consecutiveEmptyStreamHtml = 0;
+ 
++        // Out-of-range / repeat-page guard. If this page's products are identical
++        // to the previous page's (same first-product URL AND same count), the
++        // site is serving page-1 content for an overflow page (e.g. Odoo) and we
++        // would otherwise loop forever. End the stream WITHOUT saving the dupes.
++        const curSignature = pageSignature(products);
++        if (isRepeatPage(prevPageSignature, curSignature)) {
++          console.log(`[CatalogCrawl] Stream "${stream.id}" T${tier}: page ${currentPageNum} duplicates previous page (out-of-range/overflow), ending stream`);
++          cycleComplete = true;
++          break;
++        }
++        prevPageSignature = curSignature;
++
+         allProducts.push(...products);
+         productsFound += products.length;
+ 
+diff --git a/backend/src/services/catalog-page-signature.ts b/backend/src/services/catalog-page-signature.ts
+new file mode 100644
+index 0000000..981e4e6
+--- /dev/null
++++ b/backend/src/services/catalog-page-signature.ts
+@@ -0,0 +1,37 @@
++// backend/src/services/catalog-page-signature.ts
++//
++// Pure helpers for the out-of-range / repeat-page guard in the catalog stream
++// walk (FIX 2). Some platforms (e.g. Odoo) silently return page-1 content for
++// out-of-range pages instead of an empty page, so the walk never sees 0
++// products and loops forever. We detect a repeat by comparing each page's
++// signature to the previous page's.
++//
++// The signature is firstURL|lastURL|count. The LAST url is load-bearing: a real
++// Odoo overflow page serves page-1 content end-to-end (first AND last AND count
++// all identical), but a legitimately-paginated catalog that PINS a featured /
++// sticky product to position 0 of every page (WooCommerce/Shopify "featured
++// first" sorts) shares the same first URL and count across pages yet differs in
++// its tail — so including lastURL stops us from silently truncating those.
++//
++// Extracted as a pure module so the dupe-detection logic can be unit-tested
++// without running the live crawler.
++
++/** Build an identity signature for a page of catalog products. */
++export function pageSignature(products: Array<{ url: string }>): string {
++  const first = products[0]?.url ?? '';
++  const last = products[products.length - 1]?.url ?? '';
++  return `${first}|${last}|${products.length}`;
++}
++
++/**
++ * True when the current page is an exact repeat of the previous page — i.e. an
++ * out-of-range/overflow page serving page-1 content. `prev` is null on the
++ * first page of a stream (never a repeat). An empty/zero-products signature
++ * (`||0`) never counts as a repeat — empty pages are handled by the caller's
++ * end-of-catalog logic, not this guard.
++ */
++export function isRepeatPage(prev: string | null, current: string): boolean {
++  if (prev === null) return false;
++  if (current === '||0') return false;
++  return prev === current;
++}
+diff --git a/backend/src/services/queue-stale-job.ts b/backend/src/services/queue-stale-job.ts
+new file mode 100644
+index 0000000..29ca8da
+--- /dev/null
++++ b/backend/src/services/queue-stale-job.ts
+@@ -0,0 +1,36 @@
++// backend/src/services/queue-stale-job.ts
++//
++// Pure decision logic for removeStaleJob (FIX 1b). Extracted so it can be
++// unit-tested without opening a real Redis/BullMQ connection (importing
++// queue.ts connects to Redis at module load). queue.ts wraps this with the
++// actual job.remove() side effect.
++
++/** BullMQ lock duration for the crawl worker (worker.ts lockDuration: 300000). */
++export const LOCK_DURATION_MS = 300_000;
++
++export type StaleJobAction =
++  | 'remove'        // safe to remove now
++  | 'remove-active' // active but lock expired (orphan) — try remove, tolerate re-lock
++  | 'skip';         // a live worker genuinely owns it — never remove
++
++/**
++ * Decide what to do with a job given its BullMQ state and timing.
++ *
++ *  - active + lock FRESH (age <= LOCK_DURATION_MS) → skip (live crawl)
++ *  - active + lock EXPIRED                         → remove-active (dead worker orphan)
++ *  - waiting / delayed                            → remove (not running)
++ *  - failed / completed / anything else           → remove
++ */
++export function decideStaleJobAction(
++  state: string,
++  processedOn: number | null | undefined,
++  now: number = Date.now(),
++): StaleJobAction {
++  if (state === 'active') {
++    const age = processedOn != null ? now - processedOn : Infinity;
++    // NEVER remove a fresh active job — that would kill a live crawl.
++    return age > LOCK_DURATION_MS ? 'remove-active' : 'skip';
++  }
++  // waiting, delayed, failed, completed, unknown → safe to remove.
++  return 'remove';
++}
+diff --git a/backend/src/services/queue.ts b/backend/src/services/queue.ts
+index ffa1542..ec7d6f3 100644
+--- a/backend/src/services/queue.ts
++++ b/backend/src/services/queue.ts
+@@ -1,6 +1,7 @@
+ import { Queue } from 'bullmq';
+ import IORedis from 'ioredis';
+ import { config } from '../config';
++import { decideStaleJobAction } from './queue-stale-job';
+ 
+ export const redisConnection = new IORedis(config.redisUrl, {
+   maxRetriesPerRequest: null, // Required by BullMQ
+@@ -115,6 +116,46 @@ export async function cleanupLegacyJobs(): Promise<void> {
+   }
+ }
+ 
++/**
++ * Remove a wedged scrape-queue job by id. Decision logic (see
++ * decideStaleJobAction): removes failed/completed/waiting/delayed jobs and
++ * orphaned active jobs whose lock has expired (worker died without releasing
++ * it); SKIPS fresh active jobs (a live worker genuinely owns them — removing
++ * would kill an in-flight crawl).
++ *
++ * An expired-lock active job may be re-grabbed by a live worker the instant we
++ * try to remove it. In that case job.remove() throws ("could not remove job ...
++ * locked"); we log a warn and leave it for the BullMQ stalled-job reaper.
++ */
++export async function removeStaleJob(jobId: string): Promise<'removed' | 'skipped' | 'not-found'> {
++  const job = await scrapeQueue.getJob(jobId);
++  if (!job) return 'not-found';
++
++  const state = await job.getState();
++  const action = decideStaleJobAction(state, job.processedOn);
++
++  if (action === 'skip') {
++    console.log(`[Queue] removeStaleJob: ${jobId} is active with a fresh lock, skipping`);
++    return 'skipped';
++  }
++
++  try {
++    await job.remove();
++    if (action === 'remove-active') {
++      console.log(`[Queue] removeStaleJob: removed orphaned active job ${jobId} (lock expired)`);
++    }
++    return 'removed';
++  } catch (err) {
++    // Only the genuine "job is locked by a live worker" throw is a benign skip.
++    // Any other error (Redis down, unexpected BullMQ failure) must propagate —
++    // swallowing it would hide a real failure as if a worker held the lock.
++    const msg = err instanceof Error ? err.message : String(err);
++    if (!/lock|could not (be )?remove/i.test(msg)) throw err;
++    console.warn(`[Queue] removeStaleJob: ${jobId} could not be removed (state=${state}, action=${action}, likely re-locked by a live worker): ${msg}`);
++    return 'skipped';
++  }
++}
++
+ // ─── Crawl Scheduler Queue ────────────────────────────────────────────────────
+ 
+ export const schedulerQueue = new Queue('scheduler', {
+diff --git a/backend/src/services/scraper/__test__/cf-interstitial.test.ts b/backend/src/services/scraper/__test__/cf-interstitial.test.ts
+new file mode 100644
+index 0000000..5e72bde
+--- /dev/null
++++ b/backend/src/services/scraper/__test__/cf-interstitial.test.ts
+@@ -0,0 +1,65 @@
++// backend/src/services/scraper/__test__/cf-interstitial.test.ts
++//
++// FIX 3 — Cloudflare interstitial classifier. The `challenge-platform` beacon is
++// on EVERY page of a passive-CF site (jobrook/solely/gunpost/londero), so keying
++// detection/resolution on it makes resolution never succeed → 0 products. The
++// classifier must key only on TRUE interstitial markers, and must treat a normal
++// page that merely loads the beacon as real content.
++import { describe, it, expect } from 'vitest';
++import { isCfInterstitial, isCfResolved } from '../cf-interstitial';
++
++// A realistic passive-CF page: substantial product markup PLUS the beacon.
++const passiveCfPage =
++  '<html><head><script src="/cdn-cgi/challenge-platform/h/g/scripts/jsd/main.js"></script></head>' +
++  '<body>' +
++  '<div class="product-grid">' +
++  Array.from({ length: 30 }, (_, i) => `<a class="product" href="/p/${i}">Rifle ${i}</a>`).join('') +
++  '</div>' +
++  '<p>'.padEnd(6000, 'x') + '</p>' +
++  '</body></html>';
++
++// A real CF interstitial block page.
++const cfBlockPage =
++  '<html><head><title>Just a moment...</title></head>' +
++  '<body><div id="challenge-running"></div>' +
++  '<script>window._cf_chl_opt={cvId:"3"}</script></body></html>';
++
++describe('isCfInterstitial (FIX 3)', () => {
++  it('returns FALSE for a normal page that merely loads the challenge-platform beacon', () => {
++    expect(passiveCfPage.includes('challenge-platform')).toBe(true); // beacon present
++    expect(isCfInterstitial(passiveCfPage)).toBe(false);            // but NOT a challenge
++  });
++
++  it('returns TRUE for a real "Just a moment..." block page', () => {
++    expect(isCfInterstitial(cfBlockPage)).toBe(true);
++  });
++
++  it('returns TRUE for a turnstile / _cf_chl_opt interstitial', () => {
++    const html = '<html><body><script>_cf_chl_opt</script><iframe src="https://challenges.cloudflare.com/turnstile/v0/api.js"></iframe></body></html>';
++    expect(isCfInterstitial(html)).toBe(true);
++  });
++
++  it('returns TRUE for a tiny cloudflare shell', () => {
++    expect(isCfInterstitial('<html><body>cloudflare</body></html>')).toBe(true);
++  });
++
++  it('returns FALSE for ordinary product HTML with no CF markers at all', () => {
++    expect(isCfInterstitial('<html><body><div class="product">Glock 19</div></body></html>')).toBe(false);
++  });
++});
++
++describe('isCfResolved (FIX 3)', () => {
++  it('reports a passive-CF page (beacon present, real content) as RESOLVED', () => {
++    // This is the core regression: previously requiring !challenge-platform meant
++    // resolution NEVER succeeded on passive-CF sites.
++    expect(isCfResolved(passiveCfPage)).toBe(true);
++  });
++
++  it('reports a still-showing interstitial as NOT resolved', () => {
++    expect(isCfResolved(cfBlockPage)).toBe(false);
++  });
++
++  it('reports an empty shell (no interstitial markers but tiny body) as NOT resolved', () => {
++    expect(isCfResolved('<html><body></body></html>')).toBe(false);
++  });
++});
+diff --git a/backend/src/services/scraper/cf-interstitial.ts b/backend/src/services/scraper/cf-interstitial.ts
+new file mode 100644
+index 0000000..e181376
+--- /dev/null
++++ b/backend/src/services/scraper/cf-interstitial.ts
+@@ -0,0 +1,59 @@
++// backend/src/services/scraper/cf-interstitial.ts
++//
++// Pure Cloudflare-interstitial classifier (FIX 3). Passive-CF sites embed the
++// `challenge-platform` beacon (cdn-cgi/challenge-platform/...) on EVERY page,
++// not just block pages. Keying detection or "resolved?" on that beacon makes
++// resolution never succeed on those sites → empty/challenge HTML → 0 products.
++//
++// These markers ONLY appear on a real interstitial (the "Just a moment..."
++// block page), so we use them as the positive signal. Extracted as a pure
++// module so it can be unit-tested and shared by the Node-side detection and the
++// in-browser resolution predicate in playwright-fetcher.ts.
++
++/**
++ * True when the HTML is a genuine Cloudflare interstitial / block page (NOT a
++ * normal page that merely loads the challenge-platform beacon).
++ */
++export function isCfInterstitial(html: string): boolean {
++  return (
++    html.includes('cf-browser-verification') ||
++    html.includes('Just a moment...') ||
++    html.includes('Checking your browser') ||
++    html.includes('cf-challenge') ||
++    html.includes('cf-chl-') ||
++    html.includes('_cf_chl_opt') ||
++    html.includes('_cf_chl') ||
++    html.includes('challenges.cloudflare.com/turnstile') ||
++    html.includes('Attention Required') ||
++    html.includes('Verifying you are human') ||
++    // Minimal CF block pages: tiny HTML mentioning cloudflare.
++    (html.length < 5000 && html.includes('cloudflare'))
++  );
++}
++
++/**
++ * True when an interstitial has resolved to real content. Mirrors the in-browser
++ * predicate used by page.waitForFunction in playwright-fetcher.ts: interstitial
++ * text/markers gone AND a substantial body present. Deliberately does NOT key on
++ * `challenge-platform` (present on every passive-CF page).
++ *
++ * NOTE: the inline page.waitForFunction predicate in playwright-fetcher.ts is the
++ * AUTHORITATIVE resolution check (it runs in the browser, against the live DOM).
++ * This function mirrors that logic only so the contract can be unit-tested.
++ */
++export function isCfResolved(html: string): boolean {
++  if (
++    html.includes('Just a moment') ||
++    html.includes('Checking your browser') ||
++    html.includes('Verifying you are human') ||
++    html.includes('Attention Required') ||
++    html.includes('_cf_chl_opt') ||
++    html.includes('challenges.cloudflare.com/turnstile') ||
++    html.includes('id="cf-browser-verification"') ||
++    html.includes('id="challenge-running"') ||
++    html.includes('id="challenge-form"')
++  ) {
++    return false;
++  }
++  return html.length > 5000;
++}
+diff --git a/backend/src/services/scraper/playwright-fetcher.ts b/backend/src/services/scraper/playwright-fetcher.ts
+index dbed626..c98c8c7 100644
+--- a/backend/src/services/scraper/playwright-fetcher.ts
++++ b/backend/src/services/scraper/playwright-fetcher.ts
+@@ -9,6 +9,7 @@
+  */
+ 
+ import type { Browser, Page } from 'playwright-core';
++import { isCfInterstitial } from './cf-interstitial';
+ 
+ export const PLAYWRIGHT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+ 
+@@ -208,17 +209,11 @@ export async function fetchWithPlaywright(
+     }
+ 
+     // ── Cloudflare challenge (IUAM / turnstile / managed challenge) ────────
+-    const isCfChallenge =
+-      initialContent.includes('cf-browser-verification') ||
+-      initialContent.includes('Just a moment...') ||
+-      initialContent.includes('challenge-platform') ||
+-      initialContent.includes('Checking your browser') ||
+-      initialContent.includes('cf-challenge') ||
+-      initialContent.includes('_cf_chl') ||
+-      initialContent.includes('Attention Required') ||
+-      initialContent.includes('Verifying you are human') ||
+-      // Detect minimal CF challenge pages (tiny HTML with cloudflare references)
+-      (initialContent.length < 5000 && initialContent.includes('cloudflare'));
++    // NOTE: the `challenge-platform` beacon (cdn-cgi/challenge-platform/...) is
++    // embedded on EVERY page of a passive-CF site, not just interstitials, so it
++    // is NOT a challenge signal. isCfInterstitial keys only on true block-page
++    // markers.
++    const isCfChallenge = isCfInterstitial(initialContent);
+ 
+     if (isCfChallenge) {
+       console.log(`[Playwright] Detected Cloudflare challenge (${initialContent.length}b), waiting for resolution...`);
+@@ -229,15 +224,20 @@ export async function fetchWithPlaywright(
+         `(() => {
+           const text = document.body?.innerText || '';
+           const html = document.documentElement?.innerHTML || '';
+-          // Challenge is resolved when these indicators disappear
++          // Resolved when the true INTERSTITIAL markers are gone. We deliberately
++          // do NOT key off 'challenge-platform' — that beacon is present on every
++          // page of a passive-CF site, so requiring its absence would mean the
++          // challenge never reports as resolved (returns empty/challenge HTML → 0
++          // products). Interstitial markers below ONLY appear on the block page.
+           return !text.includes('Just a moment') &&
+                  !text.includes('Checking your browser') &&
+                  !text.includes('Verifying you are human') &&
+                  !text.includes('Attention Required') &&
++                 !html.includes('_cf_chl_opt') &&
++                 !html.includes('challenges.cloudflare.com/turnstile') &&
+                  !document.querySelector('#cf-browser-verification') &&
+                  !document.querySelector('#challenge-running') &&
+                  !document.querySelector('#challenge-form') &&
+-                 !html.includes('challenge-platform') &&
+                  // Also check that we have real content (not an empty shell)
+                  html.length > 5000;
+         })()`,

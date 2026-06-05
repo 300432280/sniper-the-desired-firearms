@@ -1,0 +1,3220 @@
+{
+  "runAt": "2026-05-26T17:02:45.098Z",
+  "totalMs": 110323,
+  "counts": {
+    "ready": 17,
+    "notReady": 48
+  },
+  "categories": {
+    "priceBad": [
+      "bullseyenorth.com",
+      "canada.hibid.com",
+      "canadasgunstore.ca",
+      "canadiangunnutz.com",
+      "ellwoodepps.com",
+      "icollector.com",
+      "jobrookoutdoors.com",
+      "kodiakdefence.com",
+      "londerosports.com",
+      "nordicmarksman.com",
+      "northprosports.com",
+      "precisionoptics.net",
+      "reliablegun.com",
+      "townpost.ca"
+    ],
+    "stockBad": [
+      "basspro.ca",
+      "irunguns.ca",
+      "millerandmillerauctions.com",
+      "surplusherbys.com",
+      "thegundealer.ca",
+      "www.gobles.ca"
+    ],
+    "noWatermark": [
+      "basspro.ca",
+      "irunguns.ca",
+      "millerandmillerauctions.com",
+      "surplusherbys.com",
+      "thegundealer.ca",
+      "www.gobles.ca"
+    ],
+    "tiersIncomplete": [
+      "basspro.ca",
+      "bullseyenorth.com",
+      "durhamoutdoors.ca",
+      "jobrookoutdoors.com",
+      "millerandmillerauctions.com",
+      "oleysarmoury.com",
+      "shooterschoice.com",
+      "surplusherbys.com",
+      "www.gobles.ca"
+    ],
+    "coverageLow": [
+      "basspro.ca",
+      "bullseyenorth.com",
+      "ellwoodepps.com",
+      "frontierfirearms.ca",
+      "fulcrum-outdoors.shoplightspeed.com",
+      "g4cgunstore.com",
+      "irunguns.ca",
+      "jobrookoutdoors.com",
+      "liangjian.ca",
+      "lockharttactical.com",
+      "londerosports.com",
+      "northprosports.com",
+      "oleysarmoury.com",
+      "outfitters.goldnloan.com",
+      "precisionoptics.net",
+      "rdsc.ca",
+      "reliablegun.com",
+      "sail.ca",
+      "shooterschoice.com",
+      "solelyoutdoors.com",
+      "store.prophetriver.com",
+      "store.theshootingcentre.com",
+      "surplusherbys.com",
+      "thegundealer.ca",
+      "triggersandbows.com",
+      "wolverinesupplies.com",
+      "www.gagnonsports.com",
+      "www.gobles.ca"
+    ],
+    "liveCountUnknown": [
+      "icollector.com",
+      "millerandmillerauctions.com"
+    ],
+    "urlBad": [
+      "basspro.ca",
+      "bullseyenorth.com",
+      "canada.hibid.com",
+      "canadiangunnutz.com",
+      "gotenda.com",
+      "irunguns.ca",
+      "jobrookoutdoors.com",
+      "londerosports.com",
+      "millerandmillerauctions.com",
+      "store.prophetriver.com",
+      "surplusherbys.com",
+      "thegundealer.ca",
+      "www.gagnonsports.com",
+      "www.gobles.ca"
+    ],
+    "titleBad": [
+      "doubletapsports.com",
+      "firearmsoutletcanada.com",
+      "g4cgunstore.com",
+      "greatnorthgunco.ca",
+      "hical.ca",
+      "liangjian.ca",
+      "marstar.ca",
+      "northprosports.com",
+      "shooterschoice.com",
+      "theammosource.com",
+      "townpost.ca",
+      "truenortharms.com",
+      "westernmetal.ca"
+    ],
+    "wmBad": [
+      "basspro.ca",
+      "bullseyenorth.com",
+      "canadiangunnutz.com",
+      "ellwoodepps.com",
+      "g4cgunstore.com",
+      "gotenda.com",
+      "hical.ca",
+      "irunguns.ca",
+      "londerosports.com",
+      "millerandmillerauctions.com",
+      "store.prophetriver.com",
+      "surplusherbys.com",
+      "theammosource.com",
+      "thegundealer.ca",
+      "townpost.ca",
+      "www.gagnonsports.com",
+      "www.gobles.ca"
+    ],
+    "verifyBad": [
+      "alsimmonsgunshop.com",
+      "basspro.ca",
+      "bullseyenorth.com",
+      "canada.hibid.com",
+      "canadafirstammo.ca",
+      "canadiangunnutz.com",
+      "gotenda.com",
+      "hical.ca",
+      "irunguns.ca",
+      "jobrookoutdoors.com",
+      "londerosports.com",
+      "millerandmillerauctions.com",
+      "oleysarmoury.com",
+      "store.prophetriver.com",
+      "surplusherbys.com",
+      "theammosource.com",
+      "thegundealer.ca",
+      "townpost.ca",
+      "www.gagnonsports.com",
+      "www.gobles.ca"
+    ],
+    "threw": []
+  },
+  "results": [
+    {
+      "domain": "aagcanada.ca",
+      "id": "cmm3v7sen0002o7a363n0zs3m",
+      "isEnabled": true,
+      "adapterType": "shopify",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 615,
+        "dbTotal": 629,
+        "liveCount": 565,
+        "coverage": 109,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 395
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://aagcanada.ca/products/tikka-t3x-ace-target-223-rem-23-7-threaded-barrel-made-in-finland-new-in-box",
+        "watermarkUrl": "https://aagcanada.ca/products/tikka-t3x-ace-target-223-rem-23-7-threaded-barrel-made-in-finland-new-in-box",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 2733
+    },
+    {
+      "domain": "alflahertys.com",
+      "id": "cmltxz6fp000289xar53h1vkf",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 5279,
+        "dbTotal": 5305,
+        "liveCount": 5256,
+        "coverage": 100,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "shooting-supplies-firearms-and-ammunition-firearms:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 3601
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://alflahertys.com/gamo-magnum-gr-jungle-22-cal-break-barrel-air-rifle-3-9-40-scope-up-to-1-300-fps-611006155-j54/",
+        "watermarkUrl": "https://alflahertys.com/ruger-american-generation-ii-ranch-bolt-action-rifle/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3863
+    },
+    {
+      "domain": "alsimmonsgunshop.com",
+      "id": "cmm3v7t5d000oo7a3bb9vsztq",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 1621,
+        "dbTotal": 1633,
+        "liveCount": 1638,
+        "coverage": 99,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 96,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 193
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://alsimmonsgunshop.com/product/rossi-lwc-44mag-14313n/",
+        "watermarkUrl": "https://alsimmonsgunshop.com/product/rossi-lwc-44mag-14313n/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 0,
+        "failures": [
+          "sourceId=65111 not in batched response (or no price)",
+          "sourceId=65088 not in batched response (or no price)",
+          "sourceId=65094 not in batched response (or no price)"
+        ]
+      },
+      "durationMs": 6235
+    },
+    {
+      "domain": "basspro.ca",
+      "id": "cmlvesr5o00131a42plitdzw5",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "coverage 0% < 95% (0/16543)",
+        "no lastWatermarkUrl",
+        "no streamState (bootstrap not yet started?)",
+        "bootstrap tier(s) not yet completed",
+        "stock coverage 0% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 0% < 95% (0/16543)",
+          "no lastWatermarkUrl",
+          "no streamState (bootstrap not yet started?)",
+          "bootstrap tier(s) not yet completed",
+          "stock coverage 0% < 95% (retailer threshold)"
+        ],
+        "dbActive": 0,
+        "dbTotal": 0,
+        "liveCount": 16543,
+        "coverage": 0,
+        "hasWatermark": false,
+        "tiersComplete": false,
+        "tierStatus": [],
+        "priceCoverage": 100,
+        "stockCoverage": 0,
+        "thumbCoverage": 0,
+        "inStockCount": 0
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": null,
+        "watermarkUrl": null,
+        "notes": [
+          "no active priced products to spot-check",
+          "no lastWatermarkUrl"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 0,
+        "succeeded": 0,
+        "failures": [
+          "no products to verify"
+        ]
+      },
+      "durationMs": 34623
+    },
+    {
+      "domain": "budgetshootersupply.ca",
+      "id": "cmltxz6xs000h89xascxu85b0",
+      "isEnabled": true,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 2821,
+        "dbTotal": 2825,
+        "liveCount": 2813,
+        "coverage": 100,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 93,
+        "inStockCount": 1538
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://budgetshootersupply.ca/product/lawrence-shot-magnum-8-25lb-bag/",
+        "watermarkUrl": "https://budgetshootersupply.ca/product/speer-30-308-168gr-gd-bullet-50-bx-20-cs/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 2450
+    },
+    {
+      "domain": "bullseyenorth.com",
+      "id": "cmlvesq1c00031a421xipjyxw",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 39% < 95% (1300/3343)",
+        "bootstrap tier(s) not yet completed",
+        "price coverage 92% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 39% < 95% (1300/3343)",
+          "bootstrap tier(s) not yet completed",
+          "price coverage 92% < 95% (retailer threshold)"
+        ],
+        "dbActive": 1300,
+        "dbTotal": 1300,
+        "liveCount": 3343,
+        "coverage": 39,
+        "hasWatermark": true,
+        "tiersComplete": false,
+        "tierStatus": [
+          "firearms:4=pending"
+        ],
+        "priceCoverage": 92,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 1294
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://www.bullseyenorth.com/shop/mossberg-maverick-88-all-purpose-pump-action-shotgun-12-gauge-28-barrel-3-chamber-5-rounds-matte-black-31010-4773",
+        "watermarkUrl": "https://www.bullseyenorth.com/shop/blue-line-pump-12-gauge-shotgun-185-51-accepts-870-furniture-23203",
+        "notes": [
+          "product URL fetch threw: Parse Error: Invalid header token",
+          "watermark URL fetch threw: Parse Error: Invalid header token"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 0,
+        "failures": [
+          "https://www.bullseyenorth.com/shop/mossberg-maverick-88-all-purpose-pump-action-shotgun-12-gauge-28-barrel-3-chamber-5-rounds-matte-black-31010-4773: Parse Error: Invalid header token",
+          "https://www.bullseyenorth.com/shop/diana-bandit-black-pcp-air-pistol-rifle-177-45mm-495-fps-35227: Parse Error: Invalid header token",
+          "https://www.bullseyenorth.com/shop/diana-air-rifle-stormrider-1050-fps-cal-45mm177-33401: Parse Error: Invalid header token"
+        ]
+      },
+      "durationMs": 3892
+    },
+    {
+      "domain": "canada.hibid.com",
+      "id": "cmlvesrg0001c1a42fq4p45b0",
+      "isEnabled": false,
+      "adapterType": "auction-hibid",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "price coverage 0% < 50% (auction threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "price coverage 0% < 50% (auction threshold)"
+        ],
+        "dbActive": 394,
+        "dbTotal": 397,
+        "liveCount": 394,
+        "coverage": 100,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "lots:4=done"
+        ],
+        "priceCoverage": 0,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 394
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": null,
+        "watermarkUrl": "https://canada.hibid.com/lot/293226099/vintage-brass-wall-light-fixture?ref=lot-list",
+        "notes": [
+          "no active priced products to spot-check"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 0,
+        "succeeded": 0,
+        "failures": [
+          "no products to verify"
+        ]
+      },
+      "durationMs": 8434
+    },
+    {
+      "domain": "canadafirstammo.ca",
+      "id": "cmltxz77r000q89xaoawg2lsl",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 932,
+        "dbTotal": 962,
+        "liveCount": 132,
+        "coverage": 706,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 131
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://canadafirstammo.ca/product/mosin-nagant/",
+        "watermarkUrl": "https://canadafirstammo.ca/product/used-tag-fde-plate-carrier-l-xl/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 0,
+        "failures": [
+          "sourceId=6733 not in batched response (or no price)",
+          "sourceId=8451 not in batched response (or no price)",
+          "sourceId=10307 not in batched response (or no price)"
+        ]
+      },
+      "durationMs": 3945
+    },
+    {
+      "domain": "canadasgunstore.ca",
+      "id": "cmlvesr0l000z1a425mydrwe4",
+      "isEnabled": true,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "price coverage 91% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "price coverage 91% < 95% (retailer threshold)"
+        ],
+        "dbActive": 2529,
+        "dbTotal": 2530,
+        "liveCount": 2389,
+        "coverage": 106,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "departments-outdoors---hunting-etc--|30.html:4=done"
+        ],
+        "priceCoverage": 91,
+        "stockCoverage": 100,
+        "thumbCoverage": 98,
+        "inStockCount": 1898
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.canadasgunstore.ca/products/optic-base-weaver-browning-sa22%7CWEA-48064.html",
+        "watermarkUrl": "https://www.canadasgunstore.ca/inet/storefront/create_account.php",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 57840
+    },
+    {
+      "domain": "canadiangunnutz.com",
+      "id": "cmltxz815001g89xamlvho7by",
+      "isEnabled": true,
+      "adapterType": "forum-xenforo",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "price coverage 4% < 50% (forum threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "price coverage 4% < 50% (forum threshold)"
+        ],
+        "dbActive": 6568,
+        "dbTotal": 6578,
+        "liveCount": 6147,
+        "coverage": 107,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "exchange-of-hunting-and-sporting-rifles.64:4=done"
+        ],
+        "priceCoverage": 4,
+        "stockCoverage": 100,
+        "thumbCoverage": 47,
+        "inStockCount": 6568
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://www.canadiangunnutz.com/forum/threads/lefty-lh-left-handed-nearly-mint-savage-116-weather-warrior-30-06-999-with-talley-rings-and-2-mags.2579348/",
+        "watermarkUrl": "https://www.canadiangunnutz.com/forum/threads/equipment-exchanging-buyers-and-sellers-responsibilities.2018286/",
+        "notes": [
+          "product URL returned HTTP 403",
+          "watermark URL returned HTTP 403"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 0,
+        "failures": [
+          "https://www.canadiangunnutz.com/forum/threads/lefty-lh-left-handed-nearly-mint-savage-116-weather-warrior-30-06-999-with-talley-rings-and-2-mags.2579348/: HTTP 403",
+          "https://www.canadiangunnutz.com/forum/threads/bnib-marlin-336-dark-series-in-30-30win-2200.2580401/: HTTP 403",
+          "https://www.canadiangunnutz.com/forum/threads/rossi-lwc-556-223-500-shipped.2580602/: HTTP 403"
+        ]
+      },
+      "durationMs": 2212
+    },
+    {
+      "domain": "corwin-arms.com",
+      "id": "cmlvesq80000a1a42tyfz7lgp",
+      "isEnabled": true,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 37,
+        "dbTotal": 37,
+        "liveCount": 16,
+        "coverage": 231,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 16
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.corwin-arms.com/product/scottish-lion-flag/",
+        "watermarkUrl": "https://www.corwin-arms.com/product/mosin-rifle-bend-bolt-actions-in-7-62x54r/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 2119
+    },
+    {
+      "domain": "dantesports.com",
+      "id": "cmm3v7t2a000mo7a3gvavqaac",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 2238,
+        "dbTotal": 2309,
+        "liveCount": 2086,
+        "coverage": 107,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 446
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://dantesports.com/fr/produit/sig-sauer-cross-sawtooth-rifle/",
+        "watermarkUrl": "https://dantesports.com/fr/produit/verrou-a-combinaison-mazzlock-pour-armes-a-feu/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 5975
+    },
+    {
+      "domain": "dlaskarms.com",
+      "id": "cmltxz8gg001t89xa3u23ezcd",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 233,
+        "dbTotal": 235,
+        "liveCount": 235,
+        "coverage": 99,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 165
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://dlaskarms.com/product/dlask-arms-corp-xb-2-linear-compensator/",
+        "watermarkUrl": "https://dlaskarms.com/product/dlask-arms-8-5-shorty-shotgun/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 5374
+    },
+    {
+      "domain": "doctordeals.ca",
+      "id": "cmm3v7t4a000no7a3o042mkal",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 961,
+        "dbTotal": 961,
+        "liveCount": 975,
+        "coverage": 99,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 419
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://doctordeals.ca/product/remington-870-sportsman-12-gauge-pump-action-shotgun-r81076/",
+        "watermarkUrl": "https://doctordeals.ca/product/mossberg-500-12-gauge-3-inch-pump-action-shotgun-24-inch-matte-blued-riffled-sighted-barrel-3-inch-chamber-new/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 4667
+    },
+    {
+      "domain": "doubletapsports.com",
+      "id": "cmm0hekt0000110ndvcwnp4hr",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 1857,
+        "dbTotal": 1868,
+        "liveCount": 1860,
+        "coverage": 100,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 1350
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://doubletapsports.com/product/remington-model-1100-12ga-semi-automatic-shotgun/",
+        "watermarkUrl": "https://doubletapsports.com/product/remington-model-1100-12ga-semi-automatic-shotgun/",
+        "notes": [
+          "title \"Remington Model 1100 12GA 24″ Semi-Automatic Shotgun\" not found in response body (371592 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 10256
+    },
+    {
+      "domain": "durhamoutdoors.ca",
+      "id": "cmltxz7ss001989xaoiqb9kni",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "bootstrap tier(s) not yet completed"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "bootstrap tier(s) not yet completed"
+        ],
+        "dbActive": 104,
+        "dbTotal": 104,
+        "liveCount": 47,
+        "coverage": 221,
+        "hasWatermark": true,
+        "tiersComplete": false,
+        "tierStatus": [
+          "surplus-and-collection_c_33.html:4=pending"
+        ],
+        "priceCoverage": 99,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 83
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://durhamoutdoors.ca/SURPLUS-RIFLE-CARCANO-65-X-52_p_3004.html",
+        "watermarkUrl": "https://durhamoutdoors.ca/CHIAPPA-c44-MAG-1892-MHR-WILDLANDS-BLACK-16%E2%80%9D_p_3592.html",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 9840
+    },
+    {
+      "domain": "ellwoodepps.com",
+      "id": "cmltxz6eo000189xayn5wvgkr",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 9% < 95% (2928/34078)",
+        "price coverage 92% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 9% < 95% (2928/34078)",
+          "price coverage 92% < 95% (retailer threshold)"
+        ],
+        "dbActive": 2928,
+        "dbTotal": 3394,
+        "liveCount": 34078,
+        "coverage": 9,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "catalogsearch-result:4=done"
+        ],
+        "priceCoverage": 92,
+        "stockCoverage": 100,
+        "thumbCoverage": 92,
+        "inStockCount": 2466
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": false,
+        "productUrl": "https://ellwoodepps.com/remington-798.html",
+        "watermarkUrl": "https://ellwoodepps.com/catalog/product/view/id/435471/s/duo-realis-55-nitro-2-1-16-inch-blue-lime/",
+        "notes": [
+          "watermark URL returned HTTP 404"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 2733
+    },
+    {
+      "domain": "firearmsoutletcanada.com",
+      "id": "cmltxz6pw000a89xacnyqekjc",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 3302,
+        "dbTotal": 3396,
+        "liveCount": 3260,
+        "coverage": 101,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms:4=done"
+        ],
+        "priceCoverage": 98,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 1838
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://firearmsoutletcanada.com/black-creek-labs-mrx-bison-5-56-nato-16-bisr55616blk-.html",
+        "watermarkUrl": "https://firearmsoutletcanada.com/federation-firearms-rs-410-revolver-shotgun-410ga-3-26-barrel-blk-ff-rs410-26/",
+        "notes": [
+          "title \"Black Creek Labs MRX Bison - 5.56 NATO, 16\", BLK [BISR55616B\" not found in response body (297708 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 5607
+    },
+    {
+      "domain": "fishingworldgc.ca",
+      "id": "cmlvesqtw000u1a42p9j8e7i7",
+      "isEnabled": false,
+      "adapterType": "shopify",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 2102,
+        "dbTotal": 2105,
+        "liveCount": 1953,
+        "coverage": 108,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 1079
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://fishingworldgc.ca/collections/fwgc-staff-picks/products/tikka-t3x-arctic-308-win",
+        "watermarkUrl": "https://fishingworldgc.ca/products/weatherby-orion-sporting-over-under-shotgun-12ga-30",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 2748
+    },
+    {
+      "domain": "frontierfirearms.ca",
+      "id": "cmltxz6je000589xaijhcnlds",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 12% < 95% (155/1274)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 12% < 95% (155/1274)"
+        ],
+        "dbActive": 155,
+        "dbTotal": 866,
+        "liveCount": 1274,
+        "coverage": 12,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "categories.php:4=done"
+        ],
+        "priceCoverage": 99,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 145
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://frontierfirearms.ca/mesh-panel-7/",
+        "watermarkUrl": "https://frontierfirearms.ca/barnes-277-diameter-130-grain-solid-hollow-point-tsx-50-count/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3091
+    },
+    {
+      "domain": "fulcrum-outdoors.shoplightspeed.com",
+      "id": "cmm3v7tr20016o7a30d7xtkfx",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 1% < 95% (50/3661)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 1% < 95% (50/3661)"
+        ],
+        "dbActive": 50,
+        "dbTotal": 50,
+        "liveCount": 3661,
+        "coverage": 1,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 50
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://fulcrum-outdoors.shoplightspeed.com/antler-arms-ti-mountain-7mm-prc-bear-standard.html",
+        "watermarkUrl": "https://fulcrum-outdoors.shoplightspeed.com/adler-ad500-semi-auto-rifle-308-win.html",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3132
+    },
+    {
+      "domain": "g4cgunstore.com",
+      "id": "cmlvesqg0000i1a425uv5g6dv",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "coverage 22% < 95% (1289/5876)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 22% < 95% (1289/5876)"
+        ],
+        "dbActive": 1289,
+        "dbTotal": 1289,
+        "liveCount": 5876,
+        "coverage": 22,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "categories.php:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 503
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://g4cgunstore.com/product/heckler-koch-p30l-v3-ext-9mm-4-5-black/",
+        "watermarkUrl": "https://g4cgunstore.com/wp-admin/edit-tags.php?taxonomy=product_cat&post_type=product&s=iron+sights",
+        "notes": [
+          "title \"Heckler & Koch P30L-V3 EXT 9mm 4.5″ Black\" not found in response body (359138 bytes)",
+          "watermark URL returned HTTP 403"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 5869
+    },
+    {
+      "domain": "gotenda.com",
+      "id": "cmltxz6ca000089xa8f29w3yz",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 16303,
+        "dbTotal": 16397,
+        "liveCount": 16735,
+        "coverage": 97,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 98,
+        "inStockCount": 10214
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://www.gotenda.com/product/scsa-taipan-x-300-blk-16-5%e2%80%b3-pump-action-5-rounds-grey/",
+        "watermarkUrl": "https://www.gotenda.com/product/browning-citori-825-golden-clays-sporting-12-ga-3-32-over-under-shotgun/",
+        "notes": [
+          "product URL returned HTTP 307",
+          "watermark URL returned HTTP 307"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 0,
+        "failures": [
+          "Store API returned HTTP 307"
+        ]
+      },
+      "durationMs": 11399
+    },
+    {
+      "domain": "greatnorthgunco.ca",
+      "id": "cmm0hekpc000010nd1t0oo5p3",
+      "isEnabled": true,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 4323,
+        "dbTotal": 4324,
+        "liveCount": 4321,
+        "coverage": 100,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 98,
+        "inStockCount": 508
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://greatnorthgunco.ca/product/jamart-co-liege-belgium-sxs-in-12ga-3/",
+        "watermarkUrl": "https://greatnorthgunco.ca/product/jamart-co-liege-belgium-sxs-in-12ga-3/",
+        "notes": [
+          "title \"Jamart & Co (Liège, Belgium) SXS in 12ga\" not found in response body (86074 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 10015
+    },
+    {
+      "domain": "groupepronature.ca",
+      "id": "cmm3v7sfu0003o7a3assboall",
+      "isEnabled": true,
+      "adapterType": "shopify",
+      "hasWaf": true,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 1619,
+        "dbTotal": 1620,
+        "liveCount": 1581,
+        "coverage": 102,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 506
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://groupepronature.ca/products/nettoyant-rem-action-en-aerosol-rem-action-aerosol-cleaner",
+        "watermarkUrl": "https://groupepronature.ca/products/nettoyant-rem-action-en-aerosol-rem-action-aerosol-cleaner",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 14217
+    },
+    {
+      "domain": "gunpost.ca",
+      "id": "cmltxz83m001i89xarjvjsc0g",
+      "isEnabled": false,
+      "adapterType": "classifieds-gunpost",
+      "hasWaf": true,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 36881,
+        "dbTotal": 37327,
+        "liveCount": 25186,
+        "coverage": 146,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "ads:4=done"
+        ],
+        "priceCoverage": 98,
+        "stockCoverage": 97,
+        "thumbCoverage": 98,
+        "inStockCount": 32987
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.gunpost.ca/archery/bows/edmonton/pse-evo-evl-rh-0",
+        "watermarkUrl": "https://www.gunpost.ca/firearms/rifles/edmonton/reduced-winchester-94-ae-45-colt",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 5880
+    },
+    {
+      "domain": "hical.ca",
+      "id": "cmltxz8xi002789xaaqs4yaj2",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 1690,
+        "dbTotal": 1690,
+        "liveCount": 1676,
+        "coverage": 101,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 549
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://hical.ca/product/trinity-force-large-laser/",
+        "watermarkUrl": "https://hical.ca/product/ruger-10-22-extended-magazine-and-bolt-release-kit/",
+        "notes": [
+          "title \"Trinity Force Large Laser\" not found in response body (212 bytes)",
+          "watermark URL response did not match product-page markers"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 0,
+        "failures": [
+          "Store API returned HTTP 200"
+        ]
+      },
+      "durationMs": 7536
+    },
+    {
+      "domain": "icollector.com",
+      "id": "cmltxz85t001k89xava0pnkq0",
+      "isEnabled": false,
+      "adapterType": "auction-icollector",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "live product count unavailable"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "live product count unavailable"
+        ],
+        "dbActive": 6985,
+        "dbTotal": 6987,
+        "liveCount": null,
+        "coverage": null,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 68,
+        "stockCoverage": 100,
+        "thumbCoverage": 1,
+        "inStockCount": 6494
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.icollector.com/Lee-Breech-Lock-Bushings-Lot_i59486172",
+        "watermarkUrl": "https://www.icollector.com/Having-Giving_i46710734",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 1914
+    },
+    {
+      "domain": "internationalshootingsupplies.com",
+      "id": "cmltxz7pk001689xa1de9mpyl",
+      "isEnabled": true,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 5314,
+        "dbTotal": 5335,
+        "liveCount": 5286,
+        "coverage": 101,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 2353
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://internationalshootingsupplies.com/product/chiappa-wildlands-1892-alaskan-takedown-rifle-chrome-357-mag-16-barrel/",
+        "watermarkUrl": "https://internationalshootingsupplies.com/product/browning-citori-cx-12-ga-3-30-barrel/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3306
+    },
+    {
+      "domain": "intersurplus.com",
+      "id": "cmn4d3n270001uf410d2g9n1w",
+      "isEnabled": false,
+      "adapterType": "shopify",
+      "hasWaf": true,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 3726,
+        "dbTotal": 3731,
+        "liveCount": 2804,
+        "coverage": 133,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 2820
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://intersurplus.com/products/unknown-in-410ga",
+        "watermarkUrl": "https://intersurplus.com/products/unknown-in-410ga",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 10142
+    },
+    {
+      "domain": "irunguns.ca",
+      "id": "cmlvesqzl000y1a426cxtl783",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 0% < 95% (0/104)",
+        "no lastWatermarkUrl",
+        "stock coverage 0% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 0% < 95% (0/104)",
+          "no lastWatermarkUrl",
+          "stock coverage 0% < 95% (retailer threshold)"
+        ],
+        "dbActive": 0,
+        "dbTotal": 0,
+        "liveCount": 104,
+        "coverage": 0,
+        "hasWatermark": false,
+        "tiersComplete": true,
+        "tierStatus": [
+          "subcategory.php:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 0,
+        "thumbCoverage": 0,
+        "inStockCount": 0
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": null,
+        "watermarkUrl": null,
+        "notes": [
+          "no active priced products to spot-check",
+          "no lastWatermarkUrl"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 0,
+        "succeeded": 0,
+        "failures": [
+          "no products to verify"
+        ]
+      },
+      "durationMs": 777
+    },
+    {
+      "domain": "jobrookoutdoors.com",
+      "id": "cmltxz7xc001d89xaa7xlt78k",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "coverage 3% < 95% (48/1669)",
+        "bootstrap tier(s) not yet completed",
+        "price coverage 90% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 3% < 95% (48/1669)",
+          "bootstrap tier(s) not yet completed",
+          "price coverage 90% < 95% (retailer threshold)"
+        ],
+        "dbActive": 48,
+        "dbTotal": 55,
+        "liveCount": 1669,
+        "coverage": 3,
+        "hasWatermark": true,
+        "tiersComplete": false,
+        "tierStatus": [
+          "api:4=pending"
+        ],
+        "priceCoverage": 90,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 10
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://www.jobrookoutdoors.com/rh7-arrow-rest.html",
+        "watermarkUrl": "https://www.jobrookoutdoors.com/consequence-31-rh-50-fde.html",
+        "notes": [
+          "product URL returned HTTP 404"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 2,
+        "failures": [
+          "https://www.jobrookoutdoors.com/rh7-arrow-rest.html: HTTP 404"
+        ]
+      },
+      "durationMs": 5107
+    },
+    {
+      "domain": "kodiakdefence.com",
+      "id": "cmplzm94c0000wul5d52t1zfn",
+      "isEnabled": true,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "price coverage 70% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "price coverage 70% < 95% (retailer threshold)"
+        ],
+        "dbActive": 179,
+        "dbTotal": 179,
+        "liveCount": 181,
+        "coverage": 99,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "shop:4=done"
+        ],
+        "priceCoverage": 70,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 171
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://kodiakdefence.com/shop/wk180c-lower-parts-kit-with-external-bolt-catch/",
+        "watermarkUrl": "https://kodiakdefence.com/shop/mag801-5/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 10633
+    },
+    {
+      "domain": "leverarms.com",
+      "id": "cmltxz6ll000789xazdnuh63l",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 965,
+        "dbTotal": 975,
+        "liveCount": 971,
+        "coverage": 99,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 366
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://leverarms.com/shop/kit/attachments-and-parts/canik-tp-elite-sc-sub-compact-9mm-magazine-ma899/",
+        "watermarkUrl": "https://leverarms.com/shop/guns/shotguns/pump-action-shotguns/mossberg-maverick-88-security-12-ga-3-31048/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 1704
+    },
+    {
+      "domain": "liangjian.ca",
+      "id": "cmm3v7ts40017o7a3733ji1fr",
+      "isEnabled": true,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 7% < 95% (142/2110)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 7% < 95% (142/2110)"
+        ],
+        "dbActive": 142,
+        "dbTotal": 144,
+        "liveCount": 2110,
+        "coverage": 7,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "categories.php:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 82,
+        "inStockCount": 137
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://liangjian.ca/shop/ols/products/savage-arms-a17-47007-17hmr--22heavy-barrel-semi-auto-rifle",
+        "watermarkUrl": "https://liangjian.ca/shop/ols/products/savage-arms-a17-47007-17hmr--22heavy-barrel-semi-auto-rifle",
+        "notes": [
+          "title \"Savage Arms A17 47007 17HMR 22\"Heavy Barrel Semi-Auto Rifle\" not found in response body (92331 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3139
+    },
+    {
+      "domain": "lockharttactical.com",
+      "id": "cmltxz8fb001s89xad0gg9exc",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 5% < 95% (134/2451)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 5% < 95% (134/2451)"
+        ],
+        "dbActive": 134,
+        "dbTotal": 134,
+        "liveCount": 2451,
+        "coverage": 5,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "category:4=done"
+        ],
+        "priceCoverage": 97,
+        "stockCoverage": 100,
+        "thumbCoverage": 98,
+        "inStockCount": 70
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.lockharttactical.com/products/product/statas-wire",
+        "watermarkUrl": "https://www.lockharttactical.com/clearance/product/acu-trousers-medium-regular-brand-new",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 5937
+    },
+    {
+      "domain": "londerosports.com",
+      "id": "cmm3v7tpw0015o7a3ft6kuner",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "coverage 5% < 95% (394/8332)",
+        "price coverage 83% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 5% < 95% (394/8332)",
+          "price coverage 83% < 95% (retailer threshold)"
+        ],
+        "dbActive": 394,
+        "dbTotal": 394,
+        "liveCount": 8332,
+        "coverage": 5,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms.html:4=done"
+        ],
+        "priceCoverage": 83,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 361
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://www.londerosports.com/en/rcbs-full-length-die-set-6mm-arc-2-pack",
+        "watermarkUrl": "https://www.londerosports.com/en/federation-firearms-single-shot-28-ga-28-shotgun",
+        "notes": [
+          "product URL returned HTTP 403",
+          "watermark URL returned HTTP 403"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 0,
+        "failures": [
+          "https://www.londerosports.com/en/rcbs-full-length-die-set-6mm-arc-2-pack: HTTP 403",
+          "https://www.londerosports.com/en/used-ruger-american-gen-ii-6-5-creedmoor-22-rifle: HTTP 403",
+          "https://www.londerosports.com/en/lucky-strike-canadian-wiggler-lure: HTTP 403"
+        ]
+      },
+      "durationMs": 6342
+    },
+    {
+      "domain": "marstar.ca",
+      "id": "cmltxz6t9000d89xa27mw3jk7",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 5871,
+        "dbTotal": 5902,
+        "liveCount": 5857,
+        "coverage": 100,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 85,
+        "inStockCount": 2975
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://marstar.ca/product/5-8x24-thread-on-fake-can-muzzle-brake-308-6/",
+        "watermarkUrl": "https://marstar.ca/product/federal-12-gauge-3-1-1-8oz-bb-steel-shot-25rds-wf143bb/",
+        "notes": [
+          "title \"5/8×24 Thread-on Fake Can Muzzle Brake 308 6″\" not found in response body (259603 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 1786
+    },
+    {
+      "domain": "millerandmillerauctions.com",
+      "id": "cmltxz89b001n89xacrzexum8",
+      "isEnabled": false,
+      "adapterType": "auction-generic",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "live product count unavailable",
+        "no lastWatermarkUrl",
+        "no streamState (bootstrap not yet started?)",
+        "bootstrap tier(s) not yet completed",
+        "stock coverage 0% < 50% (auction threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "live product count unavailable",
+          "no lastWatermarkUrl",
+          "no streamState (bootstrap not yet started?)",
+          "bootstrap tier(s) not yet completed",
+          "stock coverage 0% < 50% (auction threshold)"
+        ],
+        "dbActive": 0,
+        "dbTotal": 0,
+        "liveCount": null,
+        "coverage": null,
+        "hasWatermark": false,
+        "tiersComplete": false,
+        "tierStatus": [],
+        "priceCoverage": 100,
+        "stockCoverage": 0,
+        "thumbCoverage": 0,
+        "inStockCount": 0
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": null,
+        "watermarkUrl": null,
+        "notes": [
+          "no active priced products to spot-check",
+          "no lastWatermarkUrl"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 0,
+        "succeeded": 0,
+        "failures": [
+          "no products to verify"
+        ]
+      },
+      "durationMs": 290
+    },
+    {
+      "domain": "nordicmarksman.com",
+      "id": "cmltxz6uc000e89xayuooizbe",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "price coverage 85% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "price coverage 85% < 95% (retailer threshold)"
+        ],
+        "dbActive": 4543,
+        "dbTotal": 4590,
+        "liveCount": 4782,
+        "coverage": 95,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "categories.php:4=done"
+        ],
+        "priceCoverage": 85,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 3225
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://nordicmarksman.com/copy-of-remington-rem-oil-aerosol-can-4oz/",
+        "watermarkUrl": "https://nordicmarksman.com/federal-champion-hv-training-22lr/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 2902
+    },
+    {
+      "domain": "northprosports.com",
+      "id": "cmltxz8yk002889xalsez9158",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 29% < 95% (204/710)",
+        "price coverage 94% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 29% < 95% (204/710)",
+          "price coverage 94% < 95% (retailer threshold)"
+        ],
+        "dbActive": 204,
+        "dbTotal": 229,
+        "liveCount": 710,
+        "coverage": 29,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "index.php:4=done"
+        ],
+        "priceCoverage": 94,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 172
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://northprosports.com/index.php?route=product/product&product_id=22512",
+        "watermarkUrl": "https://www.northprosports.com/index.php?route=account/order",
+        "notes": [
+          "title \"Federation Firearms Single Shot 410ga Walnut Stock - 20\" Bar\" not found in response body (24467 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 18891
+    },
+    {
+      "domain": "oleysarmoury.com",
+      "id": "cmnw4ljfw0000kq49eb3y3ucj",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 62% < 95% (2100/3368)",
+        "bootstrap tier(s) not yet completed"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 62% < 95% (2100/3368)",
+          "bootstrap tier(s) not yet completed"
+        ],
+        "dbActive": 2100,
+        "dbTotal": 2100,
+        "liveCount": 3368,
+        "coverage": 62,
+        "hasWatermark": true,
+        "tiersComplete": false,
+        "tierStatus": [
+          "firearms:4=pending"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 93,
+        "inStockCount": 2099
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://oleysarmoury.com/fort-scott-munitions-44-mag-200g-tui-tumble-upon-impact-solid-copper-20rds/",
+        "watermarkUrl": "https://oleysarmoury.com/fort-scott-munitions-44-mag-200g-tui-tumble-upon-impact-solid-copper-20rds/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 1,
+        "failures": [
+          "https://oleysarmoury.com/used-ruger-scout-308-w-vortex-2-7x32-scout-scope-double-rifle-hard-case-3-x-10rnd-mags-4-rnd-mag-extra-ruger-scope-rings/: HTTP 404",
+          "https://oleysarmoury.com/used-vintage-canuck-cil-16-gauge-2-3-4-6-box-in-good-shape-wear-on-edges-but-no-tears/: HTTP 404"
+        ]
+      },
+      "durationMs": 3171
+    },
+    {
+      "domain": "outfitters.goldnloan.com",
+      "id": "cmm3v7tta0018o7a3bxcyi9my",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 24% < 95% (42/177)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 24% < 95% (42/177)"
+        ],
+        "dbActive": 42,
+        "dbTotal": 42,
+        "liveCount": 177,
+        "coverage": 24,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 22
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://outfitters.goldnloan.com/shop/70783-marlin-xt-22mr-248?attrib=&attrib=&attrib=&attrib=&attrib=&view_mode=grid&hide_out_of_stock=1",
+        "watermarkUrl": "https://outfitters.goldnloan.com/shop/browning-rifle-x-bolt-2-speed-ovix-215?attrib=&attrib=&attrib=&attrib=&attrib=&view_mode=grid&hide_out_of_stock=1",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 15856
+    },
+    {
+      "domain": "pavillonchassepeche.ca",
+      "id": "cmm3v7t71000po7a3h0o2t7yb",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 1317,
+        "dbTotal": 1383,
+        "liveCount": 1253,
+        "coverage": 105,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 1095
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://pavillonchassepeche.ca/produit/olympia-bracelet-paracorde-8/",
+        "watermarkUrl": "https://pavillonchassepeche.ca/produit/plano-etui-noir-pour-arbalete/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 17579
+    },
+    {
+      "domain": "precisionoptics.net",
+      "id": "cmltxz78r000r89xanb2brv1f",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 3% < 95% (210/6017)",
+        "price coverage 86% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 3% < 95% (210/6017)",
+          "price coverage 86% < 95% (retailer threshold)"
+        ],
+        "dbActive": 210,
+        "dbTotal": 210,
+        "liveCount": 6017,
+        "coverage": 3,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "64.htm:4=done"
+        ],
+        "priceCoverage": 86,
+        "stockCoverage": 100,
+        "thumbCoverage": 58,
+        "inStockCount": 191
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.precisionoptics.net/Burris_Veracity_PH_2_5_12x42_3PW_MOA_FFP_Illumin_p/200201.htm",
+        "watermarkUrl": "https://www.precisionoptics.net/Zeiss_Conquest_V4_4_16x44_94_ZMoA2_Reticle_AS_p/522931-9994-080.htm",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3749
+    },
+    {
+      "domain": "rangeviewsports.ca",
+      "id": "cmltxz79y000s89xaef4uraxy",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 5520,
+        "dbTotal": 5582,
+        "liveCount": 5407,
+        "coverage": 102,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "wc-api:4=done"
+        ],
+        "priceCoverage": 95,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 3055
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.rangeviewsports.ca/product/special-order-sako-trg-m10-complete-barrel-assembly/",
+        "watermarkUrl": "https://www.rangeviewsports.ca/product/special-order-sako-trg-m10-complete-barrel-assembly/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 6805
+    },
+    {
+      "domain": "rdsc.ca",
+      "id": "cmltxz8k2001w89xae5sr2vew",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 0% < 95% (40/9343)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 0% < 95% (40/9343)"
+        ],
+        "dbActive": 40,
+        "dbTotal": 42,
+        "liveCount": 9343,
+        "coverage": 0,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "categories.php:4=done"
+        ],
+        "priceCoverage": 98,
+        "stockCoverage": 100,
+        "thumbCoverage": 75,
+        "inStockCount": 40
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://rdsc.ca/hornady-ammo-10mm-150-grain-ftx-leverevolution-20-rounds.html",
+        "watermarkUrl": "https://www.rdsc.ca/firearms-ammunition.html",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3591
+    },
+    {
+      "domain": "reliablegun.com",
+      "id": "cmltxz6kf000689xaoqvq5y9r",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "coverage 1% < 95% (39/6580)",
+        "price coverage 85% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 1% < 95% (39/6580)",
+          "price coverage 85% < 95% (retailer threshold)"
+        ],
+        "dbActive": 39,
+        "dbTotal": 39,
+        "liveCount": 6580,
+        "coverage": 1,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms:4=done"
+        ],
+        "priceCoverage": 85,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 13
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.reliablegun.com/pmc-bronze-rifle-ammunition-223a",
+        "watermarkUrl": "https://www.reliablegun.com/akdas-alcor-semi-auto-rifle-alcor-223",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 11102
+    },
+    {
+      "domain": "sail.ca",
+      "id": "cmlvesr6r00141a426w4e8f7c",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 33% < 95% (6246/18896)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 33% < 95% (6246/18896)"
+        ],
+        "dbActive": 6246,
+        "dbTotal": 6251,
+        "liveCount": 18896,
+        "coverage": 33,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "en-hunting-firearms:4=done"
+        ],
+        "priceCoverage": 98,
+        "stockCoverage": 100,
+        "thumbCoverage": 92,
+        "inStockCount": 2678
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.sail.ca/en/federal-black-cloud-fs-12-ga-shotshells-458469",
+        "watermarkUrl": "https://www.sail.ca/en/columbia-crestwood-hiking-shoes-men-s-784542",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 6712
+    },
+    {
+      "domain": "shooterschoice.com",
+      "id": "cmn4d3n020000uf41baa4ecdi",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "coverage 63% < 95% (7113/11375)",
+        "bootstrap tier(s) not yet completed"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 63% < 95% (7113/11375)",
+          "bootstrap tier(s) not yet completed"
+        ],
+        "dbActive": 7113,
+        "dbTotal": 7113,
+        "liveCount": 11375,
+        "coverage": 63,
+        "hasWatermark": true,
+        "tiersComplete": false,
+        "tierStatus": [
+          "api:4=pending"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 2076
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://shooterschoice.com/shop/brand/wheeler-brand/wheel-pro-scope-mount-kit-1/",
+        "watermarkUrl": "https://shooterschoice.com/shop/brand/tenpoint-brand/tenpoint-narrow-soft-case/",
+        "notes": [
+          "title \"WHEEL PRO SCOPE MOUNT KIT 1″\" not found in response body (180777 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 7247
+    },
+    {
+      "domain": "solelyoutdoors.com",
+      "id": "cmn5lkx720000koewfoyqlhkk",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "coverage 8% < 95% (76/900)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 8% < 95% (76/900)"
+        ],
+        "dbActive": 76,
+        "dbTotal": 76,
+        "liveCount": 900,
+        "coverage": 8,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms.html:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 92,
+        "inStockCount": 10
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.solelyoutdoors.com/winchester-44-40win-200gr-sp-50rs-box.html",
+        "watermarkUrl": "https://www.solelyoutdoors.com/bore-tech-nylon-pistol-brush-44-45-cal-3pk.html",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 5117
+    },
+    {
+      "domain": "store.prophetriver.com",
+      "id": "cmlvesq6b00081a4294m07gwr",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 2% < 95% (256/13990)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 2% < 95% (256/13990)"
+        ],
+        "dbActive": 256,
+        "dbTotal": 314,
+        "liveCount": 13990,
+        "coverage": 2,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "rifles:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 236
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://store.prophetriver.com/browning-22s-l-lr-bl-22-fld-grade-ii-lever-action-rifle-walnut-stock-engraved-receiver-blued-20barrel-15-round-capacity-mfg-024108102-s-n-03950yv242/",
+        "watermarkUrl": "https://store.prophetriver.com/zeiss-conquest-v4-3-12x44mm-sfp-capped-elevation-turret-20-z-plex-ret-522961-9920-000-open-box/",
+        "notes": [
+          "product URL returned HTTP 404",
+          "watermark URL returned HTTP 404"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 1,
+        "failures": [
+          "https://store.prophetriver.com/browning-22s-l-lr-bl-22-fld-grade-ii-lever-action-rifle-walnut-stock-engraved-receiver-blued-20barrel-15-round-capacity-mfg-024108102-s-n-03950yv242/: HTTP 404",
+          "https://store.prophetriver.com/browning-22lr-t-bolt-target-varmint-satin-finish-checkered-walnut-polished-blued-22-heavy-target-barrel-mfg-025176202/: HTTP 404"
+        ]
+      },
+      "durationMs": 3228
+    },
+    {
+      "domain": "store.theshootingcentre.com",
+      "id": "cmlvesqw9000w1a42wts64abe",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [
+        "coverage 42% < 95% (7179/16985)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 42% < 95% (7179/16985)"
+        ],
+        "dbActive": 7179,
+        "dbTotal": 7199,
+        "liveCount": 16985,
+        "coverage": 42,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms:4=done"
+        ],
+        "priceCoverage": 99,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 5648
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://store.theshootingcentre.com/mdt-picatinny-scope-base-for-remington-700-sa-20-moa/",
+        "watermarkUrl": "https://store.theshootingcentre.com/readywise-emergency-food-supply-breakfast-entree-bucket-84-servings/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 6213
+    },
+    {
+      "domain": "surplusherbys.com",
+      "id": "cmlvesqby000e1a42eom7ltyx",
+      "isEnabled": true,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 0% < 95% (0/158)",
+        "no lastWatermarkUrl",
+        "no streamState (bootstrap not yet started?)",
+        "bootstrap tier(s) not yet completed",
+        "stock coverage 0% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 0% < 95% (0/158)",
+          "no lastWatermarkUrl",
+          "no streamState (bootstrap not yet started?)",
+          "bootstrap tier(s) not yet completed",
+          "stock coverage 0% < 95% (retailer threshold)"
+        ],
+        "dbActive": 0,
+        "dbTotal": 0,
+        "liveCount": 158,
+        "coverage": 0,
+        "hasWatermark": false,
+        "tiersComplete": false,
+        "tierStatus": [],
+        "priceCoverage": 100,
+        "stockCoverage": 0,
+        "thumbCoverage": 0,
+        "inStockCount": 0
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": null,
+        "watermarkUrl": null,
+        "notes": [
+          "no active priced products to spot-check",
+          "no lastWatermarkUrl"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 0,
+        "succeeded": 0,
+        "failures": [
+          "no products to verify"
+        ]
+      },
+      "durationMs": 1245
+    },
+    {
+      "domain": "tacord.com",
+      "id": "cmlvesqsd000t1a42rcq7qm8s",
+      "isEnabled": true,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 206,
+        "dbTotal": 206,
+        "liveCount": 206,
+        "coverage": 100,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 145
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://tacord.com/product/magpul-m-lok-aluminum-rail-3-slots/",
+        "watermarkUrl": "https://tacord.com/product/nordic-mxt-shotgun-magazine-extension-tube-kit-12ga/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 7420
+    },
+    {
+      "domain": "theammosource.com",
+      "id": "cmltxz6ic000489xacjiyigbn",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": true,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 11082,
+        "dbTotal": 11444,
+        "liveCount": 2437,
+        "coverage": 455,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "modern-sporting-rifles:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 11075
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://theammosource.com/rock-island-armory-tm22-feather-semi-auto-22lr-18-barrel/",
+        "watermarkUrl": "https://theammosource.com/browning-blr-lt-wt-lever-action-rifle-308-win-20-barrel-wood-stock-with-nikon-prostaff-2-7x32-scope/",
+        "notes": [
+          "title \"Rock Island Armory TM22 Feather Semi-Auto 22LR, 18″ Barrel\" not found in response body (1087496 bytes)",
+          "watermark URL returned HTTP 404"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 2,
+        "failures": [
+          "https://theammosource.com/rock-island-armory-tm22-22-lr-20-barrel-black/: HTTP 404"
+        ]
+      },
+      "durationMs": 5526
+    },
+    {
+      "domain": "thegundealer.ca",
+      "id": "cmltxz70w000k89xas702x05d",
+      "isEnabled": false,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 0% < 95% (0/11219)",
+        "no lastWatermarkUrl",
+        "stock coverage 0% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 0% < 95% (0/11219)",
+          "no lastWatermarkUrl",
+          "stock coverage 0% < 95% (retailer threshold)"
+        ],
+        "dbActive": 0,
+        "dbTotal": 0,
+        "liveCount": 11219,
+        "coverage": 0,
+        "hasWatermark": false,
+        "tiersComplete": true,
+        "tierStatus": [
+          "all:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 0,
+        "thumbCoverage": 0,
+        "inStockCount": 0
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": null,
+        "watermarkUrl": null,
+        "notes": [
+          "no active priced products to spot-check",
+          "no lastWatermarkUrl"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "store-api",
+        "sampled": 0,
+        "succeeded": 0,
+        "failures": [
+          "no products to verify"
+        ]
+      },
+      "durationMs": 1215
+    },
+    {
+      "domain": "tommyenterprises.com",
+      "id": "cmplzdnxu0000lbobubt6l6fv",
+      "isEnabled": true,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": true,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 122,
+        "dbTotal": 122,
+        "liveCount": 121,
+        "coverage": 101,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "shop:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 99,
+        "inStockCount": 1
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://tommyenterprises.com/product/custom-work/",
+        "watermarkUrl": "https://tommyenterprises.com/product/tm22-speed-loader/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 522
+    },
+    {
+      "domain": "townpost.ca",
+      "id": "cmltxz84q001j89xa65b7d1y9",
+      "isEnabled": true,
+      "adapterType": "generic",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "price coverage 67% < 70% (classified threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "price coverage 67% < 70% (classified threshold)"
+        ],
+        "dbActive": 2457,
+        "dbTotal": 2457,
+        "liveCount": 1575,
+        "coverage": 156,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "guns:4=done"
+        ],
+        "priceCoverage": 67,
+        "stockCoverage": 100,
+        "thumbCoverage": 0,
+        "inStockCount": 6
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://www.townpost.ca/marketplace/morinville/guns/remington-700-200th-anniversary-3006/1167878",
+        "watermarkUrl": "https://www.townpost.ca/marketplace/mississauga/guns/antique-da-remingtonelliot-fourbarrel-pepperbox-32rf-2600/1167308",
+        "notes": [
+          "title \"$1700.00Remington 700 200TH Anniversary 3006categories:Sport\" not found in response body (245136 bytes)",
+          "watermark URL response did not match product-page markers"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 0,
+        "failures": [
+          "https://www.townpost.ca/marketplace/morinville/guns/remington-700-200th-anniversary-3006/1167878: 200 but no product markers in body",
+          "https://www.townpost.ca/marketplace/edmonton/guns/ruger/1167910: 200 but no product markers in body",
+          "https://www.townpost.ca/marketplace/calgary/guns/arak-wall-art/1144293: 200 but no product markers in body"
+        ]
+      },
+      "durationMs": 6150
+    },
+    {
+      "domain": "triggersandbows.com",
+      "id": "cmlvesq8u000b1a42sa7h3oq5",
+      "isEnabled": true,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 6% < 95% (292/4863)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 6% < 95% (292/4863)"
+        ],
+        "dbActive": 292,
+        "dbTotal": 303,
+        "liveCount": 4863,
+        "coverage": 6,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "html-0:4=done"
+        ],
+        "priceCoverage": 98,
+        "stockCoverage": 100,
+        "thumbCoverage": 24,
+        "inStockCount": 64
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://www.triggersandbows.com/store/UG-21731-Used-Baikal-IJ-27E-1C-12ga-3-Over-Under-Shotgun-Professionally-Customized-Barrels-22-in-Length-W-Fixed-Cylinder-Bore-Chokes-Aftermarket-Soft-Foam-Butt-Pad-Good-Condition-p836955698",
+        "watermarkUrl": "https://www.triggersandbows.com/store/UG-21731-Used-Baikal-IJ-27E-1C-12ga-3-Over-Under-Shotgun-Professionally-Customized-Barrels-22-in-Length-W-Fixed-Cylinder-Bore-Chokes-Aftermarket-Soft-Foam-Butt-Pad-Good-Condition-p836955698",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3428
+    },
+    {
+      "domain": "truenortharms.com",
+      "id": "cmltxz8ml001y89xaez2d0byp",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 4658,
+        "dbTotal": 4739,
+        "liveCount": 3686,
+        "coverage": 126,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 4640
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://truenortharms.com/tna-vr-66-ma-12ga-semi-auto-shotgun-18-6-bbl-black-synthetic-stock-non-restricted/",
+        "watermarkUrl": "https://truenortharms.com/rock-island-armory-tm22-sa-compact-black-c-22-lr-18-lclt/",
+        "notes": [
+          "title \"TNA VR-66 Max 12ga Semi-Auto Shotgun, 18.6\" BBL,Black Synthe\" not found in response body (388879 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3036
+    },
+    {
+      "domain": "westernmetal.ca",
+      "id": "cmltxz7gj000y89xajrbo7gz4",
+      "isEnabled": true,
+      "adapterType": "woocommerce",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [],
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "dbActive": 7383,
+        "dbTotal": 7398,
+        "liveCount": 7387,
+        "coverage": 100,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "api:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 4807
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": false,
+        "watermarkOk": true,
+        "productUrl": "https://westernmetal.ca/product/lead-wire-0-020-in-1-lb-spools-lw-020-1-lb/",
+        "watermarkUrl": "https://westernmetal.ca/product/savage-57420-110-high-country-bolt-rifle-300-win-24-fluted-bbl-camo-accustock-accutrigger-pvd-finish-3-rd-dbm-0685-2192/",
+        "notes": [
+          "title \"LEAD WIRE 0.020″ IN 1 LB SPOOLS LW .020 1 LB\" not found in response body (2045529 bytes)"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "store-api",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 2329
+    },
+    {
+      "domain": "wolverinesupplies.com",
+      "id": "cmltxz6yv000i89xa1fyw2rug",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 74% < 95% (6038/8208)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 74% < 95% (6038/8208)"
+        ],
+        "dbActive": 6038,
+        "dbTotal": 6069,
+        "liveCount": 8208,
+        "coverage": 74,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 5961
+      },
+      "deepLight": {
+        "urlOk": true,
+        "titleOk": true,
+        "watermarkOk": true,
+        "productUrl": "https://wolverinesupplies.com/benelli-super-black-eagle-3-sa-12ga-3-28-711mm-3-round-synthetic-realtree-max-7/",
+        "watermarkUrl": "https://wolverinesupplies.com/eberlestock-rasr-rapid-acquisition-shooting-rest-black/",
+        "notes": []
+      },
+      "deepVerify": {
+        "verifyOk": true,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 3,
+        "failures": []
+      },
+      "durationMs": 3406
+    },
+    {
+      "domain": "www.gagnonsports.com",
+      "id": "cmlvesqv4000v1a422uagtvc0",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 4% < 95% (118/2706)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 4% < 95% (118/2706)"
+        ],
+        "dbActive": 118,
+        "dbTotal": 210,
+        "liveCount": 2706,
+        "coverage": 4,
+        "hasWatermark": true,
+        "tiersComplete": true,
+        "tierStatus": [
+          "firearms-new-firearms-centerfire-rifles:4=done"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 100,
+        "thumbCoverage": 100,
+        "inStockCount": 118
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": "https://www.gagnonsports.com/copy-of-akdas-alcor-223-rem-185-semi-auto-69916777.html",
+        "watermarkUrl": "https://www.gagnonsports.com/henry-repeating-arms-big-boy-all-weather-lever-act.html",
+        "notes": [
+          "product URL returned HTTP 404",
+          "watermark URL returned HTTP 404"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 3,
+        "succeeded": 2,
+        "failures": [
+          "https://www.gagnonsports.com/copy-of-akdas-alcor-223-rem-185-semi-auto-69916777.html: HTTP 404"
+        ]
+      },
+      "durationMs": 2483
+    },
+    {
+      "domain": "www.gobles.ca",
+      "id": "cmnw2yv0f00008w31vyons9j5",
+      "isEnabled": false,
+      "adapterType": "generic-retail",
+      "hasWaf": false,
+      "ready": false,
+      "reasons": [
+        "coverage 0% < 95% (0/3823)",
+        "no lastWatermarkUrl",
+        "bootstrap tier(s) not yet completed",
+        "stock coverage 0% < 95% (retailer threshold)"
+      ],
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          "coverage 0% < 95% (0/3823)",
+          "no lastWatermarkUrl",
+          "bootstrap tier(s) not yet completed",
+          "stock coverage 0% < 95% (retailer threshold)"
+        ],
+        "dbActive": 0,
+        "dbTotal": 0,
+        "liveCount": 3823,
+        "coverage": 0,
+        "hasWatermark": false,
+        "tiersComplete": false,
+        "tierStatus": [
+          "html-0:4=pending"
+        ],
+        "priceCoverage": 100,
+        "stockCoverage": 0,
+        "thumbCoverage": 0,
+        "inStockCount": 0
+      },
+      "deepLight": {
+        "urlOk": false,
+        "titleOk": false,
+        "watermarkOk": false,
+        "productUrl": null,
+        "watermarkUrl": null,
+        "notes": [
+          "no active priced products to spot-check",
+          "no lastWatermarkUrl"
+        ]
+      },
+      "deepVerify": {
+        "verifyOk": false,
+        "method": "detail-page",
+        "sampled": 0,
+        "succeeded": 0,
+        "failures": [
+          "no products to verify"
+        ]
+      },
+      "durationMs": 681
+    }
+  ]
+}

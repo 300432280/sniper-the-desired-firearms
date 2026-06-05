@@ -1,0 +1,119 @@
+{
+  "domain": "marstar.ca",
+  "round": "R2-live-investigation",
+  "investigatedAt": "2026-06-02",
+  "posture": "live crawler paused; per-request delay >=850ms; Chrome desktop UA; no DB writes; crawler NOT resumed",
+  "corrections": [
+    {
+      "field": "auditNotes.sortNoopFinding (root-cause attribution)",
+      "round1Hypothesis": "Sort NOOP attributed to 'Likely FastCGI cache (x-fastcgi-cache:HIT) or Store API orderby ignored'. WordOps FastCGI keys on path-not-query so query cache-bust insufficient.",
+      "liveMethod": "Re-ran the 3-way sort test with per_page=3 and a random _cb nonce on the Store API, capturing response headers byte-for-byte.",
+      "evidence": "All 3 orderings returned IDENTICAL ids 281936,281955,281980 (ascending product-ID order). BUT every response carried 'x-fastcgi-cache: BYPASS' and 'cf-cache-status: DYNAMIC' -- NOT a cache HIT. So the FastCGI-cache hypothesis is FALSIFIED for this surface; the true cause is that the WC Store API (/wc/store/v1/products) simply does not honor orderby/order on this install and always returns ascending p.id.",
+      "proposedValue": "Keep sortParam:null, sortVerified:false. Correct the narrative: Store-API sort is genuinely ignored (not cache-masked); fcgi=BYPASS proves the response was freshly generated each call. WordOps path-not-query cache theory does not apply -- the endpoint is uncached.",
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam / watermark surface sort availability (NEW finding R1 missed)",
+      "round1Hypothesis": "No sort is honored anywhere (sortParam:null, sort impossible on this site).",
+      "liveMethod": "Tested orderby on the WP REST CORE surface /wp-json/wp/v2/product (the watermark's own dateFilterApi=wp-rest-core surface), which R1 never sort-tested -- R1 only tested the Store API.",
+      "evidence": "GET /wp/v2/product?orderby=date&order=desc -> first ids 399885,399882,399878 (high=newest). order=asc -> 281936,281942,281952 (low=oldest). Sort IS honored on the WP REST core surface; the NOOP is surface-specific (Store API ignores orderby, WP REST core honors it).",
+      "proposedValue": "Optional: sortParam '?orderby=date&order=desc' is AVAILABLE on the watermark surface (/wp/v2/product). It is not REQUIRED because api-date-since-watermark is date-driven, but it exists. If we want to satisfy a sort-requiring validator without changing the validator, baking sortParam on the WP-REST-core surface is a viable alternative. Recommend leaving sortParam:null and fixing the validator (theme I) instead, since the watermark does not need sort.",
+      "confidence": "high"
+    },
+    {
+      "field": "perPage / paginationPattern.perPage",
+      "round1Hypothesis": "perPage 100 (API cap) vs 999 (HTML) -- which is correct?",
+      "liveMethod": "Requested Store API with per_page=100, 200, 999 and inspected status + returned array length.",
+      "evidence": "per_page=100 -> 100 items (200 OK). per_page=200 -> HTTP 400 rest_invalid_param. per_page=999 -> HTTP 400 rest_invalid_param. WC Store API hard-caps per_page at 100.",
+      "proposedValue": "perPage:100 is CORRECT. 999 is not usable on the API surface (the only surface the crawler uses). Settled in favor of 100.",
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls (per-category vs global) + topLevelCategories.allOption accuracy",
+      "round1Hypothesis": "9 per-category /product-category/ URLs; coverage union==5862 unproven (deferred to R2); allOption counts per category.",
+      "liveMethod": "Full global walk of /wp-json/wc/store/v1/products?per_page=100&page=1..59 with Set-based ID dedup; compared union to x-wp-total. Also cross-checked category= filter total vs category 'count' field.",
+      "evidence": "Global walk: walked=5862, uniqueIds=5862, expected(x-wp-total)=5862 -> 100.0% coverage, 0 duplicates, no category filtering needed. Per-category allOption counts mostly match (firearms count=792, accessories=1931, ammunition=176 from /products/categories) but the products endpoint category=81526(firearms) returns x-wp-total=803 (vs 792) -- per-category counts are approximate (subcat tagging), NOT byte-exact.",
+      "proposedValue": "Recommended primary coverage source = single GLOBAL endpoint /wp-json/wc/store/v1/products (proven 100% / 0-dup). Keep the 9 per-category /product-category/ URLs only as the HTML-fallback spine. Do NOT rely on summed per-category allOption for the count gate -- they overlap and are approximate; use the global x-wp-total (5862, exact).",
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern.type (theme B: API vs HTML path-pagination)",
+      "round1Hypothesis": "WC sites generically suffer the buildPaginatedUrl leading-slash bug on path templates like page/{N}/.",
+      "liveMethod": "GET /product-category/firearms/page/2/ for HTTP status; grep static category HTML for any page/N, product-page=, paged= link shapes.",
+      "evidence": "/product-category/firearms/page/2/ -> HTTP 404. Static category HTML contains NO path-pagination links. marstar paginationPattern.type='api-page' (per_page=100). The crawler paginates via the API ?page=N, never HTML path.",
+      "proposedValue": "paginationPattern.type:'api-page' is CORRECT. The leading-slash buildPaginatedUrl bug (catalog-crawler.ts:122-125) is INERT for marstar -- it never builds HTML path-pagination URLs. No fix needed for this site.",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount / productCountMethod",
+      "round1Hypothesis": "5862 via wp-rest-header on /wp-json/wc/store/v1/products x-wp-total.",
+      "liveMethod": "Direct header read on Store API and WP REST core; full walk union.",
+      "evidence": "Store API x-wp-total=5862; WP REST core /wp/v2/product modified_after=2000 x-wp-total=5862; full dedup walk uniqueIds=5862. All three agree exactly.",
+      "proposedValue": "expectedProductCount:5862 CONFIRMED exact. productCountMethod wp-rest-header endpoint /wp-json/wc/store/v1/products header x-wp-total CONFIRMED. NOTE: the validator's recommended endpointPairsVerifyMethod check passes here because the endpoint is the Store API surface (not /wp/v2/), matching verifyMethod=store-api.",
+      "confidence": "high"
+    },
+    {
+      "field": "crawlers.watermark (api-date-since-watermark viability)",
+      "round1Hypothesis": "api-date-since-watermark with dateFilterApi=wp-rest-core, dateFilterField=modified_after, sort-independent.",
+      "liveMethod": "GET /wp/v2/product?modified_after=<future> and <2000-01-01>, read x-wp-total.",
+      "evidence": "modified_after=2030 -> x-wp-total=0; modified_after=2000 -> x-wp-total=5862. The date filter is HONORED on the watermark surface. The method is viable and sort-independent.",
+      "proposedValue": "crawlers.watermark CONFIRMED correct. api-date-since-watermark works without any sortParam (date filter is the ordering mechanism). This is precisely why the validator's sort requirement is wrong for this method.",
+      "confidence": "high"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "I (CRITICAL)",
+      "file": "backend/src/services/profile-validator.ts:106-118",
+      "confirmed": true,
+      "detail": "The 'sortVerification' check (severity:'required') runs for ALL watermark methods except full-catalog-sweep. Exact condition at lines 110-117: `const method = p.crawlers?.watermark?.method; if (method === 'full-catalog-sweep') { return p.crawlers?.watermark?.reason ? null : '...'; } if (p.sortVerified === true || p.sortParam) return null; return 'sortVerified must be true or sortParam must be set (unless using full-catalog-sweep with reason)';`. For api-date-since-watermark with sortVerified:false and sortParam:null, this returns the failure string. EMPIRICAL: ran validateSiteProfile(marstar profile) -> {valid:false, score:95, requiredFailures:[sortVerification], warnings:0}, matching the R1 ledger exactly. The check does NOT exempt api-date-since-watermark, which is date-driven and provably sort-independent (modified_after filter verified honored above)."
+    },
+    {
+      "theme": "I (consumer scope -- IMPORTANT NUANCE)",
+      "file": "backend/scripts/audit-review-pipeline.ts:116-121 vs backend/src/services/maintain-readiness.ts:366-454",
+      "confirmed": true,
+      "detail": "validateSiteProfile is consumed by audit-review-pipeline.ts Stage 1 (runStage1Spec): every required validator failure is pushed as a blockingError (lines 118-121). So sortVerification DOES block marstar at the AUDIT/PROMOTION gate. HOWEVER, the RUNTIME transitionSiteToMaintain (maintain-readiness.ts:366) does NOT call validateSiteProfile -- its gates are: verifyMethod presence (389), verifyEndpoint (402), deep-verify probe (423-424), and checkMaintainReadiness (ready = reasons.length===0, lines 338-339). checkMaintainReadiness reasons NEVER include sortVerified/sortParam (verified lines 162-354). So the runtime transition is NOT blocked by sort. Precise statement: theme I blocks the AUDIT-PIPELINE promotion gate (the gate that approves a profile), not the runtime transitionSiteToMaintain function itself."
+    },
+    {
+      "theme": "I (fix)",
+      "file": "backend/src/services/profile-validator.ts:115-117",
+      "confirmed": true,
+      "detail": "Fix: exempt api-date-since-watermark from the sort requirement. After the full-catalog-sweep branch, add: `if (method === 'api-date-since-watermark') return null;` (date-driven, sort-independent -- the modified_after/?after= filter provides ordering; live-verified honored on marstar). Leave the sort requirement only for navigate-from-watermark, which genuinely walks page-1-newest-first and needs a verified sort. This makes marstar valid:true at score ~98-100 with no profile change."
+    },
+    {
+      "theme": "B (API vs HTML pagination)",
+      "file": "backend/src/services/catalog-crawler.ts:122-125 (buildPaginatedUrl)",
+      "confirmed": true,
+      "detail": "marstar paginationPattern.type='api-page' (Store API ?page=N), NOT 'path'. /product-category/firearms/page/2/ returns 404 and static HTML has no path-pagination links. The leading-slash buildPaginatedUrl mangling bug is INERT for marstar -- it never constructs an HTML path-pagination URL. No per-site fix needed; theme B does not apply to this site."
+    }
+  ],
+  "coverageProof": {
+    "method": "global Store API walk /wp-json/wc/store/v1/products?per_page=100&page=1..59, Set-dedup on product.id, >=850ms/request",
+    "walked": 5862,
+    "uniqueIds": 5862,
+    "expected": 5862,
+    "pct": 100.0,
+    "duplicates": 0,
+    "recommendedCatalogUrls": {
+      "primary": "https://marstar.ca/wp-json/wc/store/v1/products (single global endpoint -- proven 100% coverage, 0 dups; api-page per_page=100)",
+      "htmlFallbackSpine": [
+        "https://marstar.ca/product-category/firearms/",
+        "https://marstar.ca/product-category/firearm-parts-and-accessories/",
+        "https://marstar.ca/product-category/accessories/",
+        "https://marstar.ca/product-category/ammunition/",
+        "https://marstar.ca/product-category/ammo-restricted/",
+        "https://marstar.ca/product-category/clearance/",
+        "https://marstar.ca/product-category/arwen/",
+        "https://marstar.ca/product-category/Misc/",
+        "https://marstar.ca/product-category/uncategorized-3/"
+      ],
+      "note": "Per-category allOption counts are approximate (firearms term count=792 but products?category=81526 x-wp-total=803). Do NOT use summed per-category counts for the coverage gate; use global x-wp-total=5862 (exact)."
+    }
+  },
+  "validatorVerdict": {
+    "willBlockTransition": true,
+    "blockScope": "Blocks the AUDIT-REVIEW-PIPELINE Stage-1 promotion gate (audit-review-pipeline.ts:116-121), which is the gate that approves a profile for maintain. Does NOT block the runtime transitionSiteToMaintain() function directly (that function does not call validateSiteProfile; its gates are verifyMethod/verifyEndpoint/deep-verify-probe/checkMaintainReadiness, none of which reference sort).",
+    "exactCondition": "profile-validator.ts:115-117 -- for method !== 'full-catalog-sweep': `if (p.sortVerified === true || p.sortParam) return null; return 'sortVerified must be true or sortParam must be set...';`. marstar has method='api-date-since-watermark', sortVerified=false, sortParam=null -> required failure -> valid:false (empirically {valid:false, score:95, 1 required failure: sortVerification}).",
+    "fix": "In profile-validator.ts after the full-catalog-sweep branch (line 114), add `if (method === 'api-date-since-watermark') return null;`. Rationale: api-date-since-watermark is date-driven (modified_after / ?after= filter), live-verified sort-INDEPENDENT (modified_after honored: future=0, past=5862). Only navigate-from-watermark needs a verified sort. Add a unit test mirroring profile-validator-method-and-verify.test.ts asserting an api-date-since-watermark profile with sortParam:null, sortVerified:false yields valid:true."
+  }
+}

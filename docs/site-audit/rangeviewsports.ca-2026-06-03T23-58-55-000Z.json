@@ -1,0 +1,123 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-03T23:53:32Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare-passive (cf-ray on every request, all catalog batches 200). Honeypot paths (xmlrpc/.env/.git/phpinfo) origin-block 403 via WP security plugin + /wp-admin/ 301->/securityblock/; catalog crawl path fully 200. No CDN WAF gating products.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status", "__cf_bm cookie"],
+    "kinstaHosting": true,
+    "rapidBurstStatus": "all 200 (10 sequential)",
+    "multiUaStatus": "desktop/mobile/bot/curl/no-UA all 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": ["/xmlrpc.php=403", "/.env=403", "/.git/config=403", "/phpinfo.php=403", "/wp-admin/=301->/securityblock/"],
+    "honeypotIsOriginNotCdn": true,
+    "botUaBlocked": false,
+    "probeIp": "audit-host (production-IP reconfirm required before promotion)"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null,
+    "note": "woodmart theme config emits age_verify:\"no\" (feature disabled). Homepage + shop return full product markup at 200 with no interstitial."
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 5454,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://www.rangeviewsports.ca/shop/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.rangeviewsports.ca/product/tikka-t1x-mtr-rimfire-rifle-22lr-20-barrel-june-special/", "title": "Tikka T1x MTR Rimfire Rifle, 22LR 20\" Barrel *June Special*", "price": 895.00, "stockStatus": "unknown" },
+    { "url": "https://www.rangeviewsports.ca/product/benchmade-50023-ferro-rod-blue/", "title": "Benchmade 50023 Ferro Rod Blue", "price": null, "stockStatus": "unknown" },
+    { "url": "https://www.rangeviewsports.ca/product/pmc-bronze-9mm-pistol-ammo-147gr-fmj-50rds/", "title": "PMC Bronze 9mm Pistol Ammo 147gr FMJ 50rds", "price": null, "stockStatus": "unknown" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 16,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/shop/page/{N}/",
+    "perPage": 16,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after",
+      "reason": "WP REST core /wp-json/wp/v2/product?modified_after two-probe honored (2099->x-wp-total 0, 1999->5454). WC Store API ?after also honored. Runtime woocommerce.ts:337 hardcodes modified_after against WP REST core."
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api-categories (4 pages, 397 total terms, 57 parent=0)",
+    "categories": [
+      { "slug": "firearm-accessories", "allOption": 1658 },
+      { "slug": "firearms", "allOption": 1045 },
+      { "slug": "fp", "allOption": 967 },
+      { "slug": "special-order", "allOption": 942 },
+      { "slug": "ammo", "allOption": 819 },
+      { "slug": "optics", "allOption": 594 },
+      { "slug": "shooting-range-accessories", "allOption": 591 },
+      { "slug": "reloading", "allOption": 350 },
+      { "slug": "knives", "allOption": 170 },
+      { "slug": "outdoor", "allOption": 84 }
+    ],
+    "totalsSumCheck": "57 parent=0 terms sum to 9204 vs global 5454 -> heavy cross-listing (brand cats: browning/cz-canada/magpul-canada, promo cats: 2026-holiday-sale/promotions, functional cats overlap). /shop/ (no category filter) returns the full 5454 with zero overlap, so it is the single minimum-coverage umbrella. Per-category list documented here for operator reference only; NOT used as catalogUrls."
+  },
+  "lastVerified": "2026-06-03",
+  "auditNotes": {
+    "runId": "R1-blind-rangeview-2026-06-03",
+    "dbColumnFlips": { "hasWaf": false, "wafType": "cloudflare-passive", "wafWorkaround": "clear" },
+    "verifyMethodPolicy": "store-api selected (WC fast-path); restock/OOS-transition alerts NOT guaranteed for products the Store API batch never returns (worker.ts:711 early-return before Playwright fallback). Operator must confirm restock alerts are not required, else switch to detail-page.",
+    "expectedCountSurface": "wc-store-api (/wp-json/wc/store/v1/products x-wp-total=5454). Matches verifyMethod=store-api per B8 pairing rule. WP REST core /wp/v2/product also = 5454 (no draft/hidden divergence on this shop).",
+    "wcCategoryApi": "store-api (recursive); but catalogUrls uses /shop/ umbrella not category= probes",
+    "wcCountSurface": "store-api customer-visible (= admin total here, both 5454)",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products (count + maintain verify + watermark ?after)",
+      "/wp-json/wp/v2/product (watermark modified_after)",
+      "/wp-json/wc/store/v1/products/categories (taxonomy)"
+    ],
+    "catalogUrlRationale": "/shop/ is the WooCommerce unfiltered base; /shop/page/300/ returns 'Page 300 of 340' confirming it walks all ~5454 products. Single URL = 100% firearm-relevant coverage (dedicated firearms retailer; nearly all SKUs firearm-relevant).",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high (audit-IP; production-IP reconfirm recommended)",
+      "expectedProductCount": "high (Store API + WP REST core agree at 5454)",
+      "catalogUrls": "high (/shop/ page-300-of-340 confirms full walk; page1/page2 ID-disjoint)",
+      "paginationPattern": "high (path-form /shop/page/N/, page1∩page2=0)",
+      "sortParam": "high (honored-default-is-newest: default==orderby=date, counter-control orderby=price differs)",
+      "watermark.method": "high (both WP-REST modified_after and Store-API after two-probes honored)",
+      "perPage": "high (woodmart HTML caps at 16/page; shop_per_page cookie ignored for HTML)"
+    },
+    "stageNotes": [
+      "Stage 1: apex 301->www (Cloudflare). canonical=https://www.rangeviewsports.ca. robots.txt Sitemap: /sitemap_index.xml.",
+      "Stage 2: cf-ray everywhere, all catalog batches 200 -> cloudflare-passive, hasWaf=false. Honeypot 403s are WP-security-plugin origin filtering (/wp-admin->/securityblock/), not CDN WAF. No CAPTCHA (recaptcha config present but site_key empty, secret_present=no).",
+      "Stage 3: WordPress 6.9.4 + WooCommerce (182 woo markers), theme woodmart/woodmart-child. adapterType=woocommerce. age_verify:no (gate disabled). needsPlaywright=false (16 product cards in static HTML).",
+      "Stage 4: /shop/ umbrella = 100% coverage (page 300 of 340). 57 parent=0 categories sum 9204 (cross-listing overlap) documented as topLevelCategories. extractionTested via Store API sample.",
+      "Stage 5: pagination path-form /shop/page/{N}/; page1 (16 urls) vs page2 (16 urls) zero overlap; perPage=16 (woodmart HTML cap, shop_per_page cookie does not raise it).",
+      "Stage 6: sort honored-default-is-newest. <select name=orderby> default option date='Sort by latest' selected; default==orderby=date first-3, counter-control orderby=price differs. sortParam=?orderby=date, sortVerified=true.",
+      "Stage 7: watermark=api-date-since-watermark. WP REST modified_after two-probe (0 / 5454) honored; Store API ?after two-probe (0 / 5454) honored.",
+      "Stage 8: expectedProductCount=5454 via wp-rest-header on /wc/store/v1/products (x-wp-total). WP REST core agrees (5454). productCountMethod object validated against runtime switch.",
+      "Stage 9: validator-shape assembled. NOTE: Stage 10 runtime-fetch simulation NOT executed in R1 blind (no production-path module run); extractionTested set on Store API + HTML card evidence, to be confirmed in R2 live."
+    ]
+  }
+}

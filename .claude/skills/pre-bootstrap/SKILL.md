@@ -991,6 +991,27 @@ The report has 9 sections in this exact order. **Reference example:** [`./exampl
 
 ---
 
+### Stage 10 — Runtime fetchability simulation (MANDATORY before promotion)
+
+**Output fields:** sets `extractionTested: true` only when ALL candidate `catalogUrls` pass.
+
+**Why this stage exists:** an audit that produces correct `catalogUrls` can still ship a profile the production crawler cannot fetch. Real incident: canadasgunstore.ca had the right umbrella URL + right adapter; production failed on a relative-path bug (fixed via A1). The audit never ran the URLs through the same code path the runtime uses, so the gap stayed silent.
+
+**Action:** call `simulateRuntimeFetch` from [`backend/scripts/probe/runtime-simulate/index.ts`](../../../backend/scripts/probe/runtime-simulate/index.ts) with `{siteUrl, catalogUrls, adapter, hasWaf}`. The module re-uses `fetchPageWithMeta` + the watermark-crawler's Playwright-fallback policy and runs `adapter.extractCatalogProducts` against each URL — the same path the runtime uses.
+
+**Assertions (ALL 5 must hold per catalogUrl):**
+1. Resolved absolute URL fetch returns HTTP 200 (Playwright when `hasWaf=true`, same as production). A Playwright response that still looks like a WAF challenge body fails this assertion.
+2. Product extraction returns ≥5 products. When the adapter exposes `fetchCatalogPage` (Shopify, WC, Ecwid-on-WordPress) the API path is tried FIRST and HTML is the fallback; the result row's `extractionPath` records which produced the count.
+3. ≥80% of returned products have non-empty `url` AND `title` AND a title that is NOT a nav/utility label (mirrors `base.ts:385-426`).
+4. ZERO returned products match the nav/utility URL pattern (mirrors `base.ts:360-379`).
+5. Raw HTML body does NOT contain a soft-404 sentinel (e.g. "page not found", "no products found", "0 results", "category does not exist").
+
+**Decision:** top-level `passed=true` → set `extractionTested: true` and proceed to operator review. Any URL fails → STOP, fix the offending URL or fix the upstream cause (adapter selector, paginationPattern, hasWaf flag), re-run Stage 10.
+
+**Anti-pattern:** don't promote `catalogUrls` without running this stage. `tsc --noEmit` and unit tests don't catch runtime-path bugs.
+
+---
+
 ## Anti-patterns (lessons from this session and prior incidents)
 
 1. **Don't include `/all-products/...` aggregator URLs in `catalogUrls`.** The operator chose the per-category catalog URL list; aggregators overlap entirely.

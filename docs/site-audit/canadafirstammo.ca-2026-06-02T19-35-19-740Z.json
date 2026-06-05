@@ -1,0 +1,122 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T19:29:33Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every response, Server: cloudflare) but passive: homepage 200, honeypot /wp-admin/ 302 (WP login redirect), sqli-shaped 301, no-UA 200. No challenge body, no rate-limit. hasWaf=false.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray: a058de181a157114-YYZ", "server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "honeypotWpAdminStatus": 302,
+    "sqliShapedStatus": 301,
+    "noUaStatus": 200,
+    "homepageStatus": 200,
+    "rapidBurstTested": false,
+    "note": "Rapid-burst/sustained-walk SKIPPED intentionally: a live production crawler is hitting this site concurrently; per audit constraint #1 (do not get IP banned), only spaced single-GET sanity probes were run. WAF severity is single-snapshot from audit IP only; R2 should run the sustained multi-UA matrix."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 132,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://canadafirstammo.ca/product-category/shop-all/",
+    "https://canadafirstammo.ca/product-category/clearance/",
+    "https://canadafirstammo.ca/product-category/accessories/",
+    "https://canadafirstammo.ca/product-category/ammunition/",
+    "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+    "https://canadafirstammo.ca/product-category/firearms/",
+    "https://canadafirstammo.ca/product-category/gunsmithing/",
+    "https://canadafirstammo.ca/product-category/plates-apparel/",
+    "https://canadafirstammo.ca/product-category/reloading/",
+    "https://canadafirstammo.ca/product-category/apparel/",
+    "https://canadafirstammo.ca/product-category/training/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "/product/federation-firearms-model-1867-410-lever-action-410/", "title": "Federation Firearms Model 1867 .410 Lever Action .410", "price": 724.99, "stockStatus": "in_stock" },
+    { "url": "/product/mcmillan-tac-6-5-6-5-creedmoor/", "title": "McMillan TAC-6.5 6.5 Creedmoor", "price": 7499.99, "stockStatus": "in_stock" },
+    { "url": "/product/federation-firearms-so-series-12-gauge-engraved-over-under-shotgun/", "title": "Federation Firearms SO-Series 12 Gauge Over/Under Shotgun", "price": 482.30, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "/wp-json/wp/v2/product",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api-per-category",
+    "categories": [
+      { "slug": "/product-category/shop-all/", "allOption": 111 },
+      { "slug": "/product-category/clearance/", "allOption": 68 },
+      { "slug": "/product-category/accessories/", "allOption": 48 },
+      { "slug": "/product-category/ammunition/", "allOption": 33 },
+      { "slug": "/product-category/accessoriesoptics/", "allOption": 26 },
+      { "slug": "/product-category/firearms/", "allOption": 16 },
+      { "slug": "/product-category/gunsmithing/", "allOption": 16 },
+      { "slug": "/product-category/plates-apparel/", "allOption": 9 },
+      { "slug": "/product-category/reloading/", "allOption": 3 },
+      { "slug": "/product-category/apparel/", "allOption": 2 },
+      { "slug": "/product-category/training/", "allOption": 2 }
+    ],
+    "totalsSumCheck": "Top-level taxonomy counts (Store API customer-visible incl OOS) sum to 334, but shop-all (111) is an aggregator overlapping the others. Global in-stock unique = 132 (Store API X-WP-Total, also 2 walked pages). ID-dedup: union of all non-shop-all categories = 131 unique; shop-all contributes 1 product NOT in any other category; union incl shop-all = 132 = full global in-stock set. shop-all KEPT because it holds 1 unique product. gunsmithing returns 0 in-stock products today (all 16 OOS) but KEPT (empty != dead)."
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-2026-06-02",
+    "probeIp": "audit-host (single IP, NOT production crawler IP)",
+    "wcCountSurface": "store-api-customer-visible",
+    "expectedCountSurface": "store-api",
+    "verifyMethodPolicy": "store-api selected (WooCommerce default); restock/OOS-transition alerts NOT guaranteed for products the Store API batch never returns (worker.ts:549/711 early-return). Operator should confirm whether restock alerts are required for this site; if so, switch verifyMethod to detail-page and re-pair expectedProductCount to the WP REST core total (962).",
+    "wcCategoryApi": "store-api",
+    "countSurfaceDivergence": "Store API default (in-stock) X-WP-Total=132; WC Store API with stock_status[0]=instock&stock_status[1]=outofstock X-WP-Total=962; WP REST core /wp/v2/product X-WP-Total=962. The 132-vs-962 gap is IN-STOCK vs ALL-STOCK (not draft/hidden): 962 = full corpus incl OOS, 132 = customer-visible in-stock listing. expectedProductCount=132 chosen to match what the HTML catalog crawl + store-api verify actually index (customer-visible).",
+    "dateFilterDivergence": "WC Store API SILENTLY IGNORES modified_after (returns 132 full set for modified_after=2099). WP REST core /wp/v2/product HONORS modified_after (2099 -> 0; 1999 -> 962). Watermark therefore uses WP REST core, matching woocommerce.ts:337 hardcoded modified_after.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium (single audit-IP snapshot; rapid-burst skipped due to concurrent live crawler)",
+      "expectedProductCount": "medium (surface-choice tension: 132 in-stock vs 962 all-stock)",
+      "catalogUrls": "high (ID-dedup walk completed)",
+      "sortParam": "high (3-outcome counter-control)",
+      "paginationPattern": "high (page/2 zero-overlap verified)",
+      "watermark.method": "high (two-probe date filter verified on WP REST core)"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200; www 301 -> apex; <link rel=canonical> = apex. canonical = https://canadafirstammo.ca",
+      "Stage 2: Cloudflare passive (cf-ray everywhere, all probes served). hasWaf=false. Rapid-burst skipped (concurrent live crawler). No captcha script in homepage. No age-gate.",
+      "Stage 3: WordPress 7.0 + WooCommerce 10.8.1 (generator meta). adapterType=woocommerce. Plain HTTP returns products -> needsPlaywright=false. maintain verify=store-api per WC default.",
+      "Stage 4: 11 productive top-level categories via Store API taxonomy (2 pages, 133 terms). ID-dedup walk: union incl shop-all = 132 = global in-stock. shop-all holds 1 unique product (kept). gunsmithing 0 in-stock today (kept).",
+      "Stage 5: pagination type=path /page/{N}/; page 2 of firearms disjoint from page 1 (zero overlap). Store API per_page caps at 100 (per_page=200 -> HTTP 400). perPage=100.",
+      "Stage 6: sortParam ?orderby=date HONORED (3-outcome: default=alpha, ?orderby=date changed first-3, ?orderby=title==default). sortVerified=true.",
+      "Stage 7: watermark = api-date-since-watermark. WP REST core modified_after two-probe passed (2099->0, 1999->962). WC Store API modified_after silently ignored -> use WP REST core surface.",
+      "Stage 8: expectedProductCount=132 (Store API customer-visible X-WP-Total). productCountMethod wp-rest-header on /wp-json/wc/store/v1/products. Documented 962 all-stock divergence in auditNotes.",
+      "Stage 9: assembled candidate. Stage 10 runtime-simulate NOT run in R1 blind (deferred to R2 live)."
+    ]
+  }
+}

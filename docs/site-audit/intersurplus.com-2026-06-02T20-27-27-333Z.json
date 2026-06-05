@@ -1,0 +1,89 @@
+{
+  "profileVersion": 1,
+  "platform": "shopify",
+  "adapterType": "shopify",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T20:22:19Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare-passive: cf-ray present, all 8 batches 200 (SQLi/XSS/honeypot/rapid-burst all pass). Only no-UA (batch 8) returned 403 (standard Shopify/CF UA requirement, not an active block). Production UA pool always sends a UA.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray", "cf-cache-status: DYNAMIC", "server: cloudflare"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all 200 (10/10)",
+    "multiUaStatus": "desktop/mobile/bot/curl all 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": false,
+    "honeypotPathStatuses": "wp-admin/wp-login/xmlrpc/git/phpinfo = 404; .env = 200 (Shopify catch-all index)",
+    "noUaStatus": 403,
+    "rapidBurstTested": true,
+    "probeIp": "audit-host (NOT production crawler IP — re-confirm WAF from production IP before promotion)"
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": "hcaptcha",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3191,
+  "productCountMethod": { "method": "shopify-products-walk", "endpoint": "/products.json", "perPage": 250 },
+  "catalogUrls": ["https://intersurplus.com/collections/all"],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://intersurplus.com/products/weaver-k4-w-3", "title": "Weaver K4-W", "price": 149.00, "stockStatus": "out_of_stock" },
+    { "url": "https://intersurplus.com/products/weaver-k3-w-1", "title": "Weaver K3-W", "price": 149.00, "stockStatus": "out_of_stock" },
+    { "url": "https://intersurplus.com/products/weaver-k2-5-9", "title": "Weaver K2.5-1", "price": 125.00, "stockStatus": "out_of_stock" }
+  ],
+  "sortParam": "?sort_by=created-descending",
+  "sortVerified": true,
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "api-page",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": true,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Shopify /products.json returns published_at-descending by default (verified: first 5 products strictly descending published_at, newest = Weaver K4-W). HTML sort_by=created-descending also honored (3-outcome test). robots.txt Disallows /collections/*sort_by* for bots, so runtime relies on products.json natural newest-first order, not the sort param."
+    },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "ecwidStoreId": null,
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-intersurplus-2026-06-02T20-27-27-333Z",
+    "round": "R1 (blind, no DB read, no scaled probes)",
+    "canonicalOrigin": "https://intersurplus.com",
+    "canonicalResolution": "apex 200; www 301 -> apex. Canonical = apex.",
+    "verifyMethodPolicy": "detail-page selected (Shopify default per Stage 3 mapping; Shopify maintain uses Playwright detail-page, Admin API requires auth). Catches OOS transitions / 404 deletions correctly.",
+    "sortParamCaveat": "sortParam is documentation only for this Shopify site. robots.txt line 'Disallow: /collections/*sort_by*' discourages crawling the sort form. Runtime watermark walks /products.json natural order (published_at-desc), which is newest-first — no sort param needed.",
+    "catalogSpine": "/collections/all walked = 3191 unique IDs; global /products.json walked = 3191 unique IDs; zero diff in either direction. collections/all is the 100%-coverage spine. collections.json products_count values are wildly inflated (all-firearms=10877, firearms=10864 vs 3191 customer-visible) — Shopify metadata counts drafts/variants; NOT used for expectedProductCount.",
+    "captchaNote": "Single 'h-captcha' marker in homepage HTML (site-wide script, likely contact/login). products.json + homepage + collection pages all return 200 with full content unblocked. hasCaptcha=false (catalog path not gated); captchaType recorded informationally.",
+    "shopifyDeptFeedSoftCap": "Not triggered — collections/all reached 3191 (matches global). No soft-cap observed at this catalog size.",
+    "firearmRelevantScope": "Site is a firearms surplus retailer; product_type breakdown (Firearms 1144, Scope 108, Barrel 102, Ammunition 95, Bullets 120, Reloading Brass 78, Gun Parts 22, Magazines 21, etc.) is firearm-relevant in its entirety. catalogUrls covers 100%.",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high (audit IP; re-confirm production IP)",
+      "expectedProductCount": "high (full products.json walk, dedup by id, 3191)",
+      "catalogUrls": "high (collections/all == global, zero diff)",
+      "sortParam": "high (3-outcome live test honored)",
+      "watermarkMethod": "high (published_at-desc natural order verified)"
+    },
+    "stageNotes": [
+      "S1 canonical: apex intersurplus.com 200; www 301->apex; canonical=apex.",
+      "S2 WAF: heavy-8-batch -> cloudflare-passive (all 200 except no-UA 403). hasWaf=false. No Sucuri/Incapsula/MalCare markers.",
+      "S3 platform: Shopify (Shopify.shop=, cdn.shopify.com x7, shopify-section x20, _shopify_* cookies, server-timing theme/pageType). adapterType=shopify. No age-gate. hcaptcha script present but non-gating.",
+      "S4 catalog: collections.json=112 collections; collections/all walk=3191 == global products.json walk=3191 (zero diff). catalogUrls=[/collections/all].",
+      "S5 pagination: products.json ?limit=250&page=N, api-page, perPage=250 verified (pages 1-12 = 250 each, page 13 = 191 last).",
+      "S6 sort: 3-outcome HTML test on /collections/all -> created-descending distinct from default & title-ascending counter-control; sort honored. sortParam documentation-only (robots disallows bot crawl of sort form).",
+      "S7 watermark: navigate-from-watermark; /products.json natural order published_at-desc (first 5 strictly descending, newest Weaver K4-W). No date-filter API needed.",
+      "S8 count: shopify-products-walk /products.json limit=250 -> 3191 unique product ids.",
+      "S9 assembly: BLIND candidate written before DB read."
+    ]
+  }
+}

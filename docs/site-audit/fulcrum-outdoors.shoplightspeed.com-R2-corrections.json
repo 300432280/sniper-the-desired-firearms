@@ -1,0 +1,124 @@
+{
+  "domain": "fulcrum-outdoors.shoplightspeed.com",
+  "canonicalDomain": "www.fulcrumoutdoors.ca",
+  "round": "R2-LIVE",
+  "runId": "R2-LIVE-fulcrum-2026-06-02",
+  "persona": "testing-api-tester",
+  "method": "Live HTTP walk (Chrome UA, >=900ms inter-request), suffix-replace buildPaginatedUrl trace, fresh sitemap recount, per-category ID-dedup full walk with limit=100 + correct pageN.html?sort=newest form.",
+  "crawlerPausedConfirmed": true,
+  "noDbWrites": true,
+
+  "corrections": [
+    {
+      "field": "paginationPattern.match + paginationPattern.template (combined sort+page form)",
+      "round1Hypothesis": "R1: match='.html', template='page{N}.html' (sort NOT baked in). DB: match='.html?sort=newest', template='page{N}.html?sort=newest'.",
+      "liveMethod": "Traced buildPaginatedUrl suffix-replace branch (catalog-crawler.ts:128-137) against the real catalogUrl base 'https://www.fulcrumoutdoors.ca/firearms/?sort=newest', then live-fetched both the mangled and correct URLs.",
+      "evidence": "buildPaginatedUrl receives stream.url = '.../firearms/?sort=newest' (catalog-crawler.ts:781). suffix-replace does baseUrl.endsWith(match). R1 match='.html' -> endsWith FALSE -> fallback L132-133 appends -> '.../firearms/?sort=newestpage2.html' (MANGLED). DB match='.html?sort=newest' -> endsWith FALSE (base ends '?sort=newest' not '.html?sort=newest') -> fallback -> '.../firearms/?sort=newestpage2.html?sort=newest' (MANGLED). Live: the MANGLED-R1 URL returns 200 but is category DEFAULT page-1 (first slug brigade-mfg-makasi-mk-15 = default-sort head, NOT newest head weatherby-307) -- Lightspeed treats the malformed query as garbage and serves page1/default-sort. SILENT page-1 loop, not a 404. The site's OWN emitted next-page href is 'https://www.fulcrumoutdoors.ca/firearms/page2.html?sort=newest'. The config that reproduces it via buildPaginatedUrl is match='/?sort=newest', template='/page{N}.html?sort=newest' -> live-verified -> 200, first slug ruger-american-gen-2-6mm-creedmoor (genuinely different page). limit+page combine: page1(limit=100) vs page2(limit=100) = 0/100 overlap.",
+      "proposedValue": { "type": "suffix-replace", "match": "/?sort=newest", "template": "/page{N}.html?sort=newest", "perPage": 12, "firstPageHasParam": false, "startPage": 1, "zeroIndexed": false },
+      "confidence": "high"
+    },
+    {
+      "field": "perPage",
+      "round1Hypothesis": "R1 perPage=12 (render). DB perPage=100 (cap).",
+      "liveMethod": "Live limit-param probe on /firearms/?sort=newest with &limit=36/100/250.",
+      "evidence": "Default render = 12 products/page (page1 slug count = 12). limit=36 -> 36 unique; limit=100 -> 100 unique; limit=250 -> silently reverts to 12. Max honored perPage cap = 100. BOTH numbers are correct on different axes: 12 = native render-per-page used by paginationPattern.perPage (page-walk math); 100 = max limit= cap used by an efficient catalog-walk. Recommend paginationPattern.perPage=12 (matches the page{N} form which renders 12/page when no limit appended) AND record perPageCap=100 so the catalog walk can append &limit=100 for 8x fewer requests (4 pages vs 28 for firearms).",
+      "proposedValue": { "paginationPattern.perPage": 12, "perPageCap": 100, "note": "12=render default for pageN.html walk; 100=max limit cap for efficient walk" },
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "R1 blind sitemap recount = 3285. DB = 3651.",
+      "liveMethod": "Fresh full GET of /sitemap.xml (flat, not index) + .html product-URL filter; cross-referenced against per-category ID-dedup full walk.",
+      "evidence": "Fresh /sitemap.xml = 4195 total <loc>, 3285 distinct product .html URLs (R1 blind 3285 reproduced EXACTLY; DB 3651 is stale/inflated, drifted -10%). 12-category full walk (header-matched, lossless pagination) = 3203 global-unique. Reconciliation: walk is a strict SUBSET of sitemap (0 walk-only products); 82 sitemap products are NOT reachable via any top-level category page (uncategorized/brand-only items: ammo, dies, scope base, knife, rifle case). Sitemap is authoritative whole-catalog surface.",
+      "proposedValue": 3285,
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls (Rule-C name-exclusion: /cool-stuff/ and /camping/)",
+      "round1Hypothesis": "R1 dropped both /cool-stuff/ and /camping/ by name (Rule C). Ledger flagged both as possibly firearm-adjacent (needs-walk-before-drop).",
+      "liveMethod": "Walked BOTH categories fully (limit=100) and inspected every product slug for firearm-adjacency instead of dropping by name.",
+      "evidence": "/cool-stuff/ (16 items) is STRONGLY firearm-adjacent: byrna-sd-launcher, umarex-secure-68p-68-cal-self-defense-air-pistol, umarex-hdp-p2p-50-cal-self-defense-air-pistol, walther-pdp-compact-c02-bb-pistol, lightweight-auxillia-level-3-ballistic-plate, extant-strike-face-plate-carrier, caffeine-assault-12-gauge, nosler-9-reloading-data, hornady-handbook-11th-edition. All confirmed in sitemap. These are self-defense launchers / air pistols / ballistic gear that the fleet should index -> INCLUDE /cool-stuff/. /camping/ (217 items) is NOT firearm-adjacent: overwhelmingly tents, stoves, sleeping bags, freeze-dried meals, kayaks, e-bike parts, headlamps. The few tactical-light/bear-spray items cross-list into /optics/ or /shooting/ -> EXCLUDE /camping/. Confirms: 'no firearm by name' must be walked, not assumed; R1 was right to scrutinize but wrong to drop /cool-stuff/.",
+      "proposedValue": { "include": ["/cool-stuff/"], "exclude": ["/camping/"], "rule": "walk-before-drop honored: cool-stuff held firearm-adjacent self-defense/air-pistol/ballistic items; camping did not" },
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls (host + completeness)",
+      "round1Hypothesis": "R1 6 firearm-relevant cats on canonical www.fulcrumoutdoors.ca. DB 12 cats on stale shoplightspeed.com host.",
+      "liveMethod": "301-redirect check + per-category full walk with header reconciliation.",
+      "evidence": "Input host fulcrum-outdoors.shoplightspeed.com 301 -> https://www.fulcrumoutdoors.ca/ (x-shop-id 665196, <link rel=canonical> agrees). DB catalogUrls still point at the OLD shoplightspeed host (works via redirect but should be canonical). Per-category walked-unique EXACTLY equals each category's header count (firearms 333/333, shooting 1522/1522, optics 261/261, hunting 167/167, archery 65/65, custom-rifle-building 47/47) = lossless pagination proof. Firearm-relevant spine (7 cats incl /cool-stuff/): firearms+shooting+optics+hunting+archery+custom-rifle-building+cool-stuff.",
+      "proposedValue": [
+        "https://www.fulcrumoutdoors.ca/firearms/?sort=newest",
+        "https://www.fulcrumoutdoors.ca/shooting/?sort=newest",
+        "https://www.fulcrumoutdoors.ca/optics/?sort=newest",
+        "https://www.fulcrumoutdoors.ca/hunting/?sort=newest",
+        "https://www.fulcrumoutdoors.ca/archery/?sort=newest",
+        "https://www.fulcrumoutdoors.ca/custom-rifle-building/?sort=newest",
+        "https://www.fulcrumoutdoors.ca/cool-stuff/?sort=newest"
+      ],
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam / sortVerified",
+      "round1Hypothesis": "R1 sortParam='?sort=newest', sortVerified=true.",
+      "liveMethod": "Cache-busted 3-outcome test (different cache-bust query than R1) on canonical host.",
+      "evidence": "default first3 (brigade-mfg-makasi-mk-15 | crusader-arms-pnd | akdas-alcor) vs ?sort=newest first3 (weatherby-307 | henry-supreme | cz-457) vs ?sort=asc first3 (adler-ad500 | adler-ad500-semi | adler-rf224, alphabetical) -- all three distinct, sort honored. CONFIRMS R1.",
+      "proposedValue": { "sortParam": "?sort=newest", "sortVerified": true },
+      "confidence": "high"
+    }
+  ],
+
+  "codeFindings": [
+    {
+      "theme": "B (suffix-replace combined sort+page form)",
+      "file": "backend/src/services/catalog-crawler.ts:128-137",
+      "confirmed": true,
+      "detail": "buildPaginatedUrl suffix-replace branch does baseUrl.endsWith(match). It is called with stream.url = catalogUrl = '.../firearms/?sort=newest' (L781). NEITHER R1's match='.html' NOR DB's match='.html?sort=newest' is a suffix of '.../firearms/?sort=newest' (the URL ends with '?sort=newest'), so BOTH hit the L132-133 fallback ('baseUrl + template') and produce a mangled URL ('.../firearms/?sort=newestpage2.html[?sort=newest]'). Live, the mangled URL returns 200 but is category DEFAULT page-1 -> the catalog walk silently re-fetches page 1 every iteration (terminated only by the prevPageSignature repeat-page guard at L790), so coverage collapses to the first 12 products of every category. CORRECT config: match='/?sort=newest', template='/page{N}.html?sort=newest' (template carries the leading slash so withoutSuffix + template rebuilds '.../firearms/page2.html?sort=newest'). Live-verified to produce a genuinely distinct page with 0/100 overlap at limit=100. ROOT CAUSE: the suffix-replace primitive assumes the base ends in the matched suffix; when sortParam is appended to a directory-style category URL, the '.html' marker is no longer the tail. The match must be the actual tail of the post-sort URL."
+    },
+    {
+      "theme": "B (mangled-URL failure mode)",
+      "file": "backend/src/services/catalog-crawler.ts:790,792-996",
+      "confirmed": true,
+      "detail": "The mangled URL does NOT 404 (would be caught by status!=200). It returns HTTP 200 with page-1/default-sort content. The only thing preventing an infinite loop is prevPageSignature equality detection (L790 comment + repeat-page break). Net effect of a mangled suffix-replace config on Lightspeed = exactly 12 products/category indexed, silently. High-severity coverage bug, not a crash."
+    }
+  ],
+
+  "coverageProof": {
+    "walked": "12 top-level categories fully (limit=100, correct pageN.html?sort=newest form, >=900ms): firearms,shooting,optics,hunting,archery,custom-rifle-building,fishing,camping,cool-stuff,outdoor-cooking,apparel,e-bikes",
+    "perCategory": {
+      "firearms": { "header": 333, "walkedUnique": 333, "pages": 4 },
+      "shooting": { "header": 1522, "walkedUnique": 1522, "pages": 16 },
+      "optics": { "header": 261, "walkedUnique": 261, "pages": 3 },
+      "hunting": { "header": 167, "walkedUnique": 167, "pages": 2 },
+      "archery": { "header": 65, "walkedUnique": 65, "pages": 1 },
+      "custom-rifle-building": { "header": 47, "walkedUnique": 47, "pages": 1 },
+      "fishing": { "header": 558, "walkedUnique": 558, "pages": 6 },
+      "camping": { "header": 217, "walkedUnique": 217, "pages": 3 },
+      "cool-stuff": { "header": 16, "walkedUnique": 16, "pages": 1 },
+      "outdoor-cooking": { "header": 29, "walkedUnique": 29, "pages": 1 },
+      "apparel": { "header": 40, "walkedUnique": 40, "pages": 1 },
+      "e-bikes": { "header": 20, "walkedUnique": 20, "pages": 1 }
+    },
+    "uniqueIds": 3203,
+    "expected": 3285,
+    "pct": "97.5% (3203 / 3285 sitemap-authoritative)",
+    "gapAnalysis": "82 sitemap products unreachable via any top-level category (uncategorized/brand-only ammo, dies, scope bases, knives, cases). Walk is a strict subset of sitemap (0 walk-only IDs). expectedProductCount should be the sitemap count (3285), since category-walk structurally cannot reach uncategorized products.",
+    "firearmRelevantSpineWalkedUnique": "firearms+shooting+optics+hunting+archery+custom-rifle-building+cool-stuff",
+    "recommendedCatalogUrls": [
+      "https://www.fulcrumoutdoors.ca/firearms/?sort=newest",
+      "https://www.fulcrumoutdoors.ca/shooting/?sort=newest",
+      "https://www.fulcrumoutdoors.ca/optics/?sort=newest",
+      "https://www.fulcrumoutdoors.ca/hunting/?sort=newest",
+      "https://www.fulcrumoutdoors.ca/archery/?sort=newest",
+      "https://www.fulcrumoutdoors.ca/custom-rifle-building/?sort=newest",
+      "https://www.fulcrumoutdoors.ca/cool-stuff/?sort=newest"
+    ]
+  },
+
+  "constraintsHonored": {
+    "minDelay": ">=900ms between live requests",
+    "noDbWrites": true,
+    "noBudgetOrProcessChanges": true,
+    "crawlerNotResumed": true,
+    "differentMethodThanR1": "R1 was single-GET blind; R2 used full ID-dedup walk + buildPaginatedUrl source trace + cache-busted sort re-test + fresh sitemap recount + per-category-walk content inspection of cool-stuff/camping."
+  }
+}

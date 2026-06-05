@@ -1,0 +1,173 @@
+{
+  "profileVersion": 1,
+  "platform": "ibm-websphere-commerce",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "akamai",
+  "wafLastProbedAt": "2026-05-25T03:02:09Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Akamai Bot Manager active blocking from cloud-IP. Site-wide 403 on /home, /robots.txt, all /l/, /c/, /p/ unless requester carries pre-set Akamai geo cookies (IpState/IpZipCode/IpGeo). Even with cookies the bm_so session cookie expires fast and subsequent paginated/parametrized URLs (?page=2&firstResult=12) re-403. Headless Playwright (Chromium+stealth) ALSO blocked (TLS/JA3 fingerprint detection). Akamai EdgeSuite 'Access Denied' interstitials served from errors.edgesuite.net.",
+  "wafProbeEvidence": {
+    "cdnHeaders": [
+      "Server: AkamaiGHost",
+      "X-Akam-SW-Version: 0.5.0",
+      "Server-Timing: ak_p; desc=...; cdn-cache; edge; origin",
+      "Set-Cookie: _bmdet=...",
+      "Set-Cookie: akavpau_c_=...",
+      "Set-Cookie: bm_ss=...",
+      "Set-Cookie: bm_so=...",
+      "Set-Cookie: bm_s=..."
+    ],
+    "sucuriHeaders": [],
+    "akamaiHeaders": ["AkamaiGHost", "_bmdet", "akavpau_c_", "bm_ss", "bm_so", "bm_s", "X-Akam-SW-Version"],
+    "rapidBurstStatus": "10/10 burst returned HTTP 403 (Access Denied) at the canonical /home path after BATCH 1 single GET succeeded",
+    "sqliRuleFired": true,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": ["/home/.env: 403", "/home/.git/config: 403", "/home/phpinfo.php: 403", "/home/wp-admin/: 404 (large body)"],
+    "botUaBlocked": true,
+    "noUaBlocked": true,
+    "rapidBurstTested": true,
+    "sustainedWalkPages": 0,
+    "perUaStatusTimeline": {
+      "chrome120": "first GET 200 with /home redirect; subsequent GETs 403 within ~3s without geo cookies",
+      "safari17_macos": "geo-cookies-set first hit 200 (homepage 56KB body); /l/firearms 200 (433KB body) but pages with ?page=N&firstResult=M re-403",
+      "iphoneSafari17": "first GET 403 size=526 (no geo cookies pre-warmed)",
+      "firefox121": "first GET 403 size=370",
+      "noUserAgent": "403"
+    },
+    "untestedAttackSurfaces": [
+      "auth-attempt (harness-policy-blocked)",
+      "path-traversal beyond /.env-.git (harness-policy-blocked)",
+      "large-body-POST (harness-policy-blocked)",
+      "shellshock UA (harness-policy-blocked)",
+      "sustained 50-page walk per UA (untested-by-harness: Akamai re-403'd on page-2 fetch within 60s)"
+    ],
+    "probeIp": "audit-environment-cloud-ip"
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+  "needsPlaywright": true,
+  "expectedProductCount": 16543,
+  "productCountMethod": {
+    "method": "generic-product-sitemap",
+    "url": "/webapp/wcs/stores/servlet/sitemap_10151.xml.gz",
+    "pattern": "/p/[a-z0-9-]+"
+  },
+  "catalogUrls": [
+    "/c/shooting",
+    "/c/hunting",
+    "/c/optics-scopes"
+  ],
+  "extractionTested": false,
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "Akamai Bot Manager actively blocks all parameterized paginated fetches from cloud IPs (page 2 = HTTP 403); SSR'd HTML for /l/<slug> contains zero products (client-side React rendering of WebSphere Commerce backend); no public API surface returns product lists without Akamai bot challenge. Sort UI (sortParam) could not be verified live because /l/firearms?page=2&firstResult=12 returned 403. Without ability to walk paginated category pages, neither navigate-from-watermark nor api-date-since-watermark is achievable from current infra; full-catalog-sweep via gzipped sitemap (16,543 product URLs) is the only viable plan and even then individual product fetches are gated by Akamai."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "searchUrl": "/webapp/wcs/stores/servlet/SearchDisplay?storeId=10151&catalogId=10052&langId=-10&searchTerm={keyword}",
+  "topLevelCategories": {
+    "source": "nav-crawl-plus-sitemap",
+    "categories": [
+      { "slug": "/c/shooting", "allOption": null },
+      { "slug": "/c/hunting", "allOption": null },
+      { "slug": "/c/optics-scopes", "allOption": null },
+      { "slug": "/c/boating", "allOption": null },
+      { "slug": "/c/camping", "allOption": null },
+      { "slug": "/c/fishing", "allOption": null },
+      { "slug": "/c/clothing", "allOption": null },
+      { "slug": "/c/footwear", "allOption": null },
+      { "slug": "/c/home-and-gifts", "allOption": null },
+      { "slug": "/c/outdoor-recreation", "allOption": null },
+      { "slug": "/c/patio", "allOption": null },
+      { "slug": "/c/bargain-cave-sale-and-clearance", "allOption": null },
+      { "slug": "/c/mens-clothing", "allOption": null },
+      { "slug": "/c/womens-clothing", "allOption": null },
+      { "slug": "/c/kids-clothing", "allOption": null }
+    ],
+    "totalsSumCheck": "allOption per-category counts unavailable: client-side React rendering hides totalResults from SSR HTML; Akamai blocks parameter probes that would expose pagination metadata. Sitemap-derived global = 16,543 /p/ URLs (full catalog inc. non-firearm). Firearm-relevant subset estimated 3,000-5,000 from leaf-category count (~50 firearm-relevant /l/ slugs out of 450). Requires residential-IP / curl_cffi chrome-impersonate / production-like browser fingerprint to verify."
+  },
+  "productUrlSchemes": {
+    "canonical": "/p/<slug>",
+    "sitemapForm": "/p/<slug>",
+    "alternateForm": "/shop/ca/<slug>",
+    "joinOn": "slug"
+  },
+  "lastVerified": "2026-05-25",
+  "auditNotes": {
+    "incomplete": true,
+    "runId": "basspro.ca-B6R1-2026-05-25T03Z",
+    "incompleteReason": "Akamai Bot Manager hard-blocks every paginated/parameterized URL from current cloud audit IP, even with iPhone Safari UA and pre-warmed geo cookies. Headless Playwright also blocked via JA3/TLS fingerprinting. Cannot verify: sortParam (3-outcome counter-control test impossible), perPage upper bound (probe limits all 403), per-category counts (Akamai blocks even single page-2 fetches), navigate-from-watermark feasibility (page 2 = 403), api-date-since-watermark (no exposed JSON API).",
+    "discoveredApiEndpoints": [
+      "https://prodlivengca.basspro.net/shop/en (Next.js wcParamJs homePageURL — backend WC SSR root, requires Akamai bypass to reach)",
+      "https://www.basspro.ca/webapp/wcs/stores/servlet/SearchDisplay?storeId=10151&catalogId=10052&searchTerm={kw}&langId=-10 (WebSphere SSR search; returned 200 with 11 results for 'glock' + 'totalSearchCount:11,totalCount:11')",
+      "https://www.basspro.ca/webapp/wcs/stores/servlet/sitemap_10151.xml.gz (gzipped sitemap, 16543 /p/ URLs + 450 /l/ + 600 /b/ + 15 /c/)"
+    ],
+    "platformDetails": {
+      "backendPlatform": "ibm-websphere-commerce-or-hcl-commerce",
+      "storeId": "10151",
+      "catalogId": "10052",
+      "langId": "-10 (English)",
+      "frontendFramework": "next.js (React, /_next/static/, buildId 1778734032037, page route /l/[pageName])",
+      "backendOrigin": "prodlivengca.basspro.net (internal WC tier)",
+      "wcParamJs": {
+        "homePageURL": "https://prodlivengca.basspro.net/shop/en",
+        "catalogId": "10052",
+        "commandContextCurrency": "USD",
+        "langId": "-10",
+        "storeId": "10151"
+      }
+    },
+    "fieldConfidence": {
+      "platform": 0.95,
+      "adapterType": 0.7,
+      "hasWaf": 0.99,
+      "wafType": 0.99,
+      "needsPlaywright": 0.95,
+      "expectedProductCount": 0.85,
+      "productCountMethod": 0.85,
+      "catalogUrls": 0.5,
+      "paginationPattern": 0.4,
+      "sortParam": 0.1,
+      "sortVerified": 0.0,
+      "perPage": 0.4,
+      "watermarkMethod": 0.5,
+      "maintainVerifyMethod": 0.5,
+      "userAgentOverride": 0.8,
+      "ageGate": 0.85,
+      "searchUrl": 0.8
+    },
+    "verifyMethodPolicy": "detail-page selected because Akamai blocks even per-product API endpoints; restock alerts require Playwright fetch of /p/<slug> per product per cycle — operationally expensive AND likely to trigger Akamai. Operator decision: enable site at all, or defer to residential-proxy infra.",
+    "scopeOverride": null,
+    "dbColumnFlips": null,
+    "stageNotes": [
+      "Stage 1 (canonical): apex basspro.ca 301→www.basspro.ca/home with Server: AkamaiGHost on apex + Server: nginx on origin. Both probed; chose www (apex 301 forces). <link rel=canonical> confirms https://www.basspro.ca/home.",
+      "Stage 2 (WAF): Akamai Bot Manager active. BATCH 1 single GET succeeded with curl (server-timing edge=1 dur=152 origin=152 cdn-cache=MISS); BATCHES 2-8 all returned 403 size=370-385 'Access Denied' Akamai EdgeSuite error page across all 5 production UAs + bot UA + no-UA. Headers carry _bmdet, akavpau_c_, bm_ss, bm_so cookies. SQLi/XSS query strings -> 403 (rule-selective). Honeypot paths: /home/wp-admin/ -> 404 (large 372KB SPA shell body), /.env -> 403, /.git/config -> 403. CAPTCHA: not detected on SSR (page rendered without CAPTCHA challenge).",
+      "Stage 3 (platform): Next.js 13+ React app router frontend (data-app-router=true, _next/static/ chunks, buildId 1778734032037, page route /l/[pageName] from __NEXT_DATA__) backed by IBM/HCL WebSphere Commerce (wcParamJs.storeId=10151, catalogId=10052, commandContextCurrency=USD, langId=-10, backendOrigin=prodlivengca.basspro.net/shop/en, /webapp/wcs/stores/servlet/* paths exposed). No FirearmAlert adapter exists for WebSphere/HCL Commerce; mapped to generic-retail per default but SSR'd category HTML returns ZERO products - extractor would yield empty.",
+      "Stage 4 (catalogUrls): top-level categories = /c/shooting, /c/hunting, /c/optics-scopes (firearm-relevant); 15 total /c/ in sitemap; 450 /l/ leaf categories; 600 /b/ brands; 16543 /p/ products in sitemap. Live walk-and-dedupe to prove minimum-cover set IMPOSSIBLE from current IP (Akamai 403 on paginated fetches). NEVER did Stage 4d full walk; coverage proof deferred.",
+      "Stage 5 (pagination): robots.txt Allow rule '/l/*?page=*&firstResult=*' suggests query-form ?page=N&firstResult=M with offset hint. perPage=12 inferred from firstResult=12 hint (page2 would start at firstResult=12 if page1 has 12 items). UNABLE to verify page-1 vs page-2 zero-overlap test: /l/firearms?page=2&firstResult=12 returned HTTP 403 (Akamai).",
+      "Stage 6 (sort): UNVERIFIED - Akamai blocks /l/firearms?page=2&firstResult=12 even with geo cookies, so 3-outcome counter-control test impossible. sortParam=null + sortVerified=false (NOOP-or-unknown).",
+      "Stage 7 (watermark): full-catalog-sweep is the only viable method given Akamai block on pagination + zero SSR products + no exposed product-listing JSON API. Even full-catalog-sweep requires Playwright + Akamai cookie management; operator should defer until residential-IP infra exists.",
+      "Stage 8 (count): expectedProductCount=16543 from sitemap_10151.xml.gz (filtered /p/<slug> regex). This is GLOBAL catalog (firearms + fishing + boating + clothing + ...), NOT firearm-relevant subset. Firearm-relevant count requires per-category sum, but per-category counts not exposed in SSR HTML. productCountMethod=generic-product-sitemap with url path-only-with-leading-slash and /p/ regex pattern.",
+      "Stage 9 (assembly): candidate emitted with incomplete=true; multiple high-confidence fields (platform, hasWaf, expectedProductCount) paired with low-confidence fields (sortParam, sortVerified, perPage, watermark). RECOMMENDATION TO OPERATOR: do NOT promote this profile to DB until either (a) residential-proxy / curl_cffi-chrome-impersonate infra is added to bypass Akamai TLS fingerprinting, or (b) site is verified scrapable from production crawler IP (Akamai reputation may differ between audit IP and prod crawler IP)."
+    ]
+  }
+}

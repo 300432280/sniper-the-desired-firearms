@@ -1,0 +1,95 @@
+{
+  "profileVersion": 1,
+  "platform": "custom-php",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "sucuri-passive",
+  "wafLastProbedAt": "2026-06-02T20:22:37Z",
+  "wafProbeMethod": "single-get-r1-blind",
+  "wafProbeResult": "Sucuri/Cloudproxy in front (X-Sucuri-ID: 14007, Server: Sucuri/Cloudproxy) but serves HTTP 200 cleanly to Chrome 120 UA on apex, www, homepage, and every department listing probed. PASSIVE — no challenge/block observed. R1 BLIND did NOT run the 8-batch heavy probe (no scaled/rapid-burst per constraints); verdict is single-snapshot, MUST be re-confirmed in R2 with the full 8-batch + production-UA-matrix.",
+  "wafProbeEvidence": {
+    "sucuriHeaders": ["X-Sucuri-ID: 14007", "Server: Sucuri/Cloudproxy", "X-Sucuri-Cache: MISS"],
+    "cfHeaders": [],
+    "rapidBurstTested": false,
+    "sustainedWalkPages": 0,
+    "perUaStatusTimeline": null,
+    "untestedAttackSurfaces": ["rapid-burst", "honeypot-paths", "sqli-shaped", "xss-shaped", "no-ua", "multi-ua-matrix"],
+    "note": "R1 BLIND single-snapshot only. hasWaf set false because Sucuri served clean 200s on all paths probed, but this is NOT the mandated 8-batch verdict."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 145,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "selector": ".showing_result",
+    "perPage": 1
+  },
+  "catalogUrls": [
+    "https://irunguns.ca/product.php?departments=Firearms",
+    "https://irunguns.ca/product.php?departments=Ammunition",
+    "https://irunguns.ca/product.php?departments=Optics",
+    "https://irunguns.ca/product.php?departments=Knives",
+    "https://irunguns.ca/product.php?departments=Parts_AND_Gear",
+    "https://irunguns.ca/product.php?departments=Magazines",
+    "https://irunguns.ca/product.php?departments=Custom_Engraving",
+    "https://irunguns.ca/category.php?parent=Import_/_Export"
+  ],
+  "extractionTested": false,
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": null,
+    "template": null,
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "CANDIDATE/UNVERIFIED in R1 BLIND. No sort <select> on category pages (only department/category/manufacturer/model/calibre/classes filters). All department products server-rendered in one page sliced client-side by jPages (perPage:12). Persona prior conclusion: natural DOM order = p.id DESC (newest-first), unlocking navigate-from-watermark. R1 could NOT independently confirm: image-cache-prefix IDs in DOM order are NON-monotonic (15478,25266,26526,24381...), so newest-first ordering is NOT proven from in-page signals. Cross-reference of DOM-first slug vs an independent newest-first signal (ajax_front_action.php home_filter baseline) is a PENDING-R2 task. If R2 cannot prove p.id DESC, fall back to full-catalog-sweep."
+    },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "round": "R1-BLIND",
+    "probeIp": "audit-ip (record at promotion; Sucuri verdict is per-IP)",
+    "dbColumnFlips": { "hasWaf": false },
+    "verifyMethodPolicy": "detail-page selected; no platform store-API exists (custom PHP). Restock/OOS detection via Playwright detail-page.",
+    "fieldConfidence": {
+      "platform": "high (custom PHP, bootstrap+jquery, no CMS markers, PHPSESSID, product_detail.php?p=<slug>)",
+      "adapterType": "high (matches persona generic-retail context)",
+      "hasWaf": "LOW (single-snapshot; 8-batch not run in BLIND)",
+      "wafType": "medium (Sucuri headers confirmed; passive-vs-active needs heavy probe)",
+      "catalogUrls": "medium (department spine confirmed; coverage % unverified — no full walk in BLIND)",
+      "expectedProductCount": "LOW (static-render sum of 5 firearm-relevant depts = 145; Knives/Custom_Engraving/Import-Export render 0 statically and need AJAX/Playwright enumeration — true count likely higher)",
+      "sortParam": "high-null (no sort select exists, confirmed)",
+      "paginationPattern": "high (client-side jPages perPage:12, all products in one server response, Mistake 15 -> type null)",
+      "watermark.method": "LOW (DOM newest-first ordering UNPROVEN in BLIND)"
+    },
+    "discoveredApiEndpoints": [
+      "POST /ajax_front_action.php (home_filter / get_cart_quantity / filter actions; populates #content via jsonA.list)",
+      "POST /product_filter.php (FormData: selected + raw SQL string; client-side SQL leak observed)"
+    ],
+    "securityFindings": [
+      "Client-side JS exposes a raw SQL SELECT (p.id, p.upc_barcode, p.product_name, p.link, p.is_featured, p.from_date, p.to_date, p.product_type_id, psf.retailer_price...) and posts a `sql` FormData field to product_filter.php. NOT probed/exploited in BLIND (no attack probes, no ban risk). Flag for security-engineer review in a later round."
+    ],
+    "stageNotes": [
+      "Stage1: apex irunguns.ca and www both HTTP 200 (Chrome 120 UA), no redirect, no <link rel=canonical>. canonical = apex (preserves input). robots.txt: 'Disallow:' empty, NO Sitemap directive.",
+      "Stage2: Sucuri/Cloudproxy headers on clean 200 (X-Sucuri-ID:14007). PASSIVE per single snapshot. 8-batch NOT run (BLIND). hasWaf=false provisional.",
+      "Stage3: custom PHP storefront (bootstrap.min + jquery + custom.css/js, no CMS generator/markers). product_detail.php?p=<slug>. adapterType=generic-retail. No age-gate, no CAPTCHA markers on homepage. needsPlaywright=false provisional BUT Knives/Custom_Engraving/Import-Export render 0 products in static HTML (AJAX-loaded) -> R2 must test plain-HTTP vs Playwright for those depts.",
+      "Stage4: department spine = product.php?departments=<Dept>. Firearm-relevant depts + static counts: Firearms 95, Parts_AND_Gear 23, Magazines 20, Optics 4, Ammunition 3 (sum 145). Knives/Custom_Engraving render 0 static (AJAX). Import_/_Export via category.php = subcat index page. Clothing 4 = pure apparel, excluded from firearm-relevant scope. product.php?canadian-store == Firearms set exactly (95/95 overlap) -> redundant, excluded. NO full walk performed (BLIND) -> coverage % UNVERIFIED.",
+      "Stage5: pagination is client-side jPages ($('div.holder').jPages({containerID:'content',perPage:12})). All products in initial server HTML. No server-side ?page=N. paginationPattern.type=null (Mistake 15). perPage display=12.",
+      "Stage6: NO sort/orderby <select> on category pages (only filter selects: department/category/manufacturer/model/calibre/classes). sortParam=null, sortVerified=false. Persona Lesson 2: cross-reference DOM order vs independent newest-first signal before concluding no-sort. Cross-reference is PENDING-R2.",
+      "Stage7: candidate navigate-from-watermark (matching persona prior). UNVERIFIED in BLIND: in-page image-cache IDs are non-monotonic so p.id DESC newest-first is NOT proven. Needs ajax_front_action.php home_filter baseline cross-reference in R2; else full-catalog-sweep.",
+      "Stage8: no sitemap, no platform API. expectedProductCount = static-render sum of firearm-relevant depts = 145 (LOW confidence; AJAX-only depts not enumerated). productCountMethod html-pagination via .showing_result (per-dept 'Showing N result'); true global count requires summing all depts incl AJAX-loaded ones.",
+      "Stage9: R1 BLIND candidate written BEFORE DB read, per audit protocol."
+    ]
+  }
+}

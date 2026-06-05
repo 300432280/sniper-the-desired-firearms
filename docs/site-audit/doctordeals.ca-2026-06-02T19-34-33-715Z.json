@@ -1,0 +1,103 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "sgcaptcha",
+  "wafLastProbedAt": "2026-06-02T19:34:33Z",
+  "wafProbeMethod": "single-get-iphone-ua",
+  "wafProbeResult": "iPhone Safari UA served clean 200 on homepage + catalog + Store API + WP REST; rapid-burst heavy probe intentionally SKIPPED (sgcaptcha aggressive, live crawler active, IP-ban risk). No live challenge observed under iPhone UA.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "sgCaptchaMetaRefresh": false,
+    "rapidBurstTested": false,
+    "rapidBurstSkippedReason": "Round-1 constraint: sgcaptcha challenges aggressively under burst; live crawler active; IP-ban avoidance",
+    "homepageStatusIphoneUa": 200,
+    "catalogStatusIphoneUa": 200,
+    "serverHeader": "nginx",
+    "siteGroundCacheHeaders": ["X-Proxy-Cache", "SG-F-Cache", "X-Cache-Enabled"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 576,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://doctordeals.ca/product-category/firearms/",
+    "https://doctordeals.ca/product-category/parts/",
+    "https://doctordeals.ca/product-category/accessories/",
+    "https://doctordeals.ca/product-category/mags-barrels/",
+    "https://doctordeals.ca/product-category/clothing-gun-related/",
+    "https://doctordeals.ca/product-category/defense/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://doctordeals.ca/product/ruger-10-22-semi-automatic-rifle-standard-threaded-barrel-18-5-rear-peep-sight-extended-over-barrel-tactical-rail-front-blade-sight-muzzle-break-blued/", "title": "Ruger 10-22 Semi-automatic Rifle — Standard threaded barrel 18.5...", "price": 159.99, "stockStatus": "in_stock" },
+    { "url": "https://doctordeals.ca/product/ruger-10-22-semi-automatic-rifle-magazine-manual-lock-accessory-kit-collectors-series/", "title": "Ruger 10-22 Semi-automatic Rifle — Magazine, Manual, Lock accessory kit", "price": 29.99, "stockStatus": "in_stock" },
+    { "url": "https://doctordeals.ca/product/ruger-10-22-semi-automatic-rifle-complete-bolt-assembly-polished-collectors-series/", "title": "Ruger 10-22 Semi-automatic Rifle — Complete Bolt Assembly (polished)", "price": 119.99, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "lastVerified": "2026-06-02",
+  "topLevelCategories": {
+    "source": "wc-store-api-categories",
+    "categories": [
+      { "slug": "/product-category/parts/", "allOption": 386 },
+      { "slug": "/product-category/accessories/", "allOption": 261 },
+      { "slug": "/product-category/mags-barrels/", "allOption": 109 },
+      { "slug": "/product-category/firearms/", "allOption": 107 },
+      { "slug": "/product-category/clothing-gun-related/", "allOption": 44 },
+      { "slug": "/product-category/defense/", "allOption": 1 }
+    ],
+    "totalsSumCheck": "Sum of 6 top-level recursive counts = 908 (Store API recurses into subcats); /shop/ HTML total = 572; Store API global = 576. Sum 908 > shop 572 due to cross-listing across top-level categories (e.g. brand-parts also in parts). Union of the 6 covers 100% of customer-visible products."
+  },
+  "auditNotes": {
+    "round": "R1-blind",
+    "probeIp": "audit-IP (not production crawler IP)",
+    "verifyMethodPolicy": "store-api accepted; restock/OOS-transition alerts not guaranteed for products the Store API never returns (worker.ts:549/711 early-return). Operator confirms tradeoff.",
+    "wcCountSurface": "store-api (customer-visible 576); WP REST core admin total = 975 (includes drafts/hidden/OOS). expectedProductCount paired to store-api per B8 since verifyMethod=store-api.",
+    "expectedCountSurface": "wc-store-api",
+    "wcCategoryApi": "store-api (recursive category counts)",
+    "sortVerdict": "honored-default-is-newest: default first3 == ?orderby=date first3; counter ?orderby=title first3 differs (alphabetical). orderby honored.",
+    "dateFilterVerified": "WP REST core /wp/v2/product?modified_after=2099 -> x-wp-total 0; ?modified_after=1999 -> x-wp-total 975. Filter honored.",
+    "wafCaveat": "hasWaf:true set DEFENSIVELY per Mistake 30 (SiteGround sgcaptcha known-aggressive) + task context. No live sgcaptcha challenge was actually observed — every iPhone-UA request returned 200. Heavy 8-batch probe intentionally NOT run (IP-ban risk). Round 2 must confirm WAF severity from production IP with the sustained-pattern test.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "low-defensive (no live challenge observed; sgcaptcha assumed)",
+      "expectedProductCount": "medium (576 store-api vs 975 wp-rest; surface choice pairs with verifyMethod)",
+      "catalogUrls": "medium-high (coverage by taxonomy structure, NOT full walk per R1 constraint)",
+      "paginationPattern": "high (page1/page2 zero-overlap verified)",
+      "sortParam": "high (3-outcome counter-control verified)",
+      "watermark.method": "high (modified_after two-probe verified)"
+    },
+    "r1Constraints": "No full walks / scaled probes / rapid-burst heavy probe. catalogUrls coverage inferred from taxonomy tree + per-category count text, not ID-level full-walk dedup."
+  }
+}

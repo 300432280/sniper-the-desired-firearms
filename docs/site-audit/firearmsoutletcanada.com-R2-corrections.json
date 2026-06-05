@@ -1,0 +1,146 @@
+{
+  "domain": "firearmsoutletcanada.com",
+  "round": "R2 (live investigation, crawler paused)",
+  "runId": "R2-live-foc-2026-06-02",
+  "method": "Live multi-UA GETs (>=850ms, no parallel) + full 12-category walk via real GenericRetailAdapter.extractCatalogProducts + global URL dedup + sitemap diff + 3-outcome sort counter-control. DB siteProfile is the answer key.",
+  "corrections": [
+    {
+      "field": "perPage",
+      "round1Hypothesis": "52 (blind: counted deduped product-ids on /firearms page 1, no limit <select> seen)",
+      "liveMethod": "GET /firearms?sort=newest&limit=250 -> counted article.card elements",
+      "evidence": "limit=250 honored: exactly 250 article.card returned on a single page (and li.product=500 is a 2x render artifact, not the product count). DB profile already had perPage:250.",
+      "proposedValue": 250,
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern.perPage / template",
+      "round1Hypothesis": "perPage 52, type query, template 'page'",
+      "liveMethod": "Inspected pagination anchors on /firearms?sort=newest&limit=250",
+      "evidence": "Pagination is query-style '?...&page=N' and sort+limit survive into the pagination hrefs (e.g. /firearms?sort=newest&limit=250&page=2). type:'query' template:'page' is correct; only perPage was wrong (52 -> 250).",
+      "proposedValue": { "type": "query", "template": "page", "perPage": 250 },
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "3437 (blind sitemap read)",
+      "liveMethod": "GET /xmlsitemap.php?type=products&page=1 -> count <loc>; page=2 -> 404",
+      "evidence": "Live count = 3437 product <loc> on page=1, page=2 returns HTTP 404 (empty). R1 blind candidate (3437) is CORRECT and current. DB value 3260 is stale (2026-04-06 snapshot; catalog grew ~177).",
+      "proposedValue": 3437,
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod",
+      "round1Hypothesis": "DB shape {method:'sitemap-index', sitemapUrl:'/xmlsitemap.php', subSitemapPattern:'?type=products&page={N}'} (legacy). R1 candidate emitted {method:'sitemap', url:'/xmlsitemap.php?type=products&page=1'}.",
+      "liveMethod": "Code trace product-count-probe.ts:299-311 + type SitemapIndexMethod (l39-42) + live sitemap fetch",
+      "evidence": "SitemapIndexMethod type only defines urls:string[]. DB legacy keys {sitemapUrl,subSitemapPattern} produce m.urls===undefined; the case does `for (const x of m.urls)` -> TypeError -> caught at l540 -> returns null. validateMethod (l183-194) does NOT catch this (C1 loop is skipped when urls is undefined). VERIFIED silent-null. The R1-candidate 'sitemap' shape (case l291-297 reads m.url) WORKS and returns 3437. Canonical scalar 'sitemap' is the correct fix; a single GET suffices since all products are on page=1.",
+      "proposedValue": { "method": "sitemap", "url": "/xmlsitemap.php?type=products&page=1" },
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf / wafType",
+      "round1Hypothesis": "DB hasWaf:true + wafType:cloudflare-passive (invalid B10 combo, over-throttles). R1 candidate already set hasWaf:false.",
+      "liveMethod": "9 GETs across 3 UAs (Chrome/Safari-iPhone/Firefox) x 3 paths, >=900ms apart",
+      "evidence": "ALL 9 -> HTTP 200, server=cloudflare, cf-ray present, __cf_bm cookie, NO challenge body, identical content-length per path across UAs. No UA-reputation escalation. This is passive Cloudflare CDN, not a WAF gate. hasWaf:true is stale and forces unnecessary Playwright/throttle paths.",
+      "proposedValue": { "hasWaf": false, "wafType": "cloudflare-passive" },
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam / sortVerified",
+      "round1Hypothesis": "sortParam '?sort=newest' read from <select id=sort>; sortVerified false (3-outcome control not fired in blind mode)",
+      "liveMethod": "3-outcome counter-control: compared first-5 product slugs of default(featured) vs sort=newest vs sort=priceasc vs sort=pricedesc on /firearms",
+      "evidence": "Mistake-29 trap present (default featured first-3 == sort=newest first-3) BUT priceasc and pricedesc both differ from newest AND from each other -> ?sort= is genuinely applied, not ignored. sort=newest is honored and survives pagination (appears in pagination anchors).",
+      "proposedValue": { "sortParam": "?sort=newest", "sortVerified": true },
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "R1 candidate: 11 absolute-URL categories, DROPPED /pre-owned by name. DB: 12 relative-path categories with ?limit=250 baked, INCLUDING /pre-owned/.",
+      "liveMethod": "Full walk of all 12 categories with sort=newest&limit=250, global dedup by canonical product path, greedy set-cover for redundancy",
+      "evidence": "All 12 categories contribute UNIQUE products (greedy cover needs all 12). /pre-owned/ has 7 live items (NOT empty -> keep per Mistake 12). /pistol-parts contributes 16 unique. No category is redundant. DB's 12-URL relative-path set with ?limit=250 is correct; R1 candidate wrongly dropped /pre-owned and omitted limit. Parent-consolidation URLs (/parts,/accessories,/hunting,/knives) 404 -> 12 is the minimum spine.",
+      "proposedValue": [
+        "/firearms?sort=newest&limit=250",
+        "/ammo?sort=newest&limit=250",
+        "/optics?sort=newest&limit=250",
+        "/magazines-clips?sort=newest&limit=250",
+        "/gear-kit?sort=newest&limit=250",
+        "/storage-maintenance?sort=newest&limit=250",
+        "/reloading?sort=newest&limit=250",
+        "/pistol-parts?sort=newest&limit=250",
+        "/rifle-parts?sort=newest&limit=250",
+        "/shotgun-parts?sort=newest&limit=250",
+        "/emergency-survival-gear?sort=newest&limit=250",
+        "/pre-owned/?sort=newest&limit=250"
+      ],
+      "confidence": "high"
+    },
+    {
+      "field": "searchUrl",
+      "round1Hypothesis": "R1 candidate omitted searchUrl (Theme E miss)",
+      "liveMethod": "BigCommerce Stencil platform default; DB profile carries it",
+      "evidence": "BC Stencil canonical search is /search.php?search_query={keyword} (in DB profile). Not live-fired this round but is the platform default; should be emitted rather than omitted.",
+      "proposedValue": "/search.php?search_query={keyword}",
+      "confidence": "medium"
+    },
+    {
+      "field": "watermark.method",
+      "round1Hypothesis": "navigate-from-watermark pending sort proof",
+      "liveMethod": "sort=newest proven honored (above) + survives pagination",
+      "evidence": "sort=newest is real and stable across pages, so newest-first navigation works. navigate-from-watermark is correct; no full-catalog-sweep needed.",
+      "proposedValue": "navigate-from-watermark",
+      "confidence": "high"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "F (count-method legacy shape -> silent null)",
+      "file": "backend/src/services/product-count-probe.ts:299-311 (case) + 39-42 (SitemapIndexMethod type) + 183-194 (validateMethod C1)",
+      "confirmed": true,
+      "detail": "DB productCountMethod {method:'sitemap-index', sitemapUrl, subSitemapPattern} has NO urls[]. Switch does `for (const x of m.urls)` with m.urls===undefined -> TypeError -> caught by outer try at l540 -> returns null. validateMethod does NOT guard it (name 'sitemap-index' is valid; C1 url-shape loop is skipped because Array.isArray(undefined)===false). CONFIRMED silent-null at runtime. Fix for FOC: switch to scalar {method:'sitemap', url:'/xmlsitemap.php?type=products&page=1'} (case l291-297 reads m.url and returned 3437 live). Broader fleet fix: make sitemap-index tolerate legacy {sitemapUrl,subSitemapPattern} by expanding to urls[] (walk page=N until 404), OR have validateMethod throw on missing urls[] so it surfaces loudly instead of silent null."
+    },
+    {
+      "theme": "B (pagination leading-slash / HTML-paginate vs API)",
+      "file": "backend/src/services/catalog-crawler.ts:119-157 (buildPaginatedUrl)",
+      "confirmed": true,
+      "detail": "The leading-slash bug only affects pattern.type==='path' (l122-126). FOC's paginationPattern.type is 'query', which hits the default branch (l153-157: url.searchParams.set('page',N)) -> produces /firearms?limit=250&sort=newest&page=2 correctly. So Theme-B's path-template bug DOES NOT apply to FOC. Live-confirmed this BC site HTML-paginates via ?page=N (page 2 returns different products than page 1; pagination anchors are query-style and carry sort+limit). No API pagination involved. No code change needed for FOC pagination."
+    },
+    {
+      "theme": "D (passive-CF stale defensive flags)",
+      "file": "siteProfile.hasWaf / wafType (DB) vs R1 candidate",
+      "confirmed": true,
+      "detail": "Confirmed passive via 9 clean multi-UA GETs (all 200, cf-ray, __cf_bm, no challenge, no UA escalation). DB hasWaf:true is the invalid 'true + cloudflare-passive' combo flagged in Theme D; should be hasWaf:false. R1 blind candidate already corrected this to false."
+    }
+  ],
+  "coverageProof": {
+    "walked": "all 12 catalogUrls, sort=newest&limit=250, >=850ms between requests, global dedup by canonical product path via real GenericRetailAdapter.extractCatalogProducts",
+    "perCategoryUnique": {
+      "/firearms": 950, "/ammo": 399, "/optics": 198, "/magazines-clips": 139,
+      "/gear-kit": 484, "/storage-maintenance": 135, "/reloading": 95,
+      "/pistol-parts": 16, "/rifle-parts": 318, "/shotgun-parts": 177,
+      "/emergency-survival-gear": 104, "/pre-owned/": 7
+    },
+    "uniqueIds": 3012,
+    "expected": 3437,
+    "pct": 0.877,
+    "gap": {
+      "count": 425,
+      "characterization": "425 sitemap product URLs are NOT reachable via any of the 12 top-nav categories; 0 walked products are absent from the sitemap (walk is a strict subset). 4/4 sampled gap URLs returned HTTP 200 live products (ammo/optics/parts not assigned to top-nav category trees). No global 'shop-all' listing exists (/products,/all,/shop-all all 404). /brands is a 120-brand index; closing the gap would require walking all brand listings (heavy, high category overlap).",
+      "verdict": "Gap is real and acceptable per DB design: expectedProductCount (sitemap=3437) is the authoritative count; catalogUrls (87.7%) are the indexing spine for watermark/bootstrap. Closing the final 12.4% would require brand-listing walk (deferred / optional)."
+    },
+    "recommendedCatalogUrls": [
+      "/firearms?sort=newest&limit=250",
+      "/ammo?sort=newest&limit=250",
+      "/optics?sort=newest&limit=250",
+      "/magazines-clips?sort=newest&limit=250",
+      "/gear-kit?sort=newest&limit=250",
+      "/storage-maintenance?sort=newest&limit=250",
+      "/reloading?sort=newest&limit=250",
+      "/pistol-parts?sort=newest&limit=250",
+      "/rifle-parts?sort=newest&limit=250",
+      "/shotgun-parts?sort=newest&limit=250",
+      "/emergency-survival-gear?sort=newest&limit=250",
+      "/pre-owned/?sort=newest&limit=250"
+    ],
+    "recommendedSetIsMinimal": true,
+    "note": "All 12 categories contribute unique products (greedy set-cover requires all 12). None redundant. /pre-owned/ kept (7 live items, Mistake 12). limit=250 baked in to minimize pages walked (firearms=4 pages, all others <=2)."
+  }
+}

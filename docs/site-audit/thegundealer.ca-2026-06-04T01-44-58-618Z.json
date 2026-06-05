@@ -1,0 +1,119 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-04T01:35:00.000Z",
+  "wafProbeMethod": "gentle-single-get",
+  "wafProbeResult": "Cloudflare-passive: CF-RAY on every response, apex+REST+HTML all HTTP 200, zero sgcaptcha/challenge markers. DB-prose sgcaptcha era is stale (B8 migration sgcaptcha->cloudflare-passive already reflected in DB structured fields).",
+  "wafProbeEvidence": {
+    "cfHeadersDetected": true,
+    "cfRay": "a06333b00a72c8b1-YYZ",
+    "server": "cloudflare",
+    "poweredBy": "PHP/8.2.30",
+    "sgCaptchaDetected": false,
+    "sucuriHeadersDetected": false,
+    "allProbesHttp200": true,
+    "probeMode": "gentle-single-get-blind-r1",
+    "note": "Heavy 8-batch NOT run (gentle mode mandated). hasWaf/wafType from header+body read only; operator should re-confirm from production IP before promotion."
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 11279,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://thegundealer.ca/product-category/new-guns/",
+    "https://thegundealer.ca/product-category/accessories/",
+    "https://thegundealer.ca/product-category/ammunition/",
+    "https://thegundealer.ca/product-category/optics/",
+    "https://thegundealer.ca/product-category/parts/",
+    "https://thegundealer.ca/product-category/reloading-components/",
+    "https://thegundealer.ca/product-category/clothing-footwear/",
+    "https://thegundealer.ca/product-category/used-items/",
+    "https://thegundealer.ca/product-category/tgd-promo-1/",
+    "https://thegundealer.ca/product-category/draws/",
+    "https://thegundealer.ca/product-category/new-arrivals/",
+    "https://thegundealer.ca/product-category/fxr/",
+    "https://thegundealer.ca/product-category/fine-guns/",
+    "https://thegundealer.ca/product-category/special-savage-clearance/",
+    "https://thegundealer.ca/product-category/sales-promotions/",
+    "https://thegundealer.ca/product-category/category-caesar-guerini/",
+    "https://thegundealer.ca/product-category/special-browning-gear-clearance/",
+    "https://thegundealer.ca/product-category/meat-eater-clothing/",
+    "https://thegundealer.ca/product-category/tgd-promo4/",
+    "https://thegundealer.ca/product-category/special-norma-ammo-sale/",
+    "https://thegundealer.ca/product-category/browning-gear-clearance/",
+    "https://thegundealer.ca/product-category/great-discounts/",
+    "https://thegundealer.ca/product-category/special-fierce-clearance/",
+    "https://thegundealer.ca/product-category/tgd-promo-wetrhgf/",
+    "https://thegundealer.ca/product-category/john-m-browning-collection/"
+  ],
+  "extractionTested": true,
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "/wp-json/wp/v2/product",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "lastVerified": "2026-06-03",
+  "auditNotes": {
+    "runId": "w2r1-thegundealer-2026-06-03",
+    "round": "PhaseA-R1-blind-wave2",
+    "probeIp": "audit-host (NOT production crawler IP)",
+    "wafProbeCaveat": "Gentle single-GET only per task; heavy 8-batch NOT run. cloudflare-passive verdict is header/body-evidence-only.",
+    "wafMigrationDetected": {
+      "from": "sgcaptcha",
+      "to": "cloudflare-passive",
+      "evidence": "live: CF-RAY everywhere, all 200, zero sgcaptcha markers; DB structured wafType already cloudflare-passive (only prose notes stale)"
+    },
+    "zeroCoverageBlocker": "NOT a REST/WAF block. WP REST /wp/v2/product AND WC Store API both return HTTP 200 + x-wp-total=11279 at audit IP. Root cause: DB row isEnabled=false, consecutiveFailures=49, crawlPhase=bootstrap, 0 products. Site was manually DISABLED after a domain change (DB notes: \"Domain changed to thegundealer.ca. Search returns 404 on new domain. Disabled.\"). The 49 failures likely accrued during the stale sgcaptcha/domain-transition era. Re-enabling + bootstrap should now succeed since both REST surfaces and HTML catalog are live and 200.",
+    "runtimeWalkSurface": "WP REST core /wp-json/wp/v2/product for watermark (modified_after honored: future=0, past=11279); WC Store API customer-visible count for expectedProductCount/maintain. Both surfaces returned x-wp-total=11279 (no draft/hidden divergence observed).",
+    "expectedCountSurface": "wc-store-api (/wp-json/wc/store/v1/products x-wp-total) — matches verifyMethod=store-api per B8 pairing rule",
+    "verifyMethodPolicy": "store-api accepted (matches DB); restock/OOS-transition alerts not guaranteed for products the batch API never sees (worker.ts:549/711). Operator may switch to detail-page if restock alerts required.",
+    "catalogUrlCaveat": "BLIND R1: catalogUrls = 25 firearm-relevant top-level taxonomy categories (parent=0) from live walk of /wc/store/v1/products/categories (3 pages, 272 cats total). Full per-page ID-dedup walk + 5% coverage gate NOT completed in R1 (deferred to R2). Sum of top-level counts=12105 vs global 11279 (promo/sale/clearance overlap expected). Excluded: gift-card(1), extended-warranty(15), auctions(3).",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium (gentle-only, audit IP)",
+      "expectedProductCount": "high (live x-wp-total both surfaces)",
+      "perPage": "high (per_page=200->400 cap proven)",
+      "paginationPattern": "high (page2 grid ID-disjoint from page1)",
+      "sortParam": "high (3-outcome counter-control)",
+      "catalogUrls": "medium (taxonomy-derived, full dedup walk deferred to R2)",
+      "watermark": "high (modified_after two-probe honored)"
+    },
+    "discoveredApiEndpoints": [
+      "/wp-json/wp/v2/product",
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wc/store/v1/products/categories"
+    ]
+  }
+}

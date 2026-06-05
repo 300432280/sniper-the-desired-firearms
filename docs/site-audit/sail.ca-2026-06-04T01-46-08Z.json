@@ -1,0 +1,129 @@
+{
+  "profileVersion": 1,
+  "platform": "magento-2.x",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-06-03",
+  "wafProbeMethod": "gentle-single-get",
+  "wafProbeResult": "No CDN/WAF challenge on gentle GET; no cf-ray/x-sucuri/akamai headers; reCAPTCHA present site-wide (forms only, not gating catalog)",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "akamaiHeaders": [],
+    "serverHeader": "(none disclosed)",
+    "note": "GENTLE detection only (single GET + header read) per W2R1 anti-ban constraint. Heavy 8-batch probe NOT run. Operator must re-run heavy probe from production IP before promotion."
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 3223,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": [
+      "/media/sitemaps/sitemap_sail_en_product_001.xml",
+      "/media/sitemaps/sitemap_sail_en_product_002.xml"
+    ],
+    "_warning": "RETURNS WHOLE-STORE 18,777 (NOT the 3,223 firearm-relevant target). Only runtime-reachable method today. The firearm-relevant count requires json-api-count against foreign origin s8zq1c.a.searchspring.io, which the runtime probe cannot reach (see auditNotes.RUNTIME_GAP_productCountProbe). Firearm-relevant intended method: {method:'json-api-count', endpoint:'https://s8zq1c.a.searchspring.io/api/search/search.json?siteId=s8zq1c&resultsFormat=native&pageSize=1&page=1&filter.category_hierarchy=Hunting', field:'pagination.totalResults'}"
+  },
+  "catalogUrls": [
+    "https://www.sail.ca/en/hunting"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://www.sail.ca/en/winchester-sxp-extreme-defender-pump-action-shotgun-762079-20-075360001",
+      "title": "SXP Extreme Defender Pump-Action Shotgun",
+      "price": 749.99,
+      "stockStatus": "unknown"
+    },
+    {
+      "url": "https://www.sail.ca/en/savage-301-single-shot-shotgun-712428",
+      "title": "301 Single-Shot Shotgun",
+      "price": null,
+      "stockStatus": "unknown"
+    },
+    {
+      "url": "https://www.sail.ca/en/bioammo-game-steel-12-ga-shotshells-28-g-70-mm-25-bte-1272641",
+      "title": "Game Steel 12 ga. Shotshells",
+      "price": null,
+      "stockStatus": "unknown"
+    }
+  ],
+  "sortParam": "sort.created_at=desc",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Searchspring sort.created_at=desc verified honored (Newest differs from default); listing carries product URLs with monotonic created order. API perPage=24, page param pagination."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-06-03",
+  "auditNotes": {
+    "runId": "W2R1-sail-2026-06-03",
+    "round": "PHASE-A-R1-blind",
+    "probeIp": "audit-IP (not production); WAF verdict IP-dependent — re-confirm from production IP",
+    "scopeDecision": "FIREARM-RELEVANT only. sail.ca is a large general outdoor retailer (18,777 whole-store products). catalogUrls scoped to the Hunting department (/en/hunting), which Searchspring resolves to 3,223 firearm-relevant products via category_hierarchy=Hunting. Whole-store walk would index 18.7K non-firearm items (apparel, fishing, camping, kayaks) — out of scope.",
+    "huntingSubtree": {
+      "Hunting>Species": 683,
+      "Hunting>Firearms": 539,
+      "Hunting>Scope & Shooting Accessories": 507,
+      "Hunting>Hunting Accessories": 439,
+      "Hunting>Attractants, Urine & Feeders": 429,
+      "Hunting>Firearm accessories": 384,
+      "Hunting>Hunting Clothing": 339,
+      "Hunting>Game Calls": 174,
+      "Hunting>Crossbows & Bows": 150,
+      "Hunting>New Arrivals": 122,
+      "Hunting>Hunting knives & Tools": 93,
+      "Hunting>Airguns": 78,
+      "Hunting>Decoys": 72,
+      "Hunting>Hunting Boots": 48,
+      "Hunting>Tactical": 7,
+      "note": "subtree counts sum>3223 because Searchspring hierarchy double-counts products tagged to multiple sub-nodes; deduped walk of /en/hunting = exactly 3223 unique uids."
+    },
+    "searchspring": {
+      "siteId": "s8zq1c",
+      "api": "https://s8zq1c.a.searchspring.io/api/search/search.json",
+      "categoryField": "category_hierarchy",
+      "sortNewest": "sort.created_at=desc",
+      "perPageCap": 24
+    },
+    "discoveredApiEndpoints": [
+      "https://s8zq1c.a.searchspring.io/api/search/search.json (foreign origin, public, no auth)"
+    ],
+    "RUNTIME_GAP_productCountProbe": "json-api-count case at product-count-probe.ts:265 builds URL as `${origin}${m.endpoint}` with NO startsWith(\"http\") guard (unlike sitemap-index:312). The Searchspring API is on FOREIGN origin s8zq1c.a.searchspring.io, so json-api-count CANNOT reach it — it would request https://www.sail.ca/https://s8zq1c... . Count probe is effectively DISABLED for the firearm-relevant count until the json-api-count case is patched to honor absolute endpoints. WHOLE-STORE fallback that DOES work today: {method:\"sitemap-index\", urls:[\"/media/sitemaps/sitemap_sail_en_product_001.xml\",\"/media/sitemaps/sitemap_sail_en_product_002.xml\"]} = 18,777 (wrong scope).",
+    "RUNTIME_GAP_catalogScope": "adapterType=generic-retail walks HTML category pages. /en/hunting is a Searchspring SPA -> static HTML 0 products -> production fetchWithPlaywright() fallback fires (catalog-crawler.ts:448, !hasWaf && html.length>5000) -> generic-retail extracts Magento li.product-item cards (verified via Playwright: .product-item=39, a.product-item-link=61). Runtime crawl path is viable but SLOW (Playwright per page x 135 pages).",
+    "dbCountConcern": "DB expectedProductCount~18944 is the WHOLE-STORE count (matches sitemap 18,777 + drift). For a firearms monitor it is WRONG SCOPE; true firearm-relevant target = 3,223. The ~33%-indexed/parked-since-April symptom is consistent with the crawler attempting an unscoped whole-store walk via Playwright (too slow / times out).",
+    "fieldConfidence": {
+      "platform": "high (Magento static/version fingerprint)",
+      "adapterType": "high (matches DB)",
+      "hasWaf": "medium (gentle-only; heavy probe deferred; re-confirm production IP)",
+      "needsPlaywright": "high (Playwright render proven; static 0 products)",
+      "expectedProductCount": "high for 3223 firearm-relevant (deduped 135-page walk == totalResults); whole-store 18,777 also high",
+      "catalogUrls": "high (single /en/hunting covers 3223 unique, 0% drift)",
+      "sortParam": "high (created_at desc differs from default)",
+      "perPage": "high (Searchspring hard cap 24)",
+      "productCountMethod": "low (correct method/endpoint but blocked by runtime foreign-origin gap)"
+    }
+  }
+}

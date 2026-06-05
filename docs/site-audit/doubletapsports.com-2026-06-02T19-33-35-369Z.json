@@ -1,0 +1,120 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every response) but all probes 200; honeypot /.env => 404 (no block); WC Store API + WP REST both 200. Passive, not blocking.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray present on /, Store API, WP REST"],
+    "honeypotEnv": 404,
+    "storeApiStatus": 200,
+    "wpRestStatus": 200,
+    "rapidBurstTested": false,
+    "note": "BLIND R1: light non-bursty probe only (live crawler active on this IP). Sustained-walk + full 8-batch deferred to R2 to avoid IP risk."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1872,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://doubletapsports.com/product-category/parts/",
+    "https://doubletapsports.com/product-category/accessories/",
+    "https://doubletapsports.com/product-category/reloading/",
+    "https://doubletapsports.com/product-category/holsters-pouches-belts/",
+    "https://doubletapsports.com/product-category/range-gear/",
+    "https://doubletapsports.com/product-category/ammunition/",
+    "https://doubletapsports.com/product-category/clearance/",
+    "https://doubletapsports.com/product-category/firearms/",
+    "https://doubletapsports.com/product-category/firearms/rifles/",
+    "https://doubletapsports.com/product-category/firearms/shotguns/",
+    "https://doubletapsports.com/product-category/firearms/previously-enjoyed-firearms/",
+    "https://doubletapsports.com/product-category/specials/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://doubletapsports.com/product/armanov-cz-button-black-extended/", "title": "Armory Craft CZ 75 / SP-01 / Shadow 2 Series Light Firing Pin Spring", "price": 36.00, "stockStatus": "in_stock" },
+    { "url": "https://doubletapsports.com/product/armanov-cz-extendedmag-release-button-brass-for-shadow-2-ts2/", "title": "Armory Craft CZ Extended Mag Release Button", "price": 36.00, "stockStatus": "in_stock" },
+    { "url": "https://doubletapsports.com/product/armanov-grip-tape/", "title": "Armanov Grip Tape", "price": null, "stockStatus": "unknown" }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 120,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 120,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wp-rest-core product_cat (paginated 2 pages, 200 cats total)",
+    "categories": [
+      { "slug": "/product-category/parts/", "allOption": 856 },
+      { "slug": "/product-category/accessories/", "allOption": 366 },
+      { "slug": "/product-category/reloading/", "allOption": 307 },
+      { "slug": "/product-category/holsters-pouches-belts/", "allOption": 266 },
+      { "slug": "/product-category/range-gear/", "allOption": 71 },
+      { "slug": "/product-category/ammunition/", "allOption": 46 },
+      { "slug": "/product-category/clearance/", "allOption": 28 },
+      { "slug": "/product-category/firearms/", "allOption": 16 },
+      { "slug": "/product-category/firearms/rifles/", "allOption": 7 },
+      { "slug": "/product-category/firearms/shotguns/", "allOption": 8 },
+      { "slug": "/product-category/firearms/previously-enjoyed-firearms/", "allOption": 10 },
+      { "slug": "/product-category/specials/", "allOption": 8 }
+    ],
+    "totalsSumCheck": "Functional category counts (WP REST core count field) sum ~1989 vs global 1872; products are multi-categorized so sum >= global. 'brands' (1630) and count:0 parents (pistols/glock-pistols/cz-pistols/custom-builds) excluded from catalogUrls: 'brands' is a cross-cutting alternate taxonomy overlapping the functional spine; empty parents contribute 0 today (kept in documentation). VERIFIED-AGGREGATOR: /shop/ alone reaches 100% (16 pages x 120 = 1920 >= 1872) and is the single-URL fallback if per-category coverage drift is found in R2."
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-doubletapsports-2026-06-02",
+    "probeIp": "audit-IP (production-IP WAF re-confirm required before promotion)",
+    "verifyMethodPolicy": "store-api selected (WC fast-path); restock/OOS-transition alerts not guaranteed for products the batch API never sees (worker.ts:711 early-return). Operator confirm tradeoff.",
+    "wcCategoryApi": "wp-rest-core (count field). Coverage spine = functional top-level product-category pages; firearms children added because parent renders subcat tiles + only 16 direct products.",
+    "wcCountSurface": "Store API and WP REST both return x-wp-total=1872 (agree) — no draft/hidden divergence on this site.",
+    "expectedCountSurface": "wc-store-api (paired with verifyMethod=store-api per B8).",
+    "sortDiscovery": "No WooCommerce orderby <select> present in category HTML (BeTheme/Mfn theme; only 'orderby' tokens found were in attribute JSON). sortParam=null. Watermark uses WP REST modified_after date filter instead (verified two-probe: 2099=>0, 1999=>1872).",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "medium (light-probe only; R2 must run sustained 8-batch from production IP)",
+      "expectedProductCount": "high (both surfaces agree 1872)",
+      "catalogUrls": "medium (page-1+page-2 verified for parts; full per-category walk + ID-dedup deferred to R2)",
+      "paginationPattern": "high (page1 vs page2 zero-overlap, perPage 120)",
+      "sortParam": "high (no select exists)",
+      "watermark.method": "high (date filter two-probe passed)"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200 canonical; www 301->apex. canonicalOrigin=https://doubletapsports.com. robots Sitemap: /sitemap_index.xml.",
+      "Stage 2: Cloudflare-passive (cf-ray, all 200, /.env=404). hasWaf=false. reCAPTCHA v3 site-wide (?render=token) but does not gate catalog => hasCaptcha=false.",
+      "Stage 3: WooCommerce 10.8.1 / WordPress, BeTheme + betheme-child. adapterType=woocommerce. No age-gate. needsPlaywright=false (plain HTTP returns products).",
+      "Stage 4: 15 top-level product_cat (paginated 2 pages). Spine = functional cats; brands(1630) excluded as cross-cutting taxonomy; /shop/ verified as 100% single-URL aggregator fallback. firearms children added (parent shows tiles + 16 direct).",
+      "Stage 5: path pagination /product-category/<slug>/page/{N}/; perPage=120 (page1=120, page2=120, overlap=0).",
+      "Stage 6: no orderby <select> in HTML; sortParam=null, sortVerified=false.",
+      "Stage 7: api-date-since-watermark via WP REST modified_after (two-probe 0 / 1872).",
+      "Stage 8: expectedProductCount=1872 via wp-rest-header on WC Store API (Store API and WP REST agree).",
+      "Stage 9: BLIND R1 assembly; full per-category walk-and-dedup, sustained WAF probe, runtime-fetch simulation (Stage 10) deferred to R2."
+    ]
+  }
+}

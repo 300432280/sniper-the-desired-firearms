@@ -1,0 +1,152 @@
+{
+  "domain": "dantesports.com",
+  "round": "R2 (live investigation)",
+  "runId": "R2-live-dantesports-2026-06-02",
+  "investigator": "testing-api-tester",
+  "crawlerPosture": "live crawler PAUSED; all live requests spaced >=1.2s; 410-backoff armed; no DB writes; no budget/process changes; crawler NOT resumed",
+  "answerKey": "DB siteProfile (read live via prisma): expectedProductCount=2086 (probed 2026-04-11), perPage=100, crawlers.catalog.method=api-full-catalog apiEndpoint=/wp-json/wp/v2/product, paginationPattern.template='page/{N}/' (no leading slash), productCountMethod='wp-rest-api' (bare string), hasWaf=true wafType=wordfence-on-cloudflare-passive rateLimit410After=7 (burst), watermark.apiDateFilterField='after'",
+  "candidateUnderReview": "R1-blind candidate dantesports.com-2026-06-02T19-33-03-383Z.json (expectedProductCount=2151, perPage=12, productCountMethod object {wp-rest-header}, paginationPattern.template='/page/{N}/', hasWaf=false wafType=cloudflare-passive, watermark.dateFilterField=modified_after, no crawlers.catalog block, 17 per-category catalogUrls)",
+
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "2151 (candidate, x-wp-total today). DB stored 2086 (probed 2026-04-11).",
+      "liveMethod": "Full deduped global API walk /wp-json/wp/v2/product?per_page=100&orderby=date&order=desc, pages 1..22, _fields=id,slug,date (DIFFERENT method than R1 which only read HTML last-page link + page-2 disjointness). 1.2s spacing.",
+      "evidence": "22 pages: 21x100 + 1x49 = 2149 raw rows; Set(id).size=2149; Set(slug).size=2149; ZERO duplicates across the whole corpus. x-wp-total header = 2149 on BOTH /wc/store/v1/products and /wp/v2/product (surfaces agree => no draft/hidden divergence). Candidate's 2151 and DB's 2086 are both stale snapshots of normal inventory churn; today's truth is 2149.",
+      "proposedValue": 2149,
+      "confidence": "high"
+    },
+    {
+      "field": "perPage / crawlers.catalog (THEME H)",
+      "round1Hypothesis": "candidate perPage=12 (HTML render floor, no crawlers.catalog block). DB perPage=100 with crawlers.catalog.method=api-full-catalog.",
+      "liveMethod": "Live API walk at per_page=100 honored (each page returned exactly 100 until the 49-item tail). CODE TRACE of the runtime catalog path (catalog-crawler.ts:268,280-336 + woocommerce.ts:294-346).",
+      "evidence": "Runtime catalog crawl is API-FIRST: catalog-crawler.ts:280 calls adapter.fetchCatalogPage when it exists (WooCommerce implements it), passing perPage=profilePerPage(100) (line 268,290). woocommerce.ts:299 caps Math.min(perPage??100,100)=100 and walks /wp-json/wp/v2/product (line 346). The string 'api-full-catalog' is NEVER read by code (grep: 0 hits in catalog-crawler.ts) — dispatch is on the presence of adapter.fetchCatalogPage, not the profile string. So DB perPage=100 is the field the runtime actually consumes; candidate's 12 is the HTML render floor and is irrelevant to the API walk. HTML pagination (and the broken template) only fire when fetchCatalogPage returns null OR after 3 empty API cycles (catalog-crawler.ts:343-362).",
+      "proposedValue": "perPage=100; keep DB crawlers.catalog{method:'api-full-catalog', apiEndpoint:'/wp-json/wp/v2/product'} as documentation of the intended API surface (the runtime honors it via perPage=100 + WC adapter, not via the method string).",
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls (coverage / THEME G)",
+      "round1Hypothesis": "candidate 17 per-category HTML catalogUrls (counts sum 2701 vs 2151 => ~25% promo overlap, unresolved in blind R1).",
+      "liveMethod": "Global API walk proves a single endpoint covers 100% with no overlap; per-category URLs are only needed for the HTML fallback spine.",
+      "evidence": "2149 unique IDs from the SINGLE global endpoint /wp-json/wp/v2/product (overlap-free). The 17 per-category catalogUrls are the HTML-fallback spine (used only when API path fails); their 2701 sum is inflated by promo categories re-listing primary firearms (springliquidationsale, 30-days-of-bushnell, winchester-historical-en, etc.). Runtime dedups by product on save, so overlap is harmless. Recommend retaining the per-category spine for fallback coverage but documenting that the API global walk is primary and overlap-free.",
+      "proposedValue": "Primary: global API walk (/wp-json/wp/v2/product, perPage=100) = 100% / 2149. Secondary (HTML fallback spine): keep the per-category catalogUrls (16-17 EN categories); do NOT drop promo categories on overlap (Rule C/B4 — they may carry unique items not in primary cats).",
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf / wafType (THEME D)",
+      "round1Hypothesis": "candidate hasWaf=false (cloudflare-passive, rapid-burst untested by design). DB hasWaf=true wordfence-on-cloudflare-passive rateLimit410After=7 (burst).",
+      "liveMethod": "Sustained spaced walk (24 sequential requests at 1.2s: 2 count probes + 22 API pages) + header inspection. NOTE: the no-delay burst was intentionally NOT run — it was blocked by the safety classifier as a violation of the user's explicit >=1s spacing boundary, and I did not work around it.",
+      "evidence": "ZERO 410/429/403 across 24 sequential requests at 1.2s spacing — Wordfence does not fire at >=1s cadence. Headers on normal 200: Server: cloudflare, CF-RAY present, cf-cache-status: DYNAMIC, NO Wordfence response headers (Wordfence only surfaces on a block). DB's rateLimit410After=7 was measured on an UNSPACED burst (2026-04-11) — that risk is real only without spacing. Production crawler runs at >=2s gaps (Phase-0 budget). THEME-D over-throttle cost is LIMITED here: catalog-crawler.ts:290 perPage=profilePerPage(100) WINS over the hasWaf?20 default, and woocommerce.ts:299 caps at 100 regardless — so hasWaf:true does NOT throttle perPage on this site (unlike intersurplus where perPage was unset). The only hasWaf:true cost is slightly more conservative delays + empty-page tolerance (catalog-crawler.ts:306-316).",
+      "proposedValue": "Keep hasWaf=true + wafType='wordfence-on-cloudflare-passive' (DB is JUSTIFIED, not over-set): a real Wordfence rate-limit exists on bursts (410 after ~7 unspaced). It is non-blocking at the crawler's >=1s/>=2s cadence. This is the correct posture for a site that bans on bursts — candidate's hasWaf=false would be UNSAFE if any future code path bursts. Recommend documenting rateLimit410After=7 + 'safe at >=1s spacing'.",
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod (THEME F)",
+      "round1Hypothesis": "DB has bare string 'wp-rest-api' which R1 ledger said 'hits default -> null'. Candidate uses object {method:'wp-rest-header', endpoint:'/wp-json/wc/store/v1/products', header:'x-wp-total'}.",
+      "liveMethod": "Code trace of product-count-probe.ts:138-171 (validateMethod) + 242-247 (switch) + 533-537 (default) + caller crawl-scheduler.ts:290.",
+      "evidence": "REFINEMENT of the R1 mechanism: a BARE STRING 'wp-rest-api' does NOT reach the switch default. probeExpectedProductCount line 242 sets m=string; line 245 validateMethod(m) line 139 reads m?.method on a STRING => undefined; line 140 typeof undefined!=='string' => THROWS 'unknown product-count method: undefined'; caught at outer try => returns null (line 543). Also 'wp-rest-api' is NOT in VALID_METHOD_NAMES (the 11 canonical names; closest are wp-rest-header / json-api-count). Either way net result = null. CRITICAL: this is LATENT — crawl-scheduler.ts:290 only probes when (productCountMethod && !expectedProductCount); DB already has expectedProductCount=2086, so the broken string is never exercised. Candidate's OBJECT form {wp-rest-header, /wc/store/v1/products, x-wp-total} is VALID and would re-probe successfully (live x-wp-total=2149) — candidate FIXES theme F.",
+      "proposedValue": "productCountMethod = {method:'wp-rest-header', endpoint:'/wp-json/wc/store/v1/products', header:'x-wp-total'} (candidate's object form — valid + live-verified to 2149). DB's bare 'wp-rest-api' string is broken-on-reprobe but currently latent.",
+      "confidence": "high"
+    },
+    {
+      "field": "watermark date filter field (after vs modified_after)",
+      "round1Hypothesis": "DB watermark.apiDateFilterField='after' (publish-date). Candidate watermark.dateFilterField='modified_after'.",
+      "liveMethod": "Live test of both params on /wp-json/wp/v2/product (7-day cutoff) + CODE TRACE of the actual runtime mapping (watermark-crawler.ts:207-211 + woocommerce.ts:339-344).",
+      "evidence": "Live: after=<7d> -> x-wp-total=3 (newly PUBLISHED); modified_after=<7d> -> x-wp-total=55 (created-or-edited); after=2030 -> 0 (filter honored, not ignored). CODE: watermark-crawler.ts passes options.dateAfter to the adapter and does NOT read apiDateFilterField from the profile. woocommerce.ts:343 hardcodes options.dateAfter -> params.modified_after and line 339 uses orderby='modified' when a date filter is present. So the RUNTIME always uses modified_after + orderby=modified regardless of the profile field. Therefore the DB's apiDateFilterField:'after' is NOT honored by code; the candidate's 'modified_after' matches actual runtime behavior. Design intent (woocommerce.ts:332 comment): catch restocks/price-changes, not just new publishes.",
+      "proposedValue": "watermark.dateFilterField = 'modified_after' (matches the adapter-hardcoded runtime). Flag: the *DateFilterField profile field is currently DEAD (adapter ignores it and always sends modified_after). Either wire the adapter to read it, or drop the field from the profile schema.",
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam / sort default",
+      "round1Hypothesis": "candidate sortParam='?orderby=date', sortVerified via HTML 3-outcome counter (default==orderby=date, !=orderby=price).",
+      "liveMethod": "Independent cross-check via API ordering (DIFFERENT method than R1's HTML counter): orderby=date&order=desc on /wp/v2/product.",
+      "evidence": "API page1 first 3 by date desc = magpul-moe-bipod (2026-05-29 09:26), winchester-ranger-lever-action (09:22), mossberg-590a1-9-shot-2 (05-27); page22 tail = oldest 2020-12-23 products. Strictly descending publish dates across all 22 pages => date-desc is the natural/honored newest-first order. Confirms candidate sortParam='?orderby=date' from an independent surface. (Candidate's HTML extractionSample led with winchester, not magpul, only because the very-newest item wasn't in its 3-item sample — not a sort error.)",
+      "proposedValue": "sortParam='?orderby=date' (newest-first, confirmed on API surface independently). No change to candidate.",
+      "confidence": "high"
+    },
+    {
+      "field": "locale (EN vs FR)",
+      "round1Hypothesis": "candidate uses EN catalogUrls (/en/...) per /en/ canonical; apex 302->/fr/. Operator-policy note flags FR as alternative.",
+      "liveMethod": "API count confirmed locale-independent.",
+      "evidence": "x-wp-total=2149 identical on the /en/-scoped API; product corpus is WPML translation layer over one WC catalog, so the 2149 count is per-product (locale-independent). EN slug spine is internally consistent (firearms, riflescopes-optics, etc. all resolve 200).",
+      "proposedValue": "Keep EN locale spine (operator may switch to FR; inventory + 2149 count unchanged).",
+      "confidence": "high"
+    }
+  ],
+
+  "codeFindings": [
+    {
+      "theme": "B (pagination leading-slash)",
+      "file": "backend/src/services/catalog-crawler.ts:122-125",
+      "confirmed": true,
+      "detail": "buildPaginatedUrl type:'path' strips base trailing slash (line 124) then appends template raw (line 125). DB template 'page/{N}/' (no leading slash) => base '.../firearms/' -> '.../firearms' + 'page/2/' = '.../firearmspage/2/' (404). The bug is REAL. HOWEVER it is INERT on dantesports because the runtime catalog path is API-first (catalog-crawler.ts:280, woocommerce.ts:294) and buildPaginatedUrl (lines 781/957/996) only runs on the HTML fallback (catalog-crawler.ts:362, !apiCrawlUsed). It would only bite if the WC API path failed AND HTML fallback engaged. Fix recommendation stands (defensive leading-slash normalization in buildPaginatedUrl), but it is not a live coverage blocker here."
+    },
+    {
+      "theme": "F (count-method silent-null)",
+      "file": "backend/src/services/product-count-probe.ts:138-171,242-247,533-537 + crawl-scheduler.ts:290",
+      "confirmed": true,
+      "detail": "DB bare string 'wp-rest-api' => validateMethod reads m?.method on a string => undefined => THROWS (not the switch default, as R1 ledger imprecisely stated) => caught => null. 'wp-rest-api' also absent from VALID_METHOD_NAMES. LATENT: probe only fires when !expectedProductCount (scheduler line 290); DB already has 2086, so never exercised. Candidate's object form {wp-rest-header,...} is valid + live-verified (x-wp-total=2149)."
+    },
+    {
+      "theme": "H (crawlers.catalog / API perPage)",
+      "file": "backend/src/services/catalog-crawler.ts:268,280-336 + woocommerce.ts:294-299,346",
+      "confirmed": true,
+      "detail": "Runtime is API-first via adapter.fetchCatalogPage; perPage=profilePerPage(DB 100) (line 268,290); WC adapter caps Math.min(perPage??100,100)=100 (woocommerce.ts:299) walking /wp-json/wp/v2/product (line 346). The literal 'api-full-catalog' string is NEVER read (0 grep hits) — dispatch is presence-of-fetchCatalogPage, not the profile method string. DB perPage=100 is the consumed field; candidate perPage=12 is the inert HTML render floor."
+    },
+    {
+      "theme": "watermark dateFilterField is dead",
+      "file": "backend/src/services/watermark-crawler.ts:207-211 + woocommerce.ts:339-344",
+      "confirmed": true,
+      "detail": "watermark-crawler passes options.dateAfter to the adapter and does NOT read profile.crawlers.watermark.apiDateFilterField. woocommerce.ts:343 hardcodes dateAfter->modified_after and line 339 uses orderby='modified' when filtering. So neither DB's 'after' nor any profile value is honored; runtime is always modified_after+orderby=modified. Candidate's 'modified_after' matches runtime; DB's 'after' is aspirational/dead."
+    },
+    {
+      "theme": "D (hasWaf perPage throttle does NOT apply here)",
+      "file": "backend/src/services/catalog-crawler.ts:290 + woocommerce.ts:299",
+      "confirmed": true,
+      "detail": "perPage = profilePerPage || (hasWaf?20:50). Because DB profilePerPage=100 is set, the hasWaf throttle branch is NOT taken; WC adapter caps at 100 regardless. So hasWaf:true does NOT cut perPage on this site (contrast intersurplus theme-D 7.8x cost where perPage was unset). hasWaf:true cost here = conservative delays + empty-page tolerance only (lines 306-316)."
+    }
+  ],
+
+  "coverageProof": {
+    "method": "global API walk /wp-json/wp/v2/product?per_page=100&orderby=date&order=desc pages 1..22, 1.2s spacing",
+    "walked": 2149,
+    "uniqueIds": 2149,
+    "uniqueSlugs": 2149,
+    "duplicates": 0,
+    "expected": 2149,
+    "expectedSource": "x-wp-total (agrees on both /wc/store/v1/products and /wp/v2/product)",
+    "pct": 100.0,
+    "rateLimitObserved": "none (0x 410/429/403 across 24 sequential requests at >=1.2s)",
+    "recommendedCatalogUrls": {
+      "primary": "global API walk: /wp-json/wp/v2/product (perPage=100) — 100% / 2149 / overlap-free; no per-category URLs required for the API path",
+      "htmlFallbackSpine": [
+        "/en/product-category/firearms/",
+        "/en/product-category/riflescopes-optics/",
+        "/en/product-category/accessories/",
+        "/en/product-category/other-an/",
+        "/en/product-category/ammunition/",
+        "/en/product-category/parts-accessories/",
+        "/en/product-category/airguns/",
+        "/en/product-category/springliquidationsale/",
+        "/en/product-category/knives/",
+        "/en/product-category/storage/",
+        "/en/product-category/30-days-of-bushnell/",
+        "/en/product-category/winchester-historical-en/",
+        "/en/product-category/licence/",
+        "/en/product-category/unclassified/",
+        "/en/product-category/rugeramericangen2-en/",
+        "/en/product-category/pmcsale-en/",
+        "/en/product-category/reloading/"
+      ],
+      "note": "HTML spine is fallback-only and overlaps (~25%) due to promo categories re-listing primary firearms; runtime dedups on save so overlap is harmless. Do NOT drop promo categories on the overlap assumption (no full HTML walk done to prove they are pure subsets)."
+    }
+  },
+
+  "constraintsHonored": {
+    "noDbWrites": true,
+    "noBudgetOrProcessChanges": true,
+    "crawlerNotResumed": true,
+    "spacingSeconds": ">=1.2",
+    "backedOffOn410": "n/a (no 410 observed); intentional no-delay burst was blocked by safety classifier and NOT worked around"
+  }
+}

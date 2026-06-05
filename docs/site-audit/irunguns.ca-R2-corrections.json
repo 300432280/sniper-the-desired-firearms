@@ -1,0 +1,118 @@
+{
+  "domain": "irunguns.ca",
+  "round": "R2-LIVE",
+  "date": "2026-06-02",
+  "site": {
+    "dbRowId": "cmlvesqzl000y1a426cxtl783",
+    "name": "iRunGuns",
+    "dbUrl": "https://www.irunguns.ca",
+    "isEnabled": true,
+    "isPaused": true,
+    "productIndexRows": 0,
+    "note": "Site parked (isPaused=true) during 2026-04-27 pivot; ZERO ProductIndex rows in production — no DB cross-check of orphans possible this round."
+  },
+  "method": "Live walk with rotated desktop Chrome UA, >=900ms spacing, read-only GETs only. Set-diff of #content product_detail.php?p=<slug> anchors across bare /product.php + 12 department URLs. DB siteProfile read via prisma. generic-retail.ts extraction traced + live selector probe. SQL leak confirmed read-only (no POST).",
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "145 (R1-BLIND sum of static-render 'Showing N' across 5 firearm-relevant depts: Firearms 95 + Parts_AND_Gear 23 + Magazines 20 + Optics 4 + Ammunition 3). DB(stale)=104 (2026-05-22).",
+      "liveMethod": "Walked bare /product.php and all 12 department URLs; ID-deduped #content product_detail anchors; tested set-membership of every dept against departments=Firearms and against bare.",
+      "evidence": "Bare /product.php 'Showing 95 result', 95 unique slugs. departments=Firearms is BYTE-IDENTICAL to bare (firearms_equals_bare=true, 95==95, same first slug). Parts_AND_Gear(23)/Magazines(20)/Optics(4)/Ammunition(3)/Clothing(4)/Previously_Enjoyed(3) are ALL proper SUBSETS of Firearms(=bare): each returns allInFirearms=true AND allInBare=true. Narrow firearm union Rifles+Handguns+Shotgun = 33 unique, all subset of Firearms. The R1-BLIND 145 TRIPLE-COUNTS: it added five subsets on top of the 95-superset that already contains them. True unique in-stock count = 95.",
+      "proposedValue": 95,
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "8-URL department spine: product.php?departments={Firearms,Ammunition,Optics,Knives,Parts_AND_Gear,Magazines,Custom_Engraving} + category.php?parent=Import_/_Export.",
+      "liveMethod": "Coverage set-diff: bare #content slug set vs union of all 12 dept #content slug sets. Plus fetched category.php?parent=Import_/_Export.",
+      "evidence": "bareContentUnique=95, deptUnionUnique=95, orphans_in_bare_not_dept=0, in_dept_not_bare=0 -> bare and the dept-union cover the IDENTICAL 95 products today. The bare /product.php is a 100%-coverage single URL. The 8-dept spine is redundant AND harmful: (a) departments=Firearms == bare (aggregate alias / unknown-dept fallback, not a peer dept); (b) Knives/Custom_Engraving render 0 products (empty depts, not AJAX-blocked — they 200 with empty #content); (c) category.php?parent=Import_/_Export returns 0 product anchors (it is a sub-category NAVIGATION page, matching DB note 'subcategory.php?parent=Firearms is a navigation/landing page'). DB single-URL catalogUrls=['/product.php'] is correct.",
+      "proposedValue": ["/product.php"],
+      "confidence": "high"
+    },
+    {
+      "field": "perPage",
+      "round1Hypothesis": "12 (UI render — jPages perPage:12 client-side slice).",
+      "liveMethod": "Fetched ?page=2 and compared #content slug set vs page 1; read jPages config from DB notes; traced runtime pagination use.",
+      "evidence": "?page=2 returns the SAME 95 slugs as page 1 (sameAsPage1=true, same first slug) -> server returns the ENTIRE catalog in one response; ?page param is inert; jPages slices client-side at 12/page for display ONLY. The 12 is a UI display slice, NOT a server pagination unit. The runtime perPage is a crawler-control sentinel (paginationPattern=null so the crawler never requests a next page); DB's perPage:100 ceiling is correct. R1-BLIND's 12 confuses the UI render-slice with the crawler sentinel.",
+      "proposedValue": 100,
+      "confidence": "high"
+    },
+    {
+      "field": "crawlers.watermark.method (p.id DESC ordering)",
+      "round1Hypothesis": "navigate-from-watermark, relying on natural DOM order = p.id DESC (newest-first). R1-BLIND flagged this UNPROVEN (in-page image-cache IDs non-monotonic).",
+      "liveMethod": "Inspected #content card markup for any independent monotonic newest-first signal (image-cache prefix, UPC, data-id, from_date). Attempted the persona Mistake-18 cross-reference (DOM-first slug vs product_filter.php POST baseline) — BLOCKED by constraint 'do NOT probe the SQL endpoint'.",
+      "evidence": "In-page image-cache prefix IDs in DOM order are NON-MONOTONIC (15478, 25266, 26526, 24381, 27531, 20417, 25549, 30889...) -> these are cache/image IDs + UPC barcodes, NOT p.id; no card-level data-id or from_date is exposed. The 2026-04-07 DB cross-reference baseline product (Rifles first slug 'glenfield-model-a-moss-green-308-win-...') has ROTATED OUT of inventory (today Rifles first slug = 'ruger-american-predator-gen-ii-30-06-...'), so the exact old slug cannot be re-matched. The only proof of p.id DESC is the prior product_filter.php POST cross-reference, which this round is forbidden to re-run. CIRCUMSTANTIAL support: the historically-utility items (ATF permit, colt-9mm-bcg, colt-hydr-buffer, xpedition-crossbow) cluster at the END of DOM order, consistent with oldest-last — but this is NOT a proof.",
+      "proposedValue": "INCONCLUSIVE — cannot independently re-confirm p.id DESC in R2 under the no-SQL-endpoint constraint. Carry DB's navigate-from-watermark (2026-04-07 cross-reference) forward as UNVERIFIED-this-round. R3 (or a security-cleared round) must re-run the product_filter.php baseline cross-reference, or fall back to full-catalog-sweep if it cannot be proven. NOTE: because the entire in-stock catalog (95 products) renders in ONE response, navigate-from-watermark and full-catalog-sweep are operationally equivalent here (the 'walk' is a single GET) — the ordering question only affects watermark-cursor correctness, not coverage.",
+      "confidence": "inconclusive"
+    },
+    {
+      "field": "expectedProductCount note: AJAX-only-rendered departments",
+      "round1Hypothesis": "R1-BLIND: 'Knives/Custom_Engraving/Import-Export render 0 products in static HTML (AJAX-loaded) -> true count likely higher'.",
+      "liveMethod": "Direct GET of each dept URL with #content anchor count + 'Showing N result' read.",
+      "evidence": "Knives, Custom_Engraving, Handguns all return HTTP 200 with EMPTY #content and EMPTY 'Showing' marker (0 product anchors). These are EMPTY departments (no in-stock items), NOT AJAX-deferred renders that hide products from static HTML. The bare /product.php already contains every in-stock product across all departments server-side. R1-BLIND's 'AJAX-only, count likely higher' hypothesis is REFUTED: the static bare GET is complete at 95.",
+      "proposedValue": "no AJAX-deferred products; static bare GET is complete; needsPlaywright=false confirmed",
+      "confidence": "high"
+    }
+  ],
+  "confirmDbWins": {
+    "platform": "custom-php (R1-BLIND added no qualifier this round; matches DB)",
+    "adapterType": "generic-retail (confirmed by code trace below)",
+    "hasWaf": "false (Sucuri passive; X-Sucuri-ID 14007, Server: Sucuri/Cloudproxy on clean 200s; all GETs 200 with rotated desktop UA)",
+    "wafType": "sucuri-passive",
+    "sortParam": "null (no sort <select> on category pages; confirmed)",
+    "paginationPattern": "null (?page=2 == page 1; client-side jPages only)",
+    "searchUrl": "null (prior batch proved product_name param is inert; not re-tested this round, no contradicting evidence)",
+    "productCountMethod": "{method:'html-pagination', selector:'.showing_result', perPage:1} — canonical; reads 'Showing 95 result' -> 95x1=95. (Note: with bare catalogUrl the selector returns the GLOBAL count directly, which is the desired expectedProductCount.)",
+    "crawlers.maintain.verifyMethod": "detail-page (no store-API on custom PHP)"
+  },
+  "codeFindings": [
+    {
+      "theme": "F (extraction method choice for custom-PHP /product.php)",
+      "file": "backend/src/services/scraper/adapters/generic-retail.ts:1030-1102 (Phase-1 SELECTORS) / 1106-1155 (Phase-2 link fallback)",
+      "confirmed": true,
+      "detail": "Live selector probe: ALL Phase-1 card SELECTORS match 0 elements on irunguns /product.php (cards are bare <li> with <a class='notapplyloader'> + <div class='primg'>; no data-product-id, no .product/.card class). Therefore extraction falls to Phase-2 link-based fallback (line 1106, fires only when products.length===0). Phase-2 isProductLink regex (line 1125-1127) explicitly matches 'product_detail|product\\.php' and '.php', so every product_detail.php?p=<slug> anchor qualifies. Page-wide there are 190 product_detail anchors (each product wrapped twice: image-anchor + title-anchor); Phase-2 de-dupes by full URL via the `seen` set -> 95 unique products extracted. This equals the live bare count exactly. CONCLUSION: the GenericRetailAdapter DOES extract ALL departments' in-stock products from a SINGLE GET of bare /product.php, because the server renders the entire in-stock catalog into #content in one response. No per-department fetching needed; the DB single /product.php catalogUrl is the correct and complete surface."
+    },
+    {
+      "theme": "F (isNavUrl does not reject product_detail.php)",
+      "file": "backend/src/services/scraper/adapters/base.ts:368-387",
+      "confirmed": true,
+      "detail": "isNavUrl() rejects category/collections/cart/account/content.php/search.php/etc. but does NOT match 'product_detail.php' or bare 'product.php?p=' -> irunguns product links survive the nav filter in Phase-2 (line 1122). No false-rejection risk."
+    },
+    {
+      "theme": "expectedProductCount is NOT a MonitoredSite column (cross-cutting Theme A)",
+      "file": "backend/prisma/schema.prisma:144-216",
+      "confirmed": true,
+      "detail": "MonitoredSite has NO expectedProductCount column; only siteProfile Json? (line 195). expectedProductCount lives inside siteProfile JSON (DB value 104). Confirms ledger Theme A; any promotion tooling must write it into siteProfile, not a column."
+    },
+    {
+      "theme": "SECURITY (out of scope — flag to engineering-security-engineer)",
+      "file": "https://irunguns.ca/product.php (client-side JS, NOT repo code)",
+      "confirmed": true,
+      "detail": "Read-only confirmation (NO POST sent): page JS contains `formData.append(\"sql\", sql); $.ajax({type:'post', url:'product_filter.php', data:formData, ...})`. A client-controlled `sql` FormData field is posted to product_filter.php. The raw SELECT is built dynamically (not a static literal in homepage HTML). Endpoint NOT probed/exploited per constraint. Crawler does NOT use this endpoint (GET path returns the full catalog; playbook Mistake 16). Flagged for security-engineer review only."
+    }
+  ],
+  "coverageProof": {
+    "walked": "bare /product.php + 12 department URLs (Firearms, Rifles, Handguns, Shotgun, Ammunition, Optics, Knives, Parts_AND_Gear, Magazines, Custom_Engraving, Clothing, Previously_Enjoyed_Guns_AND_Accessories) + category.php?parent=Import_/_Export + ?page=2",
+    "uniqueIds": 95,
+    "expected": 104,
+    "pct": "live unique 95 vs DB expectedProductCount 104 = 91.3% — the 9-product gap is INVENTORY DRIFT (DB 104 captured 2026-05-22; live 95 today). Bare /product.php covers 95/95 = 100% of TODAY's in-stock catalog with one URL.",
+    "recommendedCatalogUrls": ["/product.php"],
+    "recommendedExpectedProductCount": 95,
+    "recommendedExpectedProductCountSource": "pagination-walk (single-response global '.showing_result' = 95; not facet-filtered — bare URL is the global catalog)"
+  },
+  "perDeptLiveCounts_2026-06-02": {
+    "Firearms(=bare aggregate)": 95,
+    "Rifles": 20,
+    "Handguns": 0,
+    "Shotgun": 13,
+    "Ammunition": 3,
+    "Optics": 4,
+    "Knives": 0,
+    "Parts_AND_Gear": 23,
+    "Magazines": 20,
+    "Custom_Engraving": 0,
+    "Clothing": 4,
+    "Previously_Enjoyed_Guns_AND_Accessories": 3,
+    "Import_/_Export(category.php)": 0
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "domain": "intersurplus.com",
+  "round": "R2 (live investigation)",
+  "auditedAt": "2026-06-02",
+  "persona": "testing-api-tester",
+  "liveCrawlerPaused": true,
+  "interRequestDelayMs": 850,
+  "groundTruth": {
+    "dbSiteProfile": {
+      "hasWaf": true,
+      "wafType": "cloudflare-passive",
+      "perPage": 32,
+      "paginationPattern": { "type": "query", "template": "page" },
+      "productCountMethod": {
+        "method": "sitemap-index",
+        "urls": [
+          "/sitemap_products_1.xml?from=6088444412083&amp;to=9694336516336",
+          "/sitemap_products_2.xml?from=9694437179632&amp;to=9968851845360"
+        ]
+      },
+      "expectedProductCount": 3125,
+      "catalogUrls": ["/collections/all"],
+      "lastVerified": "2026-04-12"
+    },
+    "note": "DB profile (answer key) read live via scripts/_r1read-intersurplus-2026-06-02.ts. expectedProductCount 3125 is stale (2026-04-12). The 2026-05-09 calibration JSON and the 2026-06-02 R1 blind candidate BOTH already use productCountMethod=shopify-products-walk; only the LIVE DB row still carries the stale sitemap-index shape."
+  },
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "3191 (R1 blind candidate products.json walk)",
+      "liveMethod": "Full GET walk of /products.json?limit=250&page=N (pages 1-13, 850ms inter-request), deduped by product.id.",
+      "evidence": "13 pages: 12 x 250 + 196 = 3196 unique product IDs, ZERO duplicate IDs across all pages. Re-derived independently from the FRESH sitemap-index cursors advertised by /sitemap.xml today: sitemap_products_1 (2496 /products/ <loc>) + sitemap_products_2 (700) = 3196 unique product URLs. Both independent methods agree exactly at 3196. R1's 3191 and the DB's 3125 are both stale snapshots of a growing surplus catalog.",
+      "proposedValue": 3196,
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod",
+      "round1Hypothesis": "DB sitemap-index URLs 400 at runtime due to stale Shopify from/to cursors AND `&amp;amp;` entity-encoding -> count returns null/broken; replace with shopify-products-walk.",
+      "liveMethod": "Fetched the EXACT DB-stored sitemap URLs verbatim (literal `&amp;`), then again with `&amp;`->`&` decoded, then bare (no cursors), then the live /sitemap.xml index to read today's cursors.",
+      "evidence": "REFUTES the 400/entity failure mode but CONFIRMS the count is wrong. (1) DB URLs verbatim with literal `&amp;` return HTTP 200, not 400 (sitemap_1=2373 <loc>, sitemap_2=433 <loc>). (2) Decoding `&amp;`->`&` returns byte-identical results -> Shopify simply ignores the malformed `amp;to` param; the `&amp;` is a NON-issue. (3) BARE /sitemap_products_N.xml (no from/to) return 400 empty -- the cursors are MANDATORY, not optional. (4) The real defect: the DB cursors are STALE. The runtime sitemap-index branch (product-count-probe.ts:299-311) fetches them verbatim, gets 200, and sums 2373+433 = 2806 -- a ~12% UNDERCOUNT vs the true 3196, because the stale `to=` upper bounds truncate the range before newer products. Today's /sitemap.xml index advertises different cursors (to=9823671648496 / from=9823674990832&to=10043406909680) yielding 2496+700=3196. CONCLUSION: sitemap-index with hardcoded cursors silently rots into a wrong count on every catalog change; shopify-products-walk (already used by both the 2026-05-09 calibration JSON and the R1 candidate) is the robust method. validateMethod (product-count-probe.ts:183-194) only rejects absolute URLs -- it does NOT catch stale cursors or `&amp;`, so the rot is silent.",
+      "proposedValue": { "method": "shopify-products-walk", "endpoint": "/products.json", "perPage": 250 },
+      "confidence": "high"
+    },
+    {
+      "field": "perPage (and the hasWaf-throttle framing)",
+      "round1Hypothesis": "hasWaf:true + cloudflare-passive over-throttles perPage to 32 vs the 250 the API honors (7.8x inflation, a concrete theme-D cost).",
+      "liveMethod": "Compared the live HTML storefront grid surface vs the /products.json API surface; tested limit=250, limit=50, and no-UA against the API.",
+      "evidence": "PARTIALLY REFUTES the throttle framing. There is NO WAF throttle code path. perPage=32 is simply the Shopify Debut HTML storefront grid default; perPage=250 is the API cap. The API honors whatever `limit` is sent: ?limit=250 -> 250 products, ?limit=50 -> 50 products (so perPage is param-controlled, NOT a fixed 32). The runtime Shopify catalog path calls adapter.fetchCatalogPage (catalog-crawler.ts:280-294), and shopify.ts:199 HARDCODES perPage=250 and always uses the /products.json API regardless of the caller's perPage arg AND regardless of hasWaf. So hasWaf:true never touches catalog perPage. CF is genuinely passive (cf-ray present, cf-cache DYNAMIC, all catalog/API fetches 200; no-UA returned 200 on this pass -- the prior 403 was the intermittent CF empty-UA reflex, not an active block). The DB perPage:32 is a vestigial HTML-grid value that the runtime ignores; the effective runtime perPage is 250.",
+      "proposedValue": { "perPage": 250, "hasWaf": "false (passive CF; re-confirm from production IP)", "note": "32 is the HTML-grid surface and is inert for the API catalog path; do not treat 32-vs-250 as a WAF throttle." },
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern",
+      "round1Hypothesis": "Settle api-page (R1 candidate) vs query (DB) by reading the Shopify adapter URL builder.",
+      "liveMethod": "Read shopify.ts:192-253 (fetchCatalogPage) + catalog-crawler.ts:280-294 (API path) + 781/956/996 (HTML path) + buildPaginatedUrl:119.",
+      "evidence": "BOTH values are INERT for the Shopify runtime catalog path. fetchCatalogPage exists for Shopify, so catalog-crawler always takes the API branch (L280) and never returns null for a valid Shopify origin -> buildPaginatedUrl / paginationPattern (only used at L781/956/996 in the HTML fall-through) are never consulted. Pagination is the hardcoded /products.json?limit=250&page={N} API loop (shopify.ts:208,250). The R1 `api-page` value is the more HONEST description (page-numbered API), but neither value changes behavior. This is a documentation-accuracy nit, not a coverage bug -- unlike the WC sites where the missing leading slash genuinely breaks buildPaginatedUrl.",
+      "proposedValue": { "type": "api-page", "template": "page", "perPage": 250, "firstPageHasParam": true, "startPage": 1, "note": "documentation-only; Shopify runtime ignores paginationPattern and uses the hardcoded products.json API loop" },
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "/collections/all is the 100%-coverage spine (R1 candidate); DB also = /collections/all.",
+      "liveMethod": "products.json full walk (global) cross-referenced against the live sitemap product <loc> set.",
+      "evidence": "CONFIRMED. Global /products.json walk = 3196 unique IDs; live product sitemaps = 3196 unique /products/ URLs. /collections/all is the global catalog surface for the API path (fetchCatalogPage walks /products.json globally, not per-collection). No per-category spine needed for the API crawl. (The 2026-05-09 calibration's 31-collection spine reached only 99.6% due to merchant tagging gaps; the global products.json walk has zero gap, so /collections/all + products.json walk is strictly better.)",
+      "proposedValue": ["/collections/all"],
+      "confidence": "high"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "F (count-method sitemap-index branch)",
+      "file": "backend/src/services/product-count-probe.ts:299-311",
+      "confirmed": true,
+      "detail": "sitemap-index branch fetches each m.urls entry verbatim with validateStatus:()=>true and `catch { skip }`, summing <loc> counts. With the DB's stale cursors it returns 200 and a WRONG count of 2806 (true 3196). It does NOT 400 and `&amp;` does NOT break it (contra R1). validateMethod (L183-194) only rejects absolute-URL entries for sitemap-index -- it has no guard against stale cursors or `&amp;` entities, so the undercount is SILENT. The robust fix is to migrate this site to shopify-products-walk (L359-387), which the R1 candidate already proposes."
+    },
+    {
+      "theme": "F (count-method shopify-products-walk branch)",
+      "file": "backend/src/services/product-count-probe.ts:359-387",
+      "confirmed": true,
+      "detail": "shopify-products-walk walks /products.json?limit=N&page=K, dedups by product.id into a Set, stops on empty/short page or non-200. Matches my live walk methodology exactly (3196). This is the correct method for this site."
+    },
+    {
+      "theme": "D (passive WAF / perPage)",
+      "file": "backend/src/services/scraper/adapters/shopify.ts:192-253",
+      "confirmed": true,
+      "detail": "fetchCatalogPage HARDCODES perPage=250 (L199) and always hits the /products.json API, ignoring the caller's perPage arg and hasWaf entirely. There is no WAF-driven perPage throttle anywhere in the Shopify catalog path. DB perPage:32 (HTML-grid default) is inert at runtime."
+    },
+    {
+      "theme": "shopify adapter pagination type (api-page vs query)",
+      "file": "backend/src/services/catalog-crawler.ts:280-294 (API path) vs 781/956/996 (HTML path) + buildPaginatedUrl:119",
+      "confirmed": true,
+      "detail": "Because Shopify's fetchCatalogPage never returns null for a valid origin, the catalog crawler always uses the API branch and never calls buildPaginatedUrl/paginationPattern for this site. paginationPattern (query vs api-page) is therefore inert. Pagination is shopify.ts's hardcoded ?limit=250&page={N} loop (L208,250)."
+    }
+  ],
+  "coverageProof": {
+    "walked": "13 pages of /products.json?limit=250&page=N (12 x 250 + 196), 850ms inter-request, deduped by product.id; independently re-derived from the live /sitemap.xml fresh-cursor product sitemaps (2496 + 700 /products/ <loc>)",
+    "uniqueIds": 3196,
+    "expected": 3125,
+    "expectedSource": "DB siteProfile.expectedProductCount (stale, 2026-04-12)",
+    "pct": "102.3% of stale DB expected (3196/3125); catalog has grown +71 since last verify; vs R1 candidate 3191 -> +5 drift over the audit window",
+    "recommendedCatalogUrls": ["/collections/all"],
+    "recommendedExpectedProductCount": 3196,
+    "recommendedProductCountMethod": { "method": "shopify-products-walk", "endpoint": "/products.json", "perPage": 250 }
+  }
+}

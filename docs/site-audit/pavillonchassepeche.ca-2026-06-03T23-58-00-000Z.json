@@ -1,0 +1,94 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "imunify360",
+  "wafLastProbedAt": "2026-06-03",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Imunify360 active bot-protection (IP-reputation). BATCH1 single-GET fingerprint showed only Server: LiteSpeed (clean) on /, /robots.txt, /sitemap.xml. But /wp-json/* API path returned a JSON body 'Access denied by Imunify360 bot-protection. IPs used for automation should be whitelisted' (Server: openresty/1.29.2.3). Category pages (/categorie-produit/chasse/armes-a-feu/) returned the Imunify360 JS-challenge interstitial ('Un instant, s'il vous plait...' + setTimeout reload). After the heavy probe burst/honeypot/SQLi/XSS batches, audit IP 99.228.63.11 was progressively hard-banned: every path including the homepage returned HTTP 415 from openresty. NOTE: prior audits (DB 2026-04-12 and R2 2026-05-15) both saw all-200 LiteSpeed and recorded hasWaf:false. Imunify360 is IP-reputation-triggered: passes single-GET, blocks bursts/automation. hasWaf set true DEFENSIVELY; MUST be re-probed from the production crawler IP before promotion.",
+  "wafProbeEvidence": {
+    "batch1HeaderServer": "LiteSpeed",
+    "originUnderBlock": "openresty/1.29.2.3",
+    "imunify360BodyMarker": "Access denied by Imunify360 bot-protection. IPs used for automation should be whitelisted",
+    "challengeInterstitialTitle": "Un instant, s'il vous plait...",
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "all-200-then-IP-banned-mid-probe",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": [".env (403 LiteSpeed)", ".git/config (403 LiteSpeed)"],
+    "botUaBlocked": false,
+    "probeIp": "99.228.63.11",
+    "ipBannedDuringProbe": true,
+    "priorAuditsSawNoWaf": true,
+    "untestedAttackSurfaces": ["auth-attempt", "path-traversal", "large-body-POST", "shellshock-UA"]
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 1318,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/categorie-produit/chasse/",
+    "/categorie-produit/liquidation/",
+    "/categorie-produit/tirage/"
+  ],
+  "extractionTested": false,
+  "sortParam": "?orderby=date",
+  "sortVerified": false,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": { "method": "api-date-since-watermark" },
+    "maintain": { "verifyMethod": "store-api", "verifyEndpoint": "/wp-json/wc/store/v1/products" }
+  },
+  "lastVerified": "2026-06-03",
+  "auditNotes": {
+    "runId": "r1-blind-2026-06-03",
+    "round": "PHASE A R1 (blind)",
+    "probeIp": "99.228.63.11",
+    "wafMigrationDetected": {
+      "from": "null (DB 2026-04-12 + R2 2026-05-15 both: 'No WAF. LiteSpeed direct. All 8 batches 200.')",
+      "to": "imunify360 (active bot-protection, IP-reputation)",
+      "evidence": "Imunify360 body marker on /wp-json/*; JS-challenge interstitial on category pages; audit IP hard-banned (415 openresty) after heavy probe burst/honeypot batches. Either merchant added Imunify360 since 2026-05-15 OR it is IP-reputation-triggered and prior clean runs never tripped it. Production-IP re-probe REQUIRED."
+    },
+    "dbColumnFlips": { "hasWaf": true, "wafType": "imunify360", "wafWorkaround": "clear" },
+    "verifyMethodPolicy": "store-api inherited from DB; restock alerts not guaranteed (worker.ts:549/711 OOS-transition gap).",
+    "expectedCountSurface": "wp-rest-core (/wp/v2/product) = 1318 per DB (full corpus incl OOS). Store API in-stock = 1291. B8 PAIR-RULE FLAG: DB maintain.verifyMethod=store-api expects Store-API total (1291) but DB expectedProductCount=1318 (WP REST). The DB itself stores BOTH (storeApiTotal:1291, wpRestTotal:1318). DB watermark=api-date-since-watermark walks WP REST, so 1318 matches the watermark surface; but verify (store-api) sees 1291. Surface-mismatch flagged for R2 to re-derive live.",
+    "canonicalLocaleNote": "x-default + <link rel=canonical> = FR apex (/categorie-produit/). DB catalogUrls use EN /en/product-category/. FR is the site's declared default locale; this candidate uses FR catalog paths. Operator may override to EN per DB precedent (prior R2 ruled both trees co-equal; EN was the operator runtime choice).",
+    "untestedByHarness": {
+      "reason": "Audit IP 99.228.63.11 hard-banned by Imunify360 mid-probe (415 on all paths). Could NOT live-walk catalog, verify pagination zero-overlap, run the 3-outcome sort test, run Stage 10 runtime fetch simulation, or re-derive product count this round.",
+      "fields": ["catalogUrls (FR top-level slugs read from live homepage nav before ban; NOT walked/ID-deduped)", "extractionTested (false; not run)", "sortParam/sortVerified (carried from DB, NOT re-verified)", "paginationPattern (carried from DB, NOT re-verified)", "perPage (carried from DB)", "expectedProductCount (carried from DB, NOT re-derived)", "productCountMethod (carried from DB)"]
+    },
+    "catalogUrlsNote": "FR top-level firearm-relevant categories read from live homepage nav: chasse (hunting: armes-a-feu, munition, optiques, arbaletes-arcs, air-comprime), liquidation (clearance), tirage (raffle/draw). Excluded as non-firearm: peche (fishing), vetements (clothing), plein-air (outdoor camping), salines. NOT walked/deduped due to IP ban — count of 3 is a discovery starting point, NOT a verified minimum-cover set. DB uses 6 EN-prefixed URLs incl fishing/clothing/outdoors/saltworks (broader non-firearm scope).",
+    "fieldConfidence": {
+      "platform": "high (WooCommerce 10.7.0 + WP 6.9.1 generator meta, live)",
+      "adapterType": "high",
+      "hasWaf": "high-for-this-IP (Imunify360 confirmed live; IP-dependent, needs production-IP re-probe)",
+      "wafType": "high (Imunify360 body marker captured verbatim)",
+      "catalogUrls": "low (FR top-level slugs from homepage nav; NOT walked — IP banned)",
+      "expectedProductCount": "carried-from-DB (could not re-derive; IP banned)",
+      "sortParam": "carried-from-DB-unverified",
+      "paginationPattern": "carried-from-DB-unverified"
+    },
+    "discoveredApiEndpoints": {
+      "wpRest": "/wp-json/wp/v2/product (blocked by Imunify360 from audit IP)",
+      "wcStoreApi": "/wp-json/wc/store/v1/products (blocked by Imunify360 from audit IP)"
+    }
+  }
+}

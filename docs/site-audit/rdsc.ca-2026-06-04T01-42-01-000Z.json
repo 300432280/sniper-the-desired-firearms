@@ -1,0 +1,120 @@
+{
+  "profileVersion": 1,
+  "platform": "magento2",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-04T01:35:10Z",
+  "wafProbeMethod": "gentle-single-get",
+  "wafProbeResult": "cloudflare-passive: cf-ray + server:cloudflare on every response, cf-cache-status DYNAMIC, clean 200 on apex + 2 categories + product detail, no cf-mitigated, no challenge body. GENTLE probe only (single GET per URL, no 8-batch heavy probe per Phase-A R1 IP-safety constraint).",
+  "wafProbeEvidence": {
+    "cfHeadersDetected": ["server: cloudflare", "cf-ray", "cf-cache-status: DYNAMIC"],
+    "cfRayExample": "a063330b486c1a24-YYZ",
+    "challengeBodyPresent": false,
+    "cfMitigatedHeader": false,
+    "probeType": "gentle-single-get-per-url",
+    "urlsProbed": ["/", "/semi-auto-rifle-parts.html", "/firearms-ammunition.html", "/new-products.html", "<product detail>"],
+    "note": "Heavy 8-batch probe deliberately NOT run (Phase-A R1 IP-ban-avoidance). hasWaf=false carried with HIGH confidence from clean 200s across all crawl-path URLs + one prior DB heavy-8-batch probe (2026-04-08) that also returned cloudflare-passive."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 9521,
+  "productCountMethod": {
+    "method": "generic-product-sitemap",
+    "url": "/sitemap-1-1.xml",
+    "pattern": "\\.html?(?:$|[?#])"
+  },
+  "catalogUrls": [
+    "/new-products.html"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://rdsc.ca/5-11-tactical-36-double-rifle-case-black.html", "title": "5.11 Tactical, 36\" Double Rifle Case, Black", "price": 269.99, "stockStatus": "in_stock" },
+    { "url": "https://rdsc.ca/semi-auto-rifle-parts.html", "title": "(category-page card sample, price present)", "price": 64.99, "stockStatus": "unknown" },
+    { "url": "https://rdsc.ca/semi-auto-rifle-parts.html", "title": "(category-page card sample, price present)", "price": 319.99, "stockStatus": "unknown" }
+  ],
+  "sortParam": "?product_list_order=new",
+  "sortVerified": true,
+  "perPage": 48,
+  "paginationPattern": {
+    "type": "query",
+    "template": "p",
+    "perPage": 48,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Default listing order is newest-first by Magento entity ID (near-monotonic descending; small local swaps are same-batch sequential SKUs). ?product_list_order=new verified honored via counter-control (order=new first5 [2171619..] != order=name first5 [57071..]). New products appear at top of /new-products.html page 1."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "searchUrl": "/catalogsearch/result/?q={keyword}",
+  "topLevelCategories": {
+    "source": "nav + sitemap-1-1.xml category entries; per-category totals from Magento .toolbar-number 'of N' (HTML, customer-visible)",
+    "categories": [
+      { "slug": "/manufacturers.html", "allOption": 9517 },
+      { "slug": "/firearms-ammunition.html", "allOption": 1756 },
+      { "slug": "/semi-auto-rifle-parts.html", "allOption": 1862 },
+      { "slug": "/gear-kit.html", "allOption": 1220 },
+      { "slug": "/optics-mounts.html", "allOption": 1212 },
+      { "slug": "/precision-rifle-parts.html", "allOption": 1196 },
+      { "slug": "/handgun-parts.html", "allOption": 1138 },
+      { "slug": "/clean-maintain.html", "allOption": 272 },
+      { "slug": "/lever-action-parts.html", "allOption": 260 },
+      { "slug": "/shotgun-parts.html", "allOption": 212 },
+      { "slug": "/clearance.html", "allOption": 51 }
+    ],
+    "totalsSumCheck": "/manufacturers.html=9517 and /new-products.html=9487 each independently reach ~100% of the 9521-product sitemap union (every product has a manufacturer and appears in the new-products widget). The 10 firearm-relevant sub-categories sum to ~9,179 WITH overlap (a product can be in multiple). /new-products.html chosen as the single 100%-coverage spine because it is newest-first by default, paginates cleanly to p=198 (48x197+31=9487 == toolbar total), and is the operator's runtime newest-walk path."
+  },
+  "lastVerified": "2026-06-04",
+  "auditNotes": {
+    "runId": "phase-a-r1-wave2-2026-06-03",
+    "mode": "BLIND calibration (Phase A R1); gentle WAF only; READ-ONLY; no DB writes",
+    "probeIp": "audit-host (not production crawler IP)",
+    "lowCoverageBlockerHypothesis": "NOT a discovery/extraction/WAF problem. The site is fully crawlable via plain HTTP: CF-passive, category+detail extraction works, ?p=N pagination + ?product_list_limit=48 + ?product_list_order=new all verified honored, /new-products.html reaches 100% coverage. The blocker is OPERATIONAL: DB row has isEnabled=false, crawlPhase='bootstrap', bootstrapStartedAt=null, bootstrapCompletedAt=null. The 42 indexed products were all first-seen 2026-03-01..2026-03-20 (early pre-park activity); nothing added since. Bootstrap never ran to completion. Action = enable the site + trigger bootstrap; no code/profile fix required for crawlability.",
+    "countReconciliation": "Sitemap image-tagged union = 9521 distinct product URLs (SM1 7346 + SM2 2175, zero overlap, all root-level single-segment .html). /new-products.html toolbar = 9487. /manufacturers.html toolbar = 9517. DB expectedProductCount = 9343. All within ~2%; 9343 is REAL (slightly stale snapshot). Candidate uses 9521 (freshest, full inventory incl. OOS).",
+    "expectedCountSurface": "sitemap (full inventory incl. OOS/hidden); pairs with verifyMethod=detail-page which reaches the full corpus.",
+    "verifyMethodPolicy": "detail-page selected (matches DB). Routes to Playwright/HTML detail verification; catches OOS transitions + 404 deletions. Not store-api (Magento has no WC Store API; REST is robots-disallowed and typically auth-gated).",
+    "dbDivergences": {
+      "catalogUrls": "DB=['/new-products.html'] vs candidate=['/new-products.html'] -- SAME. Confirmed correct: 100% coverage, newest-first, paginates fully. (The DB notes field's prior claim of 9089 is a stale count; live is 9487/9521.)",
+      "expectedProductCount": "DB=9343 vs candidate=9521 (+1.9%, both real; candidate is fresher full-inventory sitemap union).",
+      "productCountMethod": "DB={html-pagination,.toolbar-number,perPage:1} vs candidate={generic-product-sitemap,/sitemap-1-1.xml}. Both viable. DB html-pagination .toolbar-number returns the LAST toolbar-number which on /new-products.html is the 'of N' total (9487) -- works. Candidate prefers sitemap for OOS-inclusive full-inventory count. Either is acceptable; flagged as a choice not a bug.",
+      "perPage": "DB=48 vs candidate=48 -- SAME, verified honored (?product_list_limit=48 returns 48 cards).",
+      "sortParam": "DB=?product_list_order=new vs candidate=?product_list_order=new -- SAME, verified honored via counter-control.",
+      "platform/adapterType/hasWaf/hasCaptcha/needsPlaywright": "ALL match DB (magento2 / generic-retail / false / false / false).",
+      "url": "DB url=https://www.rdsc.ca (www). robots.txt Sitemap directive also uses www. Apex rdsc.ca returns clean 200 too; both work. Candidate uses apex-relative paths (origin-agnostic). Non-divergent."
+    },
+    "fieldConfidence": {
+      "platform": "high", "adapterType": "high", "hasWaf": "high (gentle-only, corroborated by prior DB heavy probe)",
+      "expectedProductCount": "high", "catalogUrls": "high (full p=198 walk confirmed)",
+      "sortParam": "high (counter-control)", "sortVerified": "high", "perPage": "high (limiter verified)",
+      "paginationPattern": "high (p1 vs p2 zero-overlap)", "watermark.method": "high", "maintain.verifyMethod": "medium (inherited from DB; not live-exercised)",
+      "productCountMethod": "medium (sitemap method not live-run through runtime probe this session)"
+    },
+    "inconclusiveFields": [
+      "productCountMethod runtime execution (sitemap method chosen by inspection; not run through product-count-probe.ts switch this session)",
+      "maintain.verifyMethod end-to-end (detail-page inherited from DB; Magento detail-page verify path not exercised live)",
+      "WAF under production-IP + sustained load (gentle single-GET only per R1 constraint; heavy-8-batch + sustained walk deferred to R2/R3)"
+    ],
+    "stageNotes": [
+      "Stage 1: apex rdsc.ca = clean 200 (desktop Chrome120 UA). robots.txt declares Sitemap https://www.rdsc.ca/sitemap.xml (www). Both apex and www resolve 200. Candidate uses path-relative URLs.",
+      "Stage 2: GENTLE probe only. cf-ray + server:cloudflare + cf-cache-status:DYNAMIC on every response; clean 200 on /, 2 categories, product detail, /new-products.html. No challenge, no cf-mitigated. hasWaf=false. No reCAPTCHA/hCaptcha/turnstile in homepage HTML. No age gate.",
+      "Stage 3: Magento 2.x confirmed (Magento_PageBuilder, Magento_Ui, /static/version1779888742, require.config, mage-* classes). adapterType=generic-retail. needsPlaywright=false (plain HTTP returns 24 product cards per category + full product detail). maintain verifyMethod=detail-page (non-WC).",
+      "Stage 4: /new-products.html toolbar=9487 ~= full catalog; paginates to p=198 (48x197+31=9487). /manufacturers.html=9517 also full. 11 top-level firearm-relevant categories documented. Single catalogUrl /new-products.html = 100% coverage spine.",
+      "Stage 5: pagination ?p=N (query, template 'p'), perPage 48 verified (?product_list_limit=48 -> 48 cards; 36 fell back to 24 = non-allowed-value, not a cap). p1 vs p2 zero ID overlap on semi-auto-rifle-parts.",
+      "Stage 6: sortParam ?product_list_order=new VERIFIED honored. Counter-control: order=new first5 [2171619..] != order=name first5 [57071..]. Default order already = newest (near-monotonic ID descent).",
+      "Stage 7: navigate-from-watermark. Newest-first sort verified + default order is newest by entity ID. New items appear at top of /new-products.html.",
+      "Stage 8: expectedProductCount=9521 (sitemap image-tagged union, OOS-inclusive). Cross-checks: /new-products.html=9487, /manufacturers.html=9517, DB=9343 -- all within 2%. 9343 is REAL.",
+      "Stage 9: candidate assembled. LOW-COVERAGE BLOCKER = operational (isEnabled=false, bootstrap never ran), NOT crawlability. Site is fully crawlable as-is."
+    ]
+  }
+}

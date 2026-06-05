@@ -1,0 +1,108 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-04",
+  "wafProbeMethod": "gentle-single-get-multi-ua",
+  "wafProbeResult": "Cloudflare present (cf-ray + __cf_bm on every 200) but passive; 4/4 production UAs returned HTTP 200 on a paginated category URL with no challenge. Heavy 8-batch probe deliberately skipped (IP-ban risk this session).",
+  "wafProbeEvidence": {
+    "cfRayPresent": true,
+    "cfBmCookieSet": true,
+    "cfCacheStatus": "DYNAMIC",
+    "serverHeader": "cloudflare",
+    "perUaStatus": { "Chrome120": 200, "Firefox121": 200, "Safari17": 200, "iPhone": 200 },
+    "probeMethod": "gentle (single GET per UA, >=800ms apart); heavy-waf-probe.sh NOT run",
+    "rapidBurstTested": false,
+    "note": "hasWaf set false because Cloudflare is passive (every probe 200, no challenge). Re-confirm from production crawler IP before promotion."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 17305,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": [
+      "/xmlsitemap.php?type=products&page=1",
+      "/xmlsitemap.php?type=products&page=2",
+      "/xmlsitemap.php?type=products&page=3"
+    ]
+  },
+  "catalogUrls": [
+    "/firearms/",
+    "/ammunition/",
+    "/optics/",
+    "/optics-accessories/",
+    "/gun-parts-accessories/",
+    "/reloading/",
+    "/gear/",
+    "/clearance/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://store.theshootingcentre.com/trijicon-bright-tough-night-sights-sig-sauer-8-front-8-rear/", "title": "Trijicon Bright & Tough Night Sights - Sig Sauer #8 Front / #8 Rear", "price": 135.00, "stockStatus": "out_of_stock" },
+    { "url": "https://store.theshootingcentre.com/mossberg-590-shockwave-7-shot-shotgun-12-gauge-3-18-5-barrel-model-50639/", "title": "Mossberg 590 Shockwave - 7-Shot Shotgun: 12 Gauge-3\", 18.5\" Barrel, Model 50639", "price": 603.00, "stockStatus": "in_stock" },
+    { "url": "https://store.theshootingcentre.com/skb-iseries-1209-mil-spec-pistol-case/", "title": "SKB iSeries 1209 Mil-Spec Pistol Case", "price": 129.00, "stockStatus": "out_of_stock" }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "?sort=newest verified honored (first-5 product IDs 32782,32781,32780,32778,32769 descend monotonically); default alphaasc and counter pricedesc both differ from newest. Numeric data-product-id is a reliable newest-first proxy."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-06-04",
+  "auditNotes": {
+    "runId": "w2r1-theshootingcentre-2026-06-03",
+    "mode": "blind-round-1-calibration",
+    "probeIp": "audit-ip (not production crawler IP)",
+    "wafProbePolicy": "GENTLE substitution — heavy-waf-probe.sh skipped to avoid IP ban (per Wave-2 safety constraint). hasWaf=false is from passive Cloudflare evidence only; operator must re-confirm from production IP.",
+    "dbColumnFlips": { "hasWaf": false, "wafType": "cloudflare-passive" },
+    "verifyMethodPolicy": "detail-page selected (non-WC platform; Playwright detail-page is the only verify path). Carried from DB.",
+    "expectedCountSurface": "generic-product-sitemap (3 product sitemap pages, type=products) = 17,305 unique <loc>. Customer-visible catalog HTML does not expose a clean total; sitemap is authoritative and includes OOS (BC Stencil hides OOS on category pages).",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high (DB override: BC Stencil mapped to generic-retail intentionally)",
+      "hasWaf": "medium (passive CF; gentle probe only, not heavy 8-batch)",
+      "expectedProductCount": "high (17,305 from sitemap, re-counted)",
+      "catalogUrls": "medium (8 top-level parents aggregate subtree products — verified each renders 100 products/page with multi-page pagers; full ID-level coverage walk NOT performed under blind/gentle constraint)",
+      "sortParam": "high (3-outcome counter-control test, monotonic descending IDs)",
+      "perPage": "high (?limit=100 honored — 100 products rendered on page 1)",
+      "paginationPattern": "high (?page=N, page1 vs page2 zero overlap)"
+    },
+    "coverageCaveat": "catalogUrls are the 8 top-level categories. BC Stencil parents aggregate subtree products (firearms/ammunition each render 100/page with deep pagers). 100% ID-level coverage was NOT proven via full multi-category walk because of the blind/gentle/no-IP-ban constraint; R2/R3 should walk every top-level + sum-vs-sitemap to confirm 8 parents reach 17,305.",
+    "discoveredApiEndpoints": {
+      "sitemapIndex": "/xmlsitemap.php",
+      "productSitemaps": ["/xmlsitemap.php?type=products&page=1", "&page=2", "&page=3"],
+      "categorySitemap": "/xmlsitemap.php?type=categories&page=1"
+    },
+    "stageNotes": [
+      "Stage 1: apex store.theshootingcentre.com returns 200 cleanly with Chrome120 UA; canonical = apex. robots.txt declares no Sitemap directive; BC default /xmlsitemap.php used.",
+      "Stage 2: Cloudflare passive (cf-ray, __cf_bm, cf-cache-status:DYNAMIC; all 4 production UAs 200 on /firearms/?page=2). No CAPTCHA, no age-gate markers in 425KB homepage. Heavy probe skipped (IP-ban safety).",
+      "Stage 3: platform=bigcommerce-stencil (x-bc-store-id:1000882963, BC-Ray, cdn11.bigcommerce.com/s-stx5s5fhga, stencil/ paths, x-makeswift). adapterType=generic-retail (DB-confirmed intentional mapping). needsPlaywright=false (plain HTTP returns full product HTML).",
+      "Stage 4: 8 top-level categories from /xmlsitemap.php?type=categories (203 total cats, 8 single-segment). Each top-level renders products with multi-page pagers; parents aggregate subtree. Extraction spot-check (3 products) all pass title/price/stock.",
+      "Stage 5: pagination ?page=N (query form). page1 vs page2 on /firearms/ = 20 vs 20 ids, 0 overlap. perPage probed: ?limit=100 honored (100 products rendered).",
+      "Stage 6: sortParam=?sort=newest, sortVerified=true via 3-outcome counter-control with cache-bust. newest first-5 ids 32782/32781/32780/32778/32769 (monotonic desc); default(alphaasc) & counter(pricedesc) both differ.",
+      "Stage 7: navigate-from-watermark (sort honored + numeric monotonic product IDs as newest proxy). BC /products.json not used; HTML sort walk is the path.",
+      "Stage 8: expectedProductCount=17,305 via product sitemap (3 pages: 3132+9997+4176; 17,305 unique <loc>). DB 16,985 is ~1.9% low (catalog grew since 2026-04-08), not stale/wrong.",
+      "Stage 9: assembled candidate; validator run. Stage 10 runtime-fetch simulation NOT run under blind/gentle constraint (deferred to R2)."
+    ]
+  }
+}

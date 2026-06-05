@@ -1,0 +1,110 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T19:28:46Z",
+  "wafProbeMethod": "passive-observation",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every response) but all requests 200, no challenge bodies. Classified passive. Heavy 8-batch rapid-burst probe intentionally SKIPPED this round (live production crawler active + operator ban-risk rule).",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: a058dcef98c9aaf2-YYZ", "Server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstTested": false,
+    "sustainedWalkPages": 0,
+    "challengeBodySeen": false,
+    "note": "passive-only; production-IP/sustained re-probe deferred to Round 2"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 176,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": ["https://alsimmonsgunshop.com/shop/"],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://alsimmonsgunshop.com/product/w-w-greener-sxs-12ga-14382nc/", "title": "W.W. Greener SxS 12GA (14382NC)", "price": 500.0, "stockStatus": "in_stock" },
+    { "url": "https://alsimmonsgunshop.com/product/savage-model-4c-22cal-14384nc/", "title": "Savage Model 4C .22Cal (14384NC)", "price": 350.0, "stockStatus": "in_stock" },
+    { "url": "https://alsimmonsgunshop.com/product/mossberg-model-500cr-20ga-14385nc/", "title": "Mossberg Model 500CR 20GA (14385NC)", "price": 400.0, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 9,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/shop/page/{N}/",
+    "perPage": 9,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "/wp-json/wp/v2/product",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api-per-category",
+    "categories": [
+      { "slug": "/product-category/magazines/", "allOption": 85 },
+      { "slug": "/product-category/used-non-restricted/", "allOption": 79 },
+      { "slug": "/product-category/new-non-restricted/", "allOption": 12 },
+      { "slug": "/product-category/uncategorized/", "allOption": 5 },
+      { "slug": "/product-category/collectable-22s/", "allOption": 3 },
+      { "slug": "/product-category/used-restricted/", "allOption": 2 },
+      { "slug": "/product-category/new-restricted/", "allOption": 1 },
+      { "slug": "/product-category/accessories/", "allOption": 0 }
+    ],
+    "totalsSumCheck": "Top-level (parent=0) count>0 sum = 187; used-non-restricted (79) RECURSIVELY includes its child consignment (67) under Store API recursion, and products belong to multiple categories, so category-sum (187) > customer-visible global (176). Global Store API X-WP-Total=176 is canonical; /shop/ HTML 'Showing 1-9 of 176 results' matches exactly. /shop/ aggregates all firearm-relevant categories => single-URL 100% coverage."
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-2026-06-02",
+    "probeIp": "audit-IP (not production crawler IP)",
+    "wcCountSurface": "store-api-customer-visible",
+    "expectedCountSurface": "WC Store API /wp-json/wc/store/v1/products X-WP-Total=176 (customer-visible). WP REST core /wp-json/wp/v2/product X-WP-Total=1698 (admin total, includes drafts/hidden/private) — 9.6x divergence. Paired to verifyMethod=store-api per B8.",
+    "wcCategoryApi": "store-api",
+    "verifyMethodPolicy": "store-api accepted (default WC fast-path); restock/OOS-transition alerts NOT guaranteed for products the batch API never sees (worker.ts:549/711). Operator should confirm restock alerting requirement before promotion.",
+    "wafMigrationDetected": null,
+    "dbColumnFlips": { "hasWaf": false, "wafType": "cloudflare-passive" },
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products (count + extraction)",
+      "/wp-json/wc/store/v1/products/categories (taxonomy)",
+      "/wp-json/wp/v2/product (modified_after date filter for watermark)"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium (passive-only, sustained/production-IP re-probe deferred to R2)",
+      "expectedProductCount": "high (176 confirmed two surfaces: Store API X-WP-Total + /shop/ HTML result-count)",
+      "catalogUrls": "medium (single /shop/ spine; full per-page walk + ID-dedup NOT run this round, deferred to R2)",
+      "sortParam": "high (3-outcome counter-control: default=date != ?orderby=price)",
+      "perPage": "medium (HTML /shop/ default 9; no <select name=limit> control present; Store API honors per_page=100)",
+      "paginationPattern": "medium (path-form /shop/page/N/ observed in page-numbers links; page-1 vs page-2 zero-overlap test NOT run this round)",
+      "watermark.method": "high (WP REST modified_after two-probe: future=0, past=1698)"
+    },
+    "stageNotes": [
+      "Stage 1: apex returns 200 cleanly, no redirect, <link rel=canonical>=apex. canonicalOrigin=https://alsimmonsgunshop.com.",
+      "Stage 2: Cloudflare passive (cf-ray every response, all 200). No CAPTCHA markers, no age-gate. Heavy rapid-burst probe SKIPPED (ban-risk + live crawler). hasWaf=false.",
+      "Stage 3: WooCommerce 10.8.1 on WordPress 7.0 (generator metas + 119 woocommerce markers + wp-json Link header + X-Powered-By PHP/8.2.30). adapterType=woocommerce. needsPlaywright=false (plain HTTP returns products on both /shop/ HTML and Store API).",
+      "Stage 4: /shop/ HTML 'Showing 1-9 of 176 results' == Store API global X-WP-Total=176. Single /shop/ URL aggregates all firearm-relevant categories (gun shop: all categories firearm-relevant). Full per-category walk+ID-dedup deferred to R2.",
+      "Stage 5: pagination path-form /shop/page/N/ (page-numbers links to page/2..page/20). perPage=9 (HTML default; no perPage <select>). page1-vs-page2 zero-overlap test deferred to R2.",
+      "Stage 6: <select name=orderby> with option value=date 'Sort by latest' selected by default. 3-outcome test: default first3 != ?orderby=price first3 => sort honored. sortParam=?orderby=date, sortVerified=true. Default IS newest-first (id 65388 dated 2026-06-02 == default-first slug).",
+      "Stage 7: WP REST core /wp-json/wp/v2/product modified_after two-probe (future 2099=0, past 1999=1698) => api-date-since-watermark (Method A). Note watermark walks WP REST core 1698-corpus; indexes customer-visible.",
+      "Stage 8: expectedProductCount=176 via wp-rest-header on Store API endpoint. WP REST core=1698 documented as admin divergence. Paired to store-api verify per B8.",
+      "Stage 9: candidate assembled; validator not yet run against profile-validator.ts this round (R1 blind)."
+    ]
+  }
+}

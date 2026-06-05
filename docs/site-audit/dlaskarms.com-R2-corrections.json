@@ -1,0 +1,59 @@
+{
+  "domain": "dlaskarms.com",
+  "round": "R2 (held-site reachability verdict)",
+  "runId": "R2-reachability-dlaskarms-2026-06-02",
+  "persona": "testing-api-tester",
+  "mission": "Minimal MalCare-safe reachability test of the production crawler API path (api-date-since-watermark via WC Store API + WP REST core). NOT a full walk.",
+  "productionUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (deterministic md5('dlaskarms.com')[0]%4 = idx 0; userAgentOverride is null)",
+  "reachabilityVerdict": {
+    "verdict": "SAFE-TO-ENABLE",
+    "apiPathClean": true,
+    "evidence": [
+      { "req": 1, "path": "/wp-json/wc/store/v1/products?per_page=1", "status": 200, "bytes": 4932, "marker": null },
+      { "req": 2, "path": "/wp-json/wc/store/v1/products?per_page=16&page=1", "status": 200, "bytes": 95739, "marker": null },
+      { "req": 3, "path": "/wp-json/wc/store/v1/products?per_page=16&page=2", "status": 200, "bytes": 98413, "marker": null },
+      { "req": "7", "path": "/wp-json/wp/v2/product?per_page=1", "status": 200, "bytes": 12116, "xWpTotal": 235, "marker": null },
+      { "req": "8", "path": "/wp-json/wc/store/v1/products?per_page=1 (header-only)", "status": 200, "xWpTotal": 235, "marker": null },
+      { "req": "9", "path": "/product-category/rifles/ (HTML)", "status": 200, "bytes": 94296, "marker": null }
+    ],
+    "totalActualRequests": 9,
+    "minGapSeconds": 3,
+    "stoppedEarly": false,
+    "markerScan": "Every response body scanned for /malcare/i, 'Blocked because of Malicious', /mod_security/i, 'not acceptable'. ZERO markers across all 9 requests.",
+    "gapVsBudget": "Held DB baseBudget=1800/hr implies a ~2s minimum inter-request gap (not 4s as the R2 brief assumed). Probe ran at 3s gaps and stayed clean across both API and HTML. The production crawler uses the API path; the DB-documented IP-ban trigger was a ~20-request burst, far above the 1800/hr steady-state rate."
+  },
+  "corrections": [
+    {
+      "field": "reachability (DB isEnabled)",
+      "evidence": "9 production-UA requests across Store API products (p1/p2/count), WP REST core /wp/v2/product, and rifles category HTML — all HTTP 200, no MalCare/406 markers. Real JSON payloads (95-98KB per page). The production maintain path (store-api verify on /wp-json/wc/store/v1/products) and watermark discovery path (/wp-json/wp/v2/product modified_after) are both live and clean at >=3s pace.",
+      "proposedValue": "Enable (isEnabled=true) with conservative pacing; keep baseBudget=1800 (>=2s gap). API path is the crawler's path and it is reachable.",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "evidence": "Live X-WP-Total=235 from BOTH /wp-json/wp/v2/product?per_page=1 and /wp-json/wc/store/v1/products?per_page=1 on 2026-06-02. DB siteProfile holds stale 241 (lastVerified 2026-04-11). R1 also observed 235.",
+      "proposedValue": 235,
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf / wafType",
+      "evidence": "MalCare IS present per 2026-04-11 DB ground truth (403 body marker + 406 bot-UA, IP-ban after ~20-request burst). It did NOT fire on any of the 9 slow-paced production-UA requests in this probe. The 2026-05-11 calibration heavy-8-batch also saw all-200/no-marker. MalCare blocks BURSTS, not the steady API path. Keep hasWaf:true defensively but it does not block the crawl path at sane pace.",
+      "proposedValue": "Keep hasWaf:true, wafType:malcare. NOT a hard blocker for the API path at >=2s gap.",
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern.template",
+      "evidence": "DB template is 'page/{N}/' with NO leading slash (R1 ledger theme-B: buildPaginatedUrl mangles this). This is a latent runtime defect, not a reachability issue, but flagged for Round 4 fix. Note: production crawler uses the API path (api-date-since-watermark), so HTML pagination is the fallback only.",
+      "proposedValue": "/page/{N}/",
+      "confidence": "high"
+    }
+  ],
+  "notes": [
+    "VERDICT: SAFE-TO-ENABLE. The production crawler's API path (WC Store API /wp-json/wc/store/v1/products for maintain verify + WP REST core /wp-json/wp/v2/product for watermark discovery) is fully reachable under the production UA at >=3s pace with zero MalCare/406 signals.",
+    "MalCare's documented ban trigger (DB 2026-04-11) is a ~20-request BURST that 403s for 10+ minutes. The held baseBudget=1800/hr equals a ~2s steady gap, well below burst territory. This probe deliberately used only ~9 requests at 3s gaps to avoid re-triggering the ban; it did not test the ban threshold (intentional — inconclusive-on-threshold beats risking a ban).",
+    "Bot-UA caveat: the DB notes Googlebot UA -> 406. The production UA is the real Chrome/120 string (verified above), NOT a bot UA, so 406 is not a risk on the production path.",
+    "Did NOT do a full catalog walk (out of scope + ban-avoidance). Coverage proof (catalogUrls vs 235 dedup) remains a later task; the 2026-05-11 calibration used /shop/ as a single 100%-coverage aggregator URL while R1 used the 20-cat parent:0 spine — that spine-vs-aggregator choice is unresolved but does NOT affect reachability.",
+    "Enable recommendation is conditional on keeping pacing conservative: the crawler must NOT burst. At baseBudget=1800/hr (~2s gap) and API-only path, the documented ~20-req burst threshold is not approached during normal tier crawling. If any future crawl logs a 403/406 from dlaskarms, treat as MalCare re-block and back off (cooldown), do not retry-storm.",
+    "Stale DB field also noted: siteProfile.crawlPhase says 'maintain' but the DB column crawlPhase='bootstrap' (R1 ledger B-column mismatch). Round 4 transition concern, not reachability."
+  ]
+}

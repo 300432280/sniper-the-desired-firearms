@@ -1,0 +1,134 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray + Server: cloudflare on every response), all 200/302 with production Chrome UA; no challenge bodies, no Wordfence 403-body markers observed on open catalog paths. Classified cloudflare-passive => hasWaf:false. NOTE: R1 BLIND did NOT run the rapid-burst batch (persona: Wordfence can rate-limit + live crawler active); WAF severity is single-snapshot, not sustained-walk verified.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray present on apex 302, /en/ 200, /wp-json/* 200"],
+    "sucuriHeaders": [],
+    "rapidBurstTested": false,
+    "rapidBurstStatus": "untested-by-design (R1 blind, live crawler active, Wordfence rate-limit risk)",
+    "sqliRuleFired": "untested",
+    "xssRuleFired": "untested",
+    "honeypotPathsBlocked": "untested",
+    "botUaBlocked": "untested",
+    "untestedAttackSurfaces": ["rapid-burst", "honeypot-paths", "sqli", "xss", "no-ua", "sustained-walk"],
+    "note": "Persona note says Wordfence-on-Cloudflare(passive); R1 did not confirm Wordfence presence (no 403-body marker scan via honeypot batch). Round 2 must run the sustained + multi-UA matrix."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2151,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://dantesports.com/en/product-category/firearms/",
+    "https://dantesports.com/en/product-category/riflescopes-optics/",
+    "https://dantesports.com/en/product-category/accessories/",
+    "https://dantesports.com/en/product-category/other-an/",
+    "https://dantesports.com/en/product-category/ammunition/",
+    "https://dantesports.com/en/product-category/parts-accessories/",
+    "https://dantesports.com/en/product-category/airguns/",
+    "https://dantesports.com/en/product-category/springliquidationsale/",
+    "https://dantesports.com/en/product-category/knives/",
+    "https://dantesports.com/en/product-category/storage/",
+    "https://dantesports.com/en/product-category/30-days-of-bushnell/",
+    "https://dantesports.com/en/product-category/winchester-historical-en/",
+    "https://dantesports.com/en/product-category/licence/",
+    "https://dantesports.com/en/product-category/unclassified/",
+    "https://dantesports.com/en/product-category/rugeramericangen2-en/",
+    "https://dantesports.com/en/product-category/pmcsale-en/",
+    "https://dantesports.com/en/product-category/reloading/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://dantesports.com/en/product/winchester-ranger-lever-action/", "title": "Winchester Ranger Lever Action", "price": 559.77, "stockStatus": "in_stock" },
+    { "url": "https://dantesports.com/en/product/mossberg-590a1-9-shot-2/", "title": "Mossberg 590A1 9 Shot", "price": null, "stockStatus": "unknown" },
+    { "url": "https://dantesports.com/en/product/ruger-77-357-rifle-camo/", "title": "Ruger 77/357 Rifle Camo", "price": null, "stockStatus": "unknown" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wp-rest-core-per-category (WPML lang=en)",
+    "categories": [
+      { "slug": "/en/product-category/firearms/", "allOption": 1106 },
+      { "slug": "/en/product-category/riflescopes-optics/", "allOption": 360 },
+      { "slug": "/en/product-category/accessories/", "allOption": 293 },
+      { "slug": "/en/product-category/other-an/", "allOption": 264 },
+      { "slug": "/en/product-category/ammunition/", "allOption": 238 },
+      { "slug": "/en/product-category/parts-accessories/", "allOption": 189 },
+      { "slug": "/en/product-category/airguns/", "allOption": 52 },
+      { "slug": "/en/product-category/springliquidationsale/", "allOption": 43 },
+      { "slug": "/en/product-category/knives/", "allOption": 38 },
+      { "slug": "/en/product-category/storage/", "allOption": 30 },
+      { "slug": "/en/product-category/30-days-of-bushnell/", "allOption": 27 },
+      { "slug": "/en/product-category/winchester-historical-en/", "allOption": 20 },
+      { "slug": "/en/product-category/licence/", "allOption": 18 },
+      { "slug": "/en/product-category/unclassified/", "allOption": 14 },
+      { "slug": "/en/product-category/rugeramericangen2-en/", "allOption": 4 },
+      { "slug": "/en/product-category/pmcsale-en/", "allOption": 2 },
+      { "slug": "/en/product-category/reloading/", "allOption": 1 }
+    ],
+    "totalsSumCheck": "Sum of 17 top-level counts = 2701 vs expectedProductCount 2151. Overlap ~25% — promo/overlay categories (springliquidationsale, 30-days-of-bushnell, winchester-historical-en, rugeramericangen2-en, pmcsale-en) re-list firearm products from primary categories. Per Rule C/B4, promo categories NOT dropped on overlap assumption in BLIND R1 (no full walk). Counts from WP REST core per-category which == Store API total here (no draft/hidden divergence: WP REST core total 2151 == Store API total 2151)."
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-dantesports-2026-06-02",
+    "round": "R1 (blind skill run, no DB read, no full walks, no rapid-burst)",
+    "locale": "WPML bilingual EN/FR. Apex 302 -> /fr/ (FR is the default/landing locale). canonical tag on /en/ homepage = https://dantesports.com/en/. catalogUrls use the EN-translated slugs (WPML translates category slugs per locale: armes-a-feu->firearms). FR taxonomy slugs differ; /en/product-category/<fr-slug>/ 302-redirects to the EN slug.",
+    "canonicalLocaleOverride": "Candidate uses EN locale per /en/ canonical tag. Operator may prefer FR (the apex default landing) — FR catalogUrls would use /fr/categorie-produit/<fr-slug>/. Inventory is identical across locales (same WC product corpus, WPML translation layer). 2151 count is locale-independent (per-product, not per-translation).",
+    "wcCountSurface": "WP REST core /wp/v2/product total (2151) == WC Store API /wc/store/v1/products total (2151) — no draft/hidden divergence on this site, so both surfaces agree.",
+    "expectedCountSurface": "WC Store API /wp-json/wc/store/v1/products (x-wp-total=2151). Paired with verifyMethod=store-api per B8.",
+    "verifyMethodPolicy": "store-api chosen (WC fast-path). TRADEOFF: restock/OOS-transition alerts not guaranteed for products the batch API never returns (worker.ts:549/711 early-return before Playwright fallback). Operator must confirm: if restock alerts are required, switch verifyMethod to detail-page (and switch expectedProductCount source to WP REST core /wp/v2/product, though both are 2151 here).",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products (count + maintain verify)",
+      "/wp-json/wp/v2/product (watermark modified_after date filter, honored: future=0 / past=2151)",
+      "/wp-json/wp/v2/product_cat?lang=en (taxonomy, 17 top-level, 83 total, single page)"
+    ],
+    "sortVerification": "3-outcome counter-control with cache-bust on /en/product-category/firearms/: default first3 == orderby=date first3 (winchester-ranger-lever-action, mossberg-590a1-9-shot-2, ruger-77-357-rifle-camo); counter orderby=price first3 differs (rossi-r95-..., charles-daly-101-..., khan-arms-k100-...). Verdict = honored-default-is-newest. sortParam=?orderby=date, sortVerified=true.",
+    "paginationVerification": "Path-form /page/{N}/ confirmed: firearms last page link = /page/91/; page1 12 slugs, page/2/ slugs ID-disjoint (khan-arms-arthemis-..., canuck-walnut-over-under-..., canuck-defender-marine-...). perPage=12 (WC theme default; no per-page <select> control present).",
+    "wordfenceNote": "Persona context states Wordfence-on-Cloudflare(passive). R1 did NOT scan 403 bodies for Wordfence markers (skipped honeypot/rapid-burst batches by design — live crawler + rate-limit risk). hasWaf set false on cloudflare-passive evidence; R2 must confirm Wordfence is non-blocking on the crawl path via sustained walk + multi-UA matrix.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "expectedProductCount": "high (two surfaces agree at 2151)",
+      "catalogUrls": "medium (per-category counts confirmed; NOT full-walked/ID-deduped in blind R1 — coverage sum 2701 vs 2151 overlap not resolved)",
+      "sortParam": "high (3-outcome verified)",
+      "paginationPattern": "high (page2 disjoint, last-page link read)",
+      "perPage": "high (page1=12, 91*12~=1106)",
+      "watermark.method": "high (modified_after two-probe honored)",
+      "hasWaf": "medium (single-snapshot, rapid-burst untested)",
+      "verifyMethod": "operator-policy (store-api default; restock tradeoff flagged)"
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-03",
+  "wafProbeMethod": "gentle-single-get",
+  "wafProbeResult": "cloudflare-passive: cf-ray + __cf_bm cookie, status 200, no challenge body",
+  "wafProbeEvidence": {
+    "cfRay": "a06334191bddab7c-YYZ",
+    "server": "cloudflare",
+    "via": "1.1 google",
+    "cfBmCookie": true,
+    "challengeBody": false,
+    "note": "GENTLE probe only (single GET); heavy-8-batch NOT run per Round-1 constraint"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 5414,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": [
+      "/xmlsitemap.php?type=products&page=1",
+      "/xmlsitemap.php?type=products&page=2"
+    ]
+  },
+  "catalogUrls": [
+    "/rifles/",
+    "/shotguns/",
+    "/ammunition/",
+    "/accessories/",
+    "/optics-accessories/",
+    "/rifle-scopes/",
+    "/other-optics/",
+    "/stocks/",
+    "/reloading-components/",
+    "/reloading-equipment/",
+    "/knives/",
+    "/apparel/"
+  ],
+  "extractionTested": true,
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 50,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 50,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark"
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-06-03",
+  "auditNotes": {
+    "runId": "W2R1-prophetriver-2026-06-03",
+    "round": "PhaseA-Round1-blind",
+    "probeConstraint": "gentle WAF only (single GET + header read); heavy-8-batch NOT run",
+    "lowCoverageBlocker": "OPERATIONAL: consecutiveFailures=40 -> auto-disabled (scheduler isEnabled=false at >=10 failures, crawl-scheduler.ts:483-490). lastCrawlAt=2026-04-30. bootstrapStarted/Completed=null. Site is PARKED, not under-extracting. Extraction + ?page=N pagination both verified working live via production GenericRetailAdapter + crawlStreamTier paginationPattern fallback (catalog-crawler.ts:956). ROOT failure mode that drove the 40 failures NOT determinable from gentle GET (all pages 200 + extract fine today) -> R2 live trace required.",
+    "countDivergence": "DB expectedProductCount=13974 (note claims ~13,766 sitemap ground truth 2026-04-08) vs live sitemap-index same surface today = ~5,414 (2951+2463 product <loc>, page3=404). DB count is 2.6x inflated. Either catalog contracted heavily since April or original was double-counted (e.g. summed url-tags or non-product sitemap types). Re-derive recommended.",
+    "perPageNote": "BC Stencil renders ~9-10 product cards per category page in static HTML; ?limit=50/100 NOT honored (returned fewer, not more). paginationPattern.perPage=50 inherited from DB but real static-HTML perPage is ~10. R2 should reconcile; does not affect coverage since ?page=N walks all pages.",
+    "catalogCoverage": "NOT exhaustively walk-deduped this round (gentle/blind; ~540 fetches avoided). 12 category streams inherited from DB + spot-verified (/rifles/, /ammunition/ extract real products). /new-products/ and /back-in-stock-price-drops/ excluded (0 products static, JS-hydrated). Full per-category walk + ID dedup is an R2 task.",
+    "bcGraphqlToken": "No JWT (eyJ...) found in homepage HTML; /graphql + hidden_token absent. bigcommerce-graphql apiAlternative NOT trivially available from homepage scrape.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium(gentle-only)",
+      "sortVerified": "high(3-outcome)",
+      "paginationType": "high(page1/2/3 disjoint)",
+      "expectedProductCount": "high(live sitemap)",
+      "catalogUrlsCoverage": "medium(not full-walked)",
+      "lowCoverageBlocker": "high(operational)/inconclusive(root failure mode)"
+    }
+  }
+}

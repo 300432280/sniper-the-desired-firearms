@@ -1,0 +1,110 @@
+{
+  "profilePath": "D:\\Projects\\FIREARM-ALERT\\docs\\site-audit\\tommyenterprises.com-2026-05-25T17-10-31Z.json",
+  "domain": "tommyenterprises.com",
+  "timestamp": "2026-05-26T01:44:45.734Z",
+  "stages": [
+    {
+      "stage": 1,
+      "name": "Spec Compliance",
+      "verdict": "PASS",
+      "details": {
+        "validatorResult": {
+          "valid": true,
+          "score": 100,
+          "passed": [
+            "platform",
+            "hasWaf",
+            "expectedProductCount",
+            "catalogUrls",
+            "paginationPattern",
+            "perPage",
+            "adapterType",
+            "crawlers.watermark.method",
+            "sortVerification",
+            "productCountMethod.method",
+            "productCountMethod.urlShape",
+            "crawlers.maintain.verifyMethod",
+            "wafTypePassiveCoherence",
+            "paginationPattern.templateRedundantCatalogPrefix",
+            "wafType",
+            "wafLastProbedAt",
+            "productCountMethod",
+            "productCountMethod.endpointPairsVerifyMethod",
+            "lastVerified",
+            "profileVersion",
+            "sortParam",
+            "extractionTested"
+          ],
+          "requiredFailures": [],
+          "warnings": []
+        }
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 2,
+      "name": "Live Walk Test",
+      "verdict": "PASS",
+      "details": {
+        "perUrl": [
+          {
+            "url": "https://tommyenterprises.com/shop/",
+            "page1Products": 21,
+            "page1Slugs": [
+              "full-length-10-mlok-handguard-for-tm22-a-12",
+              "rf224-bx-1-magazine-coupler",
+              "11-skeletonized-handguard-for-tm22"
+            ],
+            "page2Products": 3,
+            "page2Slugs": [
+              "buffer-tube-stock-adapter-for-taipan-x",
+              "11-mlok-handguard-for-henry-homesteader",
+              "tactical-handguard-for-citadel-ad500"
+            ],
+            "page3Products": 21,
+            "paginationVerdict": "PASS"
+          }
+        ]
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 3,
+      "name": "Multi-Method Count",
+      "verdict": "PASS",
+      "details": {
+        "counts": {
+          "api": 122
+        },
+        "driftPairs": {
+          "api-expected": 1
+        },
+        "availableMethods": 1
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 4,
+      "name": "Operator Review",
+      "verdict": "PASS",
+      "details": {
+        "mode": "approve",
+        "stagesPass": true,
+        "approved": true
+      },
+      "blockingErrors": []
+    },
+    {
+      "stage": 5,
+      "name": "Output Review Report",
+      "verdict": "PASS",
+      "details": {
+        "jsonPath": "D:\\Projects\\FIREARM-ALERT\\docs\\site-audit\\tommyenterprises.com-2026-05-25T17-10-31Z-review.json",
+        "mdPath": "D:\\Projects\\FIREARM-ALERT\\docs\\site-audit\\tommyenterprises.com-2026-05-25T17-10-31Z-review.md"
+      },
+      "blockingErrors": []
+    }
+  ],
+  "overallVerdict": "PASS",
+  "approvedForDbWrite": true
+}

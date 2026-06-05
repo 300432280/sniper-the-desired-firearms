@@ -1,0 +1,143 @@
+{
+  "domain": "durhamoutdoors.ca",
+  "round": "R2-live-investigation",
+  "date": "2026-06-02",
+  "method": "Live walk + per-divergence cross-method verification. Live crawler PAUSED. Plain axios, Chrome120 UA, >=900ms spacing. DB siteProfile (lastVerified 2026-04-06) used as answer key. Prior rounds B5R1/B5R2/B5R3 (2026-05-22) reviewed for contradiction.",
+  "searchClaimVerdict": {
+    "skillClaim": "SKILL.md B3 says durhamoutdoors search returns byte-identical CF-403 challenge for ?s=glock vs nonsense (keyword NOT honored).",
+    "verdict": "SKILL.md B3 CLAIM IS STALE/WRONG as of 2026-06-02 from audit IP.",
+    "realSearchForm": "/search.asp?keyword={keyword}  (homepage <form method=get name=searchForm action=search.asp> with <input type=text name=keyword>). The skill's ?s= form is NOT this site's form.",
+    "liveEvidence": "GET /search.asp?keyword=glock -> HTTP 200, 39684 bytes, 6 distinct _p_ product links, 18 'glock' substring hits, ZERO CF-challenge markers. GET /search.asp?keyword=xyz789nonsense -> HTTP 200, 35744 bytes, 3 DISJOINT product links, 2 'glock' hits. Different byte sizes + DISJOINT product sets => keyword IS honored. Stability re-test 4 keywords: rifle=200/15prod/51360B, mossberg=200/15prod/50853B, 22lr=200/15prod/50669B, chiappa=302 (single-brand redirect). No CF challenge on any.",
+    "contradictionNote": "B5R2 + B5R3 (2026-05-22) BOTH observed /search.asp?keyword=* -> 403 CF 'Attention Required' (4550B) for all keywords (even with __cf_bm cookie + Referer) and concluded OMIT searchUrl. R1-blind (2026-06-02) AND this R2 (2026-06-02) observe 200 + keyword-honored. The CF rule on search.asp that blocked on 2026-05-22 is no longer active from the audit IP. Search reachability is IP/time-dependent.",
+    "recommendation": "searchUrl form is unambiguously /search.asp?keyword={keyword}. Reachable + keyword-honored from audit IP today. CAVEAT: WAF rule on search.asp is IP/time-variable (was 403 on 2026-05-22). Production crawler IP MUST live-probe search.asp before relying on it; if it 403s, omit per skill B4. SKILL.md B3 durhamoutdoors example should be corrected/removed: it neither matches the form (?s= vs ?keyword=) nor the current behavior (keyword honored, not byte-identical CF-403)."
+  },
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "580 (rough mid-estimate; sum-with-overlap candidate; sitemap 147 known undercount)",
+      "liveMethod": "Independent full ID-dedup walk of all 9 catalogUrls via direct regex extraction of _p_<id>/p-<id> numeric IDs (NOT the runtime adapter — a different method than stream-page-count) at 900ms spacing, ~85 page fetches.",
+      "evidence": "GLOBAL_UNIQUE_IDS = 389 (exact). Per-cat unique: Rifles 218 (19pg), NON-RESTRICTED 281 (24pg), Shotgun 103 (9pg), Accessories 63 (6pg), Optics 2, Pistols 1, Surplus 1, Used-Consignment 1, RESTRICTED 0. SUM_WITH_OVERLAP=670 (class-groupings NON-RESTRICTED/Shotgun/Rifles re-list same guns). All pages HTTP 200.",
+      "proposedValue": 389,
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod",
+      "round1Hypothesis": "{method: sitemap, url: /sitemap.xml} (R1-blind candidate); DB = {method: stream-page-count}",
+      "liveMethod": "Walked sitemap.xml + compared to true dedup walk + read product-count-probe.ts switch (lines 291-297 sitemap, 420-528 stream-page-count).",
+      "evidence": "sitemap.xml: 442 total <loc>, of which only 147 are products (_p_), 9 categories, ~286 static pages. NOT a sitemap-index (<sitemap> count=0). Runtime 'sitemap' method (PCP:295) counts ALL <loc> = 442 (no product filter) => WRONG. Even product-filtered (generic-product-sitemap, 147) = 62% undercount of the true 389. stream-page-count (PCP:420) does the exact ID-dedup walk that yields 389. Both names are in VALID_METHOD_NAMES (PCP:110-122).",
+      "proposedValue": "{method: stream-page-count}  (DB correct; sitemap is wrong for this 3dcart site)",
+      "confidence": "high"
+    },
+    {
+      "field": "needsPlaywright",
+      "round1Hypothesis": "false (R1-blind + B5R1/R2); DB = true (defensive)",
+      "liveMethod": "Two independent confirmations: (1) 85+ plain-axios paginated fetches across the full walk = all HTTP 200 with full ~60KB product HTML; (2) ran the REAL runtime generic-retail adapter (getAdapterForUrl + extractCatalogProducts) on plain-HTTP /Rifles_c_17.html?sortby=4.",
+      "evidence": "Runtime adapter extracted 12 products from plain HTTP (HTTP 200, 59696 bytes) with correct titles/prices/stock (ADLER RF224 $429 OOS, CHIAPPA 1892 MHR $1299 in_stock, ...). No headless browser needed anywhere in the walk.",
+      "proposedValue": false,
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls (RESTRICTED_c_21 keep-empty)",
+      "round1Hypothesis": "Keep all 9 incl /RESTRICTED_c_21.html (R1); DB drops it (8 cats)",
+      "liveMethod": "Walked /RESTRICTED_c_21.html?sortby=4 live.",
+      "evidence": "/RESTRICTED_c_21.html returns HTTP 200 with 0 product cards (not 404, not redirect). Per Skill Rule C (empty != dead — preserve until 404/category-removal). It is a real, live, empty category. Keeping it costs one extra page-1 fetch per cycle and auto-covers future restricted-stock without re-audit.",
+      "proposedValue": "Keep all 9 catalogUrls including /RESTRICTED_c_21.html (R1 wins on the keep-empty rule). DB's 8-cat list is a pragmatic operator drop, not a coverage error (0 products today).",
+      "confidence": "high"
+    },
+    {
+      "field": "platform",
+      "round1Hypothesis": "shift4shop-3dcart (R1); DB = custom",
+      "liveMethod": "Read adapter-registry.ts:131 routing + observed runtime drift warning.",
+      "evidence": "Runtime logs at registry refresh: 'durhamoutdoors.ca: profile drift — adapterType=generic-retail but siteProfile.platform=custom'. Adapter routing keys on the adapterType COLUMN (registry:131 adapters[siteInfo.adapterType]), NOT siteProfile.platform — so retagging platform is documentation/family-tag only, ZERO routing risk. Fingerprints unambiguous (assets/templates/common-html5/, vcart, _3d_cart, .asp URLs).",
+      "proposedValue": "shift4shop-3dcart (retag to silence the drift warning + enable platform-family routing; safe — adapterType stays generic-retail)",
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam / sortVerified / crawlers.watermark.method",
+      "round1Hypothesis": "?sortby=4 honored, navigate-from-watermark, numeric _p_ IDs as date proxy",
+      "liveMethod": "Compared default vs ?sortby=4 page-1 first IDs; tested combined sort+pagination forms.",
+      "evidence": "Default page-1 first IDs = 117,120,121,122 (low, ascending). ?sortby=4 page-1 first IDs = 3593,3592,3591,3590 (high, strictly DESCENDING = newest-first). ?sortby=4 301-redirects to canonical path /Rifles_c_17-1-4.html. Combined forms both work + identical: -2.html?sortby=4 (query) == -2-4.html (path) -> sorted page-2 IDs 3559..3564. Plain -2.html (no sort) -> 135,137,138 (old).",
+      "proposedValue": "CONFIRM DB: sortParam=?sortby=4, sortVerified=true, crawlers.watermark.method=navigate-from-watermark. The suffix-replace -{N}.html template + ?sortby=4 query produces honored newest-first paginated pages.",
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf / wafType",
+      "round1Hypothesis": "hasWaf=false, wafType=cloudflare-passive (DB + R1-blind agree)",
+      "liveMethod": "85+ sequential paginated catalog fetches across 9 categories at 900ms, 1 UA.",
+      "evidence": "All ~85 catalog page fetches returned HTTP 200 with full product HTML. Zero challenge, zero 403 on the catalog path. CF is present (CF-RAY/__cf_bm) but passive on catalog. The only rule-selective surface is /search.asp (403 on 2026-05-22, 200 today — IP/time-variable). Catalog crawl never trips a rule.",
+      "proposedValue": "hasWaf=false, wafType=cloudflare-passive (DB correct). needsPlaywright/userAgentOverride must NOT be set defensively off this passive CF (theme D).",
+      "confidence": "high"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "F",
+      "file": "backend/src/services/product-count-probe.ts:291-297 (sitemap) vs 420-528 (stream-page-count)",
+      "confirmed": true,
+      "detail": "For 3dcart durhamoutdoors, stream-page-count is RIGHT (does ID-dedup walk -> 389, matching the true unique count). sitemap is WRONG: PCP:295 counts ALL <loc> with no product filter -> 442 for this site; the product subset is only 147 (62% undercount). The R1-blind candidate's productCountMethod=sitemap would yield a badly wrong count. DB's stream-page-count is correct. Note generic-product-sitemap (filtered to _p_) would give 147 — still a hard undercount because the 3dcart sitemap lists only a recent/partial product subset (matches testing-api-tester persona lesson: shift4shop/3dcart sitemap undercounts)."
+    },
+    {
+      "theme": "F",
+      "file": "backend/src/services/product-count-probe.ts:110-122 (VALID_METHOD_NAMES)",
+      "confirmed": true,
+      "detail": "Both 'sitemap' and 'stream-page-count' are canonical valid method names (no silent-null risk for this site, unlike the Wave-1 dual-api/wp-rest-api strings). The issue here is method CHOICE (sitemap undercounts), not an unrecognized-string null."
+    },
+    {
+      "theme": "platform-routing",
+      "file": "backend/src/services/scraper/adapter-registry.ts:131",
+      "confirmed": true,
+      "detail": "Adapter resolution = adapters[siteInfo.adapterType] || adapters.generic. Keys on adapterType COLUMN, not siteProfile.platform. Retagging platform custom->shift4shop-3dcart is zero-risk to routing (adapterType stays generic-retail). The registry refresh emits a drift WARNING when adapterType!=platform; retag silences it."
+    },
+    {
+      "theme": "pagination-sort-combined",
+      "file": "backend/src/services/catalog-crawler.ts:127-135 (suffix-replace)",
+      "confirmed": true,
+      "detail": "Suffix-replace reads pattern.template || '-{N}.html', strips pattern.match ('.html'), appends template with {N} substituted. Produces /Rifles_c_17-2.html. Live-verified that -2.html?sortby=4 (sortParam query appended) returns the SAME content as the site's canonical -2-4.html path form. So the DB template -{N}.html + sortParam ?sortby=4 combination is correct and produces honored newest-first paginated pages."
+    }
+  ],
+  "coverageProof": {
+    "walked": "All 9 catalogUrls, full pagination via -{N}.html suffix-replace + ?sortby=4, 900ms spacing, ~85 page fetches, all HTTP 200.",
+    "perCategoryUnique": {
+      "/Rifles_c_17.html": 218,
+      "/NON-RESTRICTED_c_16.html": 281,
+      "/Shotgun_c_14.html": 103,
+      "/Accessories_c_11.html": 63,
+      "/Optics_c_19.html": 2,
+      "/Pistols_c_18.html": 1,
+      "/Surplus-and-collection_c_33.html": 1,
+      "/Used-Consignment_c_20.html": 1,
+      "/RESTRICTED_c_21.html": 0
+    },
+    "sumWithOverlap": 670,
+    "uniqueIds": 389,
+    "expected": 389,
+    "pct": "100% (uniqueIds == DB expectedProductCount exactly)",
+    "recommendedCatalogUrls": [
+      "/Rifles_c_17.html",
+      "/Shotgun_c_14.html",
+      "/Pistols_c_18.html",
+      "/NON-RESTRICTED_c_16.html",
+      "/RESTRICTED_c_21.html",
+      "/Optics_c_19.html",
+      "/Accessories_c_11.html",
+      "/Surplus-and-collection_c_33.html",
+      "/Used-Consignment_c_20.html"
+    ],
+    "coverageNote": "9-cat spine fully covers the 389 unique products (union dedupe = 389). Heavy intra-spine overlap (sum 670) is expected: NON-RESTRICTED/RESTRICTED are firearm-CLASS groupings overlapping the product-TYPE cats (Rifles/Shotgun/Pistols). Overlap is harmless for coverage (dedup at index time via _p_<id>). Keep RESTRICTED (200/0) per keep-empty Rule C."
+  },
+  "verdictSummary": {
+    "expectedProductCount": "389 (DB correct; R1 candidate 580 too high; sitemap 147 undercount confirmed)",
+    "needsPlaywright": "false (DB true is stale defensive over-call; plain HTTP + runtime adapter both work at scale)",
+    "RESTRICTED_c_21": "keep (200/0, not 404)",
+    "searchUrl": "/search.asp?keyword={keyword} — keyword honored live today; SKILL.md B3 example stale/wrong; IP/time-variable WAF caveat for production",
+    "platform": "shift4shop-3dcart (retag, zero routing risk)",
+    "productCountMethod": "stream-page-count (sitemap wrong for this site)"
+  },
+  "constraintsRespected": {
+    "dbWrites": "none",
+    "budgetOrProcessChanges": "none",
+    "crawlerResumed": false,
+    "minSpacingMs": 900,
+    "throwawayScriptsDeleted": true
+  }
+}

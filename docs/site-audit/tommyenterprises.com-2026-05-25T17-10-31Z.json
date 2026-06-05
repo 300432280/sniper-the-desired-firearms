@@ -1,0 +1,285 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-05-25T17:03:31Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "cf-ray present, all 8 batches HTTP 200 across desktop/mobile/bot/curl UAs, no challenge bodies, no plugin-level WAF markers (MalCare/Wordfence absent in all 8 batches). 403s on /xmlrpc.php /.env /.git/config /phpinfo.php are origin WP/Cloudflare path-rule level, not CDN WAF.",
+  "wafProbeEvidence": {
+    "cfHeaders": [
+      "cf-ray: a0161d3acbbdf46c-YYZ",
+      "CF-Cache-Status: HIT",
+      "Server: cloudflare"
+    ],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 returned 200 in ~7s (no rate-limit kicked in)",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": [
+      "/xmlrpc.php",
+      "/.env",
+      "/.git/config",
+      "/phpinfo.php"
+    ],
+    "botUaBlocked": false,
+    "rapidBurstTested": true,
+    "rapidBurstResult": "all 200",
+    "sustainedWalkPages": 6,
+    "perUaStatusTimeline": {
+      "chrome-120-desktop": "200 throughout",
+      "safari-iphone": "200 throughout",
+      "bot-ua": "200 throughout",
+      "curl-default": "200 throughout"
+    },
+    "untestedAttackSurfaces": [
+      "auth-bypass",
+      "path-traversal",
+      "large-body-POST",
+      "shellshock-UA"
+    ],
+    "note": "Audit IP only. Per skill rule, hasWaf:false is from THIS IP; operator should reconfirm from production crawler IP before final promotion."
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 121,
+  "productCountMethod": {
+    "method": "html-pagination",
+    "url": "/shop/",
+    "selector": ".woocommerce-result-count",
+    "regex": "of\\s+([\\d,]+)\\s+results",
+    "perPage": 1
+  },
+  "catalogUrls": [
+    "/shop/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://tommyenterprises.com/product/full-length-10-mlok-handguard-for-tm22-a-12/",
+      "title": "Full Length (10″) Mlok Handguard for TM22-A-12",
+      "price": 85,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://tommyenterprises.com/product/8-cylindrical-handguard-for-tm22/",
+      "title": "8″ Cylindrical Handguard for TM22",
+      "price": 70,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://tommyenterprises.com/product/fixed-stock-and-grip-adapter-kit-for-citadel-ad500/",
+      "title": "Fixed stock and grip adapter kit for Citadel AD500",
+      "price": 120,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 21,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 21,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api-per-category",
+    "totalsSumCheck": "Sum of 23 top-level category counts = 255; overcount expected since products belong to multiple categories (e.g. a handguard sits in both \"Handguards and Grips\" parent and the firearm-specific \"GSG-16\" category). expectedProductCount=121 = customer-visible total (HTML 'Showing 1-21 of 121 results', Store API ?catalog_visibility=visible x-wp-total=121); /shop/ walks all 121 = TRUE 100% coverage. Unfiltered Store API/WP REST total = 122 includes 1 catalog_visibility=hidden product reachable only via admin/API — by definition not in any HTML catalog URL; will be picked up by watermark crawler (?modified_after=) on first cycle if/when it's modified.",
+    "categories": [
+      {
+        "id": 49,
+        "slug": "handguards-and-grips",
+        "name": "Handguards and Grips",
+        "allOption": 55
+      },
+      {
+        "id": 22,
+        "slug": "gsg-16",
+        "name": "GSG-16",
+        "allOption": 33
+      },
+      {
+        "id": 48,
+        "slug": "stocks",
+        "name": "Stocks",
+        "allOption": 22
+      },
+      {
+        "id": 67,
+        "slug": "derya-tm22",
+        "name": "Derya TM22",
+        "allOption": 21
+      },
+      {
+        "id": 73,
+        "slug": "derya-tm22-feather",
+        "name": "Derya/RIA TM22 Feather",
+        "allOption": 15
+      },
+      {
+        "id": 15,
+        "slug": "universal",
+        "name": "Universal",
+        "allOption": 13
+      },
+      {
+        "id": 65,
+        "slug": "henry-survival-ar7",
+        "name": "Henry Survival AR7",
+        "allOption": 12
+      },
+      {
+        "id": 50,
+        "slug": "kits",
+        "name": "Kits",
+        "allOption": 12
+      },
+      {
+        "id": 69,
+        "slug": "henry-lever-rifles",
+        "name": "Henry Lever Rifles",
+        "allOption": 11
+      },
+      {
+        "id": 72,
+        "slug": "henry-homesteader",
+        "name": "Henry Homesteader",
+        "allOption": 10
+      },
+      {
+        "id": 79,
+        "slug": "adler-rf224",
+        "name": "Adler RF224",
+        "allOption": 7
+      },
+      {
+        "id": 74,
+        "slug": "akdas-alcor",
+        "name": "Akdas Alcor",
+        "allOption": 7
+      },
+      {
+        "id": 57,
+        "slug": "barrel-shrouds",
+        "name": "Barrel Shrouds",
+        "allOption": 6
+      },
+      {
+        "id": 51,
+        "slug": "sights",
+        "name": "Sights",
+        "allOption": 6
+      },
+      {
+        "id": 76,
+        "slug": "taipan-x",
+        "name": "Taipan X",
+        "allOption": 6
+      },
+      {
+        "id": 70,
+        "slug": "derya-tm22la",
+        "name": "Derya TM22LA",
+        "allOption": 5
+      },
+      {
+        "id": 52,
+        "slug": "gsg15",
+        "name": "GSG-15",
+        "allOption": 4
+      },
+      {
+        "id": 90,
+        "slug": "taipan-evo",
+        "name": "Taipan EVO",
+        "allOption": 4
+      },
+      {
+        "id": 75,
+        "slug": "citadel-ad500",
+        "name": "Adler/Citadel AD500",
+        "allOption": 3
+      },
+      {
+        "id": 78,
+        "slug": "chimera-223",
+        "name": "Celik Chimera 223",
+        "allOption": 2
+      },
+      {
+        "id": 91,
+        "slug": "derya-tm22-flash",
+        "name": "Derya TM22 Flash",
+        "allOption": 1
+      },
+      {
+        "id": 25,
+        "slug": "kriss-vector",
+        "name": "Kriss Vector",
+        "allOption": 0
+      },
+      {
+        "id": 23,
+        "slug": "wk-180c-1",
+        "name": "WK-180c Gen 1",
+        "allOption": 0
+      }
+    ]
+  },
+  "lastVerified": "2026-05-25",
+  "auditNotes": {
+    "runId": "2026-05-25T17-10-31Z",
+    "probeIp": "audit-host (operator must reconfirm WAF verdict from production crawler IP per skill Stage 2 rule)",
+    "wcCountSurface": "store-api",
+    "expectedCountSurface": "store-api",
+    "wcCategoryApi": "store-api",
+    "verifyMethodPolicy": "store-api accepted; OOS-transition / restock alerts may miss for products the batch API never saw (worker.ts:549/711 early-return). Acceptable for this 122-product gun-parts site where catalog churn is slow and per-product detail-page Playwright cost would be ~10min/crawl. Operator may flip to detail-page if restock alerts become important.",
+    "catalogUrlsRationale": "Site has 122 total products (121 customer-visible). 23 top-level categories with heavy multi-tag overlap (one product appears in N categories - e.g. a TM22 handguard sits in both \"Handguards and Grips\" and \"Derya TM22\"). The single /shop/ URL is the canonical newest-first sorted aggregator, walks 6 pages (perPage=21) in 6 fetches to cover 100% of customer-visible products. Per-category list would require 23 catalogUrls covering the same 121 products via 30-50 fetches with heavy dedup, no coverage benefit. Stage 4d walk-and-dedup of /shop/ pages 1..6 returned 121 unique product IDs matching the HTML result-count line byte-for-byte.",
+    "sortVerification": "Stage 6 3-outcome counter-control: default first-5 IDs = [6216,6115,6109,5939,5865] == ?orderby=date first-5 IDs (both newest-first), and != ?orderby=price first-5 IDs [1084,4501,195,142,173]. Verdict: honored-default-is-newest. Within-page IDs descend monotonically (6216->2571 on page 1, 2566->1373 on page 2) and max-per-page descends across pages.",
+    "paginationVerification": "Stage 5 page-1 vs page-2 zero-overlap test: page 1 IDs = [6216..2571] (21 IDs), page 2 IDs = [2566..1373] (21 IDs), overlap = 0. Pattern /page/{N}/ confirmed.",
+    "perPageProbe": "?per_page=100 query param silently ignored (still 21 products returned). Theme is Flatsome and locks the perPage at 21 via large-columns-3 grid template. Runtime walker must accept perPage=21 - do NOT attempt to inflate via query param.",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wc/store/v1/products/categories",
+      "/wp-json/wp/v2/product"
+    ],
+    "dbColumnFlips": {
+      "hasWaf": false,
+      "wafType": "cloudflare-passive",
+      "wafWorkaround": null
+    },
+    "captchaNote": "reCAPTCHA v3 sitewide via Contact Form 7 plugin (script tag in homepage) but gates only contact forms (operationally non-blocking for catalog crawler). hasCaptcha=false; captchaType preserved for operator triage UI per skill Stage 2 rule.",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "high",
+      "catalogUrls": "high",
+      "expectedProductCount": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "high"
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "domain": "canadafirstammo.ca",
+  "round": "R2-live-investigation",
+  "investigatedAt": "2026-06-02",
+  "persona": "testing-api-tester",
+  "method": "spaced single-GET / single-POST live probes (>=800ms), Store API + WP REST core, HTML render scrape, ID-dedup walk. Live crawler PAUSED. No DB writes, no budget/process change, crawler NOT resumed.",
+  "verdictSummary": "R1-blind candidate (canadafirstammo.ca-2026-06-02T19-35-19-740Z.json) is LIVE-CORRECT on every contested field. Its values DIVERGE from the stale DB siteProfile on three points (perPage, catalogUrls gunsmithing, productCountMethod.method) and the candidate wins all three. expectedProductCount=132 reconfirmed by an independent per-category dedup walk.",
+  "corrections": [
+    {
+      "field": "perPage",
+      "round1Hypothesis": "candidate perPage=100 (API cap); DB perPage=12 (HTML render). R1 flagged 'perPage 100(API) vs 12(HTML) surface'.",
+      "liveMethod": "Two independent surfaces measured: (1) HTML category render GET /product-category/firearms/ -> 12 product cards, header text 'Showing 12 of 16 results' (theme renders 12/page). (2) Store API GET /wp-json/wc/store/v1/products?per_page=100 -> 100 returned; per_page=200 -> HTTP 400 (cap=100). WP REST per_page=12 honored, per_page=100 honored. CODE TRACE: woocommerce.ts:294-346 fetchCatalogPage uses the WP REST/Store API (NOT HTML); line 299 perPage=Math.min(options.perPage ?? 100, 100); catalog-crawler.ts:268,290 passes profilePerPage straight through (profilePerPage || default). So the runtime CATALOG WALK is API-based and clamps to 100.",
+      "evidence": "HTML=12 is a storefront-theme render cap, irrelevant to the runtime path. The runtime walks the API. DB perPage=12 forces the API to fetch 12/page (~11 requests for 132 in-stock) instead of 100/page (2 requests) -> ~5.5x token/request waste with zero coverage benefit. 100 is within the verified API cap.",
+      "proposedValue": 100,
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "candidate keeps /product-category/gunsmithing/ (11 URLs); DB drops it (10 URLs). Mistake-12 keep-empty.",
+      "liveMethod": "Per-category Store API X-WP-Total walk for all 11 slugs + global 2-page dedup walk. gunsmithing (cat id 4822): in-stock X-WP-Total=0 today (Store API products endpoint, default=in-stock); products/categories taxonomy count=16 (all OOS). All 11 category pages return HTTP 200. Coverage proof: union of all non-shop-all category IDs = 131 unique; shop-all contributes exactly 1 product (id 11296) present in no other category; full union incl shop-all = 132 = global in-stock X-WP-Total. global-132 minus full-union = 0 uncovered.",
+      "evidence": "gunsmithing has 16 products in taxonomy that are all OOS right now -> 0 in-stock. Per Mistake 12 (empty != dead), it MUST be kept so its products are indexed the moment any restock. Dropping it (DB) silently under-covers gunsmithing on restock. Candidate's 11-URL set is the keep-empty-correct superset; only delta vs DB is gunsmithing. Coverage is 100% with OR without gunsmithing TODAY (because 0 in-stock), so adding it is zero-risk and future-proofs the spine.",
+      "proposedValue": [
+        "https://canadafirstammo.ca/product-category/shop-all/",
+        "https://canadafirstammo.ca/product-category/clearance/",
+        "https://canadafirstammo.ca/product-category/accessories/",
+        "https://canadafirstammo.ca/product-category/ammunition/",
+        "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+        "https://canadafirstammo.ca/product-category/firearms/",
+        "https://canadafirstammo.ca/product-category/gunsmithing/",
+        "https://canadafirstammo.ca/product-category/plates-apparel/",
+        "https://canadafirstammo.ca/product-category/reloading/",
+        "https://canadafirstammo.ca/product-category/apparel/",
+        "https://canadafirstammo.ca/product-category/training/"
+      ],
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod.method",
+      "round1Hypothesis": "candidate method='wp-rest-header'; DB method='wc-store-api-header'. R1 theme F: 'wc-store-api-header' is a silent-null method string.",
+      "liveMethod": "CODE TRACE product-count-probe.ts: VALID_METHOD_NAMES (lines 110-122) lists 11 canonical methods; 'wc-store-api-header' is NOT among them. validateMethod() (line 138) is invoked at line 245 INSIDE probeExpectedProductCount's try, BEFORE the switch. For method='wc-store-api-header' it hits line 140 (not in list) and THROWS 'unknown product-count method: \"wc-store-api-header\" — did you mean \"wp-rest-header\"?' (the C2 substring suggester, lines 146-166, even uses this exact pair as its worked example at line 145). The throw is caught at line 540 and returns null (line 543). NET: count probe disabled. LIVE confirm of the canonical method: GET /wp-json/wc/store/v1/products?per_page=1 -> X-WP-Total=132 (the wp-rest-header branch lines 248-253 does exactly origin+endpoint+'?per_page=1' then parseInt(headers[header])).",
+      "evidence": "The DB 'wc-store-api-header' is NOT a silent default-branch null as the R1 ledger states — the code was hardened (Batch-5 R4 2026-05-22) to THROW with a 'did you mean wp-rest-header?' hint, caught -> null. End state is still null (probe disabled). Canonical fix = rename method to 'wp-rest-header', keep endpoint '/wp-json/wc/store/v1/products' + header 'x-wp-total' unchanged -> runs the recognized wp-rest-header branch and returns 132. The candidate already proposes exactly this. NOTE: this probe is LATENT for canadafirstammo because expectedProductCount=132 is already present (crawl-scheduler.ts:290 and worker.ts:398 both gate on !expectedProductCount); the broken string never fires today but is a landmine if the count is ever cleared.",
+      "proposedValue": { "method": "wp-rest-header", "endpoint": "/wp-json/wc/store/v1/products", "header": "x-wp-total" },
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "candidate=132 (Store API in-stock X-WP-Total); DB=132. Surface tension noted: 962 = WP REST all-stock corpus incl OOS.",
+      "liveMethod": "Independent re-derivation by per-category dedup (NOT the X-WP-Total single header). Global Store API walk per_page=100 pages 1+2 -> 100+32=132 rows, union unique IDs = 132 (zero dup across pages). X-WP-Total cross-check: Store API in-stock=132; WP REST core all-stock=962. modified_after two-probe: WP REST honors (2099->0, 1999->962), Store API silently ignores (2099 still 132).",
+      "evidence": "132 = customer-visible in-stock set (what the Store API verify + HTML catalog actually index). 962 = full corpus incl catalog-hidden/OOS. 132 is the correct expectedProductCount for the store-api verifyMethod this profile uses; pairing 962 with a store-api harvest would peg bootstrap coverage at ~14% forever (matches prior B4R3 finding). NO CHANGE to value — both candidate and DB already correct at 132. Reconfirmed by a 2nd method.",
+      "proposedValue": 132,
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf",
+      "round1Hypothesis": "false + wafType cloudflare-passive (single-IP snapshot; rapid-burst skipped due to concurrent live crawler).",
+      "liveMethod": "Spaced single-GETs only (audit constraint: do NOT trigger IP ban while live crawler runs concurrently). Browser-UA (Chrome 120) GETs to homepage, all 11 category pages, Store API, WP REST -> all HTTP 200 with cf-ray + Server: cloudflare, no challenge body, no 403/429. Sustained multi-UA burst matrix NOT re-run (intentional per constraint).",
+      "evidence": "Cloudflare is in front but passive for rotated browser UAs (matches prior B4R3 which separately proved sqlmap-UA -> 403 but rotated desktop UAs -> 200; http-client.ts rotates real browser UAs). hasWaf=false is correct for crawler-visible behavior. INCONCLUSIVE on the bot-UA active rule because I deliberately did not burst-attack a live-crawled IP. No change recommended.",
+      "proposedValue": false,
+      "confidence": "medium"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "F",
+      "file": "src/services/product-count-probe.ts:110-122,138-171,245,248-253,533-538,540-544",
+      "confirmed": true,
+      "detail": "VALID_METHOD_NAMES (110-122) = 11 methods; 'wc-store-api-header' absent. validateMethod() called at 245 before the switch THROWS for it (140) with C2 'did you mean wp-rest-header?' suggestion (145 uses this exact pair); caught at 540 -> null at 543. R1 ledger's 'hits default:return null' (533-537) is STALE — the default branch is now unreachable for known-drift names because validateMethod throws first. End state identical (null/disabled). Canonical fix = rename to 'wp-rest-header' (endpoint+header unchanged); wp-rest-header branch (248-253) returns X-WP-Total=132 live. Probe is LATENT here (expectedProductCount=132 present; crawl-scheduler.ts:290 + worker.ts:398 gate on !expectedProductCount)."
+    },
+    {
+      "theme": "B",
+      "file": "src/services/catalog-crawler.ts:119-126",
+      "confirmed": true,
+      "detail": "buildPaginatedUrl type='path': strips base trailing slash then appends template raw (122-125). canadafirstammo DB template '/page/{N}/' STARTS WITH '/' -> base '.../firearms/' -> '.../firearms' + '/page/2/' = '.../firearms/page/2/' (CORRECT, no mangle). The theme-B leading-slash bug affects sites whose template is 'page/{N}/' (no slash); canadafirstammo is NOT one of them. SEPARATELY: woocommerce.ts:294-346 shows the WC runtime catalog walk is API-based (WP REST /wp-json/wp/v2/product + Store API enrichment), so path-pagination via buildPaginatedUrl is effectively INERT for this WC site's catalog tier — the API page param drives pagination, not the URL template. paginationPattern is correct-but-dormant for the catalog path."
+    },
+    {
+      "theme": "perPage-runtime-path",
+      "file": "src/services/scraper/adapters/woocommerce.ts:299; src/services/catalog-crawler.ts:268,290",
+      "confirmed": true,
+      "detail": "fetchCatalogPage clamps perPage to Math.min(opt.perPage ?? 100, 100). catalog-crawler passes profilePerPage straight (profilePerPage || hasWaf?20:50). DB perPage=12 -> API fetches 12/page (~11 reqs for 132) vs candidate 100 -> 2 reqs. Runtime is API, not HTML; DB's 12 is a misapplied HTML-render value."
+    },
+    {
+      "theme": "watermark-date-filter",
+      "file": "src/services/scraper/adapters/woocommerce.ts:336-344",
+      "confirmed": true,
+      "detail": "WP REST /wp-json/wp/v2/product with orderby=modified + modified_after is hardcoded in fetchCatalogPage. Live: WP REST honors modified_after (2099->0,1999->962); Store API ignores it (2099 still 132). Candidate crawlers.watermark dateFilterApi=/wp-json/wp/v2/product + dateFilterField=modified_after is correct (and matches the hardcoded runtime); DB's bare api-date-since-watermark relies on the same hardcode. No conflict."
+    }
+  ],
+  "coverageProof": {
+    "method": "Store API global 2-page walk (per_page=100, orderby=date desc) + per-category X-WP-Total walk + cross-category ID dedup",
+    "walked": "11 category pages (page-1 X-WP-Total each) + global pages 1-2",
+    "perCategoryInStock": {
+      "shop-all": 109, "clearance": 68, "accessories": 48, "ammunition": 32,
+      "accessoriesoptics": 26, "firearms": 15, "gunsmithing": 0,
+      "plates-apparel": 9, "reloading": 3, "apparel": 2, "training": 2
+    },
+    "unionNonShopAll": 131,
+    "shopAllUniqueProducts": [11296],
+    "uniqueIds": 132,
+    "globalInStockXWpTotal": 132,
+    "uncoveredVsGlobal": 0,
+    "expected": 132,
+    "pct": 100.0,
+    "recommendedCatalogUrls": [
+      "https://canadafirstammo.ca/product-category/shop-all/",
+      "https://canadafirstammo.ca/product-category/clearance/",
+      "https://canadafirstammo.ca/product-category/accessories/",
+      "https://canadafirstammo.ca/product-category/ammunition/",
+      "https://canadafirstammo.ca/product-category/accessoriesoptics/",
+      "https://canadafirstammo.ca/product-category/firearms/",
+      "https://canadafirstammo.ca/product-category/gunsmithing/",
+      "https://canadafirstammo.ca/product-category/plates-apparel/",
+      "https://canadafirstammo.ca/product-category/reloading/",
+      "https://canadafirstammo.ca/product-category/apparel/",
+      "https://canadafirstammo.ca/product-category/training/"
+    ],
+    "note": "gunsmithing KEPT (Mistake 12: 0 in-stock today, 16 in taxonomy all OOS). Counts drift +-2 vs R1 candidate (shop-all 109 vs 111, ammunition 32 vs 33, firearms 15 vs 16) because the live production crawler is running concurrently and stock toggles hourly; the union-to-global identity (132) holds regardless."
+  }
+}

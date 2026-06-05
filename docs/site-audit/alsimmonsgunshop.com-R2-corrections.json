@@ -1,0 +1,107 @@
+{
+  "domain": "alsimmonsgunshop.com",
+  "round": "R2-live-investigation",
+  "auditedAt": "2026-06-02",
+  "auditor": "testing-api-tester (R2 live, crawler paused)",
+  "r1Reference": "docs/site-audit/alsimmonsgunshop.com-2026-06-02T15-31-48.json (blind candidate)",
+  "dbAnswerKeyReference": "MonitoredSite cmm3v7t5d000oo7a3bb9vsztq siteProfile (lastVerified 2026-04-11)",
+  "method": "All live requests >=800ms inter-request, sequential, browser/curl UA. No DB writes. Crawler not resumed.",
+
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "176 (Store API X-WP-Total customer-visible, productCountMethod wp-rest-header on /wc/store/v1/products)",
+      "liveMethod": "Code-traced the runtime discovery surface (woocommerce.ts fetchCatalogPage:336-346 -> WP REST /wp/v2/product PRIMARY; watermark-crawler.ts:207 calls it for api-date-since-watermark), then walked WP REST /wp-json/wp/v2/product?per_page=100 page 1..17, dedup by p.link.",
+      "evidence": "WP REST x-wp-total=1698, x-wp-totalpages=17. Walked 1698 unique /product/ URLs == header exactly. Store API default walk = 177 unique permalinks, all 177 a strict SUBSET of the 1698 corpus. Store API stock_status=outofstock x-wp-total=1521. 177(instock)+1521(oos)=1698(corpus). The runtime watermark + catalog crawler walk WP REST (the 1698 corpus), NOT the Store API default. So expectedProductCount MUST be the WP REST corpus surface. R1's 176 is the WRONG surface (in-stock subset).",
+      "proposedValue": 1698,
+      "alsoSet": { "expectedInStockCount": 177 },
+      "note": "DB answer key has expectedProductCount=1638 / expectedInStockCount=168 (2026-04-11 snapshot of the SAME two surfaces; live now 1698/177 — consignment shop inventory drifted up). Surface choice (WP REST corpus) matches DB; only the snapshot number moved.",
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod",
+      "round1Hypothesis": "{ method: 'wp-rest-header', endpoint: '/wp-json/wc/store/v1/products', header: 'x-wp-total' } -> yields 176 (in-stock)",
+      "liveMethod": "Read product-count-probe.ts switch + validateMethod; confirmed both count surfaces live.",
+      "evidence": "R1's wp-rest-header IS a valid runtime method (VALID_METHOD_NAMES line 110-122) and would return a real number, BUT pointed at /wc/store/v1/products it returns the 177 in-stock surface, contradicting the 1698 corpus the crawler actually indexes. The DB uses method 'dual-api' to record BOTH (wpRestCount 1638 + storeApiCount 168). 'dual-api' is NOT a runtime-recognized method (see codeFindings theme F) so it is documentation-only; the operational count surface for the gate must be WP REST.",
+      "proposedValue": { "method": "wp-rest-header", "endpoint": "/wp-json/wp/v2/product", "header": "x-wp-total" },
+      "note": "Point wp-rest-header at /wp/v2/product (corpus 1698), NOT /wc/store/v1/products (in-stock 177). This is a runtime-valid single-surface method that matches the discovery surface. Keep DB-style dual-api record only as an audit note, not as the runtime productCountMethod.",
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern.template",
+      "round1Hypothesis": "'/shop/page/{N}/' (baked /shop/ prefix) with catalogUrls base '/shop/'",
+      "liveMethod": "Replicated buildPaginatedUrl(type:path) byte-for-byte (catalog-crawler.ts:122-125) for both templates against base /shop/, fetched page 2 live.",
+      "evidence": "R1 template -> buildPaginatedUrl produces 'https://alsimmonsgunshop.com/shop/shop/page/2/' (DOUBLE-PATH). Live: that URL returns HTTP 200 (NOT 404) and serves page-1 content (first slug savage-model-775a-12ga-parts-gun-14396nc == page-1 first slug) -> SILENT no-advance loop, worse than a 404 because the crawler cannot detect failure. DB template '/page/{N}/' -> 'https://alsimmonsgunshop.com/shop/page/2/' returns 200 with first slug h-scherping-drilling-...14381nc (zero overlap with page 1) -> genuine advance.",
+      "proposedValue": "/page/{N}/",
+      "note": "This is the Ledger theme-B prediction confirmed, with the refinement that the double-path silently 200-loops rather than 404s. LATENT for this site because the catalog crawl uses the API path primary (catalog-crawler.ts:280) and only falls to HTML on API failure; but the broken template would corrupt the HTML fallback. Fix the template regardless.",
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "['https://alsimmonsgunshop.com/shop/'] single URL claimed 100% coverage",
+      "liveMethod": "Walked /shop/ HTML page 1..20 (page 21 = 404 clean terminus) dedup by slug; walked Store API /products/categories per-category counts.",
+      "evidence": "/shop/ HTML walk = 177 unique slugs across 20 pages -- the storefront HTML exposes ONLY the 177 in-stock products (WooCommerce hide_out_of_stock_items is ON). It does NOT reach the 1521 OOS / 1698 corpus. Per-category Store API top-level sum = 188 (used-non-restricted 79 recursively includes consignment child 68; products multi-category) -> all in-stock-capped too. NEITHER single /shop/ NOR the DB 5-category spine recovers the OOS corpus via HTML; full 1698 coverage is ONLY reachable via the WP REST API path (the primary runtime path). catalogUrls are HTML-fallback-only here and all HTML shapes cap at 177 in-stock.",
+      "proposedValue": ["/product-category/used-non-restricted/", "/product-category/new-non-restricted/", "/product-category/magazines/", "/product-category/collectable-22s/", "/product-category/accessories/", "/shop/"],
+      "note": "Adopt the DB 5-category + /shop/ spine over R1's single /shop/. Operationally equivalent for in-stock HTML coverage (both cap at 177), but the category spine is more resilient if the /shop/ template breaks. The honest caveat: NO HTML spine reaches the 1521 OOS corpus; corpus coverage depends entirely on WP REST API availability (currently 200, no auth gate).",
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf",
+      "round1Hypothesis": "false (R1 blind) vs DB true. wafType cloudflare-passive on both.",
+      "liveMethod": "Multi-UA probe (chrome/iphone/curl/python-requests) on /shop/ + 12-request sustained burst at 850ms on the production crawl surface /wp/v2/product.",
+      "evidence": "chrome/iphone/curl = 200 (identical 213998-byte body, cf-ray, cf-cache DYNAMIC, no challenge marker, no cf-mitigated). python-requests = 403 (UA-reputation block only). 12/12 burst on /wp/v2/product = 200, anyChallenge=false. Full 1698-page WP REST walk + 177 Store walk all succeeded with ZERO cookies. hasWaf:true forces ensureCookies (Playwright solve) on EVERY fetchCatalogPage call (woocommerce.ts:306-315); on failure it throws WAF_COOKIE_FAILED -> HTML fallback (in-stock-capped 177 -> loses 1521 OOS). So hasWaf:true is unnecessary overhead AND a corpus-coverage risk on a site where a browser UA is never challenged.",
+      "proposedValue": false,
+      "alsoSet": { "wafType": "cloudflare-passive" },
+      "note": "R1 blind's hasWaf:false is operationally correct (matches the Ledger theme-D 'invalid hasWaf:true+passive over-throttle' verdict against the DB). Keep wafType:cloudflare-passive for the admin UI + the python-requests-403 fact recorded in evidence. Crawler must keep a browser UA via resolveUserAgent (it does).",
+      "confidence": "high"
+    }
+  ],
+
+  "codeFindings": [
+    {
+      "theme": "B",
+      "file": "catalog-crawler.ts:122-125",
+      "confirmed": true,
+      "detail": "buildPaginatedUrl(type:'path') strips base trailing slash then appends template raw. base '/shop/' + template '/shop/page/{N}/' = '/shop/shop/page/2/'. Live this returns 200 and serves page-1 content (silent no-advance loop), NOT 404. DB template '/page/{N}/' is correct (genuine page advance, zero overlap). LATENT for alsimmons: catalog-crawler.ts:280 takes the API path primary; HTML pagination (and thus this bug) only fires on API failure (catalog-crawler.ts:362 `if (!apiCrawlUsed ...)`)."
+    },
+    {
+      "theme": "F",
+      "file": "product-count-probe.ts:138-171, 247-538, 540-544",
+      "confirmed": true,
+      "detail": "DB productCountMethod.method='dual-api' is NOT in VALID_METHOD_NAMES (line 110-122). In CURRENT code it does not reach the switch default(533-537) as the Ledger phrased it -- validateMethod (called line 245) THROWS at line 167-170 ('unknown product-count method: dual-api ... valid: ...'), which is caught by the outer try/catch at line 540-543 -> returns null. Net effect is still SILENT NULL at the call site (one error line logged). Latent: probe only runs when expectedProductCount is absent, and DB has it set (1638), so the probe never fires for this site. Refinement vs Ledger: throw-then-catch, not default-arm."
+    },
+    {
+      "theme": "D",
+      "file": "woocommerce.ts:306-315 (hasWaf cookie gate)",
+      "confirmed": true,
+      "detail": "Passive CF confirmed via clean multi-UA 200s (chrome/iphone/curl) + 12/12 sustained burst on /wp/v2/product, no challenge body, no cf-mitigated. Only python-requests bot UA gets 403. hasWaf:true (DB) forces ensureCookies Playwright solve on every fetchCatalogPage and throws WAF_COOKIE_FAILED on solve failure -> HTML fallback capped at 177 in-stock. hasWaf:true+cloudflare-passive is the invalid over-throttle combo; hasWaf:false (R1 blind) is correct."
+    },
+    {
+      "theme": "runtime-surface (mission core)",
+      "file": "woocommerce.ts:294-346 + watermark-crawler.ts:207 + catalog-crawler.ts:280,362",
+      "confirmed": true,
+      "detail": "RESOLVES the dual-surface question: fetchCatalogPage uses WP REST /wp/v2/product as PRIMARY (line 336-346), Store API only on 401/storeApiOnly. alsimmons WP REST = 200 (no gate). So BOTH the watermark crawl (api-date-since-watermark, modified_after) AND the catalog crawl (catalog-crawler.ts:280 API-primary) walk the 1698 WP REST corpus, deduped by URL. The Store API 177 is an enrichment/in-stock view, not the discovery surface. Therefore expectedProductCount = WP REST corpus (1698), expectedInStockCount = 177. /shop/ HTML and Store API default are both in-stock-capped (177) and are NOT the corpus-coverage surface."
+    }
+  ],
+
+  "coverageProof": {
+    "walked": "WP REST /wp-json/wp/v2/product per_page=100 pages 1-17 (orderby=date desc); Store API /wc/store/v1/products default pages 1-2; /shop/ HTML pages 1-20 (page 21=404); Store API stock_status=outofstock header; per-category Store API taxonomy. All >=800ms sequential.",
+    "uniqueIds": {
+      "wpRestCorpus": 1698,
+      "storeApiInStock": 177,
+      "storeApiOutOfStock_header": 1521,
+      "shopHtmlWalk": 177,
+      "instockPlusOos": 1698,
+      "storeInStockSubsetOfCorpus": "177/177 subset confirmed"
+    },
+    "expected": { "dbExpectedProductCount": 1638, "dbExpectedInStockCount": 168, "liveCorpus": 1698, "liveInStock": 177 },
+    "pct": "Corpus walk 1698/1698 = 100% of WP REST x-wp-total. Live drift vs DB snapshot: +60 corpus (1698 vs 1638), +9 in-stock (177 vs 168) — consignment inventory growth over ~7 weeks, same surfaces.",
+    "recommendedCatalogUrls": ["/product-category/used-non-restricted/", "/product-category/new-non-restricted/", "/product-category/magazines/", "/product-category/collectable-22s/", "/product-category/accessories/", "/shop/"],
+    "coverageCaveat": "Full 1698-corpus coverage is achievable ONLY via the WP REST API path (primary runtime). All HTML catalogUrls (single /shop/ or the 5-category spine) cap at 177 in-stock because hide_out_of_stock_items is ON. The category spine is preferred only for HTML-fallback resilience, not for OOS coverage."
+  },
+
+  "settledDualSurface": "Runtime walks WP REST (1698 corpus) for both watermark and catalog. Store API (177) is in-stock/enrichment only. expectedProductCount must be the corpus surface (1698 live / 1638 DB), NOT 176/177. /shop/ alone does NOT cover the corpus (caps at 177 in-stock); but neither does the per-category spine — only the API does.",
+
+  "inconclusive": [],
+  "constraintsHonored": "No DB writes. Crawler not resumed. No budget/process changes. >=800ms inter-request throughout. Heavy 8-batch WAF probe not re-run (passive already proven by clean multi-UA + sustained burst; DB heavy-probe from 2026-04-11 stands)."
+}

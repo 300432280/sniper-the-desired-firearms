@@ -1,0 +1,112 @@
+{
+  "profileVersion": 1,
+  "platform": "shift4shop-3dcart",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T19:30:28Z",
+  "wafProbeMethod": "light-multi-ua",
+  "wafProbeResult": "Cloudflare in front (CF-RAY, __cf_bm cookie, cf-cache-status:HIT) but PASSIVE — homepage + category pages return 200 with real product content across Chrome/Safari/iPhone UAs. No challenge body. /.env honeypot 403 = origin-app path filtering, not a CDN catalog block. hasWaf=false (passive Cloudflare must NOT set hasWaf=true per skill B10).",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: a058df70686a1d7b-YYZ", "server: cloudflare", "cf-cache-status: HIT", "set-cookie: __cf_bm=..."],
+    "perUaStatus": { "chrome120": 200, "safari17": 200, "iphone-safari": 200 },
+    "honeypotEnvStatus": 403,
+    "rapidBurstTested": false,
+    "sustainedWalkPages": 0,
+    "note": "BLIND round — no rapid-burst / sustained-walk probe (live crawler in progress on this IP; avoid ban). Multi-UA single-shot only. Round 2 must run sustained-pattern test per skill B9."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 580,
+  "productCountMethod": { "method": "sitemap", "url": "/sitemap.xml" },
+  "catalogUrls": [
+    "https://durhamoutdoors.ca/Rifles_c_17.html?sortby=4",
+    "https://durhamoutdoors.ca/Shotgun_c_14.html?sortby=4",
+    "https://durhamoutdoors.ca/Pistols_c_18.html?sortby=4",
+    "https://durhamoutdoors.ca/NON-RESTRICTED_c_16.html?sortby=4",
+    "https://durhamoutdoors.ca/RESTRICTED_c_21.html?sortby=4",
+    "https://durhamoutdoors.ca/Optics_c_19.html?sortby=4",
+    "https://durhamoutdoors.ca/Accessories_c_11.html?sortby=4",
+    "https://durhamoutdoors.ca/Surplus-and-collection_c_33.html?sortby=4",
+    "https://durhamoutdoors.ca/Used-Consignment_c_20.html?sortby=4"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://durhamoutdoors.ca/CHIAPPA-17HMR-LITTLE-BADGER_p_117.html", "title": "CHIAPPA 17HMR LITTLE BADGER RIFLE .17HMR, 16,5'' non restricted", "price": 259.00, "stockStatus": "in_stock" },
+    { "url": "https://durhamoutdoors.ca/p-3593.html", "title": "Chiappa 1886 Ridge Runner take down (newest, sortby=4)", "price": 1899.00, "stockStatus": "in_stock" },
+    { "url": "https://durhamoutdoors.ca/p-121.html", "title": "CHIAPPA 1892 ALASKAN TAKEDOWN 20\" .44 MAG 920.312", "price": 1599.00, "stockStatus": "out_of_stock" }
+  ],
+  "sortParam": "?sortby=4",
+  "sortVerified": true,
+  "perPage": 12,
+  "paginationPattern": {
+    "type": "suffix-replace",
+    "template": "-{N}.html",
+    "match": ".html",
+    "perPage": 12,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "?sortby=4 (Newest) verified honored — default first-3 product IDs [117,120,121] vs sortby=4 first-3 [3593,3592,...] differ; high IDs = newest, descending. Numeric _p_<id> auto-increment IDs serve as the date proxy. No API date filter on 3dcart."
+    },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "searchUrl": "/search.asp?keyword={keyword}",
+  "topLevelCategories": {
+    "source": "nav + sitemap (_c_ category URLs, identical set)",
+    "categories": [
+      { "slug": "/Rifles_c_17.html", "maxPage": 19, "estProducts": 218 },
+      { "slug": "/NON-RESTRICTED_c_16.html", "maxPage": 24, "estProducts": 276 },
+      { "slug": "/Shotgun_c_14.html", "maxPage": 9, "estProducts": 108 },
+      { "slug": "/Accessories_c_11.html", "maxPage": 6, "estProducts": 72 },
+      { "slug": "/Optics_c_19.html", "maxPage": 1, "estProducts": 2 },
+      { "slug": "/Pistols_c_18.html", "maxPage": 1, "estProducts": 1 },
+      { "slug": "/RESTRICTED_c_21.html", "maxPage": 1, "estProducts": 0 },
+      { "slug": "/Surplus-and-collection_c_33.html", "maxPage": 1, "estProducts": 1 },
+      { "slug": "/Used-Consignment_c_20.html", "maxPage": 1, "estProducts": 1 }
+    ],
+    "totalsSumCheck": "Sum of est full-page counts = ~679 with HEAVY overlap risk: NON-RESTRICTED (276) + RESTRICTED (0) are firearm-CLASS groupings that almost certainly re-list the SAME guns also in Rifles(218)/Shotgun(108)/Pistols(1). Unique count uncertain WITHOUT ID-dedup full walk (deferred to Round 2). expectedProductCount=580 is a rough mid-estimate; sitemap.xml product count (147) is a HARD undercount (Rifles alone=218 > 147). REQUIRES Round 2 full ID-dedup walk to set the real count."
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "round": "R1-blind",
+    "probeIp": "audit-host (NOT production crawler IP) — WAF verdict IP-dependent, re-confirm from production IP before promotion",
+    "adapterTypeOverride": false,
+    "verifyMethodPolicy": "detail-page selected — 3dcart is non-WC, no store-api; detail-page Playwright/HTML catches OOS+restock.",
+    "wcCountSurface": "n/a (3dcart)",
+    "expectedCountSurface": "sitemap (deterministic) but known-incomplete; real count pending Round 2 dedup walk",
+    "discoveredApiEndpoints": [],
+    "searchUrlNote": "B3 junk-keyword diff PASSED from THIS IP: ?keyword=glock=6 products/39683 bytes vs ?keyword=xyz789nonsense=3 products/35763 bytes — bodies AND product sets differ -> keyword IS honored. This CONTRADICTS the skill's batch-5 note claiming durhamoutdoors returned byte-identical 68,366-byte CF-403 challenge pages for search. Either prior obs was from a CF-blocked IP/UA or the search path changed. Re-confirm in Round 2.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "paginationPattern": "high",
+      "sortParam": "high",
+      "perPage": "high",
+      "catalogUrls": "medium (coverage proven per-category page counts; unique-dedup NOT done — overlap between class-groupings + product-type categories unresolved)",
+      "expectedProductCount": "low (estimate; sitemap undercounts, category overlap unresolved)",
+      "searchUrl": "high",
+      "crawlers.watermark.method": "high"
+    },
+    "stageNotes": [
+      "S1 canonical: apex 200, www 301->apex. canonical=https://durhamoutdoors.ca. robots Sitemap: /sitemap.xml.",
+      "S2 WAF: Cloudflare-passive (CF-RAY+__cf_bm, all UAs 200, real body). hasWaf=false. .env honeypot 403=origin path filter. No rapid-burst (blind, avoid ban).",
+      "S3 platform: shift4shop-3dcart (vcart=26.21.1, _3d_cart, 3dcart markers x4). adapterType=generic-retail. No age-gate, no captcha. needsPlaywright=false (plain HTTP yields products).",
+      "S4 catalog: 9 _c_ top-level cats from nav==sitemap. Plain-HTTP extraction works. Class-groupings (NON-RESTRICTED/RESTRICTED) likely overlap product-type cats — kept all 9 (Mistake 12: never drop). Full ID-dedup walk deferred to R2.",
+      "S5 pagination: suffix-replace _c_<id>-{N}.html. Page2 IDs [135,137] disjoint from page1 [117,120] -> honored. perPage=12 (3dcart default, no perpage select).",
+      "S6 sort: <select name=sortby> options 0=Default 1=PriceLoHi 2=PriceHiLo 3=Name 4=Newest 13=AvgReview. ?sortby=4 honored (default!=sorted, IDs 3593 vs 117). sortVerified=true.",
+      "S7 watermark: navigate-from-watermark (sort honored + numeric auto-inc _p_ IDs as date proxy; no 3dcart API date filter).",
+      "S8 count: sitemap.xml=147 products is HARD undercount (Rifles alone=218). expectedProductCount=580 rough estimate pending R2 dedup walk. productCountMethod=sitemap (only deterministic non-walk method available; flagged incomplete).",
+      "S9 assembly: validator not run in this blind round (run before promotion)."
+    ]
+  }
+}

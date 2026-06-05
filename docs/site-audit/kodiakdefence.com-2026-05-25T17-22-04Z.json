@@ -1,0 +1,141 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "imunify360",
+  "wafLastProbedAt": "2026-05-25T17:03:24.000Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Imunify360 JS-challenge interstitial on every interior path; homepage cached at edge. Playwright bypasses; production WAF cookie manager required.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "cfRayPresent": false,
+    "homepageStatus200": true,
+    "interiorPathChallenge": true,
+    "challengeMarker": "One moment, please...",
+    "rapidBurstStatus": "10/10 returned 200 on / (homepage cached)",
+    "apiPathBlockedBeforeSolve": "wp-json/* returns 200 + Imunify360 access-denied JSON before challenge solve",
+    "honeypotPathsBlocked": [".env -> 403", ".git/config -> 403", "phpinfo.php -> 404"],
+    "sqliRuleFired": "all SQLi-shaped + XSS-shaped + barebones-UA + no-UA probes returned 415 (Unsupported Media Type from nginx)",
+    "xssRuleFired": "see sqliRuleFired",
+    "perUaStatusTimelineSnapshot": {
+      "chrome120Win": "/ -> 200, 4 burst 200, /shop/ -> 200 (interstitial 4744B)",
+      "iphone17Safari": "/ -> 200, /shop/ -> 200 (interstitial)",
+      "macSafari17": "/ -> 200, /shop/ -> 200 (interstitial)",
+      "firefox121Linux": "/ -> 200 (single shot)",
+      "edge120Win": "/ -> 200 (single shot)"
+    },
+    "sustainedWalkTested": false,
+    "untestedAttackSurfaces": [
+      "50+ page sustained walk (single-host budget)",
+      "POST endpoints (only GET probed)",
+      "path-traversal probes (blocked by audit harness policy)",
+      "shellshock UA (blocked by audit harness policy)"
+    ]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 181,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": ["/shop/"],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://kodiakdefence.com/shop/2-5mm-long-arm-bondhus-wrench/", "title": "2.5MM LONG ARM BONDHUS WRENCH", "price": 2.50, "stockStatus": "in_stock", "sourceId": "58081" },
+    { "url": "https://kodiakdefence.com/shop/alcor-223-non-restricted/", "title": "Alcor 223 Non-Restricted", "price": 1499.99, "stockStatus": "in_stock", "sourceId": "60622" },
+    { "url": "https://kodiakdefence.com/shop/wk180c-lower-parts-kit-with-external-bolt-catch/", "title": "WK180C Lower Parts Kit with External Bolt Catch", "price": null, "stockStatus": "in_stock", "sourceId": "55762" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 16,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 16,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api",
+    "categories": [
+      { "id": 23, "slug": "gun-parts", "allOption": 93, "permalink": "https://kodiakdefence.com/product-category/gun-parts/" },
+      { "id": 22, "slug": "accessories", "allOption": 81, "permalink": "https://kodiakdefence.com/product-category/accessories/" },
+      { "id": 21, "slug": "magpul-usa", "allOption": 63, "permalink": "https://kodiakdefence.com/product-category/magpul-usa/" },
+      { "id": 18, "slug": "rifles", "allOption": 16, "permalink": "https://kodiakdefence.com/product-category/rifles/" },
+      { "id": 34, "slug": "magazines", "allOption": 15, "permalink": "https://kodiakdefence.com/product-category/magazines/" },
+      { "id": 15, "slug": "uncategorized", "allOption": 8, "permalink": "https://kodiakdefence.com/product-category/uncategorized/" },
+      { "id": 35, "slug": "deal", "allOption": 2, "permalink": "https://kodiakdefence.com/product-category/deal/" }
+    ],
+    "totalsSumCheck": "sum-of-root-cat-counts=278, expectedProductCount=181, overlap=97 (products multi-tagged across categories — e.g. Magpul-USA cross-tags with Accessories+Gun Parts; confirms /shop/ is the single 100% coverage spine)."
+  },
+  "lastVerified": "2026-05-25",
+  "auditNotes": {
+    "runId": "pre-bootstrap-2026-05-25-kodiakdefence",
+    "probeIp": "audit-IP (operator must re-confirm WAF behavior from production crawler IP per SKILL.md note — Imunify360 maintains per-IP allow-lists)",
+    "verifyMethodPolicy": "store-api accepted; restock alerts NOT guaranteed (worker.ts:549 OOS-transition early-return). Switch to detail-page if restock notifications are required.",
+    "expectedCountSurface": "wc-store-api",
+    "wcCategoryApi": "store-api",
+    "wafMigrationDetected": null,
+    "dbColumnFlips": { "hasWaf": true, "wafType": "imunify360", "wafWorkaround": null },
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "hasCaptcha": "high",
+      "ageGate": "high",
+      "needsPlaywright": "high",
+      "catalogUrls": "high",
+      "paginationPattern": "high",
+      "perPage": "high",
+      "sortParam": "high",
+      "sortVerified": "high",
+      "expectedProductCount": "high",
+      "productCountMethod": "high",
+      "crawlers.watermark.method": "high",
+      "crawlers.maintain.verifyMethod": "policy-decision (operator choose store-api vs detail-page)"
+    },
+    "stageNotes": {
+      "stage1_canonical": "Both apex and www return 200 on Chrome 120 desktop UA. Homepage `<link rel=\"canonical\" href=\"https://kodiakdefence.com/\">` declares apex as canonical. No hreflang. nginx server tier.",
+      "stage2_waf": "Heavy-8-batch probe: nginx server, no cf-ray, no x-sucuri, no malcare/wordfence body markers. BUT extended probe found Imunify360 challenges every interior path beyond `/` (e.g. `/shop/`, `/product-category/firearms/`, `/wp-json/...`, `/?s=glock` all return 200 + 4744-byte 'One moment, please...' JS-reload interstitial). API paths return 200 + JSON access-denied body `{\"message\":\"Access denied by Imunify360 bot-protection. IPs used for automation should be whitelisted\"}`. The standard 8-batch probe missed this because it only fingerprints `/` + honeypots. Imunify360 is a NEW wafType for this codebase (no existing handler). Runtime: production WC adapter calls ensureCookies() -> Playwright solves challenge on homepage (~6-7s) -> cookies cached in Redis (90 min TTL) -> subsequent fetches succeed.",
+      "stage3_platform": "WordPress 6.9.4 generator meta + WooCommerce 10.7.0 generator meta + 173 'woocommerce-' CSS class refs + wp-content/plugins/woocommerce assets + dt-the7 theme. adapterType=woocommerce. needsPlaywright=true (Imunify360 JS challenge on every interior path).",
+      "stage4_catalog": "Only 181 products globally. `/shop/` returns ALL 181 via WC Store API `x-wp-total: 181` AND HTML `Showing 1-16 of 181 results`. WC Store API taxonomy returned 7 root categories (gun-parts 93, accessories 81, magpul-usa 63, rifles 16, magazines 15, uncategorized 8, deal 2) summing to 278 — 97 products are multi-tagged across roots. `/shop/` is the single 100% coverage spine. Stale nav links to `/product-category/handguns/` resolve to 'Page not found' title — filtered out per B1 live-URL gate.",
+      "stage5_pagination": "Path-style `/shop/page/{N}/`, perPage=16 (theme fixed; not overridable via query). Last page = 12 (177-181 of 181). HTML page 2 confirmed: showing 17-32 of 181, product IDs disjoint from page 1. Store API perPage cap = 100 (per_page=200 returns rest_invalid_param).",
+      "stage6_sort": "<select id=\"orderby\" name=\"orderby\"> with options menu_order (default), popularity, rating, date, price, price-desc. 3-outcome counter-control test: default first-3=[58081,58077,58079]; ?orderby=date first-3=[60845,60840,60838] (descending IDs = newest); ?orderby=price first-3=[57822,55638,55664]. All three distinct -> sort honored, default != newest. sortParam='?orderby=date', sortVerified=true.",
+      "stage7_watermark": "WP REST core `/wp-json/wp/v2/product?modified_after=2099-01-01` returned x-wp-total=0; ?modified_after=1999-01-01 returned x-wp-total=181 -> modified_after honored. Store API `/wp-json/wc/store/v1/products?after=...` honored equivalently. method=api-date-since-watermark; dateFilterApi=wp-rest-core; dateFilterField=modified_after (matches runtime hardcode at woocommerce.ts:337).",
+      "stage8_count": "WC Store API `/wp-json/wc/store/v1/products?per_page=1` returns x-wp-total=181. Cross-checked: WP REST core x-wp-total=181; HTML 'Showing 1-16 of 181 results'. expectedProductCount=181, method=wp-rest-header, endpoint=/wp-json/wc/store/v1/products (matches verifyMethod=store-api per B8 pair-rule).",
+      "stage9_validation": "validateSiteProfile() returned valid:true, score:100, 21/21 passed checks, 0 failures, 0 warnings."
+    },
+    "extractionAdapterGap": "CRITICAL OPERATOR ACTION: WC adapter `extractCatalogProducts` SELECTORS array at backend/src/services/scraper/adapters/woocommerce.ts:648-657 does NOT match KDC product cards. KDC wraps each product in `<article class=\"post-N type-product product_cat-... \">` nested inside `<div class=\"wf-cell\">`. The existing 8 selectors target `li.product`, `.wd-product`, `.product-small`, `div[class*=\"product\"][class*=\"type-product\"]`, etc. — none match `<article>`. Recommended fix: add `'article[class*=\"type-product\"]'` to the SELECTORS array. Without this, runtime catalog walk via HTML returns 0 products even after Playwright solves the Imunify360 challenge -> bootstrap stalls indefinitely. The WC Store API path (used for maintain verify + watermark) does NOT depend on these selectors and will work as-is.",
+    "imunify360Note": "NEW WAF TYPE for this codebase — no existing wafType-specific handler. Pattern: HTML interstitial title 'One moment, please...', body contains <script>setTimeout(window.location.reload, 5000)</script>. Cookies NOT set on interstitial; cleared by browser context after challenge solve via Playwright. JSON API paths (`/wp-json/...`) before challenge return `Access denied by Imunify360 bot-protection` body with HTTP 200. The existing waf-cookie-manager.ts Playwright-warm-up-then-cache pattern works as-is (verified live: homepage goto with networkidle solves the challenge, then in-page fetch() against /wp-json/wc/store/v1/products returns full data). Catalog-crawler.ts:418-426 already has a 'isBlocked' check that triggers Playwright when html<2000 bytes OR specific markers match — KDC interstitial is 4744 bytes and contains neither 'Just a moment' nor 'Access Denied' literal, so the isBlocked check WILL NOT trigger. Production runtime depends on `hasWaf=true` to route through ensureCookies() in the WC adapter (woocommerce.ts:35-43) — that path works. Operator MAY consider adding 'One moment, please' to the isBlocked regex at catalog-crawler.ts:419 for defense-in-depth.",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wc/store/v1/products/categories",
+      "/wp-json/wp/v2/product"
+    ],
+    "runtimeWalkBudget": "Store API walk: ~3s for 181 products in 2 pages (per_page=100). HTML walk (if used): ~6s/page Playwright × 12 pages = ~72s. Strongly prefer Store API path for catalog sweep.",
+    "operatorDecisionRequired": [
+      "verifyMethod: store-api (default, restock alerts NOT guaranteed) vs detail-page (slower, restock alerts work)",
+      "patch WC adapter SELECTORS to support <article> wrapper before promoting this profile to DB (HTML path is dead until then)"
+    ]
+  }
+}

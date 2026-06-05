@@ -1,0 +1,126 @@
+{
+  "domain": "doubletapsports.com",
+  "round": "R2-live-investigation",
+  "runId": "R2-live-doubletapsports-2026-06-02",
+  "method": "axios + cheerio live walk, >=800ms inter-request, Safari/iPhone UA, cache-bust on sort probes; WC Store API + WP REST core",
+  "crawlerPaused": true,
+  "corrections": [
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "12 URLs: dropped 'brands' (claimed cross-cutting alternate taxonomy), ADDED firearms children (rifles/shotguns/previously-enjoyed) + range-gear/clearance/specials. R1 said catalogUrls drift both directions.",
+      "liveMethod": "Full Store API walk per top-level category (category=<id>, per_page=100, paged to x-wp-total) collecting product IDs, then set-cover + redundancy analysis. >=800ms between requests.",
+      "evidence": "GLOBAL walk = 1872 unique IDs = x-wp-total (both /wc/store/v1/products and /wp/v2/product agree). Union of ALL top-level cats = 1872, 0 missing. 'brands' has 122 UNIQUE product IDs present in NO function category -> dropping brands loses 122 products. R1 candidate union (no brands, +children, +range-gear/clearance/specials) = 1750/1872 => MISSING 122. firearms parent walk (16) == children union (rifles 7 + shotguns 8 + previously-enjoyed 10, deduped = 16) with 0 children-only IDs => Store API category filter is RECURSIVE, so firearms children add ZERO coverage. range-gear/clearance/specials/cz-pistols each have 0 UNIQUE IDs (fully redundant subset of other top-level cats).",
+      "proposedValue": [
+        "https://doubletapsports.com/product-category/brands/",
+        "https://doubletapsports.com/product-category/parts/",
+        "https://doubletapsports.com/product-category/accessories/",
+        "https://doubletapsports.com/product-category/reloading/",
+        "https://doubletapsports.com/product-category/holsters-pouches-belts/",
+        "https://doubletapsports.com/product-category/ammunition/",
+        "https://doubletapsports.com/product-category/firearms/"
+      ],
+      "confidence": "high",
+      "note": "7-cat greedy minimum = 100% coverage (1872/1872), 0 missing. IDENTICAL to DB answer-key 2026-05-11. 'brands' is MANDATORY (122 unique products). firearms children/range-gear/clearance/specials are redundant and should be dropped to minimize crawl. /shop/ remains a valid single-URL aggregator fallback (16 pages x 120 >= 1872) if per-cat drift reappears."
+    },
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "1872 (R1 blind). DB answer-key was 1855 (2026-05-11).",
+      "liveMethod": "x-wp-total header on both /wp-json/wc/store/v1/products?per_page=1 and /wp-json/wp/v2/product?per_page=1; confirmed by GLOBAL Store API walk to ID-dedup.",
+      "evidence": "Both surfaces return x-wp-total=1872; GLOBAL walk collected exactly 1872 unique IDs. DB 1855 is a stale snapshot from 2026-05-11 (live catalog grew +17). No draft/hidden divergence (Store API == WP REST).",
+      "proposedValue": 1872,
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf",
+      "round1Hypothesis": "R1 candidate set hasWaf=false but kept wafType=cloudflare-passive (R1 ledger flagged hasWaf:true+cloudflare-passive as an invalid combo in the DB).",
+      "liveMethod": "Header probe across /, Store API, WP REST, and /.env honeypot (>=800ms apart).",
+      "evidence": "cf-ray present on every response, server=cloudflare, cf-cache-status=DYNAMIC; ALL endpoints 200; /.env => 404 (no WAF block, no challenge); WC Store API + WP REST both 200; no set-cookie challenge tokens. Cloudflare is in front but PASSIVE, not blocking.",
+      "proposedValue": { "hasWaf": false, "wafType": "cloudflare-passive" },
+      "confidence": "high",
+      "note": "R1 candidate hasWaf=false is CORRECT; DB siteProfile (2026-05-11) carries stale hasWaf=true which over-throttles perPage (theme D). Keeping wafType=cloudflare-passive as documentation of the passive CDN is fine; hasWaf boolean is the only field the crawler routes on."
+    },
+    {
+      "field": "sortParam",
+      "round1Hypothesis": "R1 set sortParam=null because no WooCommerce orderby <select> exists in category HTML (BeTheme/Mfn).",
+      "liveMethod": "3-outcome counter-control on /product-category/parts/ with cache-bust (cb + no-cache headers): default vs ?orderby=date vs ?orderby=price vs ?orderby=price-desc, comparing first-8 product slugs.",
+      "evidence": "orderby=price REORDERS vs default (first slugs completely different); orderby=price-desc REORDERS vs price. So the WooCommerce ordering query IS honored server-side EVEN THOUGH no <select name='orderby'> and no form.woocommerce-ordering exist in the HTML (both confirmed absent). orderby=date == default (default catalog order already equals date-desc / newest-first), which is the desired watermark order. Persona rule confirmed: 'no sort UI' != 'no sort possible'.",
+      "proposedValue": "?orderby=date",
+      "confidence": "high",
+      "note": "R1's sortParam=null is WRONG per persona rule. However this is sort-INDEPENDENT for runtime: doubletap watermark = api-date-since-watermark (WP REST modified_after + orderby=modified), which never uses the HTML sortParam. sortParam=?orderby=date is recorded as verified/honored and matches default order; it is the correct fallback if a future HTML-walk path is ever used."
+    },
+    {
+      "field": "paginationPattern.template",
+      "round1Hypothesis": "R1 candidate set template='/page/{N}' (leading slash, correct). DB carries 'page/{N}/' (no leading slash, broken). Theme B.",
+      "liveMethod": "Code trace of buildPaginatedUrl (catalog-crawler.ts:122-125) + trace of which runtime path consumes paginationPattern for this WC site.",
+      "evidence": "buildPaginatedUrl type:'path' strips base trailing slash then appends template raw, so template MUST start with '/'. DB 'page/{N}/' on base /product-category/parts/ => /product-category/partspage/2/ (mangled, would 404). R1 '/page/{N}' is correct. BUT: this template is INERT at runtime for doubletap -- see codeFindings theme-B: both the watermark (api-date-since-watermark) and catalog (WC adapter fetchCatalogPage API path) bypass buildPaginatedUrl entirely; it only fires on full-catalog-sweep / html-stream which doubletap does not use.",
+      "proposedValue": "/page/{N}",
+      "confidence": "high"
+    },
+    {
+      "field": "watermark.method / crawlers.watermark.dateFilterField",
+      "round1Hypothesis": "api-date-since-watermark via WP REST modified_after (R1 two-probe 2099=>0, 1999=>1872).",
+      "liveMethod": "Re-ran WP REST core two-probe live + Store API orderby=date sanity.",
+      "evidence": "modified_after=2099 => x-wp-total=0; modified_after=1999 => x-wp-total=1872; store-api orderby=date&order=desc => 1872. Date filter honored. Method valid and sort-independent.",
+      "proposedValue": "api-date-since-watermark (dateFilterApi=wp-rest-core, dateFilterField=modified_after)",
+      "confidence": "high"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "B",
+      "file": "catalog-crawler.ts:122-125",
+      "confirmed": true,
+      "detail": "buildPaginatedUrl type:'path' does `stripped = base without trailing slash; return stripped + template.replace('{N}',n)`. With DB template 'page/{N}/' (no leading slash) and base /product-category/parts/, output = /product-category/partspage/2/ (404). R1 candidate '/page/{N}' (leading slash) is correct. HOWEVER the bug is INERT for doubletapsports at runtime: (1) buildPaginatedUrl is only called in catalog-crawler.ts:781/957/996 (the HTML 'html'-type stream branch, stream.type==='html') and watermark-crawler.ts:649 (full-catalog-sweep Method C ONLY). (2) doubletap's WC adapter has fetchCatalogPage -> catalog-crawler crawlCatalogTier (260-337) takes the API path (paginates via API `page` param, NOT paginationPattern) and only falls to HTML when apiCrawlUsed=false. (3) doubletap's watermark method is api-date-since-watermark (watermark-crawler.ts:746, Method A) which uses adapter.fetchCatalogPage + WP REST modified_after, NOT buildPaginatedUrl. So the broken template never executes for this site. RECOMMENDATION: still fix the template to '/page/{N}' (defensive correctness for any future HTML-fallback), and the runtime defensive-normalization + existing-profile validator proposed in R1 ledger theme-B remain worthwhile fleet-wide, but doubletap is NOT a live coverage blocker from this bug."
+    },
+    {
+      "theme": "B-runtime",
+      "file": "scraper/adapters/woocommerce.ts:294,338,434,484 + 248-261",
+      "confirmed": true,
+      "detail": "WC adapter fetchCatalogPage paginates via API `page`/`per_page` (Store API + WP REST core), independent of profile paginationPattern. getNextPageUrl (248) reads WooCommerce HTML .next.page-numbers links; getNewArrivalsUrl/getNewArrivalsUrls emit ?orderby=date query pagination on /shop/. None consume the profile path template. Confirms theme-B inertness for WC-API sites."
+    },
+    {
+      "theme": "D",
+      "file": "n/a (live header probe)",
+      "confirmed": true,
+      "detail": "Cloudflare PASSIVE confirmed live: cf-ray on every response, server=cloudflare, cf-cache-status=DYNAMIC, all probes 200, /.env honeypot 404 (no block/challenge), WC Store API + WP REST 200, no challenge set-cookie. hasWaf should be false (crawler routes only on hasWaf boolean). DB stale hasWaf=true over-throttles perPage (intersurplus quantified this theme-D cost at 7.8x). Crawler code path: catalog-crawler.ts:704/290 sets perPage to hasWaf?20:50 default when profile perPage absent, and watermark/full-sweep add WAF empty-page tolerance + Playwright -- all unnecessary overhead for a passive-CF site."
+    },
+    {
+      "theme": "G/coverage",
+      "file": "n/a (live ID-dedup)",
+      "confirmed": true,
+      "detail": "Store API category= filter is RECURSIVE (firearms parent walk == children union, 0 children-only). This invalidates the B15 'add children because parent only shows tiles' heuristic R1 applied here: for WC Store API category walks, the parent already covers all descendants. Adding leaf children only inflates crawl with redundant pages. The real coverage trap on doubletap is the OPPOSITE: dropping 'brands' (a parent with 122 products unique to it) loses 122 products."
+    }
+  ],
+  "coverageProof": {
+    "walked": "All 11 live top-level (parent=0) product_cat via Store API category= filter, paged to x-wp-total, plus GLOBAL unfiltered walk. >=800ms inter-request.",
+    "uniqueIds": 1872,
+    "expected": 1872,
+    "pct": 100.0,
+    "globalWalkUnique": 1872,
+    "unionAllTopLevel": 1872,
+    "missingFromUnion": 0,
+    "r1CandidateUnion": 1750,
+    "r1CandidateMissing": 122,
+    "r1MissingReason": "R1 dropped 'brands', which holds 122 product IDs present in no function category.",
+    "minimalCoverageSet": ["brands", "parts", "accessories", "reloading", "holsters-pouches-belts", "ammunition", "firearms"],
+    "minimalSetCoverage": "1872/1872 (100%)",
+    "redundantCats": {
+      "range-gear": "0 unique",
+      "clearance": "0 unique",
+      "specials": "0 unique",
+      "cz-pistols": "0 unique (single product covered elsewhere)",
+      "firearms/rifles": "recursive subset of firearms (0 children-only)",
+      "firearms/shotguns": "recursive subset of firearms",
+      "firearms/previously-enjoyed-firearms": "recursive subset of firearms"
+    },
+    "recommendedCatalogUrls": [
+      "https://doubletapsports.com/product-category/brands/",
+      "https://doubletapsports.com/product-category/parts/",
+      "https://doubletapsports.com/product-category/accessories/",
+      "https://doubletapsports.com/product-category/reloading/",
+      "https://doubletapsports.com/product-category/holsters-pouches-belts/",
+      "https://doubletapsports.com/product-category/ammunition/",
+      "https://doubletapsports.com/product-category/firearms/"
+    ]
+  }
+}

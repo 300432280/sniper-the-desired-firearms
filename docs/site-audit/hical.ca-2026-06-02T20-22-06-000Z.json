@@ -1,0 +1,92 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "incapsula",
+  "wafLastProbedAt": "2026-06-02T20:22:06Z",
+  "wafProbeMethod": "minimal-spaced-gets",
+  "wafProbeResult": "Incapsula active JS challenge on HTML + several JSON endpoints; WC Store API /products serves clean. Heavy 8-batch probe deliberately SKIPPED (Imperva aggressive, ban-risk).",
+  "wafProbeEvidence": {
+    "incapsulaMarkers": {
+      "xIinfoHeader": true,
+      "visidIncapCookie": "visid_incap_3254206",
+      "incapSesCookie": "incap_ses_1848_3254206",
+      "incapsulaResourcePath": "/_Incapsula_Resource",
+      "incidentIdInBody": "1848000651432544931-387098113950093418",
+      "challengeBodyBytes": 212
+    },
+    "perEndpointChallengeMatrix": {
+      "homepage_html_chrome": "challenged (212B interstitial)",
+      "homepage_html_iphone": "challenged (848B interstitial)",
+      "robots_txt": "clean (200, real text)",
+      "sitemap_index_xml": "clean (200, real XML, X-Iinfo NNNY)",
+      "product_sitemap_xml": "clean (200, real XML)",
+      "wc_store_api_products": "clean (200, real JSON, X-Iinfo NNNN, X-WP-Total present)",
+      "wc_store_api_products_categories": "challenged 2/2 (interstitial)",
+      "wp_rest_core_v2_product": "challenged (interstitial, text/html)"
+    },
+    "probeIp": "99.228.63.11",
+    "note": "Challenge is path/rule-selective AND intermittent. Static files + WC Store API /products pass; categories + WP REST core gated. No IP block observed (JS-challenge only)."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 1656,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [],
+  "extractionTested": false,
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": null,
+  "paginationPattern": null,
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "BLIND/R1: HTML catalog + WP REST core /wp/v2/product (modified_after surface) + Store API /products/categories are all Incapsula-challenged on plain HTTP; only Store API /products serves clean. Sort/pagination/date-filter unverifiable without Playwright. Provisional; R2 must verify whether navigate-from-watermark or api-date-since-watermark is reachable through the cookie/Playwright path."
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-hical-2026-06-02T20-22-06Z",
+    "round": "R1 (blind, no DB read, no heavy probe)",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products (clean, X-WP-Total=1656)",
+      "/sitemap_index.xml -> /product-sitemap.xml (1000) + /product-sitemap2.xml (656) = 1656 unique /product/ URLs"
+    ],
+    "sitemapUrl": "/sitemap_index.xml",
+    "themeStack": "JetWooBuilder + JetMenu (Crocoblock/Elementor); Yoast SEO; WooCommerce Square sync (wc_square_synced-sitemap.xml present)",
+    "verifyMethodPolicy": "store-api PROVISIONAL — chosen because /products is the only clean plain-HTTP surface; restock alerts NOT guaranteed (worker.ts:549/711 OOS-transition gap). Operator must confirm whether detail-page-via-Playwright is required given Incapsula gating.",
+    "expectedCountSurface": "wc-store-api (/wp-json/wc/store/v1/products X-WP-Total=1656) — matches verifyMethod store-api per B8 pairing rule; ALSO equals sitemap dedup count 1656 (independent cross-check).",
+    "dbColumnFlips": { "hasWaf": true, "wafType": "incapsula" },
+    "blindLimitations": [
+      "catalogUrls EMPTY: Stage 4 not completed — HTML category pages Incapsula-challenged, /products/categories challenged. Cannot derive top-level category spine blind. Deferred to R2 (Playwright/cookie path).",
+      "pagination/sort/perPage NULL: testUrl path blocked blind.",
+      "watermark method PROVISIONAL full-catalog-sweep — likely downgradable to api-date-since-watermark or navigate-from-watermark once R2 reaches the date-filter/sort surface through cookies."
+    ],
+    "fieldConfidence": {
+      "platform": "high (robots.txt WC paths + Store API JSON)",
+      "adapterType": "high",
+      "hasWaf": "high (Incapsula markers confirmed)",
+      "wafType": "high",
+      "expectedProductCount": "high (1656 from two independent surfaces)",
+      "productCountMethod": "high",
+      "needsPlaywright": "high",
+      "catalogUrls": "MISSING (blind-blocked)",
+      "paginationPattern": "unknown (blind-blocked)",
+      "sortParam": "unknown (blind-blocked)",
+      "crawlers.watermark.method": "low (provisional)"
+    }
+  }
+}

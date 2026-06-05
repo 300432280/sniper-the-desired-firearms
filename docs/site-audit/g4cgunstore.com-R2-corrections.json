@@ -1,0 +1,120 @@
+{
+  "domain": "g4cgunstore.com",
+  "round": "R2-LIVE",
+  "runId": "g4cgunstore.com-R2-2026-06-02",
+  "investigator": "testing-api-tester",
+  "method": "Live HTTP probes with Safari 17.2 UA (matches DB siteProfile.userAgentOverride), >=950ms inter-request spacing. Each R1-blind divergence re-tested with a method different from R1's hypothesis. No DB writes, crawler not resumed.",
+  "headline": "R1-BLIND over-routed around WP REST after hitting a Chrome-UA-only 403 (CF UA-reputation escalation), cascading 4 false divergences (wafType active, count via sitemap, watermark navigate-from, verifyMethod detail-page). With the Safari UA that DB already has set as userAgentOverride, WP REST /wp/v2/product is fully reachable (200, x-wp-total=5890) AND a full 59-page walk completed with ZERO escalation. The DB siteProfile (answer key) is correct on all four; R1-blind regressed from the validated B4R2 profile.",
+  "corrections": [
+    {
+      "field": "wafType",
+      "round1Hypothesis": "cloudflare-active (REST 403 across ALL UAs; UA-reputation escalation makes the site actively hostile)",
+      "liveMethod": "Sequential Safari-17.2-UA fetches of /wp-json/wp/v2/product (1 page), product_cat, then a full 59-page REST walk + 3 HTML /shop/ pages + 6 sitemap fetches, all >=950ms apart. Watched for any 200->403 flip.",
+      "evidence": "ZERO 403 across ~70 sequential requests under Safari UA. /wp-json/wp/v2/product -> 200 x-wp-total=5890. Full 59-page product walk: escalated=false, 5890/5890 unique IDs. R1's 403 was Chrome-120-UA-only (cf UA-reputation), not a flat WAF rule. cf-ray present (Cloudflare in front) but passive for real-browser UAs.",
+      "proposedValue": "cloudflare-passive",
+      "confidence": "high"
+    },
+    {
+      "field": "wafProbeEvidence.restEndpointsBlocked / discoveredApiEndpoints",
+      "round1Hypothesis": "/wp-json/wp/v2/product -> 403 (all UAs); /wp-json/wc/store/v1/products -> 403 (all UAs)",
+      "liveMethod": "Direct Safari-UA GET of /wp-json/wp/v2/product?per_page=1 and ?after=DATE; full 59-page walk.",
+      "evidence": "/wp-json/wp/v2/product is 200 under Safari UA (x-wp-total=5890, x-wp-totalpages=5890 at per_page=1; 59 totalpages at per_page=100). Only /wp-json/wc/store/v1/products is 403 (WC Store API blocked at CF edge) — that part of R1 is correct. R1 wrongly generalized the Chrome-UA 403 on /wp/v2/product to 'all UAs'.",
+      "proposedValue": "WP REST /wp/v2/product = OPEN (200, x-wp-total). WC Store API /wc/store/v1/products = 403 (blocked, confirmed). Matches DB.",
+      "confidence": "high"
+    },
+    {
+      "field": "userAgentOverride",
+      "round1Hypothesis": "Safari override added defensively because all UAs see REST 403 (R1 set it but for the wrong reason — it believed REST was dead anyway)",
+      "liveMethod": "Compared Chrome-vs-Safari behavior via the historical B4R2/B4R3 evidence + live Safari walk; traced http-client.ts resolveUserAgent.",
+      "evidence": "resolveUserAgent (http-client.ts:35-49) honors siteProfile.userAgentOverride; DB has Safari 17.2 set. pickUserAgent('g4cgunstore.com') = Chrome 120 (md5 idx 0) which is the UA that escalates. The override is the load-bearing fix: with it, the runtime crawler uses Safari and the full walk is clean (proven this session). This SETTLES the B4R3 counter (which worried a sustained walk under Chrome would 403) — the override neutralizes it.",
+      "proposedValue": "KEEP Safari 17.2 override (DB already has it). Correct value, correct reason (avoid Chrome-120 CF UA-reputation escalation), not because REST is dead.",
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod",
+      "round1Hypothesis": "sitemap-index over /product-sitemap*.xml (because REST 403 forced sitemap as the only programmatic count source)",
+      "liveMethod": "Read x-wp-total header from /wp-json/wp/v2/product (live), AND counted <loc>.../product/ across all 6 sitemap files, AND read HTML 'Showing 1-24 of N results'.",
+      "evidence": "WP REST x-wp-total = 5890 (live, Safari UA). Sitemap product <loc> total = 5889 (sitemap1-6: 1000+1000+1000+999+1000+890; sitemap7=404). HTML 'Showing 1-24 of 5890 results'. All three agree within 1. WP REST header is reachable, exact, and one request; sitemap is a -1 lagging fallback. R1's sitemap method WORKS but is the inferior surface.",
+      "proposedValue": "wp-rest-header (endpoint /wp-json/wp/v2/product, header x-wp-total). Matches DB. Sitemap-index is a valid fallback cross-check only.",
+      "confidence": "high"
+    },
+    {
+      "field": "crawlers.watermark.method",
+      "round1Hypothesis": "navigate-from-watermark (because WP/WC REST date-filter endpoints were believed 403-blocked, so api-date-since unavailable; navigate newest-first via /shop/?orderby=date)",
+      "liveMethod": "Live ?after=DATE REST query under Safari UA + ?modified_after comparison + sort-direction check.",
+      "evidence": "/wp-json/wp/v2/product?after=2026-05-01T00:00:00&orderby=date&order=desc -> 200, x-wp-total=94, returns real products newest-first (id 288002 date 2026-06-02, ... id 287907 date 2026-06-01). api-date-since-watermark IS viable. Note: ?modified_after returns 5x more (2996) — that filters last-modified (restock/edit bumps), so ?after (publish date) is correct for NEW-item watermark, matching DB dateParam='after'.",
+      "proposedValue": "api-date-since-watermark via /wp-json/wp/v2/product, dateParam='after', orderParam='order=desc&orderby=date'. Matches DB. navigate-from-watermark is a fallback only if REST regresses.",
+      "confidence": "high"
+    },
+    {
+      "field": "crawlers.maintain.verifyMethod",
+      "round1Hypothesis": "detail-page (WP REST believed 403 across all UAs, so the only working path is Playwright detail-page)",
+      "liveMethod": "Live REST reachability (above) + cross-ref DB verifyBehavior.",
+      "evidence": "WP REST is reachable under Safari UA, so the cheaper wp-rest identity verify (title/slug/thumbnail) is available; price/stock still needs HTML /product/{slug}/ since WC Store API is 403 (the DB's documented split). R1's detail-page premise (REST dead) is false. NOTE: live DB column currently holds verifyMethod='detail-page' with verifyBehavior describing the wp-rest+HTML split — internally inconsistent; B4R2 proposed 'wp-rest'. Flag for R4: reconcile verifyMethod string with the wp-rest+HTML-enrichment verifyBehavior.",
+      "proposedValue": "wp-rest (identity) + HTML /product/{slug}/ enrichment for price/stock (per DB verifyBehavior). Prefer over full detail-page Playwright.",
+      "confidence": "medium"
+    },
+    {
+      "field": "sortParam",
+      "round1Hypothesis": "?orderby=date (R1 dropped the explicit &order=desc)",
+      "liveMethod": "Live WP REST orderby=date with order=desc vs order=asc; live HTML /shop/?orderby=date&order=desc page1-vs-page2.",
+      "evidence": "order=desc -> ids 288002,287999,287997,287993,287907 (dates 2026-06-02 descending). order=asc -> ids 1862,1895,1891,1897,1911 (oldest). Sort honored. WC default for orderby=date IS desc so ?orderby=date alone is equivalent, but explicit &order=desc is safer (DB form).",
+      "proposedValue": "?orderby=date&order=desc (DB explicit form). Equivalent to R1's ?orderby=date but DB form preferred.",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "5889 (sitemap-derived)",
+      "liveMethod": "Live x-wp-total + full 59-page dedup walk.",
+      "evidence": "Live x-wp-total=5890; full walk=5890 unique IDs (100.00%); sitemap=5889; HTML=5890. DB stored value 5863 (2026-04-07) is stale-low by 27 (site grew). Live truth = 5890.",
+      "proposedValue": "5890 (live x-wp-total / full-walk verified). Refresh DB's 5863.",
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "['/shop/'] single 100%-coverage spine (R1) — vs B4R2's 6 per-category spine",
+      "liveMethod": "Full WP REST ID walk (5890/5890 covered globally) + /shop/ pagination boundary test (page 246 last, 247=404) + top-level product_cat count enumeration.",
+      "evidence": "/shop/ paginates /shop/page/{N}/ to page 246 (ceil(5890/24)=246), page 247=404 -> /shop/ is a true 100%-coverage spine, 246 pages. Per-category alternative: firearms(2124)+ammunition(1927)+accessories(1245)+sights-optics(595)+high-value-optics(288)+iron-sights(35)=6214 raw (heavy dual-tag overlap; covers same global 5890). Both cover 100%. DB chose ['/shop/'] (simplest, 246 pages); B4R2 argued 6 per-cat for per-URL token fairness (~260 pages). Either is valid; DB's single /shop/ is the current answer-key value and is correct for coverage.",
+      "proposedValue": "['/shop/'] (DB value — 100% coverage proven, 246 pages). Optional per-category spine documented if operator wants per-URL token isolation.",
+      "confidence": "high"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "B (paginationPattern leading-slash / buildPaginatedUrl)",
+      "file": "backend/src/services/catalog-crawler.ts:122-125",
+      "confirmed": true,
+      "detail": "For type:'path', buildPaginatedUrl strips the base trailing slash then appends template raw: '/shop/' -> '/shop' + '/page/2' = '/shop/page/2'. g4c's DB template is '/page/{N}' WITH a leading slash, so it is CORRECT and NOT affected by the missing-leading-slash bug that breaks sites with 'page/{N}'. Live confirmed: /shop/page/2/ is ID-disjoint from page1 (0 overlap), /shop/?page=2 query is inert (24/28 overlap with page1). g4c uses HTML path-pagination correctly; the runtime API path (WP REST) uses ?page= query natively (orthogonal, works)."
+    },
+    {
+      "theme": "F (productCountMethod string in runtime switch)",
+      "file": "backend/scripts/probe/.../product-count-probe.ts (per R1 ledger:14, switch at :247-537)",
+      "confirmed": false,
+      "detail": "Not re-traced this round (count-method runtime switch is a probe-internal concern, latent — only runs when expectedProductCount absent). g4c uses wp-rest-header which the R1 ledger lists among the silent-null method strings (default:return null). FLAG for R4: if expectedProductCount is ever cleared, wp-rest-header would silently null the count probe. Out of R2 live-investigation scope."
+    },
+    {
+      "theme": "userAgentOverride resolution (settles B4R3 counter)",
+      "file": "backend/src/services/scraper/http-client.ts:35-49",
+      "confirmed": true,
+      "detail": "resolveUserAgent honors siteProfile.userAgentOverride. DB has Safari 17.2 set. pickUserAgent('g4cgunstore.com')=Chrome 120 (md5 idx 0) is exactly the UA B4R3 showed escalates to 403. The override forces Safari at runtime, neutralizing the escalation. Proven live: 59-page walk + ~70 total requests under Safari, zero 403. B4R3's worry (sustained Chrome walk -> 403) is real for Chrome but moot because the override is set."
+    }
+  ],
+  "coverageProof": {
+    "walked": 59,
+    "walkUnit": "WP REST /wp/v2/product pages at per_page=100",
+    "uniqueIds": 5890,
+    "expected": 5890,
+    "expectedSource": "live x-wp-total (DB stored 5863 is stale-low by 27)",
+    "pct": "100.00",
+    "escalation": "none (Safari UA, >=950ms spacing, 59 sequential pages + boundary checks)",
+    "shopSpineBoundary": "/shop/page/246/ = 200 (last), /shop/page/247/ = 404; 246 pages = ceil(5890/24)",
+    "recommendedCatalogUrls": ["/shop/"],
+    "recommendedCatalogUrlsNote": "['/shop/'] = single 100%-coverage spine, 246 pages, matches DB. Per-category 6-URL spine (firearms/ ammunition/ accessories/ sights-optics/ high-value-optics/ iron-sights/) is a valid alternative (~260 pages) if operator wants per-URL token isolation; not required for coverage."
+  },
+  "r2VerdictSummary": {
+    "R1-wins": 0,
+    "DB-wins": 6,
+    "equivalent-DB-form-preferred": 2,
+    "note": "R1-BLIND lost every contested field to the DB siteProfile (the validated answer key). Root cause: a single Chrome-UA REST 403 (CF UA-reputation escalation) was generalized to 'REST dead for all UAs', cascading into wafType=active, count=sitemap, watermark=navigate-from, verifyMethod=detail-page. The Safari userAgentOverride DB already carries is the antidote, proven by a clean full walk."
+  }
+}

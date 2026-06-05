@@ -1,0 +1,98 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T20:26:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray, Server: cloudflare) but passive: homepage 200 across Chrome/iPhone/no-UA; SQLi-shaped query 200; no challenge body. /.env 403 + /admin/ 302 are BC origin behavior, not CDN challenges.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY", "cf-cache-status: DYNAMIC", "Server: cloudflare", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "homepageStatusMultiUa": { "chrome120": 200, "iphoneSafari": 200, "noUa": 200 },
+    "honeypotPathsBlocked": { "/.env": 403, "/admin/": 302 },
+    "sqliShapedStatus": 200,
+    "rapidBurstTested": false,
+    "note": "BLIND round — light posture check only (no rapid-burst, no sustained walk). cf-ray + all-200 + no challenge body = passive."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 4781,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": ["/xmlsitemap.php?type=products&page=1", "/xmlsitemap.php?type=products&page=2"]
+  },
+  "catalogUrls": [
+    "https://nordicmarksman.com/accessories/",
+    "https://nordicmarksman.com/ammunition/",
+    "https://nordicmarksman.com/apparel-and-gear/",
+    "https://nordicmarksman.com/archery/",
+    "https://nordicmarksman.com/cleaning/",
+    "https://nordicmarksman.com/firearms-and-stocks/",
+    "https://nordicmarksman.com/optics-lights/",
+    "https://nordicmarksman.com/reloading/",
+    "https://nordicmarksman.com/shotguns/",
+    "https://nordicmarksman.com/spare-parts/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://nordicmarksman.com/franchi-affinity-3-5-waterfowl-elite-shotgun-marsh-12-gauge-3-5-28-barrel/", "title": "Franchi Affinity 3.5 Waterfowl Elite Shotgun, Marsh: 12 Gauge-3.5\", 28\" Barrel", "price": 1915.00, "stockStatus": "in_stock" },
+    { "url": "https://nordicmarksman.com/franchi-affinity-3-cerakote-shotgun-realtree-max-7-12-gauge-3-28-barrel/", "title": "Franchi Affinity 3 Cerakote Shotgun, Realtree Max-7: 12 Gauge-3\", 28\" Barrel", "price": 1600.00, "stockStatus": "in_stock" },
+    { "url": "https://nordicmarksman.com/benelli-supernova-tactical-shotgun-12-gauge-3-5-14-barrel/", "title": "Benelli SuperNova Tactical Shotgun: 12 Gauge-3.5\", 14\" Barrel", "price": 940.00, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": { "method": "navigate-from-watermark" },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "r1-blind-2026-06-02",
+    "round": "R1-BLIND",
+    "probeIp": "audit-ip-not-production",
+    "canonicalOrigin": "https://nordicmarksman.com",
+    "wcCountSurface": "n/a (BigCommerce)",
+    "discoveredApiEndpoints": [],
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "expectedProductCount": "high",
+      "catalogUrls": "medium (spine identified; full walk + ID-dedup vs sitemap deferred to R2)",
+      "perPage": "medium (limit=250 honored on firearms-and-stocks; cap not confirmed on largest category)",
+      "sortParam": "high",
+      "watermarkMethod": "high"
+    },
+    "stageNotes": [
+      "Stage 1: apex canonical; www 301->apex. Both 200 under Chrome120 UA.",
+      "Stage 2: Cloudflare passive (cf-ray, Server: cloudflare, __cf_bm). hasWaf=false. No CAPTCHA, no age-gate. Light posture only (BLIND).",
+      "Stage 3: BigCommerce Stencil — meta name='platform' content='bigcommerce.stencil', x-bc-store-id 1000321469, cdn11.bigcommerce.com, .php paths. adapterType generic-retail per mapping. needsPlaywright=false (static HTML returns 220 cards).",
+      "Stage 4: 10 top-level is-root nav categories form the spine (manufacturer/ excluded as brand facet). Categories extract product cards directly (BC parents include descendants). Full walk + ID-dedup deferred to R2.",
+      "Stage 5: ?page=N query pagination; page1/page2 zero-overlap confirmed. perPage default 20; ?limit=250 returns 250 unique (BC Stencil max grid).",
+      "Stage 6: 3-outcome sort test (cache-bust): default==?sort=newest (ids 22098,22097,22096 desc) AND counter alphaasc != default (ids/titles alphabetical) => honored-default-is-newest. sortParam ?sort=newest, sortVerified true.",
+      "Stage 7: navigate-from-watermark — newest sort honored + monotonic descending data-product-id (auto-increment) on default listing.",
+      "Stage 8: sitemap-index across 2 product sitemap pages = 3023 + 1758 = 4781 product <loc> entries.",
+      "Stage 9: candidate assembled; BLIND round, no DB read prior to this write."
+    ],
+    "blindRoundCaveats": [
+      "No full catalog walk performed (task constraint). expectedProductCount from sitemap only; catalogUrls coverage vs 4781 not dedup-verified.",
+      "perPage=250 verified on firearms-and-stocks only; not confirmed it is not capped lower on a >250-per-page category page.",
+      "WAF posture is light-probe only; no 8-batch rapid burst (IP-safety). Re-confirm from production IP before promotion."
+    ]
+  }
+}

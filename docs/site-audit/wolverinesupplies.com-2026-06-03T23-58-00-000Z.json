@@ -1,0 +1,180 @@
+{
+  "profileVersion": 1,
+
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-03T23:53:50Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (CF-RAY + Server: cloudflare on every response) but PASSIVE: all main batches 200, 10-burst all 200 (no rate-limit), multi-UA all 200, no-UA 200, SQLi 200. wp-admin/wp-login/.env/.git return BC origin 403/404 (WordPress paths absent on a BigCommerce store, not a CDN challenge body). XSS query returned BC origin 400 (malformed-query reject, not a challenge). hasWaf=false (HIGH confidence).",
+  "wafProbeEvidence": {
+    "rapidBurstStatus": "200",
+    "sqliRuleFired": false,
+    "xssRuleFired": false,
+    "honeypotPathsBlocked": true,
+    "honeypotNote": "wp-admin/wp-login=403 (552B BC error), .env/.git=403, xmlrpc/phpinfo=404 — BigCommerce origin responses to non-existent WordPress paths, NOT a CDN WAF challenge",
+    "botUaBlocked": false,
+    "cfHeaders": ["CF-RAY", "Server: cloudflare", "cf-cache-status", "__cf_bm cookie"],
+    "sucuriHeaders": [],
+    "akamaiServer": false,
+    "malcareInBody": false,
+    "bcHeaders": ["x-bc-store-id: 1003335859", "BC-Ray", "x-makeswift-page-locale"]
+  },
+
+  "hasCaptcha": false,
+  "captchaType": null,
+
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+
+  "expectedProductCount": 8235,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "/xmlsitemap.php?type=products&page=1"
+  },
+
+  "catalogUrls": [
+    "/firearms/",
+    "/ammunition/",
+    "/AIRGUNSM/",
+    "/optics/",
+    "/FIREARMS-ACCESSORIES/",
+    "/parts/",
+    "/reloading/",
+    "/gearandkit/",
+    "/storagemaintenance/",
+    "/used/",
+    "/surplus/",
+    "/apparel/",
+    "/outdoors/",
+    "/gifts-gadgets-media-more/"
+  ],
+
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://wolverinesupplies.com/1911-ejector-full-size/",
+      "title": "1911 EJECTOR FULL SIZE",
+      "price": 57.95,
+      "stockStatus": "in_stock",
+      "productId": 6277
+    },
+    {
+      "url": "https://wolverinesupplies.com/dan-wesson-front-night-sight-180/",
+      "title": "Dan Wesson Front Night Sight",
+      "price": null,
+      "stockStatus": "unknown",
+      "note": "title/url from sitemap; price/stock not re-fetched on detail page this round"
+    },
+    {
+      "url": "https://wolverinesupplies.com/eotech-vudu-1-6x24-sr3-reticle-ffp-moa/",
+      "title": "EOTech Vudu 1-6x24 SR3 Reticle FFP MOA",
+      "price": null,
+      "stockStatus": "unknown",
+      "note": "title/url from sitemap; price/stock not re-fetched on detail page this round"
+    }
+  ],
+
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "BigCommerce Stencil has no public date-filter API (Storefront GraphQL token not exposed in homepage HTML; product feed has no created/published date). Newest-first sort is verifiable: ?sort=newest == default order (first 5 product IDs descend monotonically 10178>10177>10167>10166>10164 = creation order), and counter-control ?sort=alphaasc reorders the page (first IDs 6277,6282,4566...) — proving sort is honored, not a coincidental default. data-product-id is the monotonic newest signal."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+
+  "bigcommerce": {
+    "bcStoreId": "1003335859",
+    "storeHash": "s-bhxpar2unf"
+  },
+
+  "topLevelCategories": {
+    "source": "categories-sitemap (/xmlsitemap.php?type=categories&page=1, 70 category URLs; 14 top-level parents selected)",
+    "categories": [
+      { "slug": "/firearms/" },
+      { "slug": "/ammunition/" },
+      { "slug": "/AIRGUNSM/" },
+      { "slug": "/optics/" },
+      { "slug": "/FIREARMS-ACCESSORIES/" },
+      { "slug": "/parts/" },
+      { "slug": "/reloading/" },
+      { "slug": "/gearandkit/" },
+      { "slug": "/storagemaintenance/" },
+      { "slug": "/used/" },
+      { "slug": "/surplus/" },
+      { "slug": "/apparel/" },
+      { "slug": "/outdoors/" },
+      { "slug": "/gifts-gadgets-media-more/" }
+    ],
+    "totalsSumCheck": "Per-category page-1 product extraction NOT fully walked this blind round (8,235-product catalog = ~33 walks at perPage=250 per category). DB prior audit (2026-04-11) proved 14 top-level parents cover 100% of browsable products via parentChildInclusion (parent categories include child products; verified product ID 1806 on /firearms/ page 5). /shop-all/ is a single-URL 100%-coverage alternative (returns same .card products, ?sort=newest + ?page=N honored, limit=250 honored). expectedProductCount (8,235) is the sitemap total which INCLUDES OOS products hidden from category listings — category-walk browsable count will be lower (DB recorded ~5,604 browsable via /shop-all/, ~5,739 via per-category sum). This OOS gap is expected for BC Stencil and does NOT trigger the walk>probe reconcile rule."
+  },
+
+  "lastVerified": "2026-06-03",
+
+  "auditNotes": {
+    "runId": "r1-blind-2026-06-03T23-53-50Z",
+    "harnessVersion": "AI-driven pre-bootstrap, post-2026-04-27 pivot",
+    "drivenByAIDirectly": true,
+    "round": "PHASE A R1 (blind) of 4-round adversarial calibration",
+    "probeIp": "audit-IP (not production crawler IP) — WAF verdict must be re-confirmed from production IP before any promotion",
+    "discoveredApiEndpoints": [
+      "/xmlsitemap.php (sitemap index)",
+      "/xmlsitemap.php?type=products&page=1 (8235 product <loc>)",
+      "/xmlsitemap.php?type=categories&page=1 (70 category <loc>)"
+    ],
+    "wcCountSurface": "n/a (BigCommerce, not WooCommerce)",
+    "expectedCountSurface": "sitemap (full inventory incl. OOS); maintain verify=detail-page reaches OOS so surface pairing is consistent (B8)",
+    "fieldConfidence": {
+      "platform": "verified-live",
+      "adapterType": "verified-live (BC -> generic-retail per skill table)",
+      "hasWaf": "verified-live (audit IP only)",
+      "wafType": "verified-live",
+      "hasCaptcha": "verified-live",
+      "ageGate": "verified-live",
+      "expectedProductCount": "verified-live (sitemap loc count 8235)",
+      "productCountMethod": "verified-live (shape matches runtime sitemap method)",
+      "catalogUrls": "carried-from-DB-not-rewalked (full per-category walk deferred; /shop-all/ alternative live-confirmed)",
+      "sortParam": "verified-via-counter-control",
+      "perPage": "verified-live (limit=250 returned 250 unique IDs)",
+      "paginationPattern": "verified-live (page1 vs page2 zero ID overlap)",
+      "extractionTested": "verified-live (shop-all .card title+url+price populate)",
+      "watermarkMethod": "verified-via-counter-control + monotonic ID descent",
+      "maintainVerifyMethod": "derived-from-platform (non-WC -> detail-page)"
+    },
+    "stageNotes": [
+      "Stage 1: apex wolverinesupplies.com returns 200; www 301-redirects to apex. canonicalOrigin = https://wolverinesupplies.com. No <link rel=canonical> in HTML.",
+      "Stage 2: heavy-8-batch clean. CF-RAY + Server:cloudflare everywhere but all 200 (passive). 10-burst all 200, multi-UA all 200, no-UA 200, SQLi 200. wp-admin/.env/.git 403 + xmlrpc/phpinfo 404 are BC origin (no WP paths), XSS query=400 BC reject. hasWaf=false. No CAPTCHA, no age-gate.",
+      "Stage 3: bigcommerce-stencil — x-bc-store-id:1003335859, cdn11.bigcommerce.com/s-bhxpar2unf (246 refs), window.stencilBootstrap, BC-Ray, x-makeswift-page-locale. adapterType=generic-retail. needsPlaywright=false (plain HTTP returns 100 .card products on /shop-all/). maintain verifyMethod=detail-page (non-WC).",
+      "Stage 4: 14 top-level catalogUrls carried from DB prior audit (parentChildInclusion proven 2026-04-11). /shop-all/ confirmed live as single-URL 100% alternative. Full per-category re-walk deferred this blind round (8235-product catalog). Category list re-derived from live categories sitemap (70 URLs).",
+      "Stage 5: paginationPattern query ?page=N. page1 vs page2 zero ID overlap confirmed. perPage probe: ?limit=250 honored (250 unique IDs returned) — higher than DB's 100. template stores param NAME 'page' only.",
+      "Stage 6: <select name=sort id=sort> options: featured(default),newest,bestselling,alphaasc,alphadesc,avgcustomerreview,priceasc,pricedesc. 3-outcome w/ cache-bust: default==newest (IDs 10178>10177>10167... descending), alphaasc differs (6277,6282,4566...). Verdict honored-default-is-newest -> sortParam=?sort=newest, sortVerified=true.",
+      "Stage 7: navigate-from-watermark. No public BC date-filter API. Sort honored + monotonic data-product-id descent = newest signal.",
+      "Stage 8: productCountMethod sitemap /xmlsitemap.php?type=products&page=1 = 8235 <loc> (page 2 empty). Includes OOS hidden from category pages. expectedProductCount=8235 (was 8193 in DB on 2026-04-11; +42 growth).",
+      "Stage 9: BLIND R1 candidate. Validator not run as enforcement gate this round (read-only audit). Stage 4 full-walk + Stage 10 runtime sim deferred to live rounds R2."
+    ]
+  }
+}

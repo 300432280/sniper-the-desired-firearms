@@ -1,0 +1,142 @@
+{
+  "domain": "budgetshootersupply.ca",
+  "_meta": {
+    "round": "R2-live-investigation",
+    "runAt": "2026-06-02",
+    "persona": "testing-api-tester",
+    "inputs": {
+      "r1": "docs/site-audit/budgetshootersupply.ca-2026-06-02T19-34-23-028Z.json",
+      "priorR2": "docs/site-audit/budgetshootersupply.ca-2026-05-15T09-18-08Z-R2-corrections.json",
+      "priorR3": "docs/site-audit/budgetshootersupply.ca-2026-05-15T12-52-54Z-R3-counter.md",
+      "dbProfile": "MonitoredSite(budgetshootersupply.ca).siteProfile (lastVerified 2026-04-11, expectedProductCount=2809)"
+    },
+    "methodology": "Live probes with DIFFERENT methods than R1: parallel header comparison of three count surfaces, full 29-page WP REST ID-deduped walk, sitemap union, product_cat recursion matrix, pagination-form A/B, modified_after monotonicity. >=850ms inter-request spacing. Crawler left PAUSED, no DB writes.",
+    "headlineFinding": "Current R1 (2026-06-02) REGRESSED on 4 fields versus both the validated DB siteProfile and the prior R2/R3 (2026-05-15). R1 adopted the Store-API in-stock-only count (1506) and Store-API endpoint; the true denominator is WP REST core /wp-json/wp/v2/product = 2821 (live, grown from 2809). The divergence is solely the Store API default stock_status=instock filter."
+  },
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": 1506,
+      "liveMethod": "Four independent surfaces measured fresh today: (a) GET /wp-json/wp/v2/product?per_page=1 x-wp-total; (b) full 29-page WP REST walk deduped by product id; (c) sitemap union (product-sitemap.xml 1001 + 2.xml 1000 + 3.xml 820); (d) GET /wp-json/wc/store/v1/products?per_page=1&stock_status[]=instock&stock_status[]=outofstock x-wp-total.",
+      "evidence": "WP REST header = 2821; full deduped walk = 2821 unique ids (min 7247, max 98338); sitemap union = 1001+1000+820 = 2821; Store API combined-stock header = 2821. ALL FOUR equal 2821. Store API DEFAULT (in-stock only) = 1533 -- this is the surface R1 measured as ~1506 (drifted). R1's 1506 is the in-stock-only subset, NOT the full catalog.",
+      "proposedValue": 2821,
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod.endpoint",
+      "round1Hypothesis": "/wp-json/wc/store/v1/products (wp-rest-header on Store API => in-stock-only 1506)",
+      "liveMethod": "Header comparison + runtime code trace (woocommerce.ts:336-346 primary discovery is /wp-json/wp/v2/product) + DB profile read.",
+      "evidence": "DB productCountMethod.endpoint = /wp-json/wp/v2/product with explicit storeApiNote 'Store API returns in-stock only (1598 vs WP REST 2756 all published)'. Runtime bootstrap.apiEndpoints.productDiscovery = /wp-json/wp/v2/product (confirmed in DB crawlers blob). The count surface MUST match the crawl surface; the crawler walks WP REST core unfiltered, so the denominator endpoint is WP REST core.",
+      "proposedValue": "/wp-json/wp/v2/product",
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "21 per-category /product-category/<slug>/ URLs (parent-category spine)",
+      "liveMethod": "product_cat recursion matrix (WP REST product_cat=<id> x-wp-total vs Store API category=<id> x-wp-total) on 6 categories + runtime trace catalog-crawler.ts:280-362.",
+      "evidence": "WP REST product_cat does NOT recurse into child terms. Top-level parents return near-zero from WP REST while Store API recurses: ammunition (id162,parent=0) WP-REST=5 vs Store=152; bullet-casting (id218,parent=0) WP-REST=3 vs Store=157; case-prep (id195,parent=164) WP-REST=0 vs Store=155. A per-parent-category catalogUrls list would undercount catastrophically IF the HTML/category path ran. It does NOT: catalog-crawler.ts:280 calls adapter.fetchCatalogPage(origin) which walks unfiltered /wp-json/wp/v2/product (all 2821); apiCrawlUsed=true => HTML branch at catalog-crawler.ts:362 (the only consumer of catalogUrls) is skipped. DB catalogUrls = ['/products/'] (placeholder). Per-category catalogUrls are both unused AND wrong if used.",
+      "proposedValue": ["/products/"],
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern.type",
+      "round1Hypothesis": "path (template /page/{N})",
+      "liveMethod": "Pagination-form A/B: WP REST ?page=2 vs HTML /products/page/2/ vs HTML /products/ link count; buildPaginatedUrl trace (catalog-crawler.ts:119-167).",
+      "evidence": "Runtime walks WP REST via ?page=N (woocommerce.ts:338 params.page). buildPaginatedUrl 'api-page' is not a switch case (lines 122/128/139) so it falls through to the default branch (153-157) url.searchParams.set('page', N) -- the correct query form. WP REST ?page=2 -> 200 returning products. HTML /products/ returns only 7 distinct /product/ links (Woodmart AJAX-deferred grid, 1.16MB shell); /products/page/2/ -> 200 but same AJAX shell. 'path' would only matter in the never-reached HTML branch. DB paginationPattern.type = api-page, template page={N}.",
+      "proposedValue": "api-page",
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern.template",
+      "round1Hypothesis": "/page/{N}",
+      "liveMethod": "Downstream of paginationPattern.type; confirmed live WP REST ?page=2 returns products.",
+      "evidence": "Matches DB 'page={N}'. The query-style param is what the default buildPaginatedUrl branch emits and what the WP REST surface honours.",
+      "proposedValue": "page={N}",
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf",
+      "round1Hypothesis": false,
+      "liveMethod": "Response header inspection across 3 endpoints today (Server, cf-ray, x-sucuri).",
+      "evidence": "Server: Apache on all probes; no cf-ray, no x-sucuri, no incap_ses cookies. R1 already set hasWaf=false. CONFIRMED (no change). Note: SQLi-shaped query string returns 403 (origin mod_security rule-selective) but bare paths and all API calls return 200 -- path-selective origin filtering, not a CDN WAF. Matches DB hasWaf=false.",
+      "proposedValue": false,
+      "confidence": "high"
+    },
+    {
+      "field": "wafType",
+      "round1Hypothesis": null,
+      "liveMethod": "Downstream of hasWaf=false.",
+      "evidence": "DB stores wafType absent (undefined) when hasWaf=false. R1 set null. Functionally equivalent; prefer leaving unset to match DB convention.",
+      "proposedValue": null,
+      "confidence": "high"
+    },
+    {
+      "field": "crawlers.watermark surface",
+      "round1Hypothesis": "api-date-since-watermark / modified_after (correct method, but R1's expectedProductCount denominator was the WRONG surface relative to it)",
+      "liveMethod": "modified_after monotonicity on /wp-json/wp/v2/product.",
+      "evidence": "modified_after=2026-05-01 -> 709; 2026-05-20 -> 363; 2026-06-01 -> 137 (monotonic). The watermark walks WP REST core (2821 surface), the SAME surface expectedProductCount must measure. This is the resolution of the B8/theme-F contradiction: count surface and watermark surface MUST both be WP REST core (2821), not Store API in-stock (1533). R1's watermark.method is correct; only its expectedProductCount surface was mismatched.",
+      "proposedValue": "api-date-since-watermark on /wp-json/wp/v2/product (modified_after); expectedProductCount=2821 same surface",
+      "confidence": "high"
+    }
+  ],
+  "fieldsConfirmedMatchingR1AndDb": [
+    "platform: woocommerce",
+    "adapterType: woocommerce (DB stores undefined; R1 sets 'woocommerce' -- prefer explicit)",
+    "hasCaptcha: false (reCAPTCHA v3 site-wide but does not gate catalog/API)",
+    "needsPlaywright: false (API path is sole runtime crawl source; HTML AJAX-deferred)",
+    "perPage: 100 (WP REST honoured per_page=100, 29 pages for 2821)",
+    "sortParam: ?orderby=date (page1 orderby=date desc first product = lee-7mm-08... ; sort works)",
+    "crawlers.watermark.method: api-date-since-watermark",
+    "crawlers.maintain.verifyMethod: store-api"
+  ],
+  "codeFindings": [
+    {
+      "theme": "B (paginationPattern)",
+      "file": "backend/src/services/catalog-crawler.ts:119-167 (buildPaginatedUrl); path branch at 122-125",
+      "confirmed": true,
+      "detail": "'path' type appends template (default /page/{N}) -- intended for Celerant-style sites that ignore query pagination. 'api-page' is NOT a switch case; it falls through to the default branch (153-157) doing url.searchParams.set('page', N). For budgetshootersupply the runtime walks WP REST ?page=N, so api-page (query form) is correct; R1's 'path' would only fire in the never-reached HTML branch."
+    },
+    {
+      "theme": "F (product count method)",
+      "file": "backend/src/services/product-count-probe.ts:247-253 (wp-rest-header case)",
+      "confirmed": true,
+      "detail": "wp-rest-header is a recognized method: GET <endpoint>?per_page=1, read configured header. It is surface-agnostic -- it returns whatever the configured endpoint reports. R1 configured endpoint=/wp-json/wc/store/v1/products which returns the in-stock-only x-wp-total (1533~1506). Configuring endpoint=/wp-json/wp/v2/product returns the full 2821. The method is correct; R1 pointed it at the wrong endpoint."
+    },
+    {
+      "theme": "B (catalog crawl surface)",
+      "file": "backend/src/services/catalog-crawler.ts:280-362; backend/src/services/scraper/adapters/woocommerce.ts:336-346",
+      "confirmed": true,
+      "detail": "catalog-crawler.ts:280 calls adapter.fetchCatalogPage(origin,...) which (woocommerce.ts:346) GETs /wp-json/wp/v2/product (all published incl OOS) -- NOT catalogUrls, NOT Store API. apiCrawlUsed=true once products return, so catalog-crawler.ts:362 'if (!apiCrawlUsed && adapter.extractCatalogProducts)' (the sole catalogUrls consumer) is skipped. catalogUrls=['/products/'] is an operational placeholder."
+    },
+    {
+      "theme": "hasWaf classification",
+      "file": "n/a (header inspection)",
+      "confirmed": true,
+      "detail": "Server: Apache, no cf-ray/x-sucuri/incapsula across all endpoints. hasWaf=false correct. SQLi 403 is origin mod_security rule-selective, not a CDN WAF; all API/catalog traffic returns 200."
+    },
+    {
+      "theme": "Store API standalone fallback (not triggered here)",
+      "file": "backend/src/services/scraper/adapters/woocommerce.ts:431-538",
+      "confirmed": true,
+      "detail": "Store API standalone path (with in-stock pass + OOS second pass) only fires when (isStoreApiOnly || wpRestFailed) && seen.size===0. budgetshootersupply has neither storeApiOnly nor WP REST failure, so WP REST core (2821) is the live path. The OOS pass exists precisely because Store API default hides OOS -- corroborating that Store-API-default=1533 is in-stock-only."
+    }
+  ],
+  "coverageProof": {
+    "walked": 2821,
+    "uniqueIds": 2821,
+    "expected": 2821,
+    "pct": 100.0,
+    "idRange": "7247..98338",
+    "method": "Full 29-page WP REST core walk (/wp-json/wp/v2/product, per_page=100, orderby=date desc), deduped by product id. unique==x-wp-total==sitemap-union==store-combined-stock-header, all 2821.",
+    "recommendedCatalogUrls": ["/products/"],
+    "recommendedCatalogUrlsRationale": "Runtime crawl uses unfiltered WP REST core (all 2821) via adapter.fetchCatalogPage; catalogUrls is never consumed while the API responds. Per-category URLs are unused at runtime AND would undercount if the HTML branch ever ran (WP REST product_cat does not recurse parents: ammunition parent returns 5 vs 152). ['/products/'] is the correct placeholder."
+  },
+  "summary": {
+    "r1RegressionsConfirmed": 4,
+    "regressedFields": ["expectedProductCount (1506 -> 2821)", "productCountMethod.endpoint (Store API -> /wp-json/wp/v2/product)", "catalogUrls (21 per-category -> ['/products/'])", "paginationPattern (path -> api-page)"],
+    "fieldsAlreadyCorrectInR1": ["hasWaf=false", "wafType (null~undefined)", "platform", "hasCaptcha=false", "needsPlaywright=false", "perPage=100", "sortParam", "watermark.method", "maintain.verifyMethod"],
+    "directionVsR1": "majority-correct-R1-but-4-material-regressions-on-the-count-surface-contradiction",
+    "directionVsDb": "DB siteProfile (2809 / WP REST core / ['/products/'] / api-page) is correct; live count grew 2809 -> 2821 (normal churn). Recommend matching DB semantics with refreshed 2821 value.",
+    "b8ContradictionResolution": "expectedProductCount and the watermark surface are BOTH WP REST core (2821 live). Store API in-stock (1533) is a subset, not the catalog. R1 mistakenly chose the in-stock subset as the denominator. verifyMethod=store-api (maintain tier) is unrelated to the count surface and remains valid."
+  }
+}

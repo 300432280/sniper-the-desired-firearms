@@ -1,0 +1,113 @@
+{
+  "domain": "nordicmarksman.com",
+  "round": "R2-LIVE",
+  "runAt": "2026-06-02",
+  "persona": "testing-api-tester",
+  "inputR1": "docs/site-audit/nordicmarksman.com-2026-06-02T20-26-48-524Z.json",
+  "answerKeyDbProfile": "MonitoredSite cmltxz6uc000e89xayuooizbe (isEnabled=true, isPaused=true, crawlPhase=bootstrap)",
+  "note": "Live crawler PAUSED; all probes from audit IP at >=800ms spacing, Chrome120 UA. Apex canonical; www->apex 301. DB url column = www (harmless, runtime follows 301 / uses domain apex).",
+  "corrections": [
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "10-category nav spine (/accessories/, /ammunition/, ... /spare-parts/). R1 deferred the full walk and never tested whether /categories.php is a walkable listing.",
+      "liveMethod": "GET /categories.php bare and with ?limit=N, counted unique data-product-id. Settles 'tree page vs walkable listing'.",
+      "evidence": "bare /categories.php -> 200, 271KB, 20 unique data-product-id (BC default grid). ?limit=250 -> 250. ?limit=2500 page=1 -> 2500, page=2 -> 2224, page=3 -> 0 (clean termination). /categories.php is a WALKABLE GLOBAL PRODUCT LISTING (BC all-categories grid), NOT a category-tree page. It alone reaches the whole catalog with zero per-page overlap.",
+      "proposedValue": ["/categories.php"],
+      "confidence": "high"
+    },
+    {
+      "field": "perPage",
+      "round1Hypothesis": "perPage=250 (R1 'verified 250 honored on firearms-and-stocks; cap not confirmed on largest category'). DB stores 2500.",
+      "liveMethod": "Probed the ?limit= ceiling directly: ?limit=250, ?limit=1000, ?limit=2500.",
+      "evidence": "limit=250 -> exactly 250 IDs; limit=1000 -> exactly 1000 (3.65MB, 4.7s); limit=2500 -> exactly 2500 (8.74MB, 8.0s). Server honors arbitrary limit values; 2500 is the conservative working ceiling (B4R3 found limit=3000 also 200 but 10.4MB/14s; limit=5000 500-errored). 250 is NOT a ceiling, just R1's untested floor. DB value 2500 is correct.",
+      "proposedValue": 2500,
+      "confidence": "high",
+      "RUNTIME_CAVEAT": "perPage is INERT for this site at runtime - see codeFindings theme-B / theme-H. The HTML catalog and watermark walks never append ?limit=; they page at the BC default 20. perPage is only consumed by API adapters (Ecwid/Klevu/BC-GraphQL/mysimplestore), none configured here. Keep 2500 as documentation of the verified server ceiling, but it does not throttle/accelerate the live walk."
+    },
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "4781 (R1 sitemap: 3023 + 1758). DB stores 4761 (stale snapshot); B4R3 recorded 4736.",
+      "liveMethod": "Re-fetched both product sitemaps independently 2026-06-02 and counted <loc>.",
+      "evidence": "/xmlsitemap.php?type=products&page=1 -> 200, 3023 <loc>. page=2 -> 200, 1758 <loc>. page=3 -> 404. Sum = 4781. R1's 4781 is CORRECT and current; DB 4761 is stale-low by 20 (catalog grows via consignment/new arrivals). B4's 4736/4761 were earlier-in-time snapshots.",
+      "proposedValue": 4781,
+      "confidence": "high"
+    },
+    {
+      "field": "searchUrl",
+      "round1Hypothesis": "OMITTED by R1 (B4 probe skipped) - SKILL.md B4 explicitly names nordicmarksman as a prior miss; R1 repeated the miss. DB has it correct.",
+      "liveMethod": "Ran the mandatory searchUrl B4 probe: GET /search.php?search_query=rifle.",
+      "evidence": "200, 303KB, 12 unique data-product-id result cards; input name=\"search_query\" present; paginated next link 'search.php?page=2&section=product&search_query=rifle'. BC-native storefront search confirmed live and keyword-driven.",
+      "proposedValue": "/search.php?search_query={keyword}",
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam / sortVerified",
+      "round1Hypothesis": "R1 Stage 6 claimed 'default == ?sort=newest' (honored-default-is-newest). DB sortParam=?sort=newest, sortVerified=true.",
+      "liveMethod": "3-outcome cache-busted sort test ON /categories.php directly (not a sub-category): default vs ?sort=newest vs ?sort=alphaasc, first-5 data-product-id each.",
+      "evidence": "default first5 = 16967,17023,21924,19527,22098 (CURATED/featured order, NOT newest-first). ?sort=newest first5 = 22098,22097,22096,22095,22094 (monotonic descending = newest). ?sort=alphaasc first5 = 17226,19234,16740,... (alphabetical). Cross-page check: sort=newest p1 ends ...22081,22076,22075; p2 starts 22074,22073,22064 (descends cleanly across boundary). CORRECTION TO R1's NARRATIVE: default order on /categories.php is NOT newest; ?sort=newest is REQUIRED, not optional. The proposed value is unchanged but sortParam is functionally mandatory for navigate-from-watermark. Matches B4R3's adversarial finding, contradicts B4R1/B4R2's 'default==newest' claim (they collided on a coincidentally-matching first ID).",
+      "proposedValue": "?sort=newest (REQUIRED; sortVerified=true)",
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod",
+      "round1Hypothesis": "R1 stored {method:'sitemap-index', urls:['/xmlsitemap.php?type=products&page=1','...page=2']}. DB identical shape with same relative paths.",
+      "liveMethod": "Read product-count-probe.ts:299-311 and confirmed both sitemaps fetch 200 with <loc> sums.",
+      "evidence": "case 'sitemap-index' iterates m.urls, supports relative (origin-prefixed) and absolute, sums <loc>. DB relative shape is runtime-compatible. Probe only fires when expectedProductCount is absent (it is present), so this is documentation, not an active path. Shape is correct.",
+      "proposedValue": { "method": "sitemap-index", "urls": ["/xmlsitemap.php?type=products&page=1", "/xmlsitemap.php?type=products&page=2"] },
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf / wafType / needsPlaywright",
+      "round1Hypothesis": "hasWaf=false, wafType=cloudflare-passive, needsPlaywright=false (R1 light-posture only, BLIND).",
+      "liveMethod": "Sustained-walk reachability: 11 sequential GETs (categories.php variants + 2 sitemaps + search) including 2500-limit 8.7MB/12s responses, all 200 under Chrome120 UA; www->apex 301; no challenge body.",
+      "evidence": "Every probe 200 across a real catalog-sized walk (no rate-limit, no interstitial). Server: cloudflare + cf-ray = passive edge only. hasWaf=false correct; runtime correctly skips the perPage=20 WAF throttle and Playwright route (watermark-crawler.ts:79, catalog-crawler.ts:290). Static HTML returns products, so needsPlaywright=false correct. DB column hasWaf=false aligns.",
+      "proposedValue": { "hasWaf": false, "wafType": "cloudflare-passive", "needsPlaywright": false },
+      "confidence": "high"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "B (BigCommerce pagination: API or HTML?)",
+      "file": "generic-retail.ts:314-360 (fetchCatalogPage dispatch); catalog-crawler.ts:296-299",
+      "confirmed": true,
+      "detail": "BC pagination on this site is HTML, NOT API. nordicmarksman's DB profile has NO apiAlternative and NO apiConfig.klevuApiKey, so generic-retail.fetchCatalogPage() returns null at the final guard, the catalog crawler's API loop breaks (catalog-crawler.ts:296-299), and the walk falls through to the HTML path (extractCatalogProducts + getNextPageUrl). Next page is taken from the page's own a[rel=next]/.pagination-item--next a (getNextPageUrl, generic-retail.ts:1331-1355), which is /categories.php?sort=newest&page=N. buildPaginatedUrl is not used for the next link here; the site's own link is followed."
+    },
+    {
+      "theme": "B / H (count method = HTML grid; perPage NOT applied to HTML URL)",
+      "file": "generic-retail.ts:196-204 (_getSiteSpecificUrls), 265-280 (getCatalogUrls), 213-253 (getNewArrivalsUrls); catalog-crawler.ts:290,358-446; watermark-crawler.ts:324,400-470",
+      "confirmed": true,
+      "detail": "perPage:2500 is INERT for the HTML walk. _getSiteSpecificUrls returns profile.catalogUrls verbatim (/categories.php). getCatalogUrls/getNewArrivalsUrls append sortParam (?sort=newest) but NEVER append ?limit=. perPage is passed only to fetchCatalogPage() (the API adapters), which returns null here. Repo-wide grep: the only limit= injections are Shopify products.json (shopify.ts:250) and the Shopify count-probe (product-count-probe.ts:369) - neither applies to BC. Live proof: runtime watermark URL /categories.php?sort=newest returns 20 cards and rel=next is /categories.php?sort=newest&page=2 (no limit). NET: full catalog refresh walks ~239 pages of 20 (4781/20), not 2 pages of 2500. Coverage is correct; the 2500 value just mis-documents request volume. Recommend the skill flag perPage as 'API-only; inert on HTML-walk BC/Magento sites' OR add ?limit injection to the HTML catalog URL builder (latter = behavior change, out of R2 scope)."
+    },
+    {
+      "theme": "buildPaginatedUrl query branch",
+      "file": "catalog-crawler.ts:120-167",
+      "confirmed": true,
+      "detail": "For paginationPattern.type='query' template='page' (this site), buildPaginatedUrl uses the new URL() branch and sets ?page=N. No leading-slash bug applies (that bug is the type='path' branch only, lines 122-126). nordicmarksman's query pattern is safe. Note buildPaginatedUrl is a backup; the live walk prefers getNextPageUrl's parsed rel=next link."
+    },
+    {
+      "theme": "productCountMethod sitemap-index shape",
+      "file": "product-count-probe.ts:299-311",
+      "confirmed": true,
+      "detail": "case 'sitemap-index' iterates m.urls, handles relative+absolute, sums <loc>. DB's relative-path urls[] shape is runtime-compatible. Only fires when expectedProductCount absent (present here = 4761). Documentation-correct."
+    }
+  ],
+  "coverageProof": {
+    "walked": "GET /categories.php?limit=2500 page=1 (2500) + page=2 (2224); page=3 = 0 (clean termination)",
+    "uniqueIds": 4724,
+    "pageOverlap": 0,
+    "expected": 4781,
+    "expectedSource": "sitemap product pages 3023+1758 (re-derived live 2026-06-02)",
+    "pct": "98.80%",
+    "gapExplanation": "57 sitemap entries (4781-4724) unreached: mix of stale .html-suffix 404 sitemap entries (Blueprint-era) and live products tagged only to leaf subcategories not surfaced in the global /categories.php grid. Above the 95% COVERAGE_THRESHOLD. Operator may add leaf-subcat URLs for the last ~1.2% if desired (per Full Coverage rule), but /categories.php single-URL is the correct primary spine.",
+    "recommendedCatalogUrls": ["/categories.php"],
+    "recommendedAgainst": "R1's 10-category nav spine. B4R1 walked the 12-parent spine and reached only 4485 unique (94.6%) because BC Stencil parent categories do NOT recurse into subcategories; the single /categories.php global grid reaches more (98.8%) with 1 URL and 2 fetches at limit=2500 (or ~239 fetches at the runtime default 20/page)."
+  },
+  "r1DivergencesSettled": {
+    "catalogUrls": "R1 WRONG (10-cat spine) -> /categories.php single (DB correct). Live-confirmed walkable global listing.",
+    "perPage": "R1 under-probed (250) -> 2500 (DB correct, server ceiling). Caveat: inert at runtime.",
+    "expectedProductCount": "R1 CORRECT (4781). DB 4761 stale-low; recommend bump to 4781.",
+    "searchUrl": "R1 MISSED (omitted) -> /search.php?search_query={keyword} (DB correct). Repeat of SKILL.md-named prior miss.",
+    "sortParam": "R1 value correct but NARRATIVE wrong ('default==newest'). Default is curated, NOT newest; ?sort=newest is REQUIRED."
+  },
+  "constraintsHonored": ["no DB writes", "no budget/process changes", "crawler left PAUSED", ">=800ms spacing", "throwaway query script + temp files removed"]
+}

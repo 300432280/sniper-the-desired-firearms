@@ -1,0 +1,78 @@
+{
+  "domain": "basspro.ca",
+  "round": "R2-HELD-SITE-REACHABILITY",
+  "persona": "testing-api-tester",
+  "probedAt": "2026-06-02",
+  "probeIp": "audit-host (non-production cloud IP)",
+  "method": "8 spaced single GETs, >=1.5s apart (2-3s used), no rapid burst, no heavy-probe. Production UA rotation surface tested: desktop Chrome 120 AND iPhone Safari 17. STOP-on-escalation honored (no escalation observed).",
+  "reachabilityVerdict": {
+    "verdict": "HOLD",
+    "canCrawlerGetProducts": false,
+    "evidence": {
+      "robots.txt": {
+        "chrome120": "200, 1058 bytes, real robots content (NOT a block page)"
+      },
+      "sitemap_10151.xml.gz": {
+        "chrome120_HEAD": "200, Server: Apache, Content-Type: multipart/x-gzip",
+        "chrome120_GET": "200, 291901 gz bytes; case-insensitive unique /p/ count = 16736"
+      },
+      "/home": {
+        "chrome120": "403, 372 bytes, Akamai EdgeSuite 'Access Denied' interstitial (errors.edgesuite.net Reference #18.aa182117...)",
+        "iphoneSafari17": "200 BUT 2055 bytes = Akamai behavioral-challenge interstitial (sec-if-cpt-container + akam-sw.js + 'Powered and protected by Akamai'), NOT the real ~56KB SSR page"
+      },
+      "/l/firearms": {
+        "chrome120": "403, 382 bytes, Akamai EdgeSuite 'Access Denied'",
+        "iphoneSafari17": "200 BUT 2054 bytes = Akamai behavioral-challenge interstitial (sec-if-cpt-container, zero /p/ product links)"
+      },
+      "/p/b3-archery-rectify-hinge-bow-release": {
+        "iphoneSafari17": "200 BUT 2042 bytes = Akamai behavioral-challenge interstitial (sec-if-cpt + akam-sw.js, no 'add to cart', zero product markup)"
+      }
+    },
+    "interpretation": "Two distinct Akamai Bot Manager outcomes per UA: (1) production default Chrome 120 UA => hard 403 EdgeSuite Access-Denied on EVERY product surface (/home, /l/, /p/) on the FIRST single GET. (2) iPhone Safari 17 UA => HTTP 200 but body is the Akamai behavioral-challenge interstitial (~2KB sec-if-cpt-container + akam-sw.js service-worker installer), which carries ZERO products. A 200-status-but-challenge-body is a SOFT block: extractCatalogProducts/extractProducts would return 0 from it, and the >5KB-static-HTML Playwright auto-fallback would NOT even fire (challenge body is <5KB). No product surface (HTML SSR or challenge-passing) is reachable for the crawler from this IP under any production UA.",
+    "noEscalationNote": "Statuses were stable across the 8 spaced probes (clean surfaces 200 real-content; product surfaces 403 or 200-challenge). No 429, no rate-limit headers, no escalating ban. The block is policy/fingerprint-based (per-UA + TLS/JA3 + behavioral), not request-rate-based, so a slower walk does NOT help. Did NOT run the heavy-probe rapid burst (operator instruction)."
+  },
+  "r1ContradictionSettled": {
+    "question": "Does basspro return 403 on ALL product pages incl. page-1 (2026-06-02 R1), or is page-1 SSR reachable as the B6 batch (2026-05-23) found?",
+    "answer": "BOTH observations were correct for their UA. The 2026-06-02 R1 ran a single-UA Chrome 120 gentle GET => 403 everywhere (reproduced exactly: /home 403/372B, /l/firearms 403/382B). The B6 batch (2026-05-23) used Safari 17 macOS with PRE-WARMED Akamai geo cookies and got page-1 SSR 200 (56KB /home, 433KB /l/firearms) but page-2 (?page=N&firstResult=M) re-403. Net: page-1 SSR is reachable ONLY with a non-Chrome UA AND pre-warmed Akamai cookies; even then it renders products client-side (0 in static HTML) and pagination re-403s. With a cold session under any production UA (no cookie pre-warm), today's result is 403 (Chrome) or behavioral-challenge interstitial (iPhone). The crawler cannot obtain products either way.",
+    "postureDifference": "R1's 'all 403' vs B6's 'page-1 200' is explained entirely by UA + cookie-pre-warm posture, NOT by Akamai hardening over time. The Akamai block was present and effective in both windows. Today: clean infra surfaces (robots+sitemap) still 200 (B6 + today agree); product surfaces still blocked (B6 + today agree). No access change."
+  },
+  "dbVerdictAccuracy": {
+    "field": "wafWorkaround",
+    "dbValue": "{method:'none-known', notes:'Investigated 2026-04-04. robots.txt returns 403. sitemap.xml returns 403. ... WAF blocks all non-browser requests including Playwright. Currently uncrawlable without specialized tooling.', investigatedAt:'2026-04-04'}",
+    "stalePart_disproven": "The 'robots.txt returns 403 / sitemap.xml returns 403' claim is STALE and WRONG today: robots.txt = 200 (1058B real content), sitemap_10151.xml.gz = 200 (Apache, 16736 /p/ URLs). The 2026-04-04 investigator missed the WebSphere-specific sitemap path (already disproven by B6 on 2026-05-23, re-confirmed today).",
+    "accuratePart_upheld": "The core operational conclusion 'currently uncrawlable for PRODUCTS without specialized tooling (residential/anti-detect proxy or Akamai-aware browser fingerprinting)' REMAINS ACCURATE. Product pages are Akamai-blocked under every production UA; the production Playwright fallback has no Akamai-behavioral-challenge handler (playwright-fetcher.ts has Incapsula/Cloudflare/sgcaptcha/Sucuri branches but ZERO akamai/sec-if-cpt/_abck handling) and B6R1 documented headless Playwright is TLS/JA3-blocked. So the 'uncrawlable' verdict is correct for products even though its stated robots/sitemap evidence is stale."
+  },
+  "corrections": [
+    {
+      "field": "wafWorkaround.notes",
+      "evidence": "robots.txt=200 (1058B) and sitemap_10151.xml.gz=200 (Apache, 16736 /p/) today, both under Chrome 120. The 2026-04-04 'robots.txt 403 / sitemap.xml 403' is factually wrong.",
+      "proposedValue": "Replace the stale robots/sitemap-403 claim. Keep the operational conclusion. Suggested: 'robots.txt + sitemap_10151.xml.gz are reachable (200, Apache, outside the Akamai bot rule, 16,736 /p/ URLs). PRODUCT pages (/home,/c/,/l/,/p/) are Akamai-Bot-Manager-blocked: Chrome 120 => 403 EdgeSuite Access-Denied; iPhone Safari => 200 behavioral-challenge interstitial with 0 products. Headless Playwright TLS/JA3-blocked AND playwright-fetcher.ts has no Akamai-challenge handler. Uncrawlable for products without residential/anti-detect proxy or Akamai-aware fingerprinting. Re-confirmed 2026-06-02.'",
+      "confidence": "high"
+    },
+    {
+      "field": "isEnabled / hold-decision",
+      "evidence": "No product surface reachable under any production UA from audit IP; production Playwright fallback cannot clear the Akamai behavioral challenge (no handler in playwright-fetcher.ts); the 200-challenge body is <5KB so the >5KB auto-Playwright-fallback would not even trigger.",
+      "proposedValue": "KEEP HELD (isEnabled=false). Enabling would yield 0 indexed products and burn budget on 403/challenge responses. Do NOT enable until either (a) the production crawler IP is materially different in Akamai reputation AND verified to receive real SSR, or (b) Akamai-aware infra is added (residential proxy + curl_cffi/chrome-impersonate or an Akamai behavioral-challenge solver in playwright-fetcher.ts).",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "evidence": "Case-insensitive unique /p/ count from today's sitemap = 16736 (DB=16543, 2026-06-02 R1 candidate=16739). Drift is normal catalog turnover; method is reproducible.",
+      "proposedValue": "Leave DB 16543 OR refresh to ~16736; either is within turnover. This is GLOBAL catalog (all departments), NOT a firearm-relevant subset, which remains untested (all category walks blocked). Low operator priority while held.",
+      "confidence": "medium"
+    },
+    {
+      "field": "userAgentOverride",
+      "evidence": "DB has no userAgentOverride; production rotates Chrome120/Safari17/FF121/Edge120. Chrome120 => hard 403; iPhone Safari => 200-challenge (still 0 products). No UA yields products from a cold session.",
+      "proposedValue": "No UA override helps while the site is held; do not set one as a 'fix'. (B6R1 proposed Safari-17-macOS but that only helped WITH pre-warmed geo cookies, which the production crawler does not establish.) Defer.",
+      "confidence": "high"
+    }
+  ],
+  "notes": [
+    "Reachability VERDICT = HOLD. The R1 'confirmed blocker' stands: basspro is the real hard-block among the 5 held sites (unlike gotenda/hical/doctordeals which have cookie/UA bypass paths in DB).",
+    "Infra surfaces (robots.txt + sitemap.gz) ARE reachable and stable across B6 (2026-05-23) and today - the only thing the crawler can fetch. They yield a product-URL list (16,736 /p/) but NOT product data (price/stock/title need the /p/ page, which is Akamai-blocked).",
+    "Tested the production Playwright fallback REASONING per persona rule: the iPhone 200-challenge body is ~2KB (<5KB), so watermark-crawler.ts / catalog-crawler.ts auto-Playwright-fallback would NOT fire; and even if forced, playwright-fetcher.ts has no Akamai handler (only Incapsula/CF/sgcaptcha/Sucuri). Did NOT spend a real Playwright run because the static evidence already proves the challenge body + B6R1 documented headless Playwright is JA3-blocked - running it would risk an IP ban for an already-decided HOLD.",
+    "No DB writes, no budget/process changes made. Scratch files removed.",
+    "Untested-by-harness (carried, all require Akamai bypass): sortParam, perPage, paginationPattern zero-overlap, firearm-relevant product subset, navigate-from-watermark feasibility, /p/ detail-page verifyMethod reachability."
+  ]
+}

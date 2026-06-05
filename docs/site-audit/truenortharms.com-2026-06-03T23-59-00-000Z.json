@@ -1,0 +1,90 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-03T23:54:34Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray + __cf_bm on every response) but PASSIVE: all real-content batches 200 across desktop/mobile/bot/curl UAs, rapid 10x burst all 200, no challenge body anywhere. Honeypot 403s (/wp-admin, /.env, /.git/config -> 552/36355-byte BigCommerce platform blocks, not WP). XSS query -> 400 = BigCommerce input validation, not CDN WAF challenge. hasWaf=false.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY present on all batches", "__cf_bm set-cookie", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 = 200 (610288 bytes each)",
+    "multiUaStatus": "desktop/mobile/bot/curl all 200",
+    "sqliRuleFired": false,
+    "xssRuleFired": "400 on raw <script> query (BigCommerce input validation, not CDN block)",
+    "honeypotPathsBlocked": ["/wp-admin -> 403 (552B)", "/.env -> 403 (36355B)", "/.git/config -> 403 (36355B)"],
+    "botUaBlocked": false,
+    "verdict": "cloudflare-passive => hasWaf:false"
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1125,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "/xmlsitemap.php?type=categories&page=1"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://truenortharms.com/mdt-hunt-muzzle-brake-5-8x24/", "title": "MDT Hunt Muzzle Brake 5/8x24", "price": null, "stockStatus": "unknown", "note": "title+url verified via /new-arrivals/?sort=newest card extraction; price/stock not parsed in R1 blind pass" },
+    { "url": "https://truenortharms.com/cz-bren-2-ms-trail-7-62x39-magazine-5-10rds/", "title": "CZ Bren 2 MS Trail 7.62X39 Magazine 5/10rds", "price": null, "stockStatus": "unknown" },
+    { "url": "https://truenortharms.com/spare-moonclip-for-modified-sulun-sr-410-revolver-410-for-45-acp/", "title": "SULUN SR-410 revolver shotgun spare moon clip", "price": null, "stockStatus": "unknown", "note": "live 200, real product title" }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 250,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 250,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "BC Stencil default category order IS newest-first (default first-3 == ?sort=newest first-3 on /new-arrivals/); ?sort=newest honored (counter-control ?sort=alphaasc reorders to A-Z patches). Walk newest-first until known product."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-06-03",
+  "auditNotes": {
+    "runId": "r1-blind-truenortharms-2026-06-03",
+    "round": "PHASE A R1 (blind)",
+    "probeIp": "audit IP (production-IP WAF re-confirm needed before promotion per Stage 2)",
+    "expectedProductCountSource": "product-sitemap-loc-count",
+    "expectedCountSurface": "BigCommerce /xmlsitemap.php?type=products customer-visible product sitemap (single <urlset>, 1125 <loc>, pages 2-3 empty; stable across 3 fetches)",
+    "dbCountDiscrepancy": "DB expectedProductCount=1264 and DB note claims '4420 sitemap entries' — NEITHER reproduces today. Live product sitemap = 1125 stable. Task-reported index holds 4658 active = ~414% of live published catalog, indicating accumulated stale/deactivated products that left the sitemap but were never cleared from the index.",
+    "catalogUrlsCaveat": "R1 BLIND: catalogUrls set to the categories sitemap (170 canonical leaf-category URLs) as the discovery source. NOT yet walked+deduped to a minimum 100%-coverage set. BC parent categories render subcategory TILES not products (B15: /firearms/ shows 11 subcategory cards, /ammo/centerfire has 2 products). Top-level slug guesses are unreliable (many 301/404; canonical forms mix .html and trailing-slash). DB ships 149 hand-curated leaf catalogUrls — R2 must walk+dedup the 170 sitemap leaves vs the 1125 product set and prune to minimum coverage. Single aggregator does not exist on BC by default.",
+    "verifyMethodPolicy": "detail-page selected (matches DB). BC has no WC store-api; Playwright/HTML detail-page verify required for OOS/restock. detail-page is the correct non-WC default.",
+    "storeId": "BigCommerce x-bc-store-id=1002255649, store hash s-e2fesuoqas",
+    "frontend": "Makeswift CMS headers (x-makeswift-page-locale) on a BigCommerce Stencil storefront — platform is bigcommerce-stencil; Makeswift is the page builder, not the commerce platform.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "wafType": "high",
+      "expectedProductCount": "high (1125, sitemap-stable)",
+      "sortParam": "high (3-outcome counter-control passed)",
+      "perPage": "high (?limit=250 returned 250 cards)",
+      "paginationPattern": "high (page2 disjoint from page1)",
+      "catalogUrls": "LOW (R1 placeholder = categories sitemap; needs walk+dedup in R2)"
+    },
+    "discoveredApiEndpoints": [
+      "/xmlsitemap.php (sitemap index: pages/products/categories/brands/news)",
+      "/xmlsitemap.php?type=products&page=1 (1125 product locs)",
+      "/xmlsitemap.php?type=categories&page=1 (170 category locs)"
+    ]
+  }
+}

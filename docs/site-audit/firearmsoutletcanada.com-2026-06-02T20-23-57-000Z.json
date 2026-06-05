@@ -1,0 +1,94 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T20:21:27Z",
+  "wafProbeMethod": "single-get-fingerprint-blind",
+  "wafProbeResult": "Cloudflare passive (cf-ray + __cf_bm cookie present, all probes HTTP 200, no challenge body). Heavy 8-batch rapid-burst SKIPPED per Round-1 no-ban directive.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: a0592a1f9d57a20e-YYZ", "Server: cloudflare", "Set-Cookie: __cf_bm=..."],
+    "sucuriHeaders": [],
+    "rapidBurstTested": false,
+    "rapidBurstStatus": "skipped-round1-no-ban",
+    "sqliRuleFired": null,
+    "xssRuleFired": null,
+    "honeypotPathsBlocked": null,
+    "botUaBlocked": null,
+    "note": "BLIND single-GET probes only. cf-ray + all-200 on homepage, /firearms, robots.txt, sitemaps. No active attack probes attempted (untested attack surface)."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3437,
+  "productCountMethod": { "method": "sitemap", "url": "/xmlsitemap.php?type=products&page=1" },
+  "catalogUrls": [
+    "https://firearmsoutletcanada.com/firearms",
+    "https://firearmsoutletcanada.com/ammo",
+    "https://firearmsoutletcanada.com/optics",
+    "https://firearmsoutletcanada.com/magazines-clips",
+    "https://firearmsoutletcanada.com/rifle-parts",
+    "https://firearmsoutletcanada.com/pistol-parts",
+    "https://firearmsoutletcanada.com/shotgun-parts",
+    "https://firearmsoutletcanada.com/reloading",
+    "https://firearmsoutletcanada.com/storage-maintenance",
+    "https://firearmsoutletcanada.com/gear-kit",
+    "https://firearmsoutletcanada.com/emergency-survival-gear"
+  ],
+  "extractionTested": true,
+  "sortParam": "?sort=newest",
+  "sortVerified": false,
+  "perPage": 52,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 52,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": { "method": "navigate-from-watermark" },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-blind-foc-2026-06-02",
+    "round": "R1 (blind skill run; no heavy live validation)",
+    "probeIp": "audit-ip (production-IP re-confirm required before promotion)",
+    "verifyMethodPolicy": "detail-page selected (BC Stencil has no WC Store API fast-path; restock/OOS detection requires Playwright detail-page check)",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium (single-GET only; rapid-burst skipped; production-IP reconfirm needed)",
+      "expectedProductCount": "high (products sitemap, 3437 product-only locs, page 2 empty)",
+      "catalogUrls": "medium (top-level nav spine; NOT walked+deduped in blind mode; aggregators /on-sale /pre-owned /brands excluded but not proven-redundant)",
+      "sortParam": "medium (read newest from <select id=sort>; 3-outcome counter-control NOT fired in blind mode)",
+      "sortVerified": "false (not live-proven)",
+      "perPage": "medium (52 deduped product-ids on /firearms page 1; no limit <select>; max-perPage not probed)",
+      "paginationPattern": "high (?page=N confirmed via pagination-link hrefs page 2/3/4)",
+      "watermarkMethod": "medium (BC Stencil newest sort exists but unverified; navigate-from-watermark pending sort proof)"
+    },
+    "blindModeDeferrals": [
+      "Stage 4d full walk + ID-dedup of all catalogUrls NOT performed (Round 2).",
+      "Stage 6 3-outcome counter-control sort test NOT fired (Round 2) — BC Stencil default=featured false-negative trap (Mistake 29) must be checked live.",
+      "Aggregators /on-sale, /pre-owned, /brands/ excluded by name; per B4 must be walk+deduped before final drop (Round 2).",
+      "/gear-kit and /emergency-survival-gear contain non-firearm camping/CBRN subpaths; firearm-relevance scope split unverified (Round 2).",
+      "Max-perPage probe (BC ?limit=) not run (Round 2).",
+      "Heavy 8-batch WAF probe rapid-burst skipped per no-ban directive."
+    ],
+    "discoveredApiEndpoints": {
+      "sitemaps": [
+        "/xmlsitemap.php?type=products&page=1",
+        "/xmlsitemap.php?type=categories&page=1",
+        "/xmlsitemap.php?type=brands&page=1"
+      ]
+    },
+    "storeHash": "ezlzxhcsxg",
+    "bcStoreId": "1003133358",
+    "makeswiftLayer": "x-makeswift-* headers present (Makeswift CMS/page-builder on top of BC Stencil; theme layer, NOT the commerce platform - Mistake 39)"
+  }
+}

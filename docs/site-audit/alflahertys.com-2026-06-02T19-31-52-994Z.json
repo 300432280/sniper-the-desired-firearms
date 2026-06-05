@@ -1,0 +1,134 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T19:28:28Z",
+  "wafProbeMethod": "single-get-gentle",
+  "wafProbeResult": "Cloudflare in front (CF-RAY, __cf_bm present) but homepage + sitemap + category pages all return 200 to production Chrome UA; no challenge body. Heavy 8-batch rapid-burst SKIPPED per live-crawler/no-ban constraint — passive verdict from single-GET evidence only.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY: a058dc80edaebf5d-YYZ", "Server: cloudflare", "Set-Cookie: __cf_bm=..."],
+    "sucuriHeaders": [],
+    "rapidBurstTested": false,
+    "rapidBurstStatus": null,
+    "sustainedWalkPages": 0,
+    "perUaStatusTimeline": {},
+    "sqliRuleFired": null,
+    "xssRuleFired": null,
+    "honeypotPathsBlocked": null,
+    "botUaBlocked": null,
+    "untestedAttackSurfaces": ["rapid-burst", "honeypot-paths", "sqli-shaped", "xss-shaped", "no-ua", "multi-ua-matrix"],
+    "note": "BLIND R1: heavy probe intentionally NOT run (live production crawler on this IP; no-ban directive). WAF verdict is passive-evidence-only and MUST be reconfirmed in R2."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 5244,
+  "productCountMethod": {
+    "method": "sitemap",
+    "url": "/xmlsitemap.php?type=products&page=1"
+  },
+  "catalogUrls": [
+    "/shooting-supplies-and-firearms/",
+    "/shooting-supplies-firearms-ammunition/",
+    "/shooting-supplies-firearms-and-ammunition/",
+    "/optics/",
+    "/archery-and-airguns/",
+    "/knives-tools-and-lights/",
+    "/premium-knives/",
+    "/sharpeners-and-maintenance/",
+    "/hunting-gear/"
+  ],
+  "extractionTested": false,
+  "sortParam": "?sort=newest",
+  "sortVerified": false,
+  "perPage": 50,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 50,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "CANDIDATE/UNVERIFIED (BLIND R1): BC Stencil + Klevu SPA category listing; no API date filter on storefront, product sitemap is not date-ordered. If R2 proves ?sort=newest is honored on HTML listing -> navigate-from-watermark; if Klevu NOOPs the HTML sort -> fall to full-catalog-sweep."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "bigcommerce": {
+    "storeHash": "rk4zcah9rr",
+    "storeId": "1000169258",
+    "storefrontToken": null,
+    "tokenCacheTtlMs": null
+  },
+  "klevu": {
+    "apiKey": "klevu-170966446878517137",
+    "searchUrl": "https://uscs33v2.ksearchnet.com/cs/v2/search"
+  },
+  "klevuCategoryPaths": [],
+  "searchUrl": "/search.php?search_query={keyword}",
+  "topLevelCategories": {
+    "source": "sitemap (categories sitemap /xmlsitemap.php?type=categories)",
+    "categories": [
+      { "slug": "/shooting-supplies-and-firearms/", "allOption": null },
+      { "slug": "/shooting-supplies-firearms-ammunition/", "allOption": null },
+      { "slug": "/shooting-supplies-firearms-and-ammunition/", "allOption": null },
+      { "slug": "/optics/", "allOption": null },
+      { "slug": "/archery-and-airguns/", "allOption": null },
+      { "slug": "/knives-tools-and-lights/", "allOption": null },
+      { "slug": "/premium-knives/", "allOption": null },
+      { "slug": "/sharpeners-and-maintenance/", "allOption": null },
+      { "slug": "/hunting-gear/", "allOption": null }
+    ],
+    "totalsSumCheck": "NOT COMPUTED (BLIND R1 - no walk). 144 category URLs in categories sitemap; 12 distinct top-level slugs (incl. fishing/camping/clothing/gift-ideas excluded as non-firearm-relevant). THREE overlapping legacy shooting/firearms trees detected (-and-firearms, -firearms-ammunition, -firearms-and-ammunition) requiring Stage 4d walk+ID-dedup in R2 to pick minimum-cover set. Per-category allOption counts require the same surface as expectedProductCount (sitemap) per B11 - deferred to R2."
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-BLIND-alflahertys-2026-06-02",
+    "probeIp": "audit-IP (not production crawler IP)",
+    "discoveredApiEndpoints": [
+      "/xmlsitemap.php (sitemap index)",
+      "/xmlsitemap.php?type=products&page=1 (5244 product locs)",
+      "/xmlsitemap.php?type=categories&page=1 (144 category locs)",
+      "Klevu cs/v2/search uscs33v2.ksearchnet.com (apiKey klevu-170966446878517137)"
+    ],
+    "verifyMethodPolicy": "detail-page selected (non-WC platform; BC Stencil); restock/OOS detection via Playwright detail-page. store-api not applicable.",
+    "dbColumnFlips": { "note": "If DB currently has hasWaf:true + wafType:cloudflare-passive (known stale-combo from B10 lesson, alflahertys cited verbatim in persona), flip hasWaf->false and clear any stale wafWorkaround. EMITTED wafWorkaround:null." },
+    "klevuRuntimeStatus": "klevuCategoryPaths field left empty (BLIND - klevu_pageCategory not on homepage; rendered per-category page, not fetched at scale this round). _resolveKlevuCategoryPath at generic-retail.ts declared-but-unwired per persona B5 - documentation-only field.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium (passive-evidence-only; R2 must heavy-probe)",
+      "expectedProductCount": "high (sitemap single-page 5244, no page 2)",
+      "productCountMethod": "high",
+      "catalogUrls": "low (no walk+dedup; 3 overlapping shooting trees unresolved)",
+      "needsPlaywright": "medium-high (2 leaf pages render 0 server-side product cards; Klevu JS drives listing; Playwright render NOT confirmed this round - MCP bridge unavailable)",
+      "sortParam": "low (Klevu SPA; HTML ?sort likely NOOP - UNVERIFIED)",
+      "sortVerified": "false",
+      "perPage": "low (BC Stencil default guess 50; not probed via select - no select in SPA HTML)",
+      "paginationPattern": "low (UNVERIFIED - listing is client-side; ?page=N may be Klevu-driven)",
+      "watermark.method": "low (depends on unverified sort)"
+    },
+    "stageNotes": [
+      "Stage 1: apex 200 clean; www 301->apex. canonical=https://alflahertys.com. No <link rel=canonical> in HTML. robots.txt has NO Sitemap: directive.",
+      "Stage 2: Cloudflare-passive (CF-RAY + __cf_bm, all 200). NO age-gate, NO captcha markers on homepage. Heavy 8-batch SKIPPED (live crawler / no-ban). hasWaf=false.",
+      "Stage 3: bigcommerce-stencil CONFIRMED via x-bc-store-id header, cdn11.bigcommerce.com/s-rk4zcah9rr, theme-bundle stencil assets, AND <meta name=platform content=bigcommerce.stencil> on 404 page. Klevu site-search overlaid. adapterType=generic-retail per Stage 3 table.",
+      "Stage 4: 144 category URLs in sitemap; 12 top-level, firearm-relevant subset = 9 candidates. THREE legacy overlapping shooting/firearms trees - NEEDS Stage 4d walk+dedup (R2). Parent /shooting-supplies-and-firearms/ renders Subcategory tiles + 0 server-side product cards.",
+      "Stage 5: pagination UNVERIFIED - leaf category pages render 0 server-side product cards (Klevu JS SPA), no <select name=limit>, no pagination markers in static HTML. ?page=N + perPage=50 are BC-Stencil-default GUESSES, not probed.",
+      "Stage 6: sort UNVERIFIED - no server <select name=sort> in HTML (Klevu-driven). ?sort=newest is the BC Stencil candidate but likely NOOP under Klevu. sortVerified=false. R2 must run 3-outcome counter-control with cache-bust.",
+      "Stage 7: watermark candidate navigate-from-watermark (pending sort verification); fall to full-catalog-sweep if sort NOOPs. No storefront API date filter on BC.",
+      "Stage 8: expectedProductCount=5244 from products sitemap (single page, page2=404). productCountMethod={method:sitemap, url:/xmlsitemap.php?type=products&page=1}. BC product sitemap is product-only (categories segregated to ?type=categories) so plain sitemap count is clean.",
+      "Stage 9: validator NOT run in-process (BLIND). extractionTested=false (Stage 4g/10 NOT performed - Playwright unavailable). Candidate marked low-confidence on all walk-dependent fields by design."
+    ]
+  }
+}

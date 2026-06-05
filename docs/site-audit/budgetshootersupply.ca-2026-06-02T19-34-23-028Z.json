@@ -1,0 +1,148 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": null,
+  "wafLastProbedAt": "2026-06-02T19:30:00Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "No CDN/WAF. Server: Apache, no cf-ray/x-sucuri/incapsula. SQLi payload -> 403 (origin mod_security rule-selective), bare / -> 200 across Chrome/Safari/iPhone UAs + no-UA. Path-selective origin filtering only, not a CDN WAF.",
+  "wafProbeEvidence": {
+    "cfHeaders": [],
+    "sucuriHeaders": [],
+    "server": "Apache",
+    "rapidBurstStatus": "not-run (live crawler active; IP protection)",
+    "sqliRuleFired": true,
+    "xssRuleFired": "not-tested",
+    "honeypotPathsBlocked": false,
+    "botUaBlocked": false,
+    "perUaStatus": { "chrome120": 200, "safari17": 200, "iphone-safari": 200, "no-ua": 200 }
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 1506,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/product-category/rifle-pistol-reloading-components/",
+    "/product-category/rifle-pistol-reloading-tools-lubes/",
+    "/product-category/pal-ups/",
+    "/product-category/ammunition/",
+    "/product-category/bullet-casting-loading-tools-components-categories/",
+    "/product-category/shotshell-reloading-components/",
+    "/product-category/shotshell-reloading-tools-presses/",
+    "/product-category/optics/",
+    "/product-category/black-powder/",
+    "/product-category/king-competition/",
+    "/product-category/used-items/",
+    "/product-category/chronographs/",
+    "/product-category/muzzleloading/",
+    "/product-category/uncategorized/",
+    "/product-category/categories-clearance-items/",
+    "/product-category/accessories/",
+    "/product-category/books-reloading-manuals/",
+    "/product-category/gun-cleaner-lube-tools-patches/",
+    "/product-category/kestrel/",
+    "/product-category/self-heating-food/",
+    "/product-category/speed-loaders/"
+  ],
+  "extractionTested": false,
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api-categories (paginated to x-wp-totalpages=2)",
+    "categories": [
+      { "slug": "/product-category/rifle-pistol-reloading-components/", "allOption": 735 },
+      { "slug": "/product-category/rifle-pistol-reloading-tools-lubes/", "allOption": 445 },
+      { "slug": "/product-category/pal-ups/", "allOption": 205 },
+      { "slug": "/product-category/ammunition/", "allOption": 93 },
+      { "slug": "/product-category/bullet-casting-loading-tools-components-categories/", "allOption": 88 },
+      { "slug": "/product-category/shotshell-reloading-components/", "allOption": 85 },
+      { "slug": "/product-category/shotshell-reloading-tools-presses/", "allOption": 15 },
+      { "slug": "/product-category/optics/", "allOption": 14 },
+      { "slug": "/product-category/black-powder/", "allOption": 9 },
+      { "slug": "/product-category/king-competition/", "allOption": 8 },
+      { "slug": "/product-category/used-items/", "allOption": 7 },
+      { "slug": "/product-category/chronographs/", "allOption": 5 },
+      { "slug": "/product-category/muzzleloading/", "allOption": 5 },
+      { "slug": "/product-category/uncategorized/", "allOption": 4 },
+      { "slug": "/product-category/categories-clearance-items/", "allOption": 3 },
+      { "slug": "/product-category/accessories/", "allOption": 2 },
+      { "slug": "/product-category/books-reloading-manuals/", "allOption": 2 },
+      { "slug": "/product-category/gun-cleaner-lube-tools-patches/", "allOption": 2 },
+      { "slug": "/product-category/kestrel/", "allOption": 2 },
+      { "slug": "/product-category/self-heating-food/", "allOption": 1 },
+      { "slug": "/product-category/speed-loaders/", "allOption": 1 }
+    ],
+    "totalsSumCheck": "Sum of 21 top-level Store-API category counts = 1731 vs Store-API global x-wp-total = 1506. Sum > global by ~15% from cross-listing (products in multiple categories). WP REST core admin total = 2814 (includes drafts/hidden/OOS). Per-category allOption derived from SAME Store API surface as expectedProductCount (B11)."
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "round": "R1-blind",
+    "probeIp": "audit-IP (not production crawler IP) - WAF verdict must be re-confirmed from production IP before promotion",
+    "canonical": "apex https://budgetshootersupply.ca (www 301 -> apex; <link rel=canonical> -> apex)",
+    "platformStack": "WooCommerce on WordPress; Elementor 3.34.1; WP Rocket 3.20.2 (wpr_delay_js + lazy-render); Woodmart theme (woodmart_slider-sitemap.xml)",
+    "wcCategoryApi": "store-api (recurses into subcategories; ammunition id=162 returns 94 via Store API matching category meta count 93)",
+    "wcCountSurface": "store-api customer-visible (1506); WP REST core admin = 2814",
+    "expectedCountSurface": "wc-store-api (paired with verifyMethod=store-api per B8)",
+    "verifyMethodPolicy": "store-api selected (WC fast-path); restock/OOS-transition alerts not guaranteed for products the batch API never returns (worker.ts:549/711). Operator should confirm tradeoff; switch to detail-page if restock alerts required.",
+    "captchaNote": "reCAPTCHA v3 (?render=6Leq...) loaded site-wide via theme/forms; does NOT gate catalog/Store-API path -> hasCaptcha=false, captchaType recorded informationally.",
+    "ageGateNote": "JS config object contains \"age_verify\":\"no\" -> age-gate feature disabled. No interstitial, no Set-Cookie on homepage GET.",
+    "pathSelectiveFiltering": "Origin returns 403 to SQLi-shaped query string while / returns 200; mod_security-style rule, not a CDN WAF. hasWaf=false.",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wc/store/v1/products/categories",
+      "/wp-json/wp/v2/product"
+    ],
+    "sitemaps": [
+      "/sitemap_index.xml (Yoast)",
+      "/product-sitemap.xml (1001 loc)",
+      "/product-sitemap2.xml (1000 loc)",
+      "/product-sitemap3.xml (813 loc) -> ~2813 product loc == WP REST admin 2814"
+    ],
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium (audit-IP; no rapid-burst run; re-confirm from production IP)",
+      "expectedProductCount": "high (Store API x-wp-total=1506)",
+      "catalogUrls": "medium (per-category spine from Store API; NOT full-walked/ID-deduped this round; Woodmart parents may render subcat tiles in HTML)",
+      "paginationPattern": "medium (page/2 link present in HTML but raw HTML loop is JS-deferred; perPage=100 assumed WC Store API max, not probed)",
+      "sortParam": "high (Store API 3-outcome counter-control: default==date-desc, title-asc differs)",
+      "watermark.method": "high (WP REST modified_after two-probe: future=0, past=2814)",
+      "needsPlaywright": "low (HTML category archives JS-defer the WC loop; set false on assumption Store API works at scale - NOT sustained-walk verified this round)"
+    },
+    "inconclusiveR1": [
+      "needsPlaywright: raw HTML category page 1 yielded only 5 product links (widgets); full WC loop is WP-Rocket-delayed JS. Store API is the intended crawl path but a 50+ sequential sustained walk was NOT run (R2 task).",
+      "perPage=100: WC Store API per_page cap not probed; default placeholder.",
+      "catalogUrls full-walk + ID-dedup NOT performed (blind round, no scaled walks). Coverage proof deferred to R2.",
+      "extractionTested=false: Stage 4g/Stage 10 runtime fetch simulation not run."
+    ]
+  }
+}

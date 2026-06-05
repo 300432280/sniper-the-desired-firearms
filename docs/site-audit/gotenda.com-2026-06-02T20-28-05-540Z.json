@@ -1,0 +1,131 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": true,
+  "wafType": "sucuri",
+  "wafLastProbedAt": "2026-06-02T20:22:12Z",
+  "wafProbeMethod": "single-get-minimal (heavy-8-batch SKIPPED — aggressive Sucuri, IP-ban risk)",
+  "wafProbeResult": "Sucuri Cloudproxy active JS challenge on BOTH apex and www (per-host 307 + sucuri_cloudproxy_js body). iPhone UA alone does NOT bypass; requires solved sucuri_cloudproxy_uuid cookie. Cookie derived locally by evaluating challenge JS (zero extra network), then 200 OK on www.",
+  "wafProbeEvidence": {
+    "sucuriHeaders": ["X-Sucuri-ID: 14017", "Server: Sucuri/Cloudproxy"],
+    "challengeBodyMarker": "sucuri_cloudproxy_js",
+    "challengeMechanism": "JS sets sucuri_cloudproxy_uuid_f2f1c7d20 cookie via document.cookie then location.reload()",
+    "perHostChallenge": true,
+    "apexStatusNoCookie": 307,
+    "wwwStatusNoCookie": 307,
+    "wwwStatusWithCookie": 200,
+    "rapidBurstTested": false,
+    "sustainedWalkPages": 0,
+    "untestedAttackSurfaces": ["rapid-burst", "honeypot-paths", "sqli-shaped", "xss-shaped", "no-UA", "multi-UA-matrix"],
+    "untestedReason": "Aggressive Sucuri + live crawler may be active; heavy-probe rapid burst would risk audit-IP ban (persona #1 rule). BLIND round uses minimal single GETs only."
+  },
+  "wafWorkaround": {
+    "method": "cookie-cache",
+    "reason": "Sucuri Cloudproxy JS challenge; production waf-cookie-manager solves via Playwright and caches cookie in Redis (per-host, UA-fingerprint-matched)."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+  "needsPlaywright": true,
+  "expectedProductCount": 16770,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://www.gotenda.com/product-category/firearms-canada/",
+    "https://www.gotenda.com/product-category/accessories/",
+    "https://www.gotenda.com/product-category/ammunition-for-sale-in-canada-tenda-canada/",
+    "https://www.gotenda.com/product-category/gun-optics-canada/",
+    "https://www.gotenda.com/product-category/knives-tools/",
+    "https://www.gotenda.com/product-category/reloading/",
+    "https://www.gotenda.com/product-category/hunting-outdoor/",
+    "https://www.gotenda.com/product-category/gun-deals-promotions-canada/",
+    "https://www.gotenda.com/product-category/tenda-alpha/",
+    "https://www.gotenda.com/product-category/tenda-strike/"
+  ],
+  "extractionTested": false,
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "lastVerified": "2026-06-02",
+  "topLevelCategories": {
+    "source": "wc-store-api (products/categories, walked all 3 pages to X-WP-TotalPages=3)",
+    "categories": [
+      { "id": 6, "slug": "/product-category/firearms-canada/", "allOption": 4159, "firearmRelevant": true },
+      { "id": 9, "slug": "/product-category/accessories/", "allOption": 3348, "firearmRelevant": true },
+      { "id": 7, "slug": "/product-category/ammunition-for-sale-in-canada-tenda-canada/", "allOption": 2299, "firearmRelevant": true },
+      { "id": 15, "slug": "/product-category/gun-optics-canada/", "allOption": 2248, "firearmRelevant": true },
+      { "id": 2454, "slug": "/product-category/knives-tools/", "allOption": 1553, "firearmRelevant": true },
+      { "id": 35, "slug": "/product-category/reloading/", "allOption": 1426, "firearmRelevant": true },
+      { "id": 63, "slug": "/product-category/hunting-outdoor/", "allOption": 1017, "firearmRelevant": true },
+      { "id": 69, "slug": "/product-category/gun-deals-promotions-canada/", "allOption": 765, "firearmRelevant": true },
+      { "id": 20, "slug": "/product-category/tenda-alpha/", "allOption": 596, "firearmRelevant": true },
+      { "id": 2383, "slug": "/product-category/tenda-strike/", "allOption": 427, "firearmRelevant": true },
+      { "id": 276, "slug": "/product-category/gift-card/", "allOption": 6, "firearmRelevant": false },
+      { "id": 921, "slug": "/product-category/free-gift-350/", "allOption": 2, "firearmRelevant": false },
+      { "id": 924, "slug": "/product-category/free-gift-1000/", "allOption": 0, "firearmRelevant": false },
+      { "id": 922, "slug": "/product-category/free-gift-500/", "allOption": 0, "firearmRelevant": false },
+      { "id": 923, "slug": "/product-category/free-gift-700/", "allOption": 0, "firearmRelevant": false }
+    ],
+    "totalsSumCheck": "15 top-level cats (parent=0) across 208 total category entries. Sum of all top-level WC Store API counts = 17,846, which EXCEEDS the global Store API total 16,770 because Store API category 'count' recurses into subcategories and products are cross-listed across multiple top-level cats (firearms also in promotions, etc.). Per-category allOption from same surface (wc-store-api) as expectedProductCount. catalogUrls = 10 firearm-relevant top-level cats (gift-card + 4 free-gift excluded as non-firearm per Rule C exclusion list)."
+  },
+  "auditNotes": {
+    "runId": "r1-blind-gotenda-2026-06-02",
+    "round": "R1 (BLIND)",
+    "probeIp": "audit IP (single-host, minimal requests; Sucuri verdict is from THIS IP — re-confirm from production crawler IP before promotion)",
+    "wcCategoryApi": "store-api",
+    "wcCountSurface": "wc-store-api (customer-visible; equals WP REST core admin total 16770 — no draft/hidden divergence on this site)",
+    "expectedCountSurface": "wc-store-api /wc/store/v1/products x-wp-total (matches verifyMethod=store-api per B8)",
+    "verifyMethodPolicy": "store-api selected (WC fast-path). TRADEOFF: restock/OOS-transition alerts NOT guaranteed for products the batch API never sees (worker.ts:549/711). Operator must confirm this is acceptable, or switch to detail-page if restock alerts are required.",
+    "fieldConfidence": {
+      "platform": "high — WooCommerce 9.4.5 / WordPress 6.7.1 generator + 237 woocommerce markers + wp-json Link headers",
+      "hasWaf": "high — X-Sucuri-ID + Server: Sucuri/Cloudproxy + per-host JS challenge",
+      "expectedProductCount": "high — Store API x-wp-total=16770 (== WP REST core total)",
+      "catalogUrls": "medium — derived from walked 3-page taxonomy API (15 top-level cats); FULL per-category page-walk + ID-dedup (Stage 4d) NOT done under Sucuri request constraints — flagged inconclusive for R2",
+      "paginationPattern": "high — /page/2/ returned 200 + ID-disjoint products from page 1",
+      "perPage": "high — Store API honored per_page=100 (WP Store API hard cap)",
+      "sortParam": "low — no standard WC <select name=orderby> server-rendered; ordering controlled by WOOF filter plugin (client-side). HTML sort NOT verified; watermark does not depend on it.",
+      "watermark.method": "high — WP REST core modified_after two-probe honored (future=0, ancient=16770)"
+    },
+    "inconclusive": [
+      "Full Stage-4d per-category page-walk + ID-level dedup coverage proof (deferred — Sucuri aggressive, BLIND minimal-request budget)",
+      "Stage-6 3-outcome sort counter-control test (deferred — WOOF plugin ordering; needs R2 live cache-busted probes)",
+      "Stage-10 runtime fetchability simulation (deferred to R2/post-cookie)",
+      "Sub-category coverage: parent counts recurse via Store API; whether any firearm-relevant products live ONLY under non-top-level parents not verified"
+    ],
+    "stageNotes": [
+      "S1 Canonical: apex gotenda.com 301 -> www.gotenda.com (after Sucuri 307 challenge solve). Canonical = https://www.gotenda.com.",
+      "S2 WAF: Sucuri Cloudproxy, per-host JS challenge on BOTH apex and www. Cookie sucuri_cloudproxy_uuid_f2f1c7d20 derived by local JS eval (zero network). iPhone UA + cookie -> 200. hasCaptcha=false (no recaptcha/hcaptcha/turnstile markers).",
+      "S3 Platform: WooCommerce 9.4.5 on WordPress 6.7.1. adapterType=woocommerce. No age-gate. needsPlaywright=true (Sucuri challenge requires browser solve in production via waf-cookie-manager).",
+      "S4 Catalog: WC Store API products/categories walked ALL 3 pages (X-WP-TotalPages=3, X-WP-Total=208 categories). 15 top-level (parent=0); 10 firearm-relevant chosen for catalogUrls. THIS REVERSES the historical R2 gotenda mistake of reading page 1 and concluding 1 top-level category.",
+      "S5 Pagination: WordPress path-form /page/{N}/; page 2 returned 200 + product set ID-disjoint from page 1. perPage capped at 100 by WC Store API.",
+      "S6 Sort: no standard WC orderby <select> in server HTML; WOOF filter plugin handles ordering client-side. sortParam=null, sortVerified=false. Watermark uses API date filter, not HTML sort.",
+      "S7 Watermark: api-date-since-watermark via WP REST core modified_after (two-probe honored: future->0, ancient->16770). dateFilterApi=wp-rest-core, dateFilterField=modified_after.",
+      "S8 Count: expectedProductCount=16770 via wp-rest-header on /wc/store/v1/products (x-wp-total). Matches WP REST core admin total.",
+      "S9 Assembly: BLIND candidate. extractionTested=false (Stage 4g/10 deferred). Several fields flagged inconclusive for R2 live verification."
+    ]
+  }
+}

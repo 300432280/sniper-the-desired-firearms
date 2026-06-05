@@ -1,0 +1,122 @@
+{
+  "profileVersion": 1,
+  "platform": "lightspeed-ecom",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-04T01:35:04Z",
+  "wafProbeMethod": "gentle-single-get",
+  "wafProbeResult": "Cloudflare in front (Server: cloudflare, CF-RAY a06332e1590039c5-YYZ), www returned HTTP 200 to Chrome-120 UA on every probe with no challenge body. Passive, not blocking. apex (gagnonsports.com) returns 403/SSL-fail and was rejected as non-canonical.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["Server: cloudflare", "CF-RAY: a06332e1590039c5-YYZ", "cf-cache-status: DYNAMIC", "set-cookie: __cf_bm=..."],
+    "sucuriHeaders": [],
+    "challengeBodySeen": false,
+    "apexStatus": "403 (rejected as non-canonical; SSL handshake failed under curl too)",
+    "wwwStatus": "200 across all gentle probes",
+    "note": "GENTLE WAF detection only per Wave-2 R1 constraint — no 8-batch heavy probe, no multi-UA matrix, no rapid burst. Verdict from passive evidence on a single production UA (Chrome 120). Operator must re-confirm from production IP before promotion."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 2707,
+  "productCountMethod": {
+    "method": "generic-product-sitemap",
+    "url": "/sitemap.xml",
+    "pattern": "/[a-z0-9-]+\\.html$"
+  },
+  "catalogUrls": [
+    "/firearms/new-firearms/air-guns/",
+    "/firearms/new-firearms/centerfire-rifles/",
+    "/firearms/new-firearms/restricted-firearms/",
+    "/firearms/new-firearms/restricted-firearms/pistols/",
+    "/firearms/new-firearms/restricted-firearms/revolvers/",
+    "/firearms/new-firearms/restricted-firearms/rifles/",
+    "/firearms/new-firearms/rimfire-rifles/",
+    "/firearms/new-firearms/shotguns/",
+    "/firearms/used-firearms/used-restricted/",
+    "/firearms/used-firearms/used-rifles/",
+    "/firearms/used-firearms/used-shotguns/",
+    "/hunting/ammunition/centerfire-ammo/",
+    "/hunting/ammunition/collectors-cartridges/",
+    "/hunting/ammunition/handgun/",
+    "/hunting/ammunition/rimfire-ammo/",
+    "/hunting/ammunition/shotgun-ammo/",
+    "/hunting/optics/scopes-binoculars/",
+    "/hunting/optics/accessories/",
+    "/hunting/reloading/",
+    "/hunting/knives-tools/",
+    "/hunting/decoys/",
+    "/hunting/game-calls/",
+    "/hunting/shooting-accessories/ammo-storage/",
+    "/hunting/shooting-accessories/eye-ear-protection/",
+    "/hunting/shooting-accessories/gun-accessories/",
+    "/hunting/shooting-accessories/gun-maintenance/",
+    "/hunting/shooting-accessories/gun-parts/",
+    "/hunting/shooting-accessories/gun-storage/",
+    "/hunting/shooting-accessories/miscellaneous-shooting-accessories/",
+    "/sale/hunting-super-specials/new-used-guns/",
+    "/previously-owned-merchandise/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://www.gagnonsports.com/browning-bar-mark-4-hunter-270-win-22-bbl-semi-aut.html", "title": "Browning BAR Mark 4 Hunter 270 Win 22\" BBL Semi Auto Rifle", "price": null, "stockStatus": "unknown", "priceVisible": false, "note": "this card showed $0.00/login placeholder in crude scan" },
+    { "url": "https://www.gagnonsports.com/ruger-american-gen-2-predator-300-win-mag-22-burnt.html", "title": "Ruger American Gen 2 Predator 300 Win Mag 22\" Burnt Bronze/Green Splatter", "price": 1049.99, "stockStatus": "in_stock", "note": "microdata itemprop=price content=1049.99, availability content=in_stock" }
+  ],
+  "sortParam": "?sort=newest",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "suffix-replace",
+    "match": "?sort=newest",
+    "template": "page{N}.html?sort=newest",
+    "perPage": 24,
+    "firstPageHasParam": true,
+    "startPage": 2,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": { "method": "navigate-from-watermark", "reason": "?sort=newest verified honored via 3-outcome counter-control (default=chiappa/marlin, sort=newest=ruger-gen2, sort=title==default); page1/page2 zero-overlap confirms pagination honored." },
+    "maintain": { "verifyMethod": "detail-page", "verifyEndpoint": null }
+  },
+  "lastVerified": "2026-06-03",
+  "auditNotes": {
+    "runId": "wave2-r1-blind-2026-06-03",
+    "probeIp": "audit-host (single Chrome-120 UA, gentle WAF only)",
+    "canonicalLocaleOverride": "canonical=www.gagnonsports.com; apex gagnonsports.com returns 403/SSL-fail (B2: reject failing host even though it is shorter input)",
+    "scopeOverride": "DB profile includes /archery/bows/ + /archery/arrows-accessories/. This blind candidate EXCLUDES pure archery per firearm-relevant scope (bows are not firearm/airsoft). Operator decides — flag for R2.",
+    "expectedCountSurface": "firearm-relevant leaf walk-sum (not whole-site sitemap). Whole-site sitemap = 13,652 product .html URLs across ALL departments (fishing dominates). Firearm-relevant walked subset = 2,707, matching DB expectedProductCount 2706.",
+    "verifyMethodPolicy": "detail-page selected (non-store-api platform; Lightspeed has no WC Store API). Restock alerts via Playwright detail-page.",
+    "coverageBlockerHypothesis": "Site is isEnabled:false + crawlPhase:bootstrap with only 210 indexed / 118 active (~4-8% of 2706). NOT a WAF block (www is CF-passive 200) and NOT broken catalogUrls (all DB catalogUrls resolve 200 with products today). Most likely: bootstrap was never enabled/completed — the site is parked mid-onboarding.",
+    "dbDivergenceFlags": {
+      "firearmsTreeAdded": "DB note says 'No /firearms/ category exists' (true as of 2026-04-07). Site has SINCE ADDED a full /firearms/ tree (new + used, in sitemap), ~239 walked products. DB catalogUrls miss it entirely — blind candidate adds 11 /firearms/* leaves.",
+      "productCountMethodMismatch": "DB uses {method:'html-pagination', selector:'.showing_result', perPage:1}. Blind run could NOT verify a last-page link exists (Lightspeed Classic exposes only rel=next / pageN.html, no rel=last). The .showing_result selector was not validated this run. Blind candidate uses generic-product-sitemap instead. FLAG for R2: confirm whether .showing_result renders a total-count number the runtime can parse.",
+      "perPageMismatch": "DB top-level perPage:100 but paginationPattern.perPage:24. Live site honors only 24 (per_page=100 returned 24). DB's 100 is inert/wrong for this site.",
+      "searchUrlForm": "DB searchUrl '/search/{keyword}/'. Not validated this run (B3 junk-keyword diff test not run under gentle constraint). FLAG for R2."
+    },
+    "discoveredApiEndpoints": null,
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "medium (gentle probe only, single UA — operator re-confirm from prod IP)",
+      "sortParam": "high (3-outcome counter-control verified)",
+      "paginationPattern": "high (page1/page2 zero-overlap verified, suffix-replace confirmed)",
+      "perPage": "high (per_page=100 override rejected, stays 24)",
+      "expectedProductCount": "medium-high (firearm-relevant walk-sum ~2707; not every leaf fully walked, sale-overlap not fully deduped)",
+      "catalogUrls": "medium (firearms tree added vs DB; not all 31 leaves fully walked + ID-deduped this run; archery scope is an open operator question)",
+      "productCountMethod": "medium (sitemap method verified; DB's html-pagination selector unverified)"
+    },
+    "stageNotes": [
+      "Stage 1: canonical=www.gagnonsports.com. apex 403/SSL-fail, rejected (B2).",
+      "Stage 2: GENTLE only. Cloudflare-passive (CF-RAY + 200s, no challenge). hasWaf=false, hasCaptcha=false. No 8-batch/multi-UA — operator must re-confirm from prod IP.",
+      "Stage 3: lightspeed-ecom (105 cdn.shoplightspeed.com refs, x-shop-id:626968). No age-gate. adapterType=generic-retail. needsPlaywright=false (plain HTTP returns products + microdata).",
+      "Stage 4: parents (/firearms/, /hunting/, /archery/) are tile-only (0 products via .productborder) — leaves only. Firearms tree NEWLY present vs DB. 31 firearm-relevant leaf catalogUrls. Archery excluded per scope (operator question).",
+      "Stage 5: suffix-replace pageN.html?sort=newest. ?page=N silently ignored (Mistake 26). perPage=24 (override rejected). page1/page2 zero-overlap verified.",
+      "Stage 6: sort=newest honored. 3-outcome: default!=newest, counter-control(title)==default. sortVerified=true.",
+      "Stage 7: navigate-from-watermark (sort verified, newest-first works).",
+      "Stage 8: expectedProductCount=2707 (firearm-relevant walk-sum). Whole-site sitemap=13,652 (all depts). generic-product-sitemap method (no last-page link for html-pagination).",
+      "Stage 9: candidate assembled. Stage 10 runtime-simulate NOT run (read-only blind R1)."
+    ]
+  }
+}

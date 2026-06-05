@@ -318,6 +318,21 @@ async function checkSortParam(
     };
   }
 
+  // sortParam may be a structured object (e.g. Ecwid / api-body-field
+  // { type, field, value }) rather than a URL query string. The URL-based
+  // with/without-sort test only applies to string query fragments — skip it
+  // for object descriptors (matches the guard in stripSortFromUrl above).
+  if (profile.sortParam != null && typeof profile.sortParam !== 'string') {
+    return {
+      name: 'sortParam',
+      verdict: 'WARN',
+      expected: 'string query fragment to URL-test',
+      actual: `${(profile.sortParam as any)?.type ?? 'object'} descriptor`,
+      evidence: { sortParam: profile.sortParam },
+      reason: 'sortParam is a non-string (API-body sort descriptor); URL-based sort test not applicable',
+    };
+  }
+
   const sortParam: string = profile.sortParam || '';
   if (!sortParam) {
     return {

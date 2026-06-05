@@ -1,0 +1,134 @@
+{
+  "profileVersion": 1,
+  "platform": "bigcommerce-stencil",
+  "adapterType": "generic-retail",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-03T23:54:06Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every BATCH 1 response, Server: cloudflare) but catalog path returns 200 across all UAs, rapid burst, no-UA, and SQLi probes. Only honeypot/attack paths (/wp-admin, /.env, /.git -> 403; XSS query -> 400) are filtered. Passive CDN, not blocking the crawler.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["CF-RAY present on all BATCH 1 responses", "Server: cloudflare", "cf-cache-status: DYNAMIC"],
+    "sucuriHeaders": [],
+    "rapidBurstStatus": "10/10 = 200",
+    "rapidBurstTested": true,
+    "sqliRuleFired": false,
+    "xssRuleFired": true,
+    "honeypotPathsBlocked": ["/wp-admin (403)", "/wp-login.php (403)", "/.env (403)", "/.git/config (403)"],
+    "botUaBlocked": false,
+    "noUaBlocked": false,
+    "untestedAttackSurfaces": ["auth-attempt", "path-traversal", "large-body-POST", "shellshock-UA"],
+    "note": "honeypot 403s + XSS 400 are Cloudflare managed-ruleset on attack paths only; catalog path (/, /firearms/, /ammunition/, category pages) is fully open."
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 3509,
+  "productCountMethod": {
+    "method": "generic-product-sitemap",
+    "url": "/xmlsitemap.php?type=products&page=1",
+    "pattern": "oleysarmoury\\.com/[a-z0-9-]+/$"
+  },
+  "catalogUrls": [
+    "https://oleysarmoury.com/firearms/",
+    "https://oleysarmoury.com/ammunition/",
+    "https://oleysarmoury.com/optics/",
+    "https://oleysarmoury.com/magazines/",
+    "https://oleysarmoury.com/reloading/",
+    "https://oleysarmoury.com/accessories/",
+    "https://oleysarmoury.com/parts/",
+    "https://oleysarmoury.com/holsters/",
+    "https://oleysarmoury.com/safes-cabinets/",
+    "https://oleysarmoury.com/black-powder-muzzle-loader/",
+    "https://oleysarmoury.com/air-guns-and-supplies/",
+    "https://oleysarmoury.com/air-soft/",
+    "https://oleysarmoury.com/knifes/",
+    "https://oleysarmoury.com/consignment/",
+    "https://oleysarmoury.com/clearance/",
+    "https://oleysarmoury.com/bargain-bin/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://oleysarmoury.com/axor-arms-fs-pro-folding-semi-12-gauge-3-w-chokes-blk-fde/", "title": "Axor Arms FS-Pro Folding Semi 12 Gauge 3\" w/Chokes - BLK/FDE", "price": 599.99, "stockStatus": "in_stock" },
+    { "url": "https://oleysarmoury.com/browning-silver-field-hunter-12-gauge-3-28-w-chokes/", "title": "Browning Silver Field Hunter 12 Gauge 3\" 28\" w/Chokes", "price": 1849.99, "stockStatus": "in_stock" },
+    { "url": "https://oleysarmoury.com/used-bsa-1916-shtle-mkiii-303-british-sporterized-stock-is-loose/", "title": "Used BSA 1916 SHTLE MKIII 303 British Sporterized *Stock is Loose*", "price": 250.00, "stockStatus": "in_stock" }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "Query-form ?sort= is NOOP via plain HTTP (lowestprice == highestprice == newest == default, identical first-8 product IDs on /firearms/ and /22-lr/). But default DOM order is monotonic-descending BigCommerce auto-increment product-id (page1 /firearms/ ends ~10161, page2 starts 10149,10148...; /22-lr/ default 10098,10097,10043...), which IS newest-first. navigate-from-watermark paginates page 1 (newest) and walks back to the watermark using natural ID-desc order."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "bigcommerce": {
+    "storefrontToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.<redacted-rotates-48h>",
+    "tokenCacheTtlMs": 172800000
+  },
+  "topLevelCategories": {
+    "source": "sitemap-categories + nav (https://oleysarmoury.com/xmlsitemap.php?type=categories&page=1)",
+    "categories": [
+      { "slug": "/firearms", "allOption": 72 },
+      { "slug": "/ammunition", "allOption": 72 }
+    ],
+    "totalsSumCheck": "INCONCLUSIVE in R1: category tree is NON-RECURSIVE on this BC instance. /ammunition/ page-1 IDs do NOT overlap /22-lr/ page-1 IDs (1/12 common) -> top-level parents do NOT contain their per-caliber children. 251 category locs in sitemap, mostly per-caliber leaf cats (/22-lr/, /308/, /9mm/, etc.). The 16 top-level firearm-relevant catalogUrls above are a CANDIDATE spine whose union has NOT been ID-deduped against the 3509-product sitemap. Full coverage proof (walk every leaf category, union product-ids, compare to 3509) is DEFERRED to R2 — exceeds R1 blind budget."
+  },
+  "lastVerified": "2026-06-04",
+  "auditNotes": {
+    "runId": "R1-blind-oleysarmoury-2026-06-04",
+    "round": "PHASE A R1 (blind)",
+    "probeIp": "audit-host (Cloudflare per-IP reputation applies; re-confirm WAF from production crawler IP before promotion)",
+    "dbColumnFlips": { "hasWaf": false, "wafType": "cloudflare-passive" },
+    "wcCountSurface": "n/a (not WooCommerce)",
+    "expectedCountSurface": "product sitemap /xmlsitemap.php?type=products (3509 <loc>, single page, page=2 empty). Includes OOS/hidden by design.",
+    "verifyMethodPolicy": "detail-page selected (BigCommerce Stencil, no WooCommerce Store API). Restock/OOS transitions caught via Playwright detail-page check.",
+    "discoveredApiEndpoints": [
+      "/xmlsitemap.php (sitemap index: pages, products, categories, brands, news)",
+      "/xmlsitemap.php?type=products&page=1 (3509 product <loc>)",
+      "BigCommerce Storefront GraphQL bearerToken in homepage JS data layer (eat-iat=172800s=48h)"
+    ],
+    "fieldConfidence": {
+      "platform": "high (59 cdn11.bigcommerce.com refs + stencil- class)",
+      "adapterType": "high (BC -> generic-retail per skill mapping)",
+      "hasWaf": "high (8-batch + multi-UA, catalog path all 200)",
+      "expectedProductCount": "high (product sitemap, single page, deduped <loc> with product-URL pattern)",
+      "paginationPattern": "high (page1 vs page2 = 0 overlap; ?limit honored to server cap 100)",
+      "perPage": "high (limit=250 caps at 100 = BC server max)",
+      "sortParam": "high-NOOP (lowestprice==highestprice==newest==default, decisive 4-way test)",
+      "watermarkMethod": "medium (ID-desc default order is the newest signal; navigate-from-watermark unverified end-to-end against watermark)",
+      "catalogUrls": "LOW (non-recursive tree; union NOT proven to cover 3509 — R2 must do full leaf-cat walk + ID dedup)"
+    },
+    "stageNotes": [
+      "Stage 1: canonical = apex https://oleysarmoury.com (www 301->apex; <link rel=canonical> = apex). robots.txt has NO Sitemap: directive; sitemap index found at /xmlsitemap.php.",
+      "Stage 2: hasWaf=false (cloudflare-passive). cf-ray everywhere but catalog 200 across all UAs/burst/no-UA/SQLi. Honeypot+XSS filtered on attack paths only. No CAPTCHA, no age-gate.",
+      "Stage 3: platform=bigcommerce-stencil (cdn11.bigcommerce.com x59, stencil- class). adapterType=generic-retail. needsPlaywright=false (plain HTTP returns full product cards).",
+      "Stage 4: catalogUrls is a CANDIDATE top-level spine. Tree is non-recursive -> coverage UNPROVEN. expectedProductCount=3509 from product sitemap is the ground truth to dedup against in R2.",
+      "Stage 5: paginationPattern query ?page=N, firstPageHasParam=false, perPage=100 (server cap; limit=250 returned 100). page1 vs page2 = 0 overlap.",
+      "Stage 6: ?sort= is NOOP via plain HTTP (4-way identical: default/newest/lowestprice/highestprice). sortParam=null, sortVerified=false.",
+      "Stage 7: watermark=navigate-from-watermark. Default DOM order = BC auto-increment product-id DESC (independent newest-first signal, cross-referenced across /firearms/ and /22-lr/).",
+      "Stage 8: expectedProductCount=3509. productCountMethod=generic-product-sitemap on /xmlsitemap.php?type=products&page=1 with product-URL pattern filter.",
+      "Stage 9: validator not run in R1 scratch (read-only); shape assembled per Output target. Stage 10 runtime-sim DEFERRED to R2."
+    ],
+    "openQuestionsForR2": [
+      "Full leaf-category walk + ID-dedup vs 3509 sitemap to PROVE catalogUrls coverage. Likely need many per-caliber leaf URLs OR confirm a BC GraphQL all-products feed.",
+      "Confirm navigate-from-watermark end-to-end: is product-id strictly monotonic with publish time across the whole catalog?",
+      "Re-confirm hasWaf from production crawler IP (Cloudflare per-IP reputation).",
+      "Decode storefront GraphQL token usage in runtime adapter (tokenCacheTtlMs=172800000 / 48h matches SKILL.md reference)."
+    ]
+  }
+}

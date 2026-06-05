@@ -1,0 +1,70 @@
+{
+  "domain": "hical.ca",
+  "runId": "R2-reachability-hical-2026-06-02",
+  "round": "R2 (held-site sustained-reachability gate)",
+  "persona": "testing-api-tester",
+  "method": "Playwright Incapsula solve (iPhone UA per DB userAgentOverride, 13 cookies incl. visid_incap_3254206/incap_ses_1848_3254206/nlbi_3254206/PHPSESSID) -> 15 spaced (>=2.6s) axios GETs with the cookie bundle across Store API /products, WP REST core /wp/v2/product (the watermark surface), /wp/v2/product_cat, Store API /products/categories, and 2 HTML category pages. STOP-on-escalation armed (403/429/503/307/302/interstitial/network). Mirrors production waf-cookie-manager.ts:79-173 + woocommerce.ts:306-369.",
+  "probeIp": "shared with R1 (99.228.63.11 class)",
+  "reachabilityVerdict": {
+    "verdict": "SAFE-TO-ENABLE",
+    "watermarkSurfaceReachableWithCookie": true,
+    "evidence": "All 15 spaced requests returned HTTP 200, zero escalation: no 403/429/503, no 307/302 redirect, no Incapsula interstitial on ANY surface, no network reset. The Incapsula cookie session carried EVERY gated surface. X-Iinfo on all WP REST calls = '...SNNN' (S=cookie-session-validated, NNN=not-challenged); Store API = 'NNNN'. Critically, /wp/v2/product (the watermark surface R1-blind found CHALLENGED on cookieless axios) returned clean JSON on probes 2,3,4,5,6,10,13,14 with the cookie. Sustained over 8 WP-REST calls + 4 Store-API calls + 2 HTML pages + 2 category-API calls without a single re-challenge. Held budget 1800 (~4s gap at capacity 0.517) is more conservative than the 2.6s test gap, so production pace is safer than the test that passed.",
+    "watermarkMethodConfirmedReachable": "api-date-since-watermark (DB current). Live-proven: /wp/v2/product?orderby=modified&modified_after=2099-01-01 -> x-wp-total=0 (filter honored); modified_after=7d -> x-wp-total=12 (real window). Monotonicity strictly decreasing by modified across pages 1-4: p1 newest 2026-06-02T22:13:38 > p2 2026-05-27T00:00:45 > p3 2026-05-19T05:11:44 > p4 2026-05-12T23:13:39. Production path: watermark-crawler.ts:207-212 passes hasWaf:true into adapter.fetchCatalogPage -> woocommerce.ts:306-316 ensureCookies -> line 343/346 GET /wp/v2/product?modified_after=...&orderby=modified with cookie. End-to-end reachable; NO downgrade to full-catalog-sweep required.",
+    "noIpBlockObserved": true,
+    "stopTriggered": false
+  },
+  "corrections": [
+    {
+      "field": "crawlers.watermark.method",
+      "current_R1_blind": "full-catalog-sweep",
+      "current_DB": "api-date-since-watermark",
+      "proposedValue": "api-date-since-watermark",
+      "evidence": "R1's full-catalog-sweep was a blind/cookieless artifact (it never solved the Incapsula challenge, so /wp/v2/product returned the interstitial). With the production cookie-cache workaround, /wp/v2/product?modified_after=...&orderby=modified is fully reachable and the date filter is honored (probes 3,4,5). DB value is correct; R1 downgrade must be reverted. Keep DB: api-date-since-watermark on wp-rest-v2, orderBy=modified, dateFilterField=modified_after.",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "current_R1_blind": 1656,
+      "current_DB": 1676,
+      "proposedValue": 1656,
+      "evidence": "Live 2026-06-02: BOTH surfaces agree x-wp-total=1656 — Store API /wc/store/v1/products AND WP REST core /wp/v2/product (probes 1,2,5,6,10,11,13,14,15 all 1656). The DB 1676 (set 2026-05-19 B4R2, triple-matched to sitemap at that time) is stale; catalog shrank ~20 over the two weeks. R1's 1656 is current and cross-confirmed on two independent REST surfaces. The 1656-vs-1676 question is SETTLED at 1656.",
+      "confidence": "high"
+    },
+    {
+      "field": "needsPlaywright",
+      "current": true,
+      "proposedValue": true,
+      "evidence": "Keep true. Playwright is required ONCE per ~90min to solve the Incapsula JS challenge and seed the cookie-cache (waf-cookie-manager.ts). Subsequent API/HTML calls use cookies via axios. Not a per-request Playwright dependency, but the bootstrap solve is mandatory.",
+      "confidence": "high"
+    },
+    {
+      "field": "catalogUrls",
+      "current_R1_blind": "[] (empty, blind-blocked)",
+      "current_DB": "23 product-category URLs (firearm-relevant spine)",
+      "proposedValue": "retain DB 23-category spine",
+      "evidence": "R1 left catalogUrls empty because cookieless category/HTML surfaces were challenged. With cookie: /wp/v2/product_cat (probe 7) x-wp-total=142, Store API /products/categories (probe 8) x-wp-total=112 — spine derivable; both HTML category pages (probes 9,12) returned 200 with 124 product-class hits. The DB 23-URL spine (validated B4R2/B4R3) is reachable and should be retained, not emptied. (Coverage adequacy of the 23-URL set is a Round-2 walk question, not a reachability question — out of this gate's scope.)",
+      "confidence": "high"
+    },
+    {
+      "field": "crawlers.maintain.verifyMethod",
+      "current": "store-api",
+      "proposedValue": "store-api (with restock caveat noted)",
+      "evidence": "Store API /products reachable with cookie (probes 1,11,15). Retain store-api per DB precedent. CAVEAT (carried from R1/B4): worker.ts:711 early-return on store-api path may miss OOS-transition restock detection (fix branch fix/batch-3-runtime-bugs-2026-05-19). Not a reachability blocker; operator policy decision.",
+      "confidence": "high"
+    }
+  ],
+  "countReconciliation": {
+    "storeApi_xWpTotal": 1656,
+    "wpRestCore_xWpTotal": 1656,
+    "dbStale": 1676,
+    "verdict": "1656 (both live surfaces agree 2026-06-02; DB 1676 stale from 2026-05-19)"
+  },
+  "notes": [
+    "consecutiveFailures=33 in DB is STALE (lastCrawlAt 2026-04-30, pre-dates 2026-06-01 crawler fixes and the bulk-park). It is NOT evidence of a ban — R1 ledger confirms all 20 sites were bulk-parked ~2026-04-30, not banned. Live probe today shows zero hostility.",
+    "Incapsula here is JS-challenge-only (no IP reputation block). One Playwright solve yields a 13-cookie bundle that carries ALL surfaces (REST core + Store API + WC categories + HTML) for the cookie TTL. The production COOKIE_TTL_MS=90min refresh is well within the observed challenge stability.",
+    "iPhone UA (DB override) yielded the full 13-cookie bundle this run (contra the May B4R3 note that iPhone UA sometimes yielded only 2 cookies on initial visit). The bundle worked across all surfaces. UA override sound; keep iPhone Safari UA (matches the UA the cookie was solved under, per waf-cookie-manager.ts:106-107).",
+    "Production safety margin: test ran at 2.6s gap and held budget gives ~4s gap, so the real crawler will pace SLOWER than this passing test. SAFE-TO-ENABLE.",
+    "Out of scope for this reachability gate (defer to coverage/walk round): full per-category pagination sweep, all-products(cat=1867) overlap re-walk, round-trip price/stockStatus extraction. R1/B4R2 already cover the spine; this gate only certifies the crawler can sustain its watermark/catalog crawl without being banned.",
+    "productCountMethod in R1 is structured object {method:'wp-rest-header',endpoint:'/wp-json/wp/v2/product',header:'x-wp-total'} which is correct; DB matches. (B4R2/B4R3 flagged a legacy bare-string risk in some profiles; this profile's object form is fine.)"
+  ]
+}

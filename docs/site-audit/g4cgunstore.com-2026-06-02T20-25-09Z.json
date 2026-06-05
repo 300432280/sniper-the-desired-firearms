@@ -1,0 +1,106 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "cloudflare-active",
+  "wafLastProbedAt": "2026-06-02T20:25:09Z",
+  "wafProbeMethod": "light-r1-blind",
+  "wafProbeResult": "Cloudflare in front (cf-ray on every response). UA-reputation escalation observed: Chrome 120 flipped 200->403 on /shop/ after ~5-6 requests within ~60s; Safari 17 / Firefox 121 / iPhone Safari stayed 200 in the same window. JSON REST endpoints (/wp-json/wc/store/v1/products, /wp-json/wp/v2/product) return 403 across ALL tested UAs (rule on /wp-json/, not UA-reputation). HTML catalog pages fetch cleanly under non-Chrome UAs.",
+  "wafProbeEvidence": {
+    "cfHeaders": ["cf-ray present on all responses", "server: cloudflare"],
+    "perUaStatusTimeline": {
+      "chrome-120": "/shop/ 200 on first homepage fetch, then 403 after ~5-6 requests within ~60s; /wp-json/* 403",
+      "firefox-121": "/shop/ 200; /wp-json/wc/store/v1/products 403",
+      "safari-17": "/shop/ 200",
+      "iphone-safari": "/shop/ 200"
+    },
+    "restEndpointsBlocked": ["/wp-json/wc/store/v1/products -> 403 (all UAs)", "/wp-json/wp/v2/product -> 403 (all UAs)"],
+    "rapidBurstTested": false,
+    "sustainedWalkPages": 0,
+    "untestedAttackSurfaces": ["8-batch heavy probe not run (R1 BLIND, IP-ban avoidance)", "sustained 50-page walk not run (R1 BLIND)"],
+    "note": "R1 BLIND: single spaced requests only, no rapid burst, no scaled walk. WAF severity to be confirmed in R2/R3 with full UA matrix + sustained walk per B9."
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v2",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+  "needsPlaywright": false,
+  "expectedProductCount": 5889,
+  "productCountMethod": {
+    "method": "sitemap-index",
+    "urls": [
+      "/product-sitemap.xml",
+      "/product-sitemap2.xml",
+      "/product-sitemap3.xml",
+      "/product-sitemap4.xml",
+      "/product-sitemap5.xml",
+      "/product-sitemap6.xml"
+    ]
+  },
+  "catalogUrls": [
+    "https://g4cgunstore.com/shop/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://g4cgunstore.com/product/vortex-diamondback-hd-15x56-binoculars/", "title": "Vortex Diamondback HD 15x56 Binoculars", "price": ">0 (woocommerce-Price-amount present)", "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 24,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}",
+    "perPage": 24,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "navigate-from-watermark",
+      "reason": "HTML ?orderby=date sort verified honored (default menu_order / date / price all return distinct first-3 sets). WC/WP REST date-filter endpoints are 403-blocked so api-date-since-watermark is unavailable; navigate newest-first via /shop/?orderby=date."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "g4cgunstore.com-r1-blind-2026-06-02T20-25-09Z",
+    "round": "R1-BLIND",
+    "adapterTypeOverride": true,
+    "adapterTypeOverrideReason": "WooCommerce platform routed to generic-retail (operator choice for stable HTML extraction; documented in skill B12 as g4cgunstore precedent). REST surfaces are 403-blocked so the WC adapter's Store-API fast-paths are unusable anyway.",
+    "verifyMethodPolicy": "detail-page selected: WC Store API (/wp-json/wc/store/v1/products) returns 403 across all UAs, so the store-api fast-path cannot run. Playwright detail-page verify is the only working path. Restock detection via detail-page is intact.",
+    "wcCountSurface": "sitemap-index (product-sitemap*.xml) — Store API and WP REST are 403-blocked, sitemap is the only programmatic count source. Cross-checked against /shop/ HTML 'Showing 1-24 of 5890 results' (drift <0.1%).",
+    "expectedCountSurface": "sitemap product-URL count = 5889; HTML result-count = 5890. Paired with verifyMethod=detail-page (full corpus incl. OOS, matches detail-page reach).",
+    "dbColumnFlips": { "hasWaf": true, "wafType": "cloudflare-active" },
+    "discoveredApiEndpoints": ["/wp-json/wc/store/v1/products (403)", "/wp-json/wp/v2/product (403)"],
+    "topLevelCategoriesObserved": [
+      "/product-category/firearms/",
+      "/product-category/ammunition/surplus-ammo/ (ammunition parent path observed via subcats)",
+      "/product-category/sights-optics/",
+      "/product-category/accessories/",
+      "/product-category/iron-sights/",
+      "/product-category/new-arrivals/",
+      "/product-category/promotions/"
+    ],
+    "catalogUrlsNote": "R1 BLIND used /shop/ as the single 100%-coverage spine (WC catalog-all, paginated /page/N/, perPage=24). Per-category alternative spine exists (firearms/ ammunition/ sights-optics/ accessories/ iron-sights/ + brand/promo cats). Full walk + ID-dedup deferred to R2 (no full walks in R1).",
+    "fieldConfidence": {
+      "platform": "high (161 woocommerce- classes, 19 woocommerce plugin refs, wp-json)",
+      "adapterType": "medium (override, needs operator confirm)",
+      "hasWaf": "medium (UA-escalation observed but heavy probe not run; R1 BLIND)",
+      "wafType": "medium",
+      "expectedProductCount": "high (sitemap 5889 vs HTML 5890 cross-check)",
+      "catalogUrls": "low (single /shop/ spine, no full walk in R1)",
+      "sortParam": "high (3-outcome distinct sets)",
+      "sortVerified": "high",
+      "paginationPattern": "high (page2 ID-disjoint from page1)",
+      "perPage": "high (24 = WC default, confirmed)",
+      "needsPlaywright": "medium (HTML works for non-Chrome UAs)",
+      "watermarkMethod": "medium",
+      "maintainVerifyMethod": "high (Store API 403 forces detail-page)"
+    }
+  }
+}

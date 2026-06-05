@@ -1,0 +1,172 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-02T20:26:02.781Z",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare passive (cf-ray + all 200); honeypot paths 403 at origin (WordOps path-selective), but normal/SQLi/no-UA/bot all 200 on crawl path. No active CDN WAF.",
+  "wafProbeEvidence": {
+    "cfHeaders": [
+      "server: cloudflare",
+      "cf-ray present",
+      "cf-cache-status: DYNAMIC",
+      "cf-edge-cache: cache,platform=wordpress"
+    ],
+    "honeypotPathsBlocked": [
+      "/.env=403",
+      "/wp-config.php=403"
+    ],
+    "crawlPathStatus": {
+      "normal200": true,
+      "sqliShaped": 200,
+      "noUa": 200,
+      "botUa": 200
+    },
+    "sqliRuleFired": false,
+    "note": "BLIND R1: single-IP curl probe, not full 8-batch multi-UA sustained walk. Production-IP re-confirm required."
+  },
+  "wafWorkaround": null,
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": {
+    "detected": false,
+    "type": null,
+    "bypassCookie": null
+  },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 5862,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wc/store/v1/products",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "https://marstar.ca/product-category/firearms/",
+    "https://marstar.ca/product-category/firearm-parts-and-accessories/",
+    "https://marstar.ca/product-category/accessories/",
+    "https://marstar.ca/product-category/ammunition/",
+    "https://marstar.ca/product-category/ammo-restricted/",
+    "https://marstar.ca/product-category/clearance/",
+    "https://marstar.ca/product-category/arwen/",
+    "https://marstar.ca/product-category/Misc/",
+    "https://marstar.ca/product-category/uncategorized-3/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    {
+      "url": "https://marstar.ca/product/41-cal-gun-swing/",
+      "title": "41 cal Gun Swing",
+      "price": 999,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://marstar.ca/product/aim-ar-15-m4-handguard-rail/",
+      "title": "AIM: AR 15/M4 Handguard Rail",
+      "price": 1495,
+      "stockStatus": "in_stock"
+    },
+    {
+      "url": "https://marstar.ca/product/aim-butt-pad/",
+      "title": "AIM: Butt Pad",
+      "price": 1295,
+      "stockStatus": "in_stock"
+    }
+  ],
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": 100,
+  "paginationPattern": {
+    "type": "api-page",
+    "template": "page",
+    "perPage": 100,
+    "firstPageHasParam": true,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "wp-rest-core",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "R1-BLIND-marstar-2026-06-02T20-26-02-781Z",
+    "round": "R1-blind",
+    "verifyMethodPolicy": "store-api selected (WC fast-path); restock/OOS-transition alerts NOT guaranteed for products the batch API never returns (worker.ts:549/711). Operator to confirm tradeoff.",
+    "wcCountSurface": "WC Store API x-wp-total = WP REST core x-wp-total = 5862 (no draft/hidden divergence on this site). Customer-visible total matches store-api verify surface (B8 pair satisfied).",
+    "expectedCountSurface": "wc-store-api",
+    "wcCategoryApi": "store-api (category=N recurses subtree)",
+    "sortNoopFinding": "Store API orderby=date|order=desc, default, and orderby=title|order=asc ALL returned IDENTICAL ordered set (281936,281955,281980,...) even with cache-bust nonce. Order is by ascending product ID, neither newest nor alpha. Likely FastCGI cache (x-fastcgi-cache:HIT) or Store API orderby ignored. => sortParam:null, sortVerified:false. Watermark uses WP REST modified_after date filter (verified honored: future=0, past=5862), NOT HTML/API sort.",
+    "dbColumnFlips": {
+      "hasWaf": false,
+      "wafType": "cloudflare-passive",
+      "wafWorkaround": "clear"
+    },
+    "probeIp": "audit-IP single curl; production-IP WAF re-confirm pending",
+    "discoveredApiEndpoints": [
+      "/wp-json/wc/store/v1/products",
+      "/wp-json/wp/v2/product",
+      "/wp-json/wc/store/v1/products/categories"
+    ],
+    "topLevelCatNote": "12 top-level product_cat terms; dot-prefixed (.allpalrequired/.non-restricted/.ammo-restricted/nonrestrictedfilter) are PAL-restriction FILTER taxonomies that cross-list firearms/ammunition products (sum-of-tops 7849 > 5862 = overlap). catalogUrls excludes the filter taxonomies and uncategorized; firearm-relevant departments only. COVERAGE NOT FULL-WALKED in R1 (blind) - R2 must walk+dedup to prove union==5862.",
+    "fieldConfidence": {
+      "platform": "high",
+      "hasWaf": "medium-blind",
+      "expectedProductCount": "high",
+      "catalogUrls": "low-needs-walk",
+      "sortParam": "high-noop-verified",
+      "watermarkMethod": "high"
+    }
+  },
+  "topLevelCategories": {
+    "source": "wc-store-api-per-category",
+    "categories": [
+      {
+        "slug": "/product-category/firearms/",
+        "allOption": 792
+      },
+      {
+        "slug": "/product-category/firearm-parts-and-accessories/",
+        "allOption": 2829
+      },
+      {
+        "slug": "/product-category/accessories/",
+        "allOption": 1931
+      },
+      {
+        "slug": "/product-category/ammunition/",
+        "allOption": 176
+      },
+      {
+        "slug": "/product-category/ammo-restricted/",
+        "allOption": 164
+      },
+      {
+        "slug": "/product-category/clearance/",
+        "allOption": 106
+      },
+      {
+        "slug": "/product-category/arwen/",
+        "allOption": 25
+      },
+      {
+        "slug": "/product-category/Misc/",
+        "allOption": 116
+      },
+      {
+        "slug": "/product-category/uncategorized-3/",
+        "allOption": 46
+      }
+    ],
+    "totalsSumCheck": "Sum of firearm-relevant dept counts ~6185 (incl overlap); global 5862. Dot-prefixed PAL-filter cats (allpalrequired 1108, non-restricted 554, ammo-restricted 164, hidden 2) excluded as cross-listing filters. Full-walk dedup deferred to R2."
+  }
+}

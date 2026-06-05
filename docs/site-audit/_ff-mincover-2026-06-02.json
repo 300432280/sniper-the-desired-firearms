@@ -1,0 +1,153 @@
+{
+  "walkedAt": "2026-06-02T22:36:23.101Z",
+  "productiveCats": 60,
+  "totalUnique": 1088,
+  "minCoverSize": 36,
+  "minCover": [
+    {
+      "path": "/surplus/clothing/",
+      "added": 286
+    },
+    {
+      "path": "/equipment/",
+      "added": 195
+    },
+    {
+      "path": "/surplus/",
+      "added": 83
+    },
+    {
+      "path": "/equipment/hunting-accessories/",
+      "added": 82
+    },
+    {
+      "path": "/shooting-accessories.html",
+      "added": 66
+    },
+    {
+      "path": "/optics/scope-mounts.html",
+      "added": 61
+    },
+    {
+      "path": "/rifles/",
+      "added": 33
+    },
+    {
+      "path": "/power-equipment/",
+      "added": 31
+    },
+    {
+      "path": "/equipment/boxes-crates-cans-bottles/",
+      "added": 29
+    },
+    {
+      "path": "/equipment/survival-camping-gear/",
+      "added": 28
+    },
+    {
+      "path": "/equipment/gas-masks-chemical-gear/",
+      "added": 27
+    },
+    {
+      "path": "/buy-online.html",
+      "added": 20
+    },
+    {
+      "path": "/surplus/bags-pouches-packs/",
+      "added": 19
+    },
+    {
+      "path": "/ammunition-reloading/rimfire-ammunition.html",
+      "added": 17
+    },
+    {
+      "path": "/farm-supplies/",
+      "added": 17
+    },
+    {
+      "path": "/equipment/body-armor-kevlar/",
+      "added": 16
+    },
+    {
+      "path": "/firearms.html",
+      "added": 13
+    },
+    {
+      "path": "/surplus/surplus-misc-items/",
+      "added": 11
+    },
+    {
+      "path": "/scopes-optics/",
+      "added": 9
+    },
+    {
+      "path": "/equipment/fox-outdoor-supplies/",
+      "added": 7
+    },
+    {
+      "path": "/emp-shield/",
+      "added": 6
+    },
+    {
+      "path": "/equipment/blankets-sleeping-gear-and-tents/",
+      "added": 6
+    },
+    {
+      "path": "/equipment/food-food-preparation/",
+      "added": 4
+    },
+    {
+      "path": "/security-devices.html",
+      "added": 4
+    },
+    {
+      "path": "/equipment/helmets/",
+      "added": 3
+    },
+    {
+      "path": "/firearms/surplus-military-firearms/",
+      "added": 3
+    },
+    {
+      "path": "/ammunition-reloading/centerfire-ammunition.html",
+      "added": 2
+    },
+    {
+      "path": "/optics/scope-mounts/weaver.html",
+      "added": 2
+    },
+    {
+      "path": "/camping-outdoors/surplus-clothing/coats-jackets.html",
+      "added": 1
+    },
+    {
+      "path": "/equipment/b-f-products/",
+      "added": 1
+    },
+    {
+      "path": "/equipment/blades-saws-bayonets/",
+      "added": 1
+    },
+    {
+      "path": "/equipment/world-famous/",
+      "added": 1
+    },
+    {
+      "path": "/miscellaneous/books-dvds/",
+      "added": 1
+    },
+    {
+      "path": "/miscellaneous/gifts-novalties/",
+      "added": 1
+    },
+    {
+      "path": "/optics/scopes.html",
+      "added": 1
+    },
+    {
+      "path": "/vintage-surplus/",
+      "added": 1
+    }
+  ],
+  "uncoveredRemaining": 0
+}

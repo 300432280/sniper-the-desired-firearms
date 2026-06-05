@@ -1,0 +1,146 @@
+{
+  "domain": "alflahertys.com",
+  "round": "R2-live-investigation",
+  "auditedAt": "2026-06-02",
+  "persona": "testing-api-tester",
+  "summary": "R1 BLIND run regressed nearly every walk-dependent field vs the already-correct DB siteProfile (which encodes the May B4R2 conclusions). Klevu wildcard SEARCH is the PRIMARY product surface and was live-walked to 100.00% coverage (5244/5244 unique). No date sort exists (NEWEST/DATE_DESC -> HTTP 500), so sortParam:null + full-catalog-sweep are correct. catalogUrls are NOT used by the runtime for coverage (global wildcard SEARCH ignores category) -- they only seed stream slots; DB's 6 leaf URLs all 200, R1's 9-parent set contains 2 dead 404s + non-firearm cats. DB is the answer key on all walk fields; R1 must be discarded on those.",
+  "corrections": [
+    {
+      "field": "productCountMethod",
+      "round1Hypothesis": "{method:'sitemap', url:'/xmlsitemap.php?type=products&page=1'} (5244 by counting <loc>)",
+      "liveMethod": "Live POST to Klevu cs/v2/search with {query:{term:'*'},limit:1,sort:'RELEVANCE'} (the runtime klevu-api-count shape at product-count-probe.ts:401-417), AND cross-checked the sitemap loc-count.",
+      "evidence": "Klevu totalResultsFound = 5244 (HTTP 200, 2026-06-02). product-count-probe.ts:389-418 implements 'klevu-api-count' (recognized case, NOT silent-null) with resolveKlevuKey self-heal. Klevu IS the canonical product index; sitemap can lag. DB already = klevu-api-count.",
+      "proposedValue": "{method:'klevu-api-count', endpoint:'https://uscs33v2.ksearchnet.com/cs/v2/search', apiKey:'klevu-170966446878517137'}",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "round1Hypothesis": "5244 (sitemap)",
+      "liveMethod": "Klevu totalResultsFound live + full offset-walk dedup.",
+      "evidence": "Live Klevu totalResultsFound=5244 AND full walk produced exactly 5244 unique URLs = 5244 unique ids. DB currently stores 5262 (stale from 2026-05-19). Catalog drifted ~0.3% down. R1's 5244 happens to match TODAY's live count (sitemap and Klevu agree at 5244 now), but the AUTHORITATIVE source is klevu-api-count, not sitemap.",
+      "proposedValue": 5244,
+      "confidence": "high (point-in-time; runtime klevu-api-count self-measures each cycle so exact stored value is non-critical)"
+    },
+    {
+      "field": "catalogUrls",
+      "round1Hypothesis": "9 parent/tile URLs incl 3 overlapping shooting/firearms trees + non-firearm cats (archery, knives, premium-knives, sharpeners, hunting-gear)",
+      "liveMethod": "Live GET status + SSR klevu_pageCategory + server card-count for BOTH the R1 9-set and DB 6-set, 850ms apart; plus code-trace of how catalogUrls feed the Klevu branch.",
+      "evidence": "R1 set is BROKEN: 2 of its 3 parent trees 404 live ('/shooting-supplies-firearms-ammunition/' and '/shooting-supplies-firearms-and-ammunition/' as bare parents both 404; only '/shooting-supplies-and-firearms/' 200). DB's 6 leaf URLs all 200 with valid klevu_pageCategory. CRUCIAL: generic-retail.ts:376-391 fetches via GLOBAL wildcard SEARCH (query.term='*'), ignoring category entirely -> coverage is 100% from ANY non-empty catalogUrls list. catalogUrls only seed stream-rotation slots (catalog-crawler.ts:371, watermark-crawler.ts seeds, stream-detector.ts:50). So fewer valid firearm-relevant leaves = better. DB's 6 win on both axes (all-200 + firearm-relevant).",
+      "proposedValue": ["/shooting-supplies-firearms-and-ammunition/firearms/", "/shooting-supplies-firearms-ammunition/ammunition/", "/optics/", "/shooting-supplies-firearms-and-ammunition/stocks-parts-barrels-kits/", "/shooting-supplies-and-firearms/storage-transportation/", "/als-bargains/"],
+      "confidence": "high"
+    },
+    {
+      "field": "klevuCategoryPaths / apiConfig",
+      "round1Hypothesis": "klevuCategoryPaths: [] (left empty; treated documentation-only)",
+      "liveMethod": "Code-trace of the live Klevu fetch path + SSR klevu_pageCategory capture for the 6 DB leaves.",
+      "evidence": "DB has 8 deep klevuCategoryPaths transcribed from live klevu_pageCategory verbatim. BUT generic-retail.ts:287-294 comment confirms _resolveKlevuCategoryPath was REMOVED (was dead at B4R3 time, now deleted) and the live fetch uses global wildcard SEARCH ignoring categoryPath. So klevuCategoryPaths is RUNTIME-INERT. Keep DB's 8 as documentation OR drop -- either is runtime-equivalent. R1's [] is acceptable for runtime but loses the (still-accurate) documentation. Note: als-bargains klevu_pageCategory contains &#x27; (hex entity for apostrophe) -- harmless now that the &amp;-only decode method is deleted.",
+      "proposedValue": "Keep DB's 8 deep klevuCategoryPaths as documentation-only (runtime-inert). apiConfig.klevuApiKey + klevuEndpoint ARE used (live fetch + count).",
+      "confidence": "high"
+    },
+    {
+      "field": "sortParam / sortVerified",
+      "round1Hypothesis": "sortParam:'?sort=newest', sortVerified:false (BC default guess)",
+      "liveMethod": "Live POST Klevu sort matrix (different from R1's HTML grep): NEWEST, DATE_DESC, PRICE_ASC, PRICE_DESC, RELEVANCE.",
+      "evidence": "NEWEST -> HTTP 500, DATE_DESC -> HTTP 500; PRICE_ASC/PRICE_DESC/RELEVANCE -> HTTP 200 (all 5244). No date-based sort exists on this Klevu config. BC HTML '?sort=newest' is meaningless (cards=0 SSR; Klevu SPA). DB sortParam=null is correct.",
+      "proposedValue": "sortParam: null, sortVerified: true",
+      "confidence": "high"
+    },
+    {
+      "field": "crawlers.watermark.method",
+      "round1Hypothesis": "navigate-from-watermark (pending sort), fall to full-catalog-sweep",
+      "liveMethod": "Derived from the live sort-500 result + code-trace of api-offset walk.",
+      "evidence": "No date sort (NEWEST/DATE_DESC 500) and no API date filter on Klevu -> no newest-first stream possible. full-catalog-sweep over global wildcard SEARCH (5244, deduped vs DB) is the only viable T1. DB already = full-catalog-sweep.",
+      "proposedValue": "full-catalog-sweep",
+      "confidence": "high"
+    },
+    {
+      "field": "crawlers.watermark.reason",
+      "round1Hypothesis": "R1 used key 'reason' (had a reason string). DB uses key 'notes' (NOT 'reason').",
+      "liveMethod": "Code-trace profile-validator.ts:111-113.",
+      "evidence": "VALIDATOR LATENT FAILURE: profile-validator.ts:112 requires p.crawlers.watermark.reason for full-catalog-sweep. The PROMOTED DB profile has crawlers.watermark.notes but NO reason key -> the live DB profile would FAIL the 'sortVerification' required check. R1 candidate correctly used 'reason'. Fix the DB profile to add a 'reason' field (or rename notes->reason).",
+      "proposedValue": "Add crawlers.watermark.reason: 'No date-based sort on Klevu (NEWEST/DATE_DESC -> HTTP 500, live 2026-06-02); no storefront date filter. T1 walks Klevu global wildcard SEARCH (5244) and dedupes vs DB.'",
+      "confidence": "high"
+    },
+    {
+      "field": "paginationPattern",
+      "round1Hypothesis": "{type:'query', template:'page', perPage:50, ...}",
+      "liveMethod": "Code-trace catalog-crawler.ts:280-302 + generic-retail.ts:372.",
+      "evidence": "INERT for this site. When the Klevu key is present, fetchCatalogPage returns non-null and the crawler walks via the API offset loop (apiCrawlUsed=true), so buildPaginatedUrl (catalog-crawler.ts:119-126, the theme-B leading-slash bug site) is NEVER called. The real shape is api-offset computed internally (offset=(page-1)*perPage at generic-retail.ts:372). R1's query/page shape is wrong but harmless.",
+      "proposedValue": "Decorative only. Prefer {type:'api-offset', template:'offset', perPage:20} to document reality, or omit.",
+      "confidence": "high"
+    },
+    {
+      "field": "perPage",
+      "round1Hypothesis": "50",
+      "liveMethod": "Code-trace catalog-crawler.ts:290 + live (limit 1/100 both 200).",
+      "evidence": "catalog-crawler.ts:290 = profilePerPage || (hasWaf?20:50). DB perPage=20 is honored as explicit operator preference. 20/50/100 all return 200 from Klevu (I walked at limit=100). Value is operator knob; 20 fine.",
+      "proposedValue": 20,
+      "confidence": "high"
+    },
+    {
+      "field": "hasWaf / wafType / wafWorkaround",
+      "round1Hypothesis": "hasWaf:false, wafType:'cloudflare-passive', wafWorkaround:null (passive-evidence-only; flagged for R2 reconfirm)",
+      "liveMethod": "Live requests during the Klevu walk + catalogUrl status checks (sustained ~70 requests over the session, all 200/404-expected; no challenge bodies, no Sucuri headers).",
+      "evidence": "All live HTML GETs (category pages) and Klevu POSTs returned 200; no cf-mitigated/cf-chl-bypass/x-sucuri-* observed; the only 404s were the two non-existent R1 parent trees. Passive Cloudflare confirmed. DB hasWaf=false already. (B4R3 also grepped: Sucuri solver is body-detection-driven, so hasWaf=false is safe regardless.)",
+      "proposedValue": "hasWaf: false, wafType: 'cloudflare-passive', wafWorkaround: null",
+      "confidence": "high"
+    },
+    {
+      "field": "needsPlaywright",
+      "round1Hypothesis": "true",
+      "liveMethod": "Live SSR card-count (cards=0 on all 13 reachable category pages) + code-trace (grep needsPlaywright consumers).",
+      "evidence": "All category pages render 0 server-side product cards (Klevu JS SPA) -- so HTML extraction WOULD need Playwright. BUT the runtime never extracts HTML for this site: the Klevu API branch (generic-retail.ts:356-438) returns structured products directly. needsPlaywright has ZERO runtime consumers in backend/src/services (B4R3 confirmed). DB true is stale residue; runtime-inert. Align to false for cleanliness.",
+      "proposedValue": false,
+      "confidence": "medium-high (inert either way; false is cleaner)"
+    },
+    {
+      "field": "platform / adapterType / klevu key+endpoint / searchUrl",
+      "round1Hypothesis": "bigcommerce-stencil / generic-retail / klevu-170966446878517137 / uscs33v2.ksearchnet.com / /search.php?search_query={keyword}",
+      "liveMethod": "Live Klevu POST 200 + DB compare.",
+      "evidence": "Klevu key+endpoint live-verified (200, 5244). platform/adapter/searchUrl match DB. No change.",
+      "proposedValue": "MATCH - no change",
+      "confidence": "high"
+    }
+  ],
+  "codeFindings": [
+    {
+      "theme": "B (pagination leading-slash)",
+      "file": "catalog-crawler.ts:119-126 (buildPaginatedUrl) + 280-302 (api branch)",
+      "confirmed": true,
+      "detail": "The leading-slash bug is REAL (type:'path' appends template raw onto a slash-stripped base) BUT INERT for alflahertys: when the Klevu key is present, fetchCatalogPage returns non-null and the crawler walks via the API offset loop with apiCrawlUsed=true (line 302) -- buildPaginatedUrl is never reached. This site does NOT path-paginate HTML; it uses the Klevu API offset internally (generic-retail.ts:372)."
+    },
+    {
+      "theme": "F (count method silent-null)",
+      "file": "product-count-probe.ts:389-418",
+      "confirmed": true,
+      "detail": "'klevu-api-count' IS a recognized switch case (NOT silent-null like dual-api/wp-rest-api). Live POST {term:'*',limit:1,sort:'RELEVANCE'} returned totalResultsFound=5244. resolveKlevuKey self-heal present. Probe only runs when expectedProductCount absent, but the method string is valid and functional."
+    },
+    {
+      "theme": "I (validator over-requires sort / reason key)",
+      "file": "profile-validator.ts:111-113",
+      "confirmed": true,
+      "detail": "full-catalog-sweep branch requires crawlers.watermark.REASON (line 112). The promoted DB profile uses crawlers.watermark.NOTES (no reason key) -> the live DB profile would FAIL the required 'sortVerification' check. Distinct from marstar's api-date issue (line 115-117): here it's a key-name mismatch (reason vs notes) on the full-catalog-sweep path. FIX: DB profile needs a 'reason' field added. (Skill should emit 'reason' for full-catalog-sweep -- R1 candidate did, DB does not.)"
+    },
+    {
+      "theme": "C (Klevu primary surface)",
+      "file": "generic-retail.ts:356-438, 287-294",
+      "confirmed": true,
+      "detail": "Klevu is the PRIMARY surface via GLOBAL wildcard SEARCH (query.term='*', sort RELEVANCE), paged by offset=(page-1)*perPage. It does NOT filter by category. _resolveKlevuCategoryPath was REMOVED (comment 287-294); klevuCategoryPaths + catalogUrls are runtime-inert for COVERAGE (catalogUrls only seed stream slots). One global offset-walk = 100% coverage."
+    }
+  ],
+  "coverageProof": {
+    "walked": "Klevu cs/v2/search global wildcard SEARCH, offset 0..5200 step 100, 53 requests, 850ms apart (sequential, no parallel). Plus live status of all 6 DB + 9 R1 catalogUrls.",
+    "uniqueIds": 5244,
+    "uniqueUrls": 5244,
+    "expected": 5244,
+    "expectedSource": "klevu-api-count totalResultsFound (live 2026-06-02); DB-stored expectedProductCount=5262 is stale",
+    "pct": 100.0,
+    "recommendedCatalogUrls": ["/shooting-supplies-firearms-and-ammunition/firearms/", "/shooting-supplies-firearms-ammunition/ammunition/", "/optics/", "/shooting-supplies-firearms-and-ammunition/stocks-parts-barrels-kits/", "/shooting-supplies-and-firearms/storage-transportation/", "/als-bargains/"],
+    "coverageNote": "Coverage does NOT depend on catalogUrls -- the Klevu global wildcard SEARCH returns the full 5244 corpus regardless of catalogUrls. The recommended 6 (DB's set, all live-200, firearm-relevant) drive stream-rotation slot count + watermark seeds only. R1's 9-set is rejected: 2 of its parent trees 404 live and 4 entries are non-firearm categories."
+  },
+  "verdict": {
+    "answerKey": "DB siteProfile (encodes May B4R2 conclusions) is correct on ALL walk-dependent fields. R1 BLIND candidate must be discarded on: productCountMethod, catalogUrls, sortParam, sortVerified, crawlers.watermark.method, klevuCategoryPaths, perPage, needsPlaywright, paginationPattern.",
+    "r1WinsOver_db": ["crawlers.watermark uses key 'reason' (R1) vs 'notes' (DB) -- R1's key is what the validator requires; DB profile needs the 'reason' key added"],
+    "openItemForOrchestrator": "DB expectedProductCount=5262 is stale vs live 5244 (~0.3% drift); runtime klevu-api-count self-measures each cycle so non-blocking. DB crawlers.watermark.reason MISSING -> validator would fail; fix before any transitionSiteToMaintain gate."
+  }
+}

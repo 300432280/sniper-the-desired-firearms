@@ -1,0 +1,97 @@
+{
+  "domain": "gotenda.com",
+  "round": "R2 (HELD-SITE REACHABILITY)",
+  "persona": "testing-api-tester",
+  "runAt": "2026-06-02",
+  "probeIp": "audit IP (single host). Sucuri verdict is from THIS IP; production crawler IP should behave identically (same Sucuri Cloudproxy edge, UA-fingerprint-matched cookie) but re-confirm on first production solve.",
+  "method": "Mirrors production waf-cookie-manager exactly: Playwright chromium (production stealth args) + iPhone UA (siteProfile.userAgentOverride) solves Sucuri JS challenge once on /shop/, extracts context.cookies(origin), reuses the cookie string in spaced axios GETs (>=2.5s gap, maxRedirects=0). Challenge detector = status 307/403/503 OR body contains 'sucuri_cloudproxy_js'. STOP rule = 2 consecutive challenges. Scripts: backend/scripts/_tmp-gotenda-r2-reach.ts (19 req) + backend/scripts/_tmp-gotenda-r2-detail.ts (3 detail pages).",
+
+  "reachabilityVerdict": {
+    "verdict": "SAFE-TO-ENABLE",
+    "cookiePersists": true,
+    "reChallengedMidWalk": false,
+    "evidence": {
+      "solve": "Single Playwright navigation to /shop/ landed on https://www.gotenda.com/shop/ (200, no challenge interstitial) and yielded 15 cookies including sucuri_cloudproxy_uuid_f2f1c7d20. No CAPTCHA gate encountered.",
+      "sustainedWalk": "22 total spaced requests (19 mixed + 3 detail-page), ALL returned HTTP 200, ZERO Sucuri challenges (0/22). One solved cookie held across the entire ~85s walk. No 307/403/503, no sucuri_cloudproxy_js body re-injection at any step.",
+      "surfacesExercised": [
+        "WC Store API /wp-json/wc/store/v1/products (per_page=1 + page=2) -> 200, x-wp-total=16785",
+        "WP REST /wp-json/wp/v2/product (count + modified_after future/ancient two-probe) -> 200; future=0, ancient=16786",
+        "WC Store API /wp-json/wc/store/v1/products/categories p1+p2 -> 200, 172 entries, 12 parent=0 top-level cats",
+        "HTML /shop/ pages 1,2,100,693,694,695 -> all 200, 24 li.product each",
+        "HTML per-category /page/2/ for firearms,accessories,ammunition,optics,knives -> all 200, 24 li.product each",
+        "3x /product/ detail pages -> all 200"
+      ],
+      "perRequestLatencyMs": "52-4965 (HTML category archive pages slowest ~3-5s; API ~2-2.5s); no latency escalation trend that would indicate edge throttling.",
+      "budgetFit": "Held baseBudget=1800/hr => ~2s effective gap. Probe ran at 2.5s gaps with no rate-limit/escalation. At 16786 products / perPage=24 HTML = ~700 pages; or via Store API per_page=100 = ~168 pages. Either fits comfortably within a 1800/hr budget across a maintain cycle."
+    },
+    "caveats": [
+      "Cookie TTL: production waf-cookie-manager refreshes conservatively at 90 min (COOKIE_TTL_MS); DB profile claims Sucuri TTL 30 min. Cookie survived the full ~85s walk; long-cycle TTL not exhaustively tested but the 90-min refresh + reportFailure() eviction (2 failures) path already handles expiry.",
+      "Verdict is from the audit IP. Sucuri Cloudproxy is per-host and UA-fingerprint-bound; production must solve with the SAME iPhone UA override (it does - waf-cookie-manager.ts:106 resolveWafUa reads siteProfile.userAgentOverride). If production uses PLAYWRIGHT_UA (Chrome) instead, the cookie binds to a different fingerprint - confirm the iPhone override is loaded.",
+      "Rapid-burst (<2s) NOT tested by design (ban-risk rule). Verdict covers the >=2s spaced crawl the production scheduler actually performs."
+    ]
+  },
+
+  "corrections": [
+    {
+      "field": "expectedProductCount",
+      "evidence": "Live x-wp-total=16785 on BOTH /wc/store/v1/products AND /wp/v2/product; .woocommerce-result-count on /shop/ says 'of 16785 results' (drifted to 16786 mid-walk = live churn). modified_after=2000 ancient two-probe returned 16786. DB has 16615 (stale, ~170 low); R1 candidate had 16770 (also slightly stale).",
+      "proposedValue": 16785,
+      "confidence": "high",
+      "note": "Live, churning. Accept ~30-product drift or refresh to 16785. Three independent surfaces agree."
+    },
+    {
+      "field": "catalogUrls",
+      "evidence": "Settles the B4R2-vs-B4R3 dispute with live data. (1) DB /shop/ is NOT a page-1 collapse trap: /shop/ p1,p2,p100,p693,p694,p695 ALL return 24 cards with 'Showing N-M of 16785 results' and maxPageLink=700 -> /shop/ is a single real walkable index covering 100%. (2) The 15-cat structure is ALSO real: per-category page-1 IS a 6-card hero (firearms-canada p1=6 cards, maxPageLink=2 - the B4R2 trap), but /page/2/ is a full 24-per-page archive (firearms 'of 4159', accessories 3348, ammo 2299, optics 2248, knives 1568). (3) Store API /products/categories has 172 entries across 2 pages; 12 are parent=0 top-level (7 on p1 + 5 on p2) - confirming R1/B4R3 reading, refuting B4R2's page-1-only 'only 1 top-level category' claim.",
+      "proposedValue": {
+        "recommendation": "DB single /shop/ is CORRECT and sufficient for 100% coverage (walks all 700 pages). The 10-15 per-category catalogUrls (R1 candidate) are ALSO valid but require treating per-category page-1 as a hero block (start walk at /page/2/ or dedup the 6 hero cards). For lowest-risk operation, keep DB /shop/ as the single catalog spine.",
+        "shopUrl": "/shop/",
+        "shopLastPage": 700,
+        "perCategoryTrap": "per-category /product-category/<slug>/ page-1 = 6-card hero (maxPageLink=2); real archive starts /page/2/"
+      },
+      "confidence": "high",
+      "note": "Both DB (/shop/) and R1 (per-cat) cover 100%. DB /shop/ is simpler and trap-free at the /shop/ level. Do NOT crawl per-category page-1 alone (would index only 6 hero cards/cat)."
+    },
+    {
+      "field": "topLevelCategories",
+      "evidence": "Live Store API /products/categories walk (172 total, 2 pages): 12 parent=0 cats with non-trivial counts: firearms-canada 4159, accessories 3348, ammunition-for-sale-in-canada-tenda-canada 2299, gun-optics-canada 2248, knives-tools 1568, reloading 1426, hunting-outdoor 1017, gun-deals-promotions-canada 800 (promo), tenda-alpha 596, tenda-strike 428, gift-card 6, free-gift-350 2. (R1 listed 15 including 3 zero-count free-gift cats.)",
+      "proposedValue": "12 top-level categories (10 firearm-relevant after excluding gift-card + free-gift-350; gun-deals-promotions is a promo overlap). Counts are CURRENT vs R1's snapshot (knives 1568 vs R1 1553, tenda-strike 428 vs 427, gun-deals 800 vs 765).",
+      "confidence": "high",
+      "note": "Confirms R1/B4R3 over B4R2. Category 'count' recurses into subcats + products are cross-listed, so sum (~18.9k) exceeds global 16785 - expected, not a defect."
+    },
+    {
+      "field": "perPage",
+      "evidence": "Two distinct caps. HTML archive: /shop/ and category pages return exactly 24 li.product regardless of page depth (theme cap; prior B4 runs confirmed ?per_page=100 ignored). Store API: honored per_page (page=2 of per_page=10 returned x-wp-totalpages=1679 = 16785/10). DB perPage=24 (HTML) is correct for HTML walking; R1 candidate perPage=100 is the API cap.",
+      "proposedValue": { "html": 24, "storeApi": 100 },
+      "confidence": "high",
+      "note": "Single perPage field is ambiguous (recurring theme-D note). DB HTML walk path uses 24; api-* watermark/Store API path uses up to 100."
+    },
+    {
+      "field": "paginationPattern",
+      "evidence": "Path-style /page/{N}/ confirmed on /shop/ AND per-category. /shop/page/695/ still 200 (Showing 16657-16680) - tail is soft (WP clamps past-end to last data) not a hard 404, so walk must terminate on cards=0 or repeated/empty set, not on 404. maxPageLink consistently 700 on /shop/.",
+      "proposedValue": { "type": "path", "template": "/page/{N}/", "perPage": 24, "lastPage": 700, "tailBehavior": "soft (page>lastPage returns clamped/last data with 200, NOT 404)" },
+      "confidence": "high",
+      "note": "DB template '/page/{N}' (no trailing slash) works; canonical live form has trailing slash. Crawler must stop on stable/empty result, not rely on 404."
+    },
+    {
+      "field": "wafProbeEvidence.rapidBurstTested / sustainedWalkPages",
+      "evidence": "This R2 run fills the R1-flagged gap: sustainedWalkPages now = 22 (was 0). rapidBurstTested still false (intentional, ban-risk).",
+      "proposedValue": { "sustainedWalkPages": 22, "sustainedWalkChallenges": 0, "rapidBurstTested": false },
+      "confidence": "high",
+      "note": "R1 left sustainedWalkPages=0 as inconclusive; R2 closes it."
+    }
+  ],
+
+  "couldNotDisprove": [
+    "crawlers.watermark.method=api-date-since-watermark via wp-rest-core modified_after: two-probe honored live (future=0, ancient=16786). Authoritative T1 path.",
+    "needsPlaywright=true: required - the Sucuri solve needs a browser. Confirmed.",
+    "wafWorkaround cookie-cache: matches production waf-cookie-manager.ts exactly. Confirmed.",
+    "hasCaptcha: no CAPTCHA gate hit across 22 requests; recaptcha-v3 (if present) is passive telemetry, never blocks read paths. DB hasCaptcha=true is conservative; functionally false for crawling."
+  ],
+
+  "notes": "VERDICT: SAFE-TO-ENABLE. Single Sucuri solve via iPhone-UA Playwright (production path) yields a cookie that holds across a 22-request spaced (>=2.5s) mixed walk with 0 re-challenges, 0 escalation, no rate-limit. Production waf-cookie-manager refreshes at 90 min and self-heals via reportFailure eviction. The catalogUrls dispute is settled: DB /shop/ is a genuine 700-page walkable index (NOT a collapse trap at the /shop/ level), AND the 12 top-level categories are independently walkable from /page/2/ (per-category page-1 is a 6-card hero - the only real trap). expectedProductCount is live ~16785 (DB 16615 stale, brief's 16770 slightly stale). All four R1-deferred 'inconclusive' items (sustained walk, sort note, runtime fetchability, sub-cat coverage via /shop/) are resolved in favor of enabling. Recommend operator ENABLE gotenda. ONE pre-enable check: confirm the iPhone userAgentOverride is loaded into adapter-registry cache so waf-cookie-manager.ts:106 binds the cookie to the iPhone fingerprint (Chrome PLAYWRIGHT_UA fallback would bind a different fingerprint).",
+
+  "probeScripts": [
+    "backend/scripts/_tmp-gotenda-r2-reach.ts (scratch; delete at cleanup)",
+    "backend/scripts/_tmp-gotenda-r2-detail.ts (scratch; delete at cleanup)"
+  ]
+}

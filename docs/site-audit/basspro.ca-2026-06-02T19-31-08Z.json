@@ -1,0 +1,95 @@
+{
+  "profileVersion": 1,
+  "platform": "ibm-websphere-commerce",
+  "adapterType": "generic-retail",
+  "hasWaf": true,
+  "wafType": "akamai-bot-manager",
+  "wafLastProbedAt": "2026-06-02T19:29:00Z",
+  "wafProbeMethod": "gentle-single-get",
+  "wafProbeResult": "Akamai Bot Manager (TLS/JA3 tier) — every product-facing page (/home, /c/*, /l/*, /p/*) returns HTTP 403 + 382-byte block page to the audit IP under Chrome 120 UA, single spaced GET. robots.txt and the gzipped sitemap (Server: Apache, outside the bot-manager edge rule) are reachable. NO heavy 8-batch / rapid-burst probe run (Akamai aggressive — would risk IP ban).",
+  "wafProbeEvidence": {
+    "storefrontServer": "AkamaiGHost",
+    "akamaiHeaders": ["X-Akam-SW-Version: 0.5.0", "Server-Timing: ak_p"],
+    "botManagerCookies": ["bm_ss", "bm_s", "bm_so", "_bmdet", "akavpau_c_"],
+    "homeStatus": 403,
+    "categoryStatus": { "/c/shooting": 403 },
+    "listingStatus": { "/l/firearms": 403 },
+    "productDetailStatus": { "/p/b3-archery-rectify-hinge-bow-release": 403 },
+    "reachableEndpoints": ["/robots.txt (200)", "/webapp/wcs/stores/servlet/sitemap_10151.xml.gz (200, Apache)"],
+    "rapidBurstTested": false,
+    "rapidBurstSkipReason": "Akamai aggressive; rapid burst risks audit-IP ban (operator instruction)",
+    "perUaStatusTimeline": "not-collected (single-UA gentle probe only; multi-UA matrix deferred to production-IP re-probe)",
+    "untestedAttackSurfaces": ["multi-UA matrix", "sustained walk", "rapid burst", "honeypot paths", "SQLi/XSS rule probes"]
+  },
+  "hasCaptcha": false,
+  "captchaType": null,
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": true,
+  "expectedProductCount": 16739,
+  "productCountMethod": {
+    "method": "generic-product-sitemap",
+    "url": "/webapp/wcs/stores/servlet/sitemap_10151.xml.gz",
+    "pattern": "/p/"
+  },
+  "catalogUrls": [
+    "https://www.basspro.ca/c/hunting",
+    "https://www.basspro.ca/c/optics-scopes",
+    "https://www.basspro.ca/c/shooting",
+    "https://www.basspro.ca/c/bargain-cave-sale-and-clearance"
+  ],
+  "extractionTested": false,
+  "sortParam": null,
+  "sortVerified": false,
+  "perPage": null,
+  "paginationPattern": {
+    "type": "query",
+    "template": "page",
+    "perPage": null,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "full-catalog-sweep",
+      "reason": "BLIND R1 from blocked audit IP: no listing/category page reachable to verify sort or a date filter; WebSphere PLPs expose no public date-sort API observed. Method downgraded to full-catalog-sweep pending production-IP re-probe of /l/ sort options. Likely upgradable to navigate-from-watermark once /l/?page= sort UI is readable."
+    },
+    "maintain": {
+      "verifyMethod": "detail-page",
+      "verifyEndpoint": null
+    }
+  },
+  "lastVerified": "2026-06-02",
+  "auditNotes": {
+    "runId": "B-R1-BLIND-2026-06-02T19-31-08Z",
+    "probeIp": "audit-host (non-production)",
+    "akamaiBlockade": {
+      "paginatedUrlsBlocked": true,
+      "page1Blocked": true,
+      "productionIpReprobeRequired": true,
+      "evidence": "Even page 1 (/home, /c/shooting, /l/firearms, /p/<slug>) returns 403 (382-430 byte block) to audit IP across single Chrome-120 GETs; headless Playwright not attempted (skill B13: TLS/JA3 tier not defeatable from non-production IP, and IP-ban risk too high)."
+    },
+    "storeId": "10151",
+    "urlScheme": { "category": "/c/<slug>", "listing": "/l/<slug>", "product": "/p/<slug>", "brand": "/b/<slug>" },
+    "robotsSitemap": "https://www.basspro.ca/webapp/wcs/stores/servlet/sitemap_10151.xml.gz",
+    "robotsPlpPaginationHint": "Allow: /l/*?page=*&firstResult=* ; Disallow: /*&page=*&page=* (duplicate-page trap)",
+    "expectedCountSurface": "sitemap /p/ entries (case-insensitive grep, total catalog incl. all departments)",
+    "firearmRelevantSubset": "UNKNOWN from sitemap alone — /p/ URLs are flat (uncategorized); firearm-relevant partition (~3 of 15 top-level cats: hunting, optics-scopes, shooting + mixed bargain-cave) requires live category walks, all 403. Total catalog = 16739; firearm-relevant count is a subset and is untested-by-harness.",
+    "topLevelCategoriesAll": ["hunting","optics-scopes","shooting","fishing","boating","camping","clothing","mens-clothing","womens-clothing","kids-clothing","footwear","home-and-gifts","patio","outdoor-recreation","bargain-cave-sale-and-clearance"],
+    "verifyMethodPolicy": "detail-page selected (non-WC platform; no public store-api). Per-product Playwright verify — slower but catches OOS/404. Reachability of /p/ detail pages from production IP must be confirmed.",
+    "fieldConfidence": {
+      "platform": "high (robots /webapp/wcs/stores/servlet/ + sitemap_10151 storeId stamp; homepage HTML unconfirmed due to 403)",
+      "adapterType": "high (WebSphere -> generic-retail per skill table)",
+      "hasWaf": "high (AkamaiGHost + X-Akam-SW-Version + bm_* cookies + 403 everywhere)",
+      "wafType": "high",
+      "expectedProductCount": "medium-high (16739 /p/ from sitemap; total catalog not firearm-relevant subset)",
+      "catalogUrls": "low (firearm-relevant /c/ roots chosen by name/sitemap; extraction unverifiable due to 403)",
+      "paginationPattern": "low (inferred from robots ?page=&firstResult=; zero-overlap test impossible)",
+      "sortParam": "untested (all PLPs 403)",
+      "perPage": "untested",
+      "watermark.method": "low (defaulted to full-catalog-sweep; likely navigate-from-watermark)"
+    },
+    "untestedByHarness": ["catalogUrls extraction", "paginationPattern verification", "perPage", "sortParam/sortVerified", "firearm-relevant expectedProductCount", "watermark method confirmation", "maintain detail-page reachability", "multi-UA WAF matrix"]
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "profileVersion": 1,
+  "platform": "woocommerce",
+  "adapterType": "woocommerce",
+  "hasWaf": false,
+  "wafType": "cloudflare-passive",
+  "wafLastProbedAt": "2026-06-03",
+  "wafProbeMethod": "heavy-8-batch",
+  "wafProbeResult": "Cloudflare passive (cf-ray on all 200s); catalog path 200 across 4 UAs + 6x burst. CF managed-rule path-selective: /.env, /.git/config 403; XSS-shaped ?s=<script> 403; SQLi-shaped ?s='OR1=1 returned 200. None block the catalog/API crawl path.",
+  "wafProbeEvidence": {
+    "cfRay": true,
+    "server": "cloudflare",
+    "multiUaShopStatus": { "chrome": 200, "safari": 200, "iphone": 200, "firefox": 200 },
+    "rapidBurstStatus": "200x6",
+    "honeypotPathsBlocked": ["/.env(403)", "/.git/config(403)"],
+    "xssRuleFired": true,
+    "sqliRuleFired": false,
+    "uaFilter": false
+  },
+  "hasCaptcha": false,
+  "captchaType": "recaptcha-v3",
+  "ageGate": { "detected": false, "type": null, "bypassCookie": null },
+  "userAgentOverride": null,
+  "needsPlaywright": false,
+  "expectedProductCount": 11409,
+  "productCountMethod": {
+    "method": "wp-rest-header",
+    "endpoint": "/wp-json/wp/v2/product",
+    "header": "x-wp-total"
+  },
+  "catalogUrls": [
+    "/shop/"
+  ],
+  "extractionTested": true,
+  "extractionSample": [
+    { "url": "https://shooterschoice.com/shop/4022-firearms/used-rifles/used-rimfire-pump-rifle-4022-firearms/used-winchester-90-22-wrf/", "title": "USED WINCHESTER 90 .22 WRF", "price": 1295.00, "stockStatus": "in_stock" },
+    { "url": "https://shooterschoice.com/shop/4022-firearms/used-rifles/used-rimfire-bolt-rifle-4022-firearms/used-winchester-67-22-lr-3/", "title": "USED WINCHESTER 67 .22 LR", "price": 195.00, "stockStatus": "in_stock" }
+  ],
+  "sortParam": "?orderby=date",
+  "sortVerified": true,
+  "perPage": 40,
+  "paginationPattern": {
+    "type": "path",
+    "template": "/page/{N}/",
+    "perPage": 40,
+    "firstPageHasParam": false,
+    "startPage": 1,
+    "zeroIndexed": false
+  },
+  "crawlers": {
+    "watermark": {
+      "method": "api-date-since-watermark",
+      "dateFilterApi": "/wp-json/wp/v2/product",
+      "dateFilterField": "modified_after"
+    },
+    "maintain": {
+      "verifyMethod": "store-api",
+      "verifyEndpoint": "/wp-json/wc/store/v1/products"
+    }
+  },
+  "searchUrl": "/?s={keyword}&post_type=product",
+  "topLevelCategories": {
+    "source": "wc-store-api-categories (customer-visible scope, 1126 cats across 12 pages)",
+    "categories": [
+      { "slug": "/category/4027-accessories/", "allOption": 1065 },
+      { "slug": "/category/4021-ammunition/", "allOption": 612 },
+      { "slug": "/category/4023-reloading/", "allOption": 545 },
+      { "slug": "/category/4022-firearms/", "allOption": 484 },
+      { "slug": "/category/4026-clothing/", "allOption": 352 },
+      { "slug": "/category/tbsbow-accessories/", "allOption": 347 },
+      { "slug": "/category/4030-optics/", "allOption": 315 },
+      { "slug": "/category/tbsbows/", "allOption": 196 },
+      { "slug": "/category/tbsarrows-components/", "allOption": 193 },
+      { "slug": "/category/tbshunting-accessories/", "allOption": 179 },
+      { "slug": "/category/4031-knives-cutlery/", "allOption": 113 }
+    ],
+    "totalsSumCheck": "Customer-visible /shop/ HTML count = 4518 (113 pages x 40). Dept-sum (excl brand 4450 + uncategorized 424, both cross-cutting facets) = 5142 due to overlapping mis-parented subcats. brand taxonomy overlaps all departments; excluded from spine. FULL corpus (incl 6891 OOS catalog-hidden) = 11409 via WP REST core / Store API bracketed stock_status."
+  },
+  "lastVerified": "2026-06-03",
+  "auditNotes": {
+    "runId": "R1-blind-2026-06-03",
+    "wcCountSurface": "wp-rest-core (/wp-json/wp/v2/product = 11409 full corpus incl OOS/hidden)",
+    "expectedCountSurface": "wp-rest-core full corpus = 11409; customer-visible Store API default = 4518; in-stock only = 4414; out-of-stock = 6891; Store API bracketed all-statuses = 11409 (matches WP REST).",
+    "verifyMethodPolicy": "store-api selected (matches DB). NOTE: store-api fast-path can silently miss OOS->restock transitions per worker.ts:549/711; with 6891/11409 (60%) of corpus OOS, restock alerts are a large surface. Operator should weigh detail-page verify if restock alerts are required.",
+    "validatorB8Flag": "profile-validator flagged endpointPairsVerifyMethod (recommended-severity, valid:true): verifyMethod=store-api pairs with WP REST count endpoint /wp/v2/product. Per B8 the pair is inconsistent. RESOLUTION OPTIONS for R2/R3: (a) expectedProductCount=11409 + verifyMethod=detail-page (full corpus, slower verify, correct restock); (b) expectedProductCount=4518 + verifyMethod=store-api + count endpoint /wc/store/v1/products (customer-visible only, misses 6891 OOS); (c) DB's path: discover via WP REST /wp/v2/product (reaches 11409), keep store-api enrichment, accept the validator warning as a known false-positive because bootstrap discovery is API not store-api-count. Left as (chose true-total 11409 + store-api to match DB) for adversarial review.",
+    "wcCategoryApi": "store-api (category=N recurses; firearms id5380 bracketed = 3294 vs customer-visible 484)",
+    "catalogUrlChoice": "Used single /shop/ as the customer-visible 100%-coverage spine (113 pages x 40 = 4518). The 30 per-category /category/ URLs in DB also cover the customer-visible set but with heavy overlap + mis-parented subcats; brand(4450)+uncategorized(424) are cross-cutting facets. CRITICAL: HTML catalog path (both /shop/ and /category/) only reaches 4518 customer-visible products. The full 11409 corpus (6891 OOS catalog-hidden) is reachable ONLY via Store API bracketed stock_status[]= or WP REST core admin REST.",
+    "coverageGapWarning": "expectedProductCount=11409 is the FULL admin corpus, but the runtime HTML catalog crawl of /shop/ or /category/ URLs sees only 4518 (customer-visible). 5% drift gate will FAIL (4518 vs 11409 = ~60% under) unless either (a) expectedProductCount is set to the customer-visible surface 4518 to match the HTML walk, or (b) the catalog crawl/bootstrap uses the WP REST /wp/v2/product API path (admin REST is NOT stock-filtered and reaches all 11409). DB resolves this: bootstrap dataFlow discovers products via WP REST /wp/v2/product (reaches 11409) then enriches via Store API; so the DB's primary discovery is API not HTML, and expectedProductCount=11370/11411 pairs with the API discovery surface. The candidate's HTML catalogUrls are the documented fallback only.",
+    "fieldConfidence": {
+      "platform": "high",
+      "adapterType": "high",
+      "hasWaf": "high",
+      "expectedProductCount": "high (11409 = live WP REST x-wp-total, cross-confirmed by Store API bracketed all-statuses = 11409)",
+      "catalogUrls": "medium (/shop/ covers customer-visible 4518; full corpus needs API path)",
+      "sortParam": "high (HTML date-sort first id 264838 == Store API date-desc first id 264838; differs from menu_order default)",
+      "paginationPattern": "high (path /page/N/, page2 disjoint from page1)",
+      "watermark": "high (WP REST modified_after two-probe: 0 future / 11409 past)"
+    },
+    "discoveredApiEndpoints": {
+      "productDiscovery": "/wp-json/wp/v2/product (admin REST, 11409, not stock-filtered)",
+      "priceStockEnrichment": "/wp-json/wc/store/v1/products",
+      "oosInclusiveCount": "/wp-json/wc/store/v1/products?stock_status[0]=instock&stock_status[1]=outofstock&stock_status[2]=onbackorder (= 11409)"
+    },
+    "probeIp": "audit IP (not production crawler IP); CF reputation is per-IP - re-confirm WAF from production IP before promotion"
+  }
+}

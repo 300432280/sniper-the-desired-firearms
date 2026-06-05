@@ -1,0 +1,85 @@
+{
+  "domain": "doctordeals.ca",
+  "runId": "R2-HELD-REACHABILITY-2026-06-02",
+  "round": "R2 (held-site reachability gate)",
+  "persona": "testing-api-tester",
+  "probeMethod": "cold plain-HTTP axios, iPhone Safari UA (iOS 17_2), 1.8s inter-request spacing, NO Playwright, NO warmup, NO cookies; STOP-on-escalation guard armed on every request (202/403/429/503 + SG-Captcha header + .well-known/sgcaptcha body + sgcaptcha meta-refresh)",
+  "probeBudget": "19 requests across 2 sequential runs (7 + 12). 0 escalations. Did not exceed ~15-per-run careful-pace constraint per run.",
+
+  "reachabilityVerdict": {
+    "verdict": "SAFE-TO-ENABLE",
+    "iphoneUaBypassHolds": true,
+    "detailPagesReachable": true,
+    "evidence": [
+      "Run 1 (cold, no warmup): 7/7 clean HTTP 200, zero challenge markers — /, /product-category/firearms/, /product-category/parts/, Store API count, WP REST count, 2 detail pages. All at 1.8s spacing.",
+      "Run 2 (deeper sustained walk, still cold): 12/12 clean HTTP 200, zero challenge markers — 6 category pages incl. /page/2/ and /page/3/ pagination, /page/9/ boundary, WP REST newest-10, Store API per_page=10 + page=2, search ?s=ruger. No mid-walk re-challenge, no escalation.",
+      "Combined: 19/19 cold iPhone-UA requests clean. sgcaptcha did NOT re-challenge at sustained ~1.8s pace. No SG-Captcha header, no 202, no .well-known/sgcaptcha redirect on any request.",
+      "Detail page (ruger-10-22 bolt assembly) returns JSON-LD @type=Product, availability=schema.org/InStock, price=119.99, in-stock CSS class, add-to-cart present — restock/OOS detection via verifyMethod=detail-page is fully viable.",
+      "Production baseBudget=1800 (ledger bump 2026-06-02) enforces effective gap >=2s, which is SLOWER than the 1.8s pace tested here — so production pace is at least as safe as the probe.",
+      "Server header nginx; SiteGround SG-F-Cache/X-Proxy-Cache in front. No Akamai/Imperva-style hard product-page block (contrast basspro/hical)."
+    ],
+    "caveat": "sgcaptcha is a real SiteGround layer and IS burst-sensitive: prior B4R3 (2026-05-19, 99.228.63.11) observed 5/6 Store API calls returning 202 after a per_page=100 bulk dump with NO inter-request gap. The bypass holds ONLY at paced iPhone-UA HTTP (>=1.5s). Recommendation: keep needsPlaywright=true as the cookie-cache SAFETY NET (DB wafWorkaround.method=cookie-cache, storeApiAvailable=true, 30min TTL) so a stray 202/403 triggers a Playwright re-solve rather than a failure cascade — but the steady-state path is plain HTTP, no Playwright per request. Do NOT issue burst/no-gap requests and do NOT request per_page=100 bulk dumps; cap perPage and keep the inter-request delay.",
+    "probeIp": "audit-IP (not production crawler IP) — production IP behavior should match since the gate is UA + pace based, not IP-reputation based; the desktop-UA 403 is UA-driven (Mistake 30)."
+  },
+
+  "divergencesSettled": [
+    {
+      "divergence": "verifyMethod: store-api (R1 candidate) vs detail-page (DB)",
+      "winner": "DB (detail-page) — CORRECT",
+      "evidence": "detail-page preserves restock/OOS-transition detection. store-api silently drops it for products the batch Store API never returns (worker.ts:549/711 early-return — documented in this persona + B4 audit). Live: detail page carries JSON-LD availability + price + stock class, so detail-page is fully operable here. B4R2/R3/validation (2026-05-19) already settled this 3x; R1-blind re-introduced the wrong store-api value. Per CLAUDE.md custom rule: never weaken restock detection.",
+      "proposedValue": "detail-page",
+      "confidence": "high"
+    },
+    {
+      "divergence": "expectedProductCount / count surface: 576 (Store API in-stock) vs 965 (DB WP REST) vs 975 (live WP REST today)",
+      "winner": "WP REST surface (DB approach) — but value drifted 965 -> 975",
+      "evidence": "Live x-wp-total: WP REST core /wp-json/wp/v2/product = 975; WC Store API /wp-json/wc/store/v1/products = 576. The two measure DIFFERENT surfaces: WP REST = full corpus incl OOS/drafts/uncategorized (admin total); Store API = customer-visible in-stock only. Watermark uses api-date-since-watermark against WP REST (/wp/v2/product modified_after), so expectedProductCount MUST pair to the WP REST surface (975) for coverage accounting, NOT the Store API 576. R1's 576 was the wrong surface for a watermark-via-WP-REST site. DB 965 is a stale snapshot (2026-04-06); live is 975 (+10, normal catalog growth).",
+      "proposedValue": 975,
+      "proposedProductCountMethod": { "method": "wp-rest-header", "endpoint": "/wp-json/wp/v2/product", "header": "x-wp-total" },
+      "confidence": "high"
+    }
+  ],
+
+  "corrections": [
+    {
+      "field": "crawlers.maintain.verifyMethod",
+      "evidence": "DB=detail-page is correct and runtime-operable (live detail page has JSON-LD availability/price/stock). R1 candidate store-api would silently drop restock detection (worker.ts:549/711). Reverse R1, keep DB.",
+      "proposedValue": "detail-page",
+      "confidence": "high"
+    },
+    {
+      "field": "expectedProductCount",
+      "evidence": "Live WP REST /wp-json/wp/v2/product x-wp-total = 975 (DB had stale 965 from 2026-04-06). Watermark surface = WP REST, so count must pair to WP REST, not Store API 576.",
+      "proposedValue": 975,
+      "confidence": "high"
+    },
+    {
+      "field": "productCountMethod",
+      "evidence": "Confirm DB shape: wp-rest-header on /wp-json/wp/v2/product x-wp-total (975). R1 candidate productCountMethod used wp-rest-header on the Store API endpoint /wc/store/v1/products (576) — wrong surface for a WP-REST-watermark site.",
+      "proposedValue": { "method": "wp-rest-header", "endpoint": "/wp-json/wp/v2/product", "header": "x-wp-total" },
+      "confidence": "high"
+    },
+    {
+      "field": "needsPlaywright",
+      "evidence": "Keep TRUE as a cookie-cache safety net (DB wafWorkaround), NOT because every request needs Playwright. Steady state is paced plain-HTTP iPhone UA (19/19 clean cold). Playwright re-solve should fire only on a 202/403 (waf-cookie-manager recognizes /.well-known/sgcaptcha/).",
+      "proposedValue": true,
+      "confidence": "high"
+    },
+    {
+      "field": "isEnabled / crawlPhase",
+      "evidence": "DB isEnabled=false, consecutiveFailures=22, nextCrawlAt=2026-04-30 are STALE bulk-park residue from the 2026-04-27 pivot (per ledger), NOT a live ban. Reachability gate passes. Recommend enabling alongside the other R2-cleared sites; reset consecutiveFailures=0 at enable time (Round 4 / operator step, not this round).",
+      "proposedValue": "enable (operator action in Round 4); reset consecutiveFailures to 0",
+      "confidence": "high"
+    }
+  ],
+
+  "notes": [
+    "PRIMARY RESULT: iPhone-UA cold plain-HTTP bypass HOLDS at sustained 1.8s pace across 19 requests with zero sgcaptcha challenge. This contradicts B4R3's burst-202 observation, which was caused by no-gap bursts + per_page=100 bulk dump, not by the paced path. The gate is UA + pace, not request-count.",
+    "DB notes ('iPhone mobile UA bypasses cleanly via plain HTTP — no Playwright needed') are corroborated by live evidence; the wafWorkaround cookie-cache is the fallback, not the primary path.",
+    "wafType=sgcaptcha is correct (SiteGround SG-F-Cache/X-Proxy-Cache present; desktop UA returns 403 per Mistake 30). hasWaf=true correct. Keep as-is.",
+    "Do NOT run heavy 8-batch / rapid-burst probes against this site (IP-ban + 202-cascade risk). The reachability question is answered without them.",
+    "Operational guardrails for enable: (1) keep userAgentOverride = iPhone iOS 17_2 UA; (2) keep inter-request delay >=1.5s (baseBudget=1800 already enforces ~2s); (3) cap perPage (12 HTML / <=20 Store API) — NO per_page=100; (4) leave Playwright cookie-cache fallback armed for 202/403 recovery.",
+    "Coverage note (carry to Round 4, NOT a reachability blocker): Store API 576 < WP REST 975 by ~399 (OOS/drafts/uncategorized). T1 api-date-since-watermark via WP REST sees all 975; the 6-URL catalogUrls HTML spine + Store API only surface the in-stock 576. This matches the DB design (catalogUrls = HTML-fallback spine; full corpus via WP REST watermark). No new finding.",
+    "No DB writes, no budget/process changes performed. Temp probe scripts (_tmp-dd-r2-*.ts) created under backend/scripts and deleted post-run."
+  ]
+}
