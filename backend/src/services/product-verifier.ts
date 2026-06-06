@@ -563,14 +563,14 @@ function detectStockStatus($: cheerio.CheerioAPI, html: string): 'in_stock' | 'o
 
 // ── Data extraction (layered) ───────────────────────────────────────────────
 
-interface ExtractedData {
+export interface ExtractedData {
   title?: string;
   price?: number;
   regularPrice?: number;
   thumbnail?: string;
 }
 
-function extractProductData(
+export function extractProductData(
   $: cheerio.CheerioAPI,
   html: string,
   baseUrl: string,
@@ -768,7 +768,27 @@ function extractFromOpenGraph($: cheerio.CheerioAPI): OgData {
   if (ogTitle) result.title = ogTitle;
 
   const ogImage = $('meta[property="og:image"]').attr('content');
-  if (ogImage) result.thumbnail = ogImage;
+  // Reject generic "OG card generator" URLs. Some sites (e.g. TownPost's
+  // `/api/og?title=...`) set og:image to a server-rendered TEXT card, not the
+  // listing photo. Storing it overwrites the real CDN thumbnail the listing
+  // extractor already captured with an unhelpful text image. The real photo is
+  // URL-encoded inside the card URL's `fallbackUrl=` param — recover it when
+  // present; otherwise drop the og:image so the existing thumbnail is kept.
+  if (ogImage && /\/api\/og\b/i.test(ogImage)) {
+    const fb = ogImage.match(/[?&]fallbackUrl=([^&]+)/i);
+    const recovered = fb ? decodeURIComponent(fb[1]) : '';
+    if (recovered && /^https?:\/\//i.test(recovered) && !/\/api\/og\b/i.test(recovered)) {
+      result.thumbnail = recovered;
+    } else {
+      // No fallbackUrl to recover from. We drop the og card and rely on the
+      // listing/HTML thumbnail. Log it so a future format change (card URL without
+      // fallbackUrl AND no HTML thumbnail → silent thumbnail loss) is observable.
+      console.debug(`[product-verifier] dropped /api/og og:image with no recoverable fallbackUrl: ${ogImage}`);
+    }
+    // leave result.thumbnail unset → caller keeps the listing/HTML thumbnail
+  } else if (ogImage) {
+    result.thumbnail = ogImage;
+  }
 
   // product:price:amount is standard for e-commerce OG tags
   const ogPrice = $('meta[property="product:price:amount"]').attr('content');

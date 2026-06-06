@@ -137,6 +137,56 @@ export class GenericAdapter extends AbstractAdapter {
     return candidates.length ? Math.min(...candidates) : undefined;
   }
 
+  /** Strip a leading `www.` from a URL's host (canonical-host normalization). */
+  private _stripWww(url: string): string {
+    try {
+      const u = new URL(url);
+      u.hostname = u.hostname.replace(/^www\./i, '');
+      return u.toString();
+    } catch {
+      return url;
+    }
+  }
+
+  /**
+   * Normalize a classifieds product URL to the site's CANONICAL host.
+   *
+   * Strips `www.` ONLY when the site's canonical host is the bare host — never
+   * blindly for every classifieds site. A www-canonical classifieds site (one
+   * that redirects bare→www, the opposite of TownPost) would otherwise get
+   * non-resolving bare-host URLs stored silently. The bare-canonical decision is
+   * sourced, in order: (1) `siteProfile.canonicalHost` from the site cache, if
+   * present (forward-compatible — the field doesn't exist in the schema yet);
+   * (2) an explicit allowlist of hosts known to be bare-canonical (townpost.ca,
+   * verified 308 www→bare on 2026-06-05). Any site not covered keeps its host
+   * untouched, so adding a new classifieds site never silently breaks its URLs.
+   */
+  private _normalizeClassifiedHost(url: string, baseUrl: string): string {
+    let bareHost = '';
+    try {
+      bareHost = new URL(baseUrl).hostname.replace(/^www\./i, '').toLowerCase();
+    } catch {
+      return url;
+    }
+
+    // (1) Profile-declared canonical host (preferred when populated).
+    let canonical: string | undefined;
+    try {
+      const { _getSiteCacheEntry } = require('../adapter-registry');
+      const entry = _getSiteCacheEntry?.(bareHost);
+      canonical = entry?.siteProfile?.canonicalHost;
+    } catch { /* cache miss — fall through to allowlist */ }
+
+    // (2) Known bare-canonical hosts.
+    const BARE_CANONICAL_HOSTS = new Set(['townpost.ca']);
+
+    const canonicalIsBare = canonical
+      ? canonical.toLowerCase().replace(/^www\./i, '') === canonical.toLowerCase() // canonical has no www → bare
+      : BARE_CANONICAL_HOSTS.has(bareHost);
+
+    return canonicalIsBare ? this._stripWww(url) : url;
+  }
+
   // ── Catalog Crawl Methods (Phase 3) ───────────────────────────────────────
 
   getNewArrivalsUrl(origin: string): string {
@@ -184,8 +234,18 @@ export class GenericAdapter extends AbstractAdapter {
         if (/^\$?\d[\d,.]*$/.test(title)) return;
         if (this.isNavTitle(title)) return;
 
-        const url = this.extractLink(element, baseUrl);
-        if (!url || seen.has(url)) return;
+        let url = this.extractLink(element, baseUrl);
+        if (!url) return;
+        // Host normalization (classifieds). The catalog page is fetched at
+        // www.townpost.ca but the site 308-redirects to the bare host, so detail
+        // pages canonicalize to townpost.ca. Strip the `www.` so stored product
+        // URLs match the canonical host (and the normalizeDomain convention used in
+        // the site-cache lookup) — without this, www/bare variants of the same ad
+        // would create duplicate ProductIndex rows under @@unique([siteId, url]).
+        // ONLY when the site's canonical host is the bare host — a www-canonical
+        // classifieds site would otherwise get non-resolving bare-host URLs.
+        if (isClassified) url = this._normalizeClassifiedHost(url, baseUrl);
+        if (seen.has(url)) return;
         if (this.isNavUrl(url)) return;
         seen.add(url);
 

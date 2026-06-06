@@ -185,6 +185,23 @@ export abstract class AbstractAdapter implements SiteAdapter {
       }
     }
 
+    // TownPost classifieds fallback malformation. When a card's title can't be read
+    // from `data-testid="ad-title"` (older markup), `raw` becomes the whole anchor's
+    // concatenated text: `$<price><title>categories:<cats><town><time-ago>` — e.g.
+    // `$1200.00Steiner GS3 ...categories:Sporting GoodsGunsToronto, ON1 day ago`.
+    // Two signatures must BOTH hold to fire this strip: a leading `$<price>` AND a
+    // `categories:` sr-only tail. Requiring both narrows it to the TownPost shape and
+    // spares legitimate titles that merely contain the word "categories:" (e.g.
+    // "Browse all categories: rifles, shotguns", "FDE Lower - categories: Rifle Parts"),
+    // which have no leading price. It can still over-strip a contrived title that both
+    // starts with a price AND contains "categories:" — no live fleet title does today.
+    if (/^\s*\$\s*[\d,]/.test(raw) && /categories:/i.test(raw)) {
+      raw = raw
+        .replace(/\s*categories:.*$/i, '')
+        .replace(/^\s*\$\s*[\d,]+(?:\.\d{1,2})?\s*/, '')
+        .trim();
+    }
+
     // Strip trailing price + button/status text that BigCommerce/generic-retail cards
     // accidentally include (sibling elements' text captured alongside product title).
     raw = raw
@@ -378,6 +395,16 @@ export abstract class AbstractAdapter implements SiteAdapter {
     // BigCommerce/generic: search pages, gift certificate pages
     if (/\/search\.php/i.test(url)) return true;
     if (/\/giftcertificates/i.test(url)) return true;
+    // BigCommerce Stencil faceted-navigation pages. A `_bc_fsnf` query param is the
+    // BC "faceted search nav filter" flag — these URLs (e.g.
+    // `/ar-15-parts/brakes.html?_bc_fsnf=1&brand=252`) are a category page filtered
+    // by a brand/feature facet, NOT a product. The card markup BC renders for them
+    // is the category tile (title = category name, no thumbnail/sourceId), so they
+    // leak into extractCatalogProducts as junk "products". The param is unique to
+    // facet pages — real BC product detail URLs (`/<slug>/`) never carry it — so
+    // matching it is precise and generic across every BC Stencil site.
+    // (truenortharms.com repro 2026-06-05: 364 such rows titled "Brakes" etc.)
+    if (/[?&]_bc_fsnf=/i.test(url)) return true;
     // Reject URLs that are just the site homepage (path is / or empty)
     try {
       const path = new URL(url).pathname;
