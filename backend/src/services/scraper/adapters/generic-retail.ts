@@ -330,6 +330,17 @@ export class GenericRetailAdapter extends AbstractAdapter {
       }
     }
 
+    // ── Branch: Searchspring search-API-as-catalog (Magento sites whose
+    // storefront HTML hides stock; the real stock/price live in Searchspring JSON) ──
+    if (profile?.apiAlternative?.type === 'searchspring') {
+      try {
+        return await this._fetchSearchspringPage(profile.apiAlternative, page, options);
+      } catch (err) {
+        console.log(`[GenericRetail] searchspring error for ${origin} page ${page}: ${err instanceof Error ? err.message : err}. Returning null so dispatcher falls back to HTML.`);
+        return null;
+      }
+    }
+
     // ── Branch: BigCommerce Stencil GraphQL Storefront API ──
     if (profile?.apiAlternative?.type === 'bigcommerce-graphql') {
       try {
@@ -696,6 +707,207 @@ export class GenericRetailAdapter extends AbstractAdapter {
       products,
       totalPages,
       nextPageUrl: totalPages !== undefined && page < totalPages ? `ecwid://page/${page + 1}` : undefined,
+    };
+  }
+
+  // ── Searchspring search-API-as-catalog ──────────────────────────────────
+  // Some Magento storefronts render product listings client-side from a
+  // Searchspring search API; the static HTML carries NO stock/price, so the
+  // generic HTML extractor flags everything out_of_stock. The Searchspring JSON
+  // API (plain HTTP GET, no auth, no Playwright) carries real stock/price.
+  //
+  // Unlike the single-endpoint APIs above (mysimplestore/ecwid/bigcommerce — one
+  // store-wide query), this branch scopes the crawl to a CURATED SET of category
+  // filters (`apiAlternative.categories[]`) — used when the operator wants only a
+  // subset of a general retailer's catalog (e.g. sail.ca: ammo/optics/firearms,
+  // NOT apparel/boots/camping). Searchspring `filter.category_hierarchy` values
+  // AND together within one request (verified live: two filters → 0 results), so
+  // each category must be its own request. We flatten the categories into one
+  // logical paginated catalog: the single global `page` cursor the catalog crawler
+  // walks (1,2,3…) maps to (categoryIndex, localPage) via cumulative per-category
+  // page counts. Per-category totalPages is learned by fetching page 1 of each
+  // category once and cached per (siteId|categories|perPage) so repeated
+  // fetchCatalogPage calls within a crawl don't re-probe.
+  //
+  // Reads ALL config from `apiCfg` (siteProfile.apiAlternative) — ZERO hardcoded
+  // sail domain/siteId/categories. Expected shape:
+  //   {
+  //     type: 'searchspring',
+  //     searchspringSiteId: 's8zq1c',
+  //     endpoint: 'https://s8zq1c.a.searchspring.io/api/search/search.json', // optional; derived from siteId if absent
+  //     resultsPerPage: 100,            // Searchspring param is `resultsPerPage` (NOT pageSize — pageSize is ignored, falls back to 24)
+  //     sortParam: '&sort.created_at=desc', // newest-first; leave empty for merchant default
+  //     productOrigin: 'https://www.sail.ca', // origin for relative product urls (optional; urls are usually absolute)
+  //     categories: [
+  //       'Hunting>Firearms',
+  //       'Hunting>Scope & Shooting Accessories>Scopes',
+  //       ...
+  //     ],
+  //   }
+  //
+  // Field map (verified live 2026-06-06 on s8zq1c):
+  //   url → url | uid/id → sourceId | name → title | price → price |
+  //   regular_price → regularPrice (only if > price) |
+  //   variant_in_stock ("0"/">0") → stockStatus | imageUrl/thumbnailImageUrl → thumbnail |
+  //   category_hierarchy/dpt_en/sub_cat_en → sourceCategory (drives productType classifier).
+  // No product date field exists; ordering is server-side via sortParam.
+  private _searchspringPageMapCache = new Map<string, { perCat: number[]; cumulative: number[]; total: number; builtAt: number }>();
+  private static readonly SEARCHSPRING_PAGEMAP_TTL_MS = 30 * 60 * 1000; // re-probe category counts every 30 min so a long-lived worker catches newly-added products
+
+  private async _fetchSearchspringPage(
+    apiCfg: any,
+    globalPage: number,
+    options?: { sortBy?: 'newest' | 'oldest'; perPage?: number },
+  ): Promise<CatalogPage | null> {
+    const siteId: string | undefined = apiCfg.searchspringSiteId;
+    const categories: string[] = Array.isArray(apiCfg.categories) ? apiCfg.categories : [];
+    if (!siteId || categories.length === 0) {
+      console.log('[GenericRetail] searchspring: missing searchspringSiteId or categories[] in apiAlternative');
+      return null;
+    }
+    const endpoint: string = apiCfg.endpoint || `https://${siteId}.a.searchspring.io/api/search/search.json`;
+    const perPage = Math.min(options?.perPage || apiCfg.resultsPerPage || 100, 100);
+    // sortParam is a pre-encoded query fragment (e.g. '&sort.created_at=desc').
+    // 'oldest' is not supported by Searchspring here; bootstrap walks every page
+    // regardless of order, so we only honor the configured (newest-first) sort.
+    const sortParam: string = options?.sortBy === 'oldest' ? '' : (apiCfg.sortParam || '');
+
+    const buildUrl = (cat: string, localPage: number) =>
+      `${endpoint}?siteId=${encodeURIComponent(siteId)}&resultsFormat=native&resultsPerPage=${perPage}&page=${localPage}` +
+      `&filter.category_hierarchy=${encodeURIComponent(cat)}${sortParam}`;
+
+    const fetchJson = async (url: string): Promise<any> => {
+      const r = await axios.get(url, {
+        timeout: 20000,
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        },
+        validateStatus: (s) => s === 200,
+      });
+      return r.data;
+    };
+
+    // ── Build (or reuse) the per-category page map: how many pages each category
+    // has, and the cumulative boundaries that flatten them into one sequence.
+    const cacheKey = `${siteId}|${categories.join('||')}|${perPage}|${sortParam}`;
+    let map = this._searchspringPageMapCache.get(cacheKey);
+    // Rebuild when absent or expired. The TTL (30 min) is far shorter than the tier
+    // cooldowns (3-9h), so a fresh crawl cycle always re-probes category counts at
+    // page 1 — catching products added since the last cycle without re-probing on
+    // every page within one walk.
+    if (!map || (Date.now() - map.builtAt) > GenericRetailAdapter.SEARCHSPRING_PAGEMAP_TTL_MS) {
+      const perCat: number[] = [];
+      for (const cat of categories) {
+        const data = await fetchJson(buildUrl(cat, 1));
+        const totalResults: number = data?.pagination?.totalResults ?? 0;
+        perCat.push(Math.max(0, Math.ceil(totalResults / perPage)));
+      }
+      const cumulative: number[] = [];
+      let run = 0;
+      for (const c of perCat) { run += c; cumulative.push(run); }
+      map = { perCat, cumulative, total: run, builtAt: Date.now() };
+      this._searchspringPageMapCache.set(cacheKey, map);
+    }
+
+    const totalPages = map.total;
+    if (globalPage > totalPages) {
+      return { products: [], totalPages };
+    }
+
+    // Map the global page index to (categoryIndex, localPage).
+    let catIndex = 0;
+    while (catIndex < map.cumulative.length && globalPage > map.cumulative[catIndex]) catIndex++;
+    const prevCumulative = catIndex === 0 ? 0 : map.cumulative[catIndex - 1];
+    const localPage = globalPage - prevCumulative;
+    const cat = categories[catIndex];
+
+    const data = await fetchJson(buildUrl(cat, localPage));
+    const rawResults: any[] = Array.isArray(data?.results) ? data.results : [];
+
+    const products: CatalogProduct[] = [];
+    for (const r of rawResults) {
+      const url: string | undefined = r?.url;
+      const name: string | undefined = r?.name;
+      if (!url || !name) continue;
+
+      let resolvedUrl = String(url);
+      if (resolvedUrl.startsWith('/') && apiCfg.productOrigin) {
+        try { resolvedUrl = new URL(resolvedUrl, apiCfg.productOrigin).toString(); } catch { /* keep relative */ }
+      }
+
+      const priceNum = typeof r.price === 'number' ? r.price : (r.price != null ? parseFloat(String(r.price)) : undefined);
+      const regNum = typeof r.regular_price === 'number' ? r.regular_price : (r.regular_price != null ? parseFloat(String(r.regular_price)) : undefined);
+      const stockNum = parseFloat(String(r.variant_in_stock ?? ''));
+      const stockStatus: CatalogProduct['stockStatus'] =
+        Number.isFinite(stockNum) ? (stockNum > 0 ? 'in_stock' : 'out_of_stock') : 'unknown';
+
+      // sourceCategory drives the product-classifier (ammunition/optics/firearm).
+      //
+      // The dpt_en/sub_cat_en strings ALONE mis-classify two high-value cases
+      // because the classifier's CATEGORY_MAP is first-match-wins with anchored
+      // tokens (product-classifier.ts:21-37, NOT editable here):
+      //   - "bolt-action rifles" → the firearm token `\brifle\b` does NOT match the
+      //     plural "rifles" (no word boundary before the 's'), so `\bbolt\b` (parts,
+      //     idx 4) wins → rifles wrongly become 'parts'.
+      //   - "rifle ammunition" → `\brifle\b` DOES match (boundary before the space),
+      //     and firearm (idx 0) is tested before ammunition → ammo wrongly becomes
+      //     'firearm'. Note `\bammunit\b` never matches "ammunition" either (no
+      //     boundary after the 't'), so ammo only classifies via shotshell/rimfire/
+      //     centerfire/ammo/cartridge tokens.
+      //
+      // Fix: use the per-product category_hierarchy LEAF under the fetched filter
+      // `cat` (which carries the structural "Firearms"/"Ammunition" token) to pick a
+      // single-intent sourceCategory built from classifier-EFFECTIVE tokens. Only the
+      // Firearms/Airguns subtree is remapped; every other category keeps the
+      // descriptive dpt/sub string (scopes→optics, binoculars→optics, etc. already
+      // classify correctly). Verified against real sail rows 2026-06-07.
+      let sourceCategory: string | undefined;
+      const dpt = (r.dpt_en || '').toString().trim();
+      const sub = (r.sub_cat_en || '').toString().trim();
+      const dptSub = [dpt, sub].filter(Boolean).join(' > ');
+
+      // Deepest category_hierarchy entry that lies under the fetched filter `cat`
+      // (decode the &gt;/&amp; the API HTML-encodes). This is the authoritative
+      // structural path, e.g. "Hunting>Firearms>Centerfire Rifles" or
+      // "Hunting>Firearms>Ammunition".
+      const decode = (s: string) => s.replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+      let structuralLeaf = '';
+      if (Array.isArray(r.category_hierarchy)) {
+        const under = r.category_hierarchy.map((x: any) => decode(String(x))).filter((s: string) => s.startsWith(cat));
+        under.sort((a: string, b: string) => b.split('>').length - a.split('>').length);
+        structuralLeaf = under[0] || decode(String(r.category_hierarchy[r.category_hierarchy.length - 1] ?? ''));
+      }
+
+      // Ammo is checked FIRST and matches ">Ammunition" as a path SEGMENT anywhere
+      // (not just the tail) — sail nests it one level deeper as
+      // "Hunting>Firearms>Ammunition>Centerfire" / ">Rimfire" / ">Shotshell". The
+      // firearm branch would otherwise win (the path also contains ">Firearms>").
+      if (/>\s*ammunition\s*(>|$)/i.test(structuralLeaf) || /ammunition\s*boxes/i.test(structuralLeaf)) {
+        sourceCategory = 'ammo cartridge';          // ammo tokens only — strips the gun word in "rifle ammunition"
+      } else if (/>\s*firearms?\s*>/i.test(structuralLeaf) || />\s*air\s*guns?\b/i.test(structuralLeaf) || />\s*airguns?\s*>/i.test(structuralLeaf)) {
+        sourceCategory = 'firearm';                  // guns + airguns → firearm token (survives the bolt/rifle anchoring trap)
+      } else {
+        sourceCategory = dptSub || (structuralLeaf || undefined);
+      }
+
+      products.push({
+        url: resolvedUrl,
+        sourceId: r.uid != null ? String(r.uid) : (r.id != null ? String(r.id) : undefined),
+        title: String(name).trim().slice(0, 160),
+        price: Number.isFinite(priceNum as number) ? (priceNum as number) : undefined,
+        regularPrice: Number.isFinite(regNum as number) && (regNum as number) > (priceNum as number) ? (regNum as number) : undefined,
+        stockStatus,
+        thumbnail: r.imageUrl || r.thumbnailImageUrl || undefined,
+        sourceCategory,
+        // postDate: undefined — Searchspring exposes no per-product date field.
+      });
+    }
+
+    return {
+      products,
+      totalPages,
+      nextPageUrl: globalPage < totalPages ? `searchspring://page/${globalPage + 1}` : undefined,
     };
   }
 
