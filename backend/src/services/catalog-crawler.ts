@@ -432,8 +432,11 @@ export async function crawlCatalogTier(params: {
             // body, 4744 bytes -- above the 2000-byte threshold and contains
             // none of the previously-listed markers, so the walker treated it
             // as end-of-catalog instead of falling through to Playwright).
+            // 'challenge-platform' removed 2026-06-06: CF injects the benign /cdn-cgi/challenge-platform/
+            // beacon on EVERY passive page → false block → needless Playwright. Real CF blocks still caught
+            // by 'Just a moment'; non-CF blocks by Incapsula/Access Denied/403/Imunify360 'One moment, please'.
             const isBlocked = html.length < 2000 ||
-              /Incapsula|Access Denied|403 Forbidden|challenge-platform|Just a moment|One moment, please/i.test(html);
+              /Incapsula|Access Denied|403 Forbidden|Just a moment|One moment, please/i.test(html);
             if (isBlocked && html.length > 0) {
               try {
                 const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');
@@ -845,8 +848,9 @@ export async function crawlStreamTier(params: {
             break;
           }
 
+          // 'challenge-platform' removed 2026-06-06 (benign CF beacon on every passive page; see note above).
           const isBlocked = html.length < 2000 ||
-            /Incapsula|Access Denied|403 Forbidden|challenge-platform|Just a moment/i.test(html);
+            /Incapsula|Access Denied|403 Forbidden|Just a moment/i.test(html);
           if (isBlocked && html.length > 0) {
             try {
               const { fetchWithPlaywright } = await import('./scraper/playwright-fetcher');

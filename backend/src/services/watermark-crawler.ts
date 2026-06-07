@@ -104,9 +104,12 @@ async function fetchHtml(
     }
 
     // Playwright fallback: if static HTML is too small or WAF-blocked, try headless browser
+    // 'challenge-platform' removed 2026-06-06: CF injects that benign beacon on every passive page →
+    // false block → needless Playwright. Real CF blocks still caught by cf-browser-verification / Just a moment /
+    // Checking your browser / Attention Required / cf-challenge; non-CF by Incapsula / Access Denied / 403.
     const isBlockedOrEmpty = html.length < 2000 || html.includes('_Incapsula_Resource') ||
       html.includes('Access Denied') || html.includes('403 Forbidden') ||
-      html.includes('cf-browser-verification') || html.includes('challenge-platform') ||
+      html.includes('cf-browser-verification') ||
       html.includes('Just a moment...') || html.includes('Checking your browser') ||
       html.includes('Attention Required') || html.includes('cf-challenge');
     if (isBlockedOrEmpty && html.length > 0) {

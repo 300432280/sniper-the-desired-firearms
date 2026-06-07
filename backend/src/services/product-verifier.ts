@@ -49,7 +49,11 @@ const DEFAULT_MIN_REAL_PAGE_BYTES = 2_000;
 const DEFAULT_WAF_PATTERNS = [
   'cf-browser-verification',
   'Just a moment...',
-  'challenge-platform',
+  // NOTE: 'challenge-platform' removed 2026-06-06 — Cloudflare injects the benign script
+  // '/cdn-cgi/challenge-platform/scripts/jsd/main.js' on EVERY page (even passive, non-challenged),
+  // so this substring false-matched real product pages on all CF-fronted sites → needless Playwright
+  // fallback (OOM/slow). Real CF challenges are still caught by '_cf_chl' + 'Just a moment...' +
+  // 'cf-browser-verification'. Verified on gobles.ca (100KB product page, status 200, no WAF).
   '_cf_chl',
   'Attention Required',
   '_Incapsula_Resource',
