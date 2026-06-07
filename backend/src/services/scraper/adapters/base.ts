@@ -88,7 +88,8 @@ export abstract class AbstractAdapter implements SiteAdapter {
 
     // Prefer data-src (lazy-loaded real image) over src (may be a placeholder/loading SVG)
     // Klevu JS overlay uses "origin" attribute for the real CDN image URL.
-    const dataSrc = img.attr('data-src') || img.attr('data-lazy-src') || img.attr('data-original') || img.attr('origin') || '';
+    // data-wood-src: Woodmart WooCommerce theme lazy-load (e.g. g4cgunstore.com); src is a base64 placeholder.
+    const dataSrc = img.attr('data-src') || img.attr('data-lazy-src') || img.attr('data-original') || img.attr('data-wood-src') || img.attr('origin') || '';
     const src = img.attr('src') || '';
     // Use data-src if available, otherwise src — but skip loading/placeholder SVGs
     const isPlaceholder = /loading|place-?holder|blank|spacer|spinner|\.svg$/i.test(src) ||
@@ -405,6 +406,24 @@ export abstract class AbstractAdapter implements SiteAdapter {
     // matching it is precise and generic across every BC Stencil site.
     // (truenortharms.com repro 2026-06-05: 364 such rows titled "Brakes" etc.)
     if (/[?&]_bc_fsnf=/i.test(url)) return true;
+    // Generic faceted-navigation query params. A category listing filtered by a
+    // brand/sort/price/colour/size facet renders a category TILE card (title =
+    // category/brand name, price=null, no sourceId) that leaks into
+    // extractCatalogProducts as a junk "product". (rdsc.ca repro 2026-06-06: 1347
+    // rows incl. `/new-products.html?manufacturer=1590` titled "Zero Tolerance 14item".)
+    //
+    // This is a DENY-LIST, not "any query string = nav": OpenCart
+    // (`?route=product/product&product_id=NN&path=NN`), Volusion
+    // (`?ProductCode=XXX`), custom PHP (`?p=slug`), Shopify (`?variant=NN`) and
+    // Odoo (`/shop/<slug>?category=NN`) all carry query params on REAL product
+    // detail URLs. Each param below was verified to appear on ZERO active product
+    // rows across the fleet DB (scripts/_facet-explore-2026-06-06.ts), so denying
+    // it cannot drop a legitimate product. NOTE deliberately EXCLUDED: `category`
+    // (50 priced Odoo products use `?category=NN`), `path`/`product_id`/`route`/`p`
+    // (OpenCart/PHP product params), `page`/`limit`/`limitstart` (pagination),
+    // `variant`/`id`/`sku`/`productcode` (product detail), `orderby`/`product_list_order`
+    // (price-bearing rows make them ambiguous, and rdsc does not involve them).
+    if (/[?&](manufacturer|brand|filter|color|colour|size|dir|cat|sort|order|price|price_min|price_max|min_price|max_price|product_list_dir)=/i.test(url)) return true;
     // Reject URLs that are just the site homepage (path is / or empty)
     try {
       const path = new URL(url).pathname;
