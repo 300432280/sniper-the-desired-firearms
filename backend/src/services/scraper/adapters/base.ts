@@ -82,6 +82,59 @@ export abstract class AbstractAdapter implements SiteAdapter {
     return undefined;
   }
 
+  /**
+   * Reject a site's GENERIC placeholder/default image so it isn't stored as a
+   * product thumbnail (returns null = honest "no image"; re-checked next crawl).
+   *
+   * CONSERVATIVE by design — matches only known placeholder FILENAME segments,
+   * never a bare substring. A real product image under `/uploads/` or whose slug
+   * merely contains "default" (e.g. `marstar.../2019/05/file.jpg`, a product slug
+   * starting "default-…") MUST pass. Verified against a real-thumbnail corpus
+   * pulled from the DB across BigCommerce / WooCommerce / Magento / custom-PHP
+   * sites (2026-06-07): 0 real images matched.
+   *
+   * Confirmed fleet placeholders this rejects (active-row counts 2026-06-07):
+   *   westernmetal.ca       woocommerce-placeholder.png   (800)
+   *   wolverinesupplies.com img/ProductDefault.jpg        (963, BigCommerce theme)
+   *   reliablegun.com       thumbs/defau/default-image_580.webp (1171)
+   *   ellwoodepps.com       skin/frontend/.../storefront_hunting.jpg (3695, Magento banner)
+   */
+  static isPlaceholderThumbnail(url: string): boolean {
+    if (!url) return false;
+    let pathname = url;
+    let filename = url;
+    try {
+      const u = new URL(url, 'https://x.invalid');
+      pathname = u.pathname.toLowerCase();
+      filename = (pathname.split('/').pop() || '').toLowerCase();
+    } catch {
+      pathname = url.toLowerCase();
+      filename = (url.split(/[?#]/)[0].split('/').pop() || '').toLowerCase();
+    }
+
+    // 1. WooCommerce stock placeholder — unambiguous, appears anywhere in path.
+    if (pathname.includes('woocommerce-placeholder')) return true;
+    // 2. reliablegun default-image (e.g. `thumbs/defau/default-image_580.webp`).
+    //    "default-image" is never part of a real product slug, so a leading
+    //    boundary is enough; the trailing char may be `_`/`-`/`.` (no \b after).
+    if (/(^|[/_-])default-image([/_.-]|$)/.test(pathname)) return true;
+    // 3. Magento theme banner reused as a product image (epps_theme storefront_*).
+    //    Anchored to a theme dir so a real product whose filename starts
+    //    "storefront" can't be hit by accident.
+    if (/\/(skin|frontend|theme)[^?#]*\/storefront[_-]/.test(pathname)) return true;
+    // 4. Filename-anchored generic placeholders. Anchored to the FILENAME so a
+    //    real image deep under a path that merely contains these words passes.
+    if (/^productdefault\.(jpe?g|png|webp|gif|svg)$/.test(filename)) return true;
+    if (/^(placeholder|no-?image|no_image|default|blank|noimage|product-?default)\.(jpe?g|png|webp|gif|svg)$/.test(filename)) return true;
+    // Prefix forms — only for UNAMBIGUOUS placeholder words. `default[-_]` is
+    // intentionally EXCLUDED: real product slugs start "default-…" (e.g.
+    // `default-tactical-rifle-stock.jpg`). The reliablegun `default-image_*`
+    // form is already caught by the `\bdefault-image\b` rule above.
+    if (/^(placeholder|no-?image|no_image)[-_]/.test(filename)) return true;
+
+    return false;
+  }
+
   /** Resolve a usable image URL from a single <img>, skipping placeholders. */
   private _thumbnailFromImg(img: cheerio.Cheerio<any>, baseUrl: string): string | undefined {
     if (!img.length) return undefined;
@@ -111,13 +164,18 @@ export abstract class AbstractAdapter implements SiteAdapter {
     if (/place-?holder|klevu\.com|blank\.(gif|png|jpg)/i.test(chosen)) return undefined;
     if (/^data:/i.test(chosen)) return undefined;
 
+    let resolved: string;
     try {
-      if (chosen.startsWith('http')) return chosen;
-      if (chosen.startsWith('//')) return `https:${chosen}`;
-      return new URL(chosen, baseUrl).toString();
+      if (chosen.startsWith('http')) resolved = chosen;
+      else if (chosen.startsWith('//')) resolved = `https:${chosen}`;
+      else resolved = new URL(chosen, baseUrl).toString();
     } catch {
       return undefined;
     }
+    // Reject the site's generic placeholder/default image (resolved to absolute so
+    // filename-anchored matching is reliable). Stored as null = honest "no image".
+    if (AbstractAdapter.isPlaceholderThumbnail(resolved)) return undefined;
+    return resolved;
   }
 
   /** Extract a date from an element */
