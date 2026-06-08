@@ -117,7 +117,6 @@ Every check came back green. Plain HTTP fetches with default UA work; no Playwri
 | Phase | field | value | what it means |
 |---|---|---|---|
 | **Tier 1 (new items)** | `crawlers.watermark.method` | **`navigate-from-watermark`** | paginate newest-first to find watermark, then walk back to index new products |
-| Bootstrap | `crawlers.bootstrap.apiEndpoints` | `null` | no platform API — pure HTML walk |
 | **Maintain** | `crawlers.maintain.verifyMethod` | **`detail-page`** | each verify is a Playwright page fetch |
 | Maintain | `crawlers.maintain.verifyEndpoint` | `null` | Celerant has no batch product API |
 

@@ -837,7 +837,7 @@ async function checkWafType(
 // ─── Library Entry ──────────────────────────────────────────────────────────
 
 export async function verifySiteProfile(
-  site: { id: string; domain: string; url: string; siteProfile: unknown; hasWaf?: boolean },
+  site: { id: string; domain: string; url: string; siteProfile: unknown; hasWaf?: boolean; crawlPhase?: string },
 ): Promise<VerificationResult> {
   const startMs = Date.now();
   const profile = (site.siteProfile || {}) as any;
@@ -857,7 +857,19 @@ export async function verifySiteProfile(
   const { check: catalogCheck, urlResults } = await checkCatalogUrls(siteUrl, profile, wafCtx);
   const paginationCheck = await checkPaginationPattern(siteUrl, profile, urlResults, wafCtx);
   const sortCheck = await checkSortParam(siteUrl, profile, urlResults, wafCtx);
-  const countCheck = await checkExpectedProductCount(siteUrl, profile);
+  // expectedProductCount is a BOOTSTRAP-only coverage gate. In maintain phase the
+  // live catalog count drifts (restocks/sellouts), so a drift-based FAIL here is a
+  // false alarm — skip the check and record it as a PASS with a bootstrap-only reason.
+  const countCheck: ParameterCheck = site.crawlPhase === 'maintain'
+    ? {
+        name: 'expectedProductCount',
+        verdict: 'PASS',
+        expected: 'bootstrap-only gate (skipped in maintain phase)',
+        actual: null,
+        evidence: { storedCount: profile.expectedProductCount ?? null, actualCount: null, methodUsed: null, driftPct: null },
+        reason: 'expectedProductCount is a bootstrap coverage gate; live count drift is expected in maintain phase',
+      }
+    : await checkExpectedProductCount(siteUrl, profile);
   const wafCheck = await checkWafType(siteUrl, profile);
 
   const checks = [catalogCheck, paginationCheck, sortCheck, countCheck, wafCheck];
@@ -886,12 +898,12 @@ async function main() {
   const OUTPUT_DIR = path.resolve(__dirname, '..', '..', 'docs', 'site-verification');
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
 
-  let sites: Array<{ id: string; domain: string; url: string; siteProfile: any; hasWaf: boolean }>;
+  let sites: Array<{ id: string; domain: string; url: string; siteProfile: any; hasWaf: boolean; crawlPhase: string }>;
 
   if (arg === '--all') {
     sites = await prisma.monitoredSite.findMany({
       where: { isEnabled: true },
-      select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true },
+      select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true, crawlPhase: true },
       orderBy: { domain: 'asc' },
     });
     console.log(`\n=== Verifying ${sites.length} enabled sites ===\n`);
@@ -900,7 +912,7 @@ async function main() {
     const domain = arg.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
     const site = await prisma.monitoredSite.findFirst({
       where: { domain },
-      select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true },
+      select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true, crawlPhase: true },
     });
     if (!site) {
       console.error(`Site not found: ${domain}`);

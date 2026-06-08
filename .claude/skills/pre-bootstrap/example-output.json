@@ -87,9 +87,6 @@
       "method": "navigate-from-watermark",
       "reason": "Path-baked sort verified via /orderby/<value>/ swap counter-control. Default newest-first product (umarex-hk-mp5-37218 on /firearms) differs from counter-control alpha-A-Z first product (-derya--ria-tm22-37335) — proves the path-form sort is honored. perPage=36 from canonical sorted catalog URL."
     },
-    "bootstrap": {
-      "apiEndpoints": null
-    },
     "maintain": {
       "verifyMethod": "detail-page",
       "verifyEndpoint": null

@@ -345,12 +345,12 @@ export interface WatchdogResult {
 export async function verifyAllSiteProfiles(): Promise<WatchdogResult[]> {
   // Dynamic require to avoid rootDir issues (scripts/ is outside src/)
   const { verifySiteProfile } = require('../../scripts/verify-site-profile') as {
-    verifySiteProfile: (site: { id: string; domain: string; url: string; siteProfile: unknown; hasWaf?: boolean }) => Promise<VerificationResult>;
+    verifySiteProfile: (site: { id: string; domain: string; url: string; siteProfile: unknown; hasWaf?: boolean; crawlPhase?: string }) => Promise<VerificationResult>;
   };
 
   const sites = await prisma.monitoredSite.findMany({
     where: { isEnabled: true },
-    select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true },
+    select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true, crawlPhase: true },
   });
 
   console.log(`[Watchdog] Starting siteProfile verification for ${sites.length} enabled sites...`);
@@ -368,6 +368,7 @@ export async function verifyAllSiteProfiles(): Promise<WatchdogResult[]> {
         url: site.url,
         siteProfile: site.siteProfile,
         hasWaf: site.hasWaf,
+        crawlPhase: site.crawlPhase,
       });
     } catch (err) {
       // Hard error — record as failure
