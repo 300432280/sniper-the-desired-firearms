@@ -25,6 +25,10 @@
 import { prisma } from '../src/lib/prisma';
 import { fetchUrl } from './probe/shared/fetch';
 import type { FetchResult } from './probe/shared/fetch';
+
+// WAF context threaded into the HTML catalog-page fetches so WAF sites get the
+// cached-cookies → Playwright path the crawler uses (not a blocked axios GET).
+type FetchOpts = { hasWaf?: boolean; wafType?: string | null };
 import { GenericRetailAdapter } from '../src/services/scraper/adapters/generic-retail';
 import { buildPaginatedUrl } from '../src/services/catalog-crawler';
 import type { PaginationPattern } from '../src/services/catalog-crawler';
@@ -108,6 +112,7 @@ export interface CatalogUrlResult {
 async function checkCatalogUrls(
   siteUrl: string,
   profile: any,
+  wafCtx: FetchOpts = {},
 ): Promise<{ check: ParameterCheck; urlResults: CatalogUrlResult[] }> {
   const catalogUrls: string[] = profile.catalogUrls || [];
   const urlResults: CatalogUrlResult[] = [];
@@ -133,7 +138,7 @@ async function checkCatalogUrls(
     try {
       // GET page to extract products (HEAD alone can't tell us about content)
       await delay(DELAY_MS);
-      const fetchResult = await fetchUrl(fullUrl, { timeoutMs: 30000 });
+      const fetchResult = await fetchUrl(fullUrl, { timeoutMs: 30000, ...wafCtx });
       result.status = fetchResult.status;
 
       if (fetchResult.status >= 400) {
@@ -184,6 +189,7 @@ export async function checkPaginationPattern(
   siteUrl: string,
   profile: any,
   urlResults: CatalogUrlResult[],
+  wafCtx: FetchOpts = {},
 ): Promise<ParameterCheck> {
   const pattern: PaginationPattern | undefined = profile.paginationPattern;
   const workingUrl = urlResults.find(r => r.productCount > 0);
@@ -204,7 +210,7 @@ export async function checkPaginationPattern(
 
   try {
     await delay(DELAY_MS);
-    const page2Result = await fetchUrl(page2Url, { timeoutMs: 30000 });
+    const page2Result = await fetchUrl(page2Url, { timeoutMs: 30000, ...wafCtx });
 
     if (page2Result.status >= 400) {
       return {
@@ -303,6 +309,7 @@ async function checkSortParam(
   siteUrl: string,
   profile: any,
   urlResults: CatalogUrlResult[],
+  wafCtx: FetchOpts = {},
 ): Promise<ParameterCheck> {
   const watermarkMethod = profile.crawlers?.watermark?.method;
 
@@ -378,13 +385,13 @@ async function checkSortParam(
   try {
     // Fetch without-sort
     await delay(DELAY_MS);
-    const withoutSortResult = await fetchUrl(withoutSortUrl, { timeoutMs: 30000 });
+    const withoutSortResult = await fetchUrl(withoutSortUrl, { timeoutMs: 30000, ...wafCtx });
     const withoutSortProducts = extractProducts(withoutSortResult.body, withoutSortUrl);
     const withoutSortFirst = withoutSortProducts.length > 0 ? extractSlug(withoutSortProducts[0].url) : null;
 
     // Fetch with-sort
     await delay(DELAY_MS);
-    const withSortResult = await fetchUrl(withSortUrl, { timeoutMs: 30000 });
+    const withSortResult = await fetchUrl(withSortUrl, { timeoutMs: 30000, ...wafCtx });
     const withSortProducts = extractProducts(withSortResult.body, withSortUrl);
     const withSortFirst = withSortProducts.length > 0 ? extractSlug(withSortProducts[0].url) : null;
 
@@ -420,7 +427,7 @@ async function checkSortParam(
     }
 
     await delay(DELAY_MS);
-    const counterResult = await fetchUrl(counterControlUrl, { timeoutMs: 30000 });
+    const counterResult = await fetchUrl(counterControlUrl, { timeoutMs: 30000, ...wafCtx });
     const counterProducts = extractProducts(counterResult.body, counterControlUrl);
     const counterControlFirst = counterProducts.length > 0 ? extractSlug(counterProducts[0].url) : null;
 
@@ -830,16 +837,26 @@ async function checkWafType(
 // ─── Library Entry ──────────────────────────────────────────────────────────
 
 export async function verifySiteProfile(
-  site: { id: string; domain: string; url: string; siteProfile: unknown },
+  site: { id: string; domain: string; url: string; siteProfile: unknown; hasWaf?: boolean },
 ): Promise<VerificationResult> {
   const startMs = Date.now();
   const profile = (site.siteProfile || {}) as any;
   const siteUrl = site.url.replace(/\/$/, '');
 
+  // WAF context for HTML catalog-page fetches. On WAF sites a plain axios GET is
+  // blocked, so the catalog/pagination/sort checks read a WAF challenge page and
+  // (wrongly) report 0 products. Threading hasWaf/wafType routes those fetches
+  // through the cached-cookies → Playwright path the crawler uses. NOT applied to
+  // the API/JSON/sitemap checks below: those parse JSON or response headers, and
+  // Playwright would return rendered HTML (wrapping JSON in <pre>) — corrupting
+  // x-wp-total / JSON.parse. API access on WAF sites is handled by the crawler's
+  // own cookie path, not by this verifier.
+  const wafCtx: FetchOpts = { hasWaf: site.hasWaf, wafType: (profile.wafType as string | null) ?? null };
+
   // Run checks sequentially (anti-ban: each check has internal delays)
-  const { check: catalogCheck, urlResults } = await checkCatalogUrls(siteUrl, profile);
-  const paginationCheck = await checkPaginationPattern(siteUrl, profile, urlResults);
-  const sortCheck = await checkSortParam(siteUrl, profile, urlResults);
+  const { check: catalogCheck, urlResults } = await checkCatalogUrls(siteUrl, profile, wafCtx);
+  const paginationCheck = await checkPaginationPattern(siteUrl, profile, urlResults, wafCtx);
+  const sortCheck = await checkSortParam(siteUrl, profile, urlResults, wafCtx);
   const countCheck = await checkExpectedProductCount(siteUrl, profile);
   const wafCheck = await checkWafType(siteUrl, profile);
 
@@ -869,12 +886,12 @@ async function main() {
   const OUTPUT_DIR = path.resolve(__dirname, '..', '..', 'docs', 'site-verification');
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
 
-  let sites: Array<{ id: string; domain: string; url: string; siteProfile: any }>;
+  let sites: Array<{ id: string; domain: string; url: string; siteProfile: any; hasWaf: boolean }>;
 
   if (arg === '--all') {
     sites = await prisma.monitoredSite.findMany({
       where: { isEnabled: true },
-      select: { id: true, domain: true, url: true, siteProfile: true },
+      select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true },
       orderBy: { domain: 'asc' },
     });
     console.log(`\n=== Verifying ${sites.length} enabled sites ===\n`);
@@ -883,7 +900,7 @@ async function main() {
     const domain = arg.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
     const site = await prisma.monitoredSite.findFirst({
       where: { domain },
-      select: { id: true, domain: true, url: true, siteProfile: true },
+      select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true },
     });
     if (!site) {
       console.error(`Site not found: ${domain}`);

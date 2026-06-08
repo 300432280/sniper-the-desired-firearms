@@ -13,9 +13,25 @@
  */
 
 import { prisma } from '../lib/prisma';
-import { fetchPage, randomDelay } from './scraper/http-client';
+import { randomDelay } from './scraper/http-client';
 import { detectSiteType } from './scraper/utils/html';
 import * as cheerio from 'cheerio';
+
+// WAF-aware fetch primitive (cached-cookies → Playwright for hasWaf sites,
+// axios otherwise) — the SAME path the crawler/verifier use. Plain
+// http-client.fetchPage does NOT route WAF sites through Playwright, which
+// caused WAF-protected maintain sites (leverarms, precisionoptics,
+// triggersandbows, westernmetal) to be marked unreachable here even though
+// production crawls reach them fine. Dynamic require mirrors the existing
+// verifyAllSiteProfiles() pattern (scripts/ lives outside src/ rootDir).
+type WafAwareFetch = (
+  url: string,
+  opts: { timeoutMs?: number; hasWaf?: boolean; wafType?: string | null },
+) => Promise<{ status: number; body: string }>;
+function getWafAwareFetch(): WafAwareFetch {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../../scripts/probe/shared/fetch').fetchUrl as WafAwareFetch;
+}
 
 interface HealthCheckResult {
   siteId: string;
@@ -34,12 +50,35 @@ async function checkSite(site: {
   domain: string;
   url: string;
   siteType: string;
+  hasWaf?: boolean;
+  wafType?: string | null;
 }): Promise<HealthCheckResult> {
   const start = Date.now();
 
   try {
-    const html = await fetchPage(site.url);
+    // Use the WAF-aware fetch so WAF sites get the cached-cookies → Playwright
+    // path the crawler uses, instead of a plain HTTP GET the WAF blocks.
+    const fetchUrl = getWafAwareFetch();
+    const fetched = await fetchUrl(site.url, {
+      timeoutMs: 30000,
+      hasWaf: site.hasWaf,
+      wafType: site.wafType ?? null,
+    });
     const responseTimeMs = Date.now() - start;
+
+    // A WAF/error status with no usable body means the probe was blocked.
+    if (fetched.status >= 400) {
+      return {
+        siteId: site.id,
+        domain: site.domain,
+        isReachable: fetched.status >= 500 ? false : true,
+        canScrape: false,
+        responseTimeMs,
+        errorMessage: `HTTP ${fetched.status}`,
+      };
+    }
+
+    const html = fetched.body;
 
     if (!html || html.length < 100) {
       return {
@@ -142,7 +181,7 @@ export async function runHealthChecks(): Promise<{
 }> {
   const sites = await prisma.monitoredSite.findMany({
     where: { isEnabled: true },
-    select: { id: true, domain: true, url: true, siteType: true },
+    select: { id: true, domain: true, url: true, siteType: true, hasWaf: true, siteProfile: true },
   });
 
   console.log(`[HealthMonitor] Starting health checks for ${sites.length} sites...`);
@@ -156,7 +195,8 @@ export async function runHealthChecks(): Promise<{
     const batchResults = await Promise.all(
       batch.map(async (site) => {
         await randomDelay(200, 600); // stagger within batch
-        return checkSite(site);
+        const wafType = (site.siteProfile as { wafType?: string | null } | null)?.wafType ?? null;
+        return checkSite({ ...site, wafType });
       })
     );
     results.push(...batchResults);
@@ -305,12 +345,12 @@ export interface WatchdogResult {
 export async function verifyAllSiteProfiles(): Promise<WatchdogResult[]> {
   // Dynamic require to avoid rootDir issues (scripts/ is outside src/)
   const { verifySiteProfile } = require('../../scripts/verify-site-profile') as {
-    verifySiteProfile: (site: { id: string; domain: string; url: string; siteProfile: unknown }) => Promise<VerificationResult>;
+    verifySiteProfile: (site: { id: string; domain: string; url: string; siteProfile: unknown; hasWaf?: boolean }) => Promise<VerificationResult>;
   };
 
   const sites = await prisma.monitoredSite.findMany({
     where: { isEnabled: true },
-    select: { id: true, domain: true, url: true, siteProfile: true },
+    select: { id: true, domain: true, url: true, siteProfile: true, hasWaf: true },
   });
 
   console.log(`[Watchdog] Starting siteProfile verification for ${sites.length} enabled sites...`);
@@ -327,6 +367,7 @@ export async function verifyAllSiteProfiles(): Promise<WatchdogResult[]> {
         domain: site.domain,
         url: site.url,
         siteProfile: site.siteProfile,
+        hasWaf: site.hasWaf,
       });
     } catch (err) {
       // Hard error — record as failure
@@ -347,8 +388,15 @@ export async function verifyAllSiteProfiles(): Promise<WatchdogResult[]> {
       data: {
         siteId: site.id,
         checkType: 'watchdog',
-        isReachable: verification.overallVerdict !== 'FAIL',
-        canScrape: verification.overallVerdict === 'PASS',
+        // 2026-06-08 mapping fix: stop the watchdog crying wolf on healthy sites.
+        // isReachable = did the verifier actually reach the site (produced any checks). A data-drift
+        // FAIL (e.g. expectedProductCount probe mismatch) must NOT mark a site that crawls fine "unreachable";
+        // only a hard error (catch -> checks=[]) is truly unreachable.
+        // canScrape = PASS or WARN. WARN (honored-default sort, sub-category tile pages, non-URL API sort
+        // descriptors) is a HEALTHY state, not a scrape failure; only a real FAIL flips canScrape, so benign
+        // WARNs no longer trip siteprofile_drift_3strikes (which keys on canScrape).
+        isReachable: verification.checks.length > 0,
+        canScrape: verification.overallVerdict !== 'FAIL',
         responseTimeMs: verification.durationMs,
         errorMessage: verification.overallVerdict === 'PASS'
           ? null
